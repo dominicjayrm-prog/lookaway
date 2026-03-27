@@ -45,16 +45,21 @@ export default function AuthScreen() {
 
     setLoading(true);
 
-    if (mode === 'login') {
-      const result = await signIn(email.trim(), password);
-      if (result.error) setError(result.error);
-    } else {
-      const result = await signUp(email.trim(), password, displayName.trim() || undefined);
-      if (result.error) {
-        setError(result.error);
+    try {
+      if (mode === 'login') {
+        const result = await signIn(email.trim(), password);
+        if (result.error) setError(result.error);
       } else {
-        setSignUpSuccess(true);
+        const result = await signUp(email.trim(), password, displayName.trim() || undefined);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setSignUpSuccess(true);
+        }
       }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Something went wrong';
+      setError(message);
     }
 
     setLoading(false);
