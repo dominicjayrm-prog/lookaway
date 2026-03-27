@@ -21,7 +21,7 @@ export default function GameScreen() {
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, loseLife, score } = useGameStore();
+  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, loseLife, recordLevelComplete, score } = useGameStore();
   const level = getLevelById(levelId ?? '');
 
   useEffect(() => { if (level) resetGame(); }, [level]);
@@ -34,16 +34,10 @@ export default function GameScreen() {
     if (revealTimeout.current) { clearTimeout(revealTimeout.current); revealTimeout.current = null; }
     if (transitionTimeout.current) { clearTimeout(transitionTimeout.current); transitionTimeout.current = null; }
   }, []);
-
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
   const handleStart = useCallback(() => { if (level) startLevel(level); }, [level, startLevel]);
-
-  const handleMemoriseComplete = useCallback(() => {
-    setGameState('TRANSITION');
-    clearTimeouts();
-    transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 800);
-  }, [setGameState, clearTimeouts]);
+  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 800); }, [setGameState, clearTimeouts]);
 
   const handleSelectOption = useCallback((index: number) => {
     if (selectedOption !== null) return;
@@ -52,20 +46,14 @@ export default function GameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      if (isCorrect) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }
-      else { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); }
+      if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800);
     }, 300);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) {
-      selectOption(null);
-      revealAnswer();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      clearTimeouts();
-      revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800);
-    }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   const handleNextScene = useCallback(() => { nextScene(); }, [nextScene]);
@@ -75,6 +63,7 @@ export default function GameScreen() {
       const stars = getStarsForScore(score, level);
       addGems(GEM_REWARDS[stars]);
       addStars(stars);
+      recordLevelComplete(level.id, stars, score);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/game/result');
     }
