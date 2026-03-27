@@ -3,32 +3,24 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { StarRating } from '@/src/components/StarRating';
 import { Button } from '@/src/components/Button';
 import { Card } from '@/src/components/Card';
 import { useGameStore } from '@/src/store';
+import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
 export default function ResultScreen() {
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, addGems, addStars, loseLife } =
+  const { score, answers, currentLevel, gameState, resetGame } =
     useGameStore();
 
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
 
-  const getStars = (): 0 | 1 | 2 | 3 => {
-    if (!level) return 0;
-    if (score >= level.parScore) return 3;
-    if (score >= 80) return 2;
-    if (score >= level.requiredScore) return 1;
-    return 0;
-  };
-
-  const stars = getStars();
+  const stars = level ? getStarsForScore(score, level) : 0;
   const correctCount = answers.filter((a) => a.isCorrect).length;
   const totalCount = answers.length;
 
@@ -38,9 +30,10 @@ export default function ResultScreen() {
   };
 
   const handleRetry = () => {
+    const id = level?.id;
     resetGame();
-    if (level) {
-      router.replace(`/game/${level.id}`);
+    if (id) {
+      router.replace(`/game/${id}`);
     } else {
       router.replace('/(tabs)');
     }
@@ -52,7 +45,7 @@ export default function ResultScreen() {
         {passed ? (
           <>
             <Text style={styles.completeTitle}>Level complete!</Text>
-            <StarRating stars={stars} size={44} animate={true} />
+            <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate={true} />
           </>
         ) : (
           <Text style={styles.failedTitle}>Not quite...</Text>
@@ -67,7 +60,7 @@ export default function ResultScreen() {
           <Card style={styles.rewardCard}>
             <Text style={styles.rewardLabel}>Gems earned</Text>
             <Text style={styles.rewardValue}>
-              +{stars === 3 ? 20 : stars === 2 ? 10 : 5}
+              +{GEM_REWARDS[stars as 0 | 1 | 2 | 3]}
             </Text>
           </Card>
         )}
