@@ -23,6 +23,10 @@ export default function RootLayout() {
             name="game/[levelId]"
             options={{ gestureEnabled: false }}
           />
+          <Stack.Screen
+            name="game/daily"
+            options={{ gestureEnabled: false }}
+          />
           <Stack.Screen name="game/result" />
           <Stack.Screen name="settings" />
         </Stack>
