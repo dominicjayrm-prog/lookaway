@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   input: { backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, color: colors.text, borderWidth: 1, borderColor: 'transparent' },
   errorContainer: { backgroundColor: 'rgba(255,107,107,0.08)', borderRadius: borderRadius.sm, padding: spacing.md, marginBottom: spacing.lg },
   errorText: { fontSize: typography.sizes.sm, color: colors.wrong, textAlign: 'center' },
-  primaryButton: { backgroundColor: colors.accent, borderRadius: borderRadius.md, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
+  primaryButton: { backgroundColor: colors.accent, borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center', justifyContent: 'center', minHeight: 52, width: '100%' },
   primaryButtonText: { color: '#FFFFFF', fontSize: typography.sizes.lg, fontWeight: '700' },
   buttonDisabled: { opacity: 0.6 },
   toggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxl, paddingBottom: spacing.xxxl },
