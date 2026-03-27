@@ -6,13 +6,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { LookAwayLogo } from '@/src/components/LookAwayLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useGameStore } from '@/src/store';
+import { LEVELS } from '@/src/data/levels';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
 export default function PlayTab() {
   const router = useRouter();
-  const { gems, lives, streakCount, totalStars } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount } = useGameStore();
+  const nextLevelId = getNextUnplayedLevelId();
+  const nextLevel = LEVELS.find((l) => l.id === nextLevelId);
+  const nextLevelNumber = nextLevel?.levelNumber ?? 1;
+  const nextLevelTitle = nextLevel?.title ?? 'Shape Basics';
+  const completedCount = getCompletedLevelCount();
+  const memoryScore = getMemoryScore();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -36,9 +43,9 @@ export default function PlayTab() {
 
       <View style={styles.continueCard}>
         <Text style={styles.continueLabel}>CONTINUE</Text>
-        <Text style={styles.continueTitle}>{`World 1 ${String.fromCharCode(8212)} Level 1`}</Text>
-        <Text style={styles.continueSubtitle}>Shape Basics</Text>
-        <TouchableOpacity style={styles.playButton} activeOpacity={0.85} onPress={() => router.push('/game/w1-l1')}>
+        <Text style={styles.continueTitle}>{`World 1 ${String.fromCharCode(8212)} Level ${nextLevelNumber}`}</Text>
+        <Text style={styles.continueSubtitle}>{nextLevelTitle}</Text>
+        <TouchableOpacity style={styles.playButton} activeOpacity={0.85} onPress={() => router.push(`/game/${nextLevelId}`)}>
           <Text style={styles.playButtonText}>Play</Text>
         </TouchableOpacity>
       </View>
@@ -48,7 +55,7 @@ export default function PlayTab() {
           <Text style={styles.dailyLabel}>DAILY CHALLENGE</Text>
           <Text style={styles.dailyDate}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
         </View>
-        <TouchableOpacity style={styles.dailyButton} activeOpacity={0.85} onPress={() => router.push('/(tabs)/daily')}>
+        <TouchableOpacity style={styles.dailyButton} activeOpacity={0.85} onPress={() => router.push('/game/daily')}>
           <Text style={styles.dailyButtonText}>Play today's challenge</Text>
         </TouchableOpacity>
       </View>
@@ -57,8 +64,8 @@ export default function PlayTab() {
         <View style={styles.statsRow}>
           <View style={styles.statColumn}>
             <Text style={styles.statLabel}>Memory score</Text>
-            <Text style={styles.statValueMemory}>{`${String.fromCharCode(8212)}%`}</Text>
-            <Text style={styles.statHint}>Play your first level!</Text>
+            <Text style={styles.statValueMemory}>{completedCount > 0 ? `${memoryScore}%` : `${String.fromCharCode(8212)}%`}</Text>
+            {completedCount === 0 && <Text style={styles.statHint}>Play your first level!</Text>}
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statColumn}>
