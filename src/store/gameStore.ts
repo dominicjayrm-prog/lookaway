@@ -3,12 +3,12 @@ import type { Level, GameState } from '@/src/types/game';
 
 interface Answer {
   questionId: string;
-  selectedIndex: number;
+  selectedIndex: number | null;
   correctIndex: number;
   isCorrect: boolean;
 }
 
-interface GameStore {
+export interface GameStore {
   // Player state
   gems: number;
   lives: number;
@@ -40,7 +40,7 @@ interface GameStore {
   // Actions \u2014 game
   startLevel: (level: Level) => void;
   setGameState: (state: GameState) => void;
-  selectOption: (index: number) => void;
+  selectOption: (index: number | null) => void;
   revealAnswer: () => void;
   nextQuestion: () => void;
   nextScene: () => void;
@@ -48,7 +48,7 @@ interface GameStore {
   resetGame: () => void;
 }
 
-const LIFE_REGEN_MS = 30 * 60 * 1000; // 30 minutes
+export const LIFE_REGEN_MS = 30 * 60 * 1000; // 30 minutes
 
 export const useGameStore = create<GameStore>((set, get) => ({
   // Player defaults
@@ -116,11 +116,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   revealAnswer: () => {
     const { currentLevel, currentSceneIndex, currentQuestionIndex, selectedOption, answers } = get();
-    if (!currentLevel || selectedOption === null) return;
+    if (!currentLevel) return;
 
     const scene = currentLevel.scenes[currentSceneIndex];
+    if (!scene || currentQuestionIndex >= scene.questions.length) return;
+
     const question = scene.questions[currentQuestionIndex];
-    const isCorrect = selectedOption === question.correctIndex;
+    const isCorrect = selectedOption !== null && selectedOption === question.correctIndex;
 
     const answer: Answer = {
       questionId: question.id,
@@ -141,6 +143,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!currentLevel) return;
 
     const scene = currentLevel.scenes[currentSceneIndex];
+    if (!scene) return;
+
     const nextQ = currentQuestionIndex + 1;
 
     if (nextQ < scene.questions.length) {
@@ -151,12 +155,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         gameState: 'QUESTION',
       });
     } else {
-      // Scene done \u2014 check if more scenes
       const nextScene = currentSceneIndex + 1;
       if (nextScene < currentLevel.scenes.length) {
         set({ gameState: 'SCENE_SCORE' });
       } else {
-        // Level done
         get().completeLevel();
       }
     }
