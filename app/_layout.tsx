@@ -27,6 +27,14 @@ export default function RootLayout() {
             name="game/daily"
             options={{ gestureEnabled: false }}
           />
+          <Stack.Screen
+            name="game/speed"
+            options={{ gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="game/spot"
+            options={{ gestureEnabled: false }}
+          />
           <Stack.Screen name="game/result" />
           <Stack.Screen name="settings" />
         </Stack>
