@@ -1,3 +1,5 @@
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/src/theme/colors';
@@ -11,9 +13,9 @@ const TAB_CONFIG: {
   icon: IoniconsName;
   iconFocused: IoniconsName;
 }[] = [
-  { name: 'index', title: 'Play', icon: 'play-outline', iconFocused: 'play' },
+  { name: 'index', title: 'Play', icon: 'play-circle-outline', iconFocused: 'play-circle' },
   { name: 'journey', title: 'Journey', icon: 'map-outline', iconFocused: 'map' },
-  { name: 'daily', title: 'Daily', icon: 'today-outline', iconFocused: 'today' },
+  { name: 'daily', title: 'Daily', icon: 'calendar-outline', iconFocused: 'calendar' },
   { name: 'shop', title: 'Shop', icon: 'diamond-outline', iconFocused: 'diamond' },
 ];
 
@@ -26,14 +28,16 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textLight,
         tabBarStyle: {
           backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          height: 85,
-          paddingBottom: 25,
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(0,0,0,0.06)',
+          height: 80,
+          paddingBottom: 28,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: typography.sizes.xs,
           fontWeight: typography.weights.medium,
+          marginTop: 2,
         },
       }}
     >
@@ -43,12 +47,14 @@ export default function TabLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons
-                name={focused ? tab.iconFocused : tab.icon}
-                size={size}
-                color={color}
-              />
+            tabBarIcon: ({ focused, size }) => (
+              <View style={focused ? iconStyles.activeContainer : iconStyles.inactiveContainer}>
+                <Ionicons
+                  name={focused ? tab.iconFocused : tab.icon}
+                  size={size}
+                  color={focused ? colors.accent : colors.textLight}
+                />
+              </View>
             ),
           }}
         />
@@ -56,3 +62,16 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const iconStyles = StyleSheet.create({
+  activeContainer: {
+    backgroundColor: 'rgba(108,92,231,0.08)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  inactiveContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+});

@@ -10,3 +10,6 @@ export { LivesIndicator } from './LivesIndicator';
 export { GemCounter } from './GemCounter';
 export { StreakBadge } from './StreakBadge';
 export { SceneRenderer } from './SceneRenderer';
+export { LookAwayLogo } from './LookAwayLogo';
+export { Wordmark } from './Wordmark';
+export { MobileContainer } from './MobileContainer';
