@@ -13,3 +13,4 @@ export { SceneRenderer } from './SceneRenderer';
 export { LookAwayLogo } from './LookAwayLogo';
 export { Wordmark } from './Wordmark';
 export { MobileContainer } from './MobileContainer';
+export { OutOfLivesModal } from './OutOfLivesModal';
