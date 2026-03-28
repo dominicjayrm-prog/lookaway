@@ -1,19 +1,26 @@
 import { cookies } from 'next/headers';
 
 const COOKIE_NAME = 'admin_session';
-const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 export async function verifyAuth(): Promise<boolean> {
   const cookieStore = await cookies();
-  return cookieStore.has(COOKIE_NAME);
+  const session = cookieStore.get(COOKIE_NAME);
+  return session?.value === 'authenticated';
 }
 
-export function setAuthCookie(response: Response): Response {
-  response.headers.append('Set-Cookie', `${COOKIE_NAME}=true; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE}`);
-  return response;
+export async function setAuthCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, 'authenticated', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+  });
 }
 
-export function clearAuthCookie(response: Response): Response {
-  response.headers.append('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
-  return response;
+export async function clearAuthCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
 }
