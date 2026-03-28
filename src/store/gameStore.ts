@@ -1,10 +1,16 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Level, GameState } from '@/src/types/game';
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
 function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
+
+// Web-safe storage that falls back gracefully
+const webStorage = {
+  getItem: (name: string): string | null => { try { return typeof window !== 'undefined' ? localStorage.getItem(name) : null; } catch { return null; } },
+  setItem: (name: string, value: string): void => { try { if (typeof window !== 'undefined') localStorage.setItem(name, value); } catch {} },
+  removeItem: (name: string): void => { try { if (typeof window !== 'undefined') localStorage.removeItem(name); } catch {} },
+};
 
 export interface GameStore {
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null; streakCount: number; totalStars: number; highestWorld: number;
@@ -41,4 +47,4 @@ export const useGameStore = create<GameStore>()(persist((set, get) => ({
   nextScene: () => { const { currentSceneIndex } = get(); set({ currentSceneIndex: currentSceneIndex + 1, currentQuestionIndex: 0, selectedOption: null, revealedCorrect: null, gameState: 'MEMORISE' }); },
   completeLevel: () => { const { answers, currentLevel } = get(); if (!currentLevel) return; const t = answers.length; const c = answers.filter((a) => a.isCorrect).length; const pct = t > 0 ? Math.round((c / t) * 100) : 0; set({ score: pct, gameState: pct >= currentLevel.requiredScore ? 'COMPLETE' : 'FAILED' }); },
   resetGame: () => set({ currentLevel: null, gameState: 'READY', currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
-}), { name: 'lookaway-progress', storage: createJSONStorage(() => AsyncStorage), partialize: (state) => ({ gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt, streakCount: state.streakCount, totalStars: state.totalStars, highestWorld: state.highestWorld, levelProgress: state.levelProgress, completedScores: state.completedScores }) }));
+}), { name: 'lookaway-progress', storage: createJSONStorage(() => webStorage), partialize: (state) => ({ gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt, streakCount: state.streakCount, totalStars: state.totalStars, highestWorld: state.highestWorld, levelProgress: state.levelProgress, completedScores: state.completedScores }) }));
