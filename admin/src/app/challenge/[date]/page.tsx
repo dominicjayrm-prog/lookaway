@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { DeleteButton } from './delete-button';
 
 export default async function ChallengeDetailPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
@@ -30,7 +31,10 @@ export default async function ChallengeDetailPage({ params }: { params: Promise<
           <h1 className="text-2xl font-bold text-slate-900">{date}</h1>
           <p className="mt-1 text-sm text-slate-500">Mode: {challenge.mode} | Difficulty: {challenge.difficulty}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[challenge.status] ?? 'bg-gray-100 text-gray-700'}`}>{challenge.status}</span>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[challenge.status] ?? 'bg-gray-100 text-gray-700'}`}>{challenge.status}</span>
+          <DeleteButton date={date} />
+        </div>
       </div>
 
       {playerCount > 0 && (
