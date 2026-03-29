@@ -2,6 +2,7 @@
 import { Suspense, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import InteractiveCanvas from '@/components/InteractiveCanvas';
+import LibraryThumbnail from '@/components/LibraryThumbnail';
 import { objectLibrary, CATEGORIES } from '@/data/objectLibrary';
 import type { Scene, SceneObject } from '@/lib/types';
 
@@ -38,7 +39,6 @@ function BuilderInner() {
   }, [search]);
 
   const onDateChange = useCallback((nd:string)=>{setDate(nd);setMode(modeFor(nd));setScenes([]);}, []);
-
   const generate = useCallback(async()=>{
     setLoading(true);setError(null);setSuccess(null);
     try{const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,mode,difficulty:diff})});
@@ -46,60 +46,47 @@ function BuilderInner() {
     const sd=data.challenge?.scene_data??data.scene_data??data;setScenes(sd.scenes??[]);setActiveScene(0);
     setSuccess('Generated!');setTimeout(()=>setSuccess(null),3000);}catch(e:any){setError(e.message);}finally{setLoading(false);}
   },[date,mode,diff]);
-
   const approve = useCallback(async(status:'live'|'draft')=>{
     setApproving(true);setError(null);
     try{const res=await fetch('/api/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dates:[date],status})});
     if(!res.ok){const d=await res.json();throw new Error(d.error||'Failed');}
     setSuccess(status==='live'?'Published!':'Saved as draft');setTimeout(()=>setSuccess(null),3000);}catch(e:any){setError(e.message);}finally{setApproving(false);}
   },[date]);
-
-  const updateSceneObjects = useCallback((objs:SceneObject[])=>{
-    setScenes(prev=>prev.map((s,i)=>i===activeScene?{...s,objects:objs}:s));
-  },[activeScene]);
-
+  const updateSceneObjects = useCallback((objs:SceneObject[])=>{setScenes(prev=>prev.map((s,i)=>i===activeScene?{...s,objects:objs}:s));},[activeScene]);
   const handleCanvasClick = useCallback((e:React.MouseEvent<HTMLDivElement>)=>{
     if(!activeTool)return;
     const rect=(e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const x=Math.round(((e.clientX-rect.left)/rect.width)*100);
-    const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
+    const x=Math.round(((e.clientX-rect.left)/rect.width)*100);const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
     const newObj:SceneObject={id:`obj-${Date.now()}`,type:activeTool,color:activeColor,x,y,size:35,zIndex:scenes[activeScene]?.objects?.length??0};
     setScenes(prev=>prev.map((s,i)=>i===activeScene?{...s,objects:[...(s.objects||[]),newObj]}:s));
   },[activeTool,activeColor,activeScene,scenes]);
-
   const updateQuestion = useCallback((qi:number,field:string,value:any)=>{
-    setScenes(prev=>prev.map((s,i)=>{
-      if(i!==activeScene)return s;
-      const qs=[...(s.questions||[])];
-      qs[qi]={...qs[qi],[field]:value};
-      return{...s,questions:qs};
-    }));
+    setScenes(prev=>prev.map((s,i)=>{if(i!==activeScene)return s;const qs=[...(s.questions||[])];qs[qi]={...qs[qi],[field]:value};return{...s,questions:qs};}));
   },[activeScene]);
 
   const scene=scenes[activeScene];
-  const sceneCount=mode==='classic'?5:mode==='speed'?10:5;
 
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left: Object Library */}
-      <div className="w-60 bg-white border-r border-gray-200 overflow-y-auto p-3 flex-shrink-0">
-        <h3 className="text-sm font-bold text-slate-900 mb-2">Objects</h3>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm mb-3" />
-        <div className="flex gap-1 flex-wrap mb-3">{PALETTE.map(c=>(<button key={c} onClick={()=>setActiveColor(c)} style={{width:20,height:20,borderRadius:'50%',backgroundColor:c,border:activeColor===c?'2px solid #1A1A18':'1px solid #ddd'}} />))}</div>
+      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto p-3 flex-shrink-0">
+        <h3 className="text-sm font-bold text-slate-900 mb-2">Object Library</h3>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search objects..." className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm mb-3" />
+        <div className="flex gap-1 flex-wrap mb-3">{PALETTE.map(c=>(<button key={c} onClick={()=>setActiveColor(c)} style={{width:20,height:20,borderRadius:'50%',backgroundColor:c,border:activeColor===c?'2px solid #1A1A18':'1px solid #ddd',cursor:'pointer'}} />))}</div>
         {CATEGORIES.map(cat=>{
           const items=filteredLib.filter(o=>o.category===cat);
           if(items.length===0)return null;
           const isOpen=expandedCats.has(cat);
-          return(<div key={cat} className="mb-2">
-            <button onClick={()=>setExpandedCats(prev=>{const n=new Set(prev);n.has(cat)?n.delete(cat):n.add(cat);return n;})} className="w-full flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider py-1 hover:text-slate-700">
-              {cat}<span>{isOpen?'\u25B2':'\u25BC'}</span>
+          return(<div key={cat} className="mb-3">
+            <button onClick={()=>setExpandedCats(prev=>{const n=new Set(prev);n.has(cat)?n.delete(cat):n.add(cat);return n;})} className="w-full flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider py-1.5 hover:text-slate-700">
+              <span>{cat} ({items.length})</span><span className="text-[10px]">{isOpen?'\u25B2':'\u25BC'}</span>
             </button>
-            {isOpen&&<div className="grid grid-cols-4 gap-1 mt-1">{items.map(obj=>(<button key={obj.id} onClick={()=>setActiveTool(activeTool===obj.id?null:obj.id)} title={obj.name} className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg border ${activeTool===obj.id?'border-purple-500 bg-purple-50 ring-2 ring-purple-300':'border-gray-100 hover:bg-gray-50'}`}>
-              {obj.id==='circle'?'\u25CF':obj.id==='square'?'\u25A0':obj.id==='triangle'?'\u25B2':obj.id==='star'?'\u2605':obj.id==='heart'?'\u2665':obj.id==='diamond'?'\u25C6':obj.label?obj.label:obj.name[0]}
+            {isOpen&&<div className="grid grid-cols-4 gap-1.5 mt-1">{items.map(obj=>(<button key={obj.id} onClick={()=>setActiveTool(activeTool===obj.id?null:obj.id)} title={obj.name} className={`w-12 h-12 rounded-lg flex items-center justify-center border transition-all ${activeTool===obj.id?'border-purple-500 bg-purple-50 ring-2 ring-purple-300 scale-105':'border-gray-100 hover:bg-gray-50 hover:border-gray-200'}`}>
+              <LibraryThumbnail item={obj} size={28} color="#78909C" />
             </button>))}</div>}
           </div>);
         })}
-        {activeTool&&<p className="mt-2 text-xs text-purple-600 font-medium">Click canvas to place: {activeTool}</p>}
+        {activeTool&&<div className="mt-3 p-2 bg-purple-50 rounded-lg"><p className="text-xs text-purple-700 font-medium">Click canvas to place:</p><p className="text-xs text-purple-600">{objectLibrary.find(o=>o.id===activeTool)?.name}</p></div>}
       </div>
 
       {/* Center: Canvas + Controls */}
@@ -113,24 +100,19 @@ function BuilderInner() {
               <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-purple-700 disabled:opacity-50">{loading?'Generating...':'Generate'}</button>
             </div>
           </div>
-
           {error&&<div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">{error}</div>}
           {success&&<div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2">{success}</div>}
-
           {scenes.length>0&&(<>
             <div className="flex gap-1 mb-3">{scenes.map((_,i)=>{const s=scenes[i];const hasObjs=(s?.objects?.length??0)>=3;const hasQs=(s?.questions?.length??0)>=1;return(<button key={i} onClick={()=>{setActiveScene(i);setSelectedId(null);}} className={`px-3 py-1.5 text-xs rounded-lg font-medium flex items-center gap-1 ${i===activeScene?'bg-purple-600 text-white':'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><span className={`w-2 h-2 rounded-full ${hasObjs&&hasQs?'bg-green-400':hasObjs?'bg-yellow-400':'bg-red-400'}`}/>Scene {i+1}</button>);})}</div>
-
             <div className="flex gap-2 mb-3">
               <button onClick={()=>setShowGrid(!showGrid)} className={`px-2 py-1 text-xs rounded ${showGrid?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600'}`}>Grid</button>
               <button onClick={()=>{if(confirm('Clear all objects?'))updateSceneObjects([]);}} className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200">Clear</button>
               <span className="text-xs text-slate-400 py-1">{scene?.objects?.length??0} objects</span>
             </div>
-
             <div onClick={handleCanvasClick} style={{cursor:activeTool?'crosshair':'default'}}>
               <InteractiveCanvas objects={scene?.objects??[]} onObjectsChange={updateSceneObjects} selectedId={selectedId} onSelectObject={setSelectedId} width={500} height={500} showGrid={showGrid} />
             </div>
           </>)}
-
           {scenes.length>0&&<div className="mt-6 flex gap-3">
             <button onClick={()=>approve('live')} disabled={approving} className="bg-green-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50">{approving?'Publishing...':'Approve & Publish'}</button>
             <button onClick={()=>approve('draft')} disabled={approving} className="bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2 text-sm font-medium hover:bg-gray-50">Save as Draft</button>
