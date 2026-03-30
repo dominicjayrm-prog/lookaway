@@ -5,7 +5,10 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
 function hasSeenOnboarding(): boolean {
-  try { return localStorage.getItem('lookaway_onboarded') === 'true'; } catch { return false; }
+  try {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('lookaway_onboarded') === 'true';
+  } catch { return false; }
 }
 
 export default function Index() {
