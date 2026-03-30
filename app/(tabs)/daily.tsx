@@ -52,7 +52,7 @@ export default function DailyTab() {
           </View>
         </View>
 
-        <Button title={`Start ${modeInfo.name}`} onPress={() => router.push(MODE_ROUTES[todayMode] as any)} style={[styles.startButton, { backgroundColor: colors.accent }]} textStyle={styles.startButtonText} />
+        <Button title={`Start ${modeInfo.name} — ${modeInfo.description}`} onPress={() => router.push(MODE_ROUTES[todayMode] as any)} style={[styles.startButton, { backgroundColor: colors.accent }]} textStyle={styles.startButtonText} />
 
         <View style={styles.weekSection}>
           <Text style={[styles.weekTitle, { color: colors.text }]}>This week</Text>
