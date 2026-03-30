@@ -61,11 +61,10 @@ export const Button = React.memo(function Button({
     <Pressable
       onPress={handlePress}
       disabled={disabled}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         variantStyles[variant],
         disabled && styles.disabled,
-        pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
         style,
       ]}
     >
