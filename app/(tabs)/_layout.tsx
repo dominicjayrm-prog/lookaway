@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -19,17 +19,18 @@ const TAB_CONFIG: {
 ];
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: '#B2BEC3',
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.tabBar,
           borderTopWidth: 1,
-          borderTopColor: 'rgba(0,0,0,0.06)',
+          borderTopColor: colors.tabBarBorder,
           height: 80,
           paddingBottom: 28,
           paddingTop: 8,
@@ -45,11 +46,11 @@ export default function TabLayout() {
           options={{
             title: tab.title,
             tabBarIcon: ({ focused }) => (
-              <View style={focused ? styles.activeIconContainer : styles.inactiveIconContainer}>
+              <View style={focused ? [styles.activeIconContainer, { backgroundColor: colors.accentSoft }] : styles.inactiveIconContainer}>
                 <Ionicons
                   name={focused ? tab.iconFocused : tab.icon}
                   size={22}
-                  color={focused ? colors.accent : '#B2BEC3'}
+                  color={focused ? colors.accent : colors.tabBarInactive}
                 />
               </View>
             ),
@@ -62,7 +63,6 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   activeIconContainer: {
-    backgroundColor: 'rgba(108,92,231,0.08)',
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 5,

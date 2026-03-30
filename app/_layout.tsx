@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/src/providers/AuthProvider';
+import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
-import { colors } from '@/src/theme/colors';
 
 function LifeRegenChecker() {
   const checkLifeRegen = useGameStore((s) => s.checkLifeRegen);
@@ -12,24 +12,36 @@ function LifeRegenChecker() {
   return null;
 }
 
+function ThemedStack() {
+  const { colors, isDark } = useTheme();
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade' }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="game/[levelId]" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="game/daily" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="game/speed" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="game/spot" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="game/result" />
+        <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="settings" />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <MobileContainer>
-        <LifeRegenChecker />
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade' }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="game/[levelId]" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="game/daily" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="game/speed" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="game/spot" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="game/result" />
-          <Stack.Screen name="settings" />
-        </Stack>
-      </MobileContainer>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MobileContainer>
+          <LifeRegenChecker />
+          <ThemedStack />
+        </MobileContainer>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
