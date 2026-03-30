@@ -6,7 +6,8 @@ import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL_COUNTS, getMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
-import { getLevelById } from '@/src/data/levels';
+import { fetchWorldLevels } from '@/src/data/levels';
+import type { Level } from '@/src/types/game';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -81,6 +82,19 @@ export default function WorldMapScreen() {
   }, [levelProgress, worldId, totalLevels]);
 
   const [popup, setPopup] = useState<number | null>(null);
+  const [levelTitles, setLevelTitles] = useState<Record<number, string>>({});
+
+  // Preload level titles from Supabase
+  useEffect(() => {
+    let cancelled = false;
+    fetchWorldLevels(worldId).then((levels) => {
+      if (cancelled) return;
+      const titles: Record<number, string> = {};
+      levels.forEach((l) => { titles[l.levelNumber] = l.title; });
+      setLevelTitles(titles);
+    });
+    return () => { cancelled = true; };
+  }, [worldId]);
 
   // Auto-scroll to current level on mount and when level changes
   useEffect(() => {
@@ -108,11 +122,7 @@ export default function WorldMapScreen() {
   }, [worldId, currentLevel, router]);
 
   // Get level title for bottom bar
-  const currentLevelTitle = useMemo(() => {
-    const id = `w${worldId}-l${currentLevel}`;
-    const level = getLevelById(id);
-    return level?.title ?? `Level ${currentLevel}`;
-  }, [worldId, currentLevel]);
+  const currentLevelTitle = levelTitles[currentLevel] ?? `Level ${currentLevel}`;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
@@ -237,6 +247,7 @@ export default function WorldMapScreen() {
           stars={getLevelStars(worldId, popup, levelProgress)}
           completedUpTo={completedUpTo}
           colors={colors}
+          title={levelTitles[popup] ?? `Level ${popup}`}
           onClose={() => setPopup(null)}
           onPlay={() => { setPopup(null); router.push(`/game/w${worldId}-l${popup}`); }}
         />
@@ -320,13 +331,11 @@ const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldI
 });
 
 /* ── POPUP ── */
-function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, colors, onClose, onPlay }: {
+function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, colors, title, onClose, onPlay }: {
   worldId: number; levelNum: number; worldColor: string; stars: number; completedUpTo: number;
-  colors: Record<string, string>; onClose: () => void; onPlay: () => void;
+  colors: Record<string, string>; title: string; onClose: () => void; onPlay: () => void;
 }) {
   const isCompleted = levelNum <= completedUpTo;
-  const level = getLevelById(`w${worldId}-l${levelNum}`);
-  const title = level?.title ?? `Level ${levelNum}`;
   const starsNeeded = 3 - stars;
   const label = stars === 3 ? 'Perfect score!' : stars === 2 ? 'Great job!' : stars === 1 ? 'Passed' : '';
 

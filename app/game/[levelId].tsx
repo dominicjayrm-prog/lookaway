@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -10,11 +10,12 @@ import { QuestionCard } from '@/src/components/QuestionCard';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
-import { getLevelById } from '@/src/data/levels';
+import { fetchLevelById } from '@/src/data/levels';
 import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+import type { Level } from '@/src/types/game';
 
 export default function GameScreen() {
   const { levelId } = useLocalSearchParams<{ levelId: string }>();
@@ -22,7 +23,22 @@ export default function GameScreen() {
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, loseLife, recordLevelComplete, score } = useGameStore();
-  const level = getLevelById(levelId ?? '');
+
+  const [level, setLevel] = useState<Level | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch level from Supabase (async), fall back to hardcoded
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchLevelById(levelId ?? '').then((result) => {
+      if (!cancelled) {
+        setLevel(result ?? null);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [levelId]);
 
   useEffect(() => { if (level) resetGame(); }, [level]);
 
@@ -69,6 +85,10 @@ export default function GameScreen() {
     }
     if (gameState === 'FAILED') { loseLife(); router.replace('/game/result'); }
   }, [gameState]);
+
+  if (loading) {
+    return (<SafeAreaView style={styles.container}><ActivityIndicator size="large" color={colors.accent} /></SafeAreaView>);
+  }
 
   if (!level) {
     return (<SafeAreaView style={styles.container}><Text style={styles.errorText}>Level not found</Text><Button title="Go back" onPress={() => router.back()} /></SafeAreaView>);
