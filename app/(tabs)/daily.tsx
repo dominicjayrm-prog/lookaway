@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -84,13 +84,12 @@ export default function DailyTab() {
         </View>
 
         {/* Start button with scene count */}
-        <TouchableOpacity
-          style={[styles.startButton, { backgroundColor: colors.accent }]}
-          activeOpacity={0.85}
+        <Pressable
+          style={({ pressed }) => [styles.startButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
           onPress={() => router.push(MODE_ROUTES[todayMode] as any)}
         >
-          <Text style={styles.startButtonText}>Start {modeInfo.name} \u2014 {MODE_SCENE_TEXT[todayMode]}</Text>
-        </TouchableOpacity>
+          <Text style={styles.startButtonText}>Start {modeInfo.name} — {MODE_SCENE_TEXT[todayMode]}</Text>
+        </Pressable>
 
         {/* This week */}
         <View style={styles.weekSection}>
