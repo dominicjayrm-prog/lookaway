@@ -1,6 +1,7 @@
 'use client';
 import React, { useRef, useState, useCallback } from 'react';
 import type { SceneObject } from '@/lib/types';
+import { getObjectById } from '@/data/objectLibrary';
 
 const COLORS = ['#FF6B6B','#0984E3','#00B894','#F9CA24','#6C5CE7','#E17055','#FD79A8','#00CEC9','#55EFC4','#FF7675','#2D3436','#A0522D'];
 
@@ -14,18 +15,13 @@ interface Props {
   showGrid?: boolean;
 }
 
-function renderShape(type: string, color: string, size: number) {
+function renderShape(type: string, color: string, size: number, label?: string) {
   const px = size * 5;
-  switch (type) {
-    case 'circle': return <div style={{ width: px, height: px, borderRadius: '50%', backgroundColor: color }} />;
-    case 'square': return <div style={{ width: px, height: px, borderRadius: 4, backgroundColor: color }} />;
-    case 'triangle': return <svg width={px} height={px} viewBox="0 0 100 100"><polygon points="50,5 95,95 5,95" fill={color} /></svg>;
-    case 'star': return <svg width={px} height={px} viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={color} /></svg>;
-    case 'diamond': return <div style={{ width: px*0.7, height: px*0.7, backgroundColor: color, borderRadius: 3, transform: 'rotate(45deg)' }} />;
-    case 'hexagon': return <svg width={px} height={px} viewBox="0 0 100 100"><polygon points="50,2 93,25 93,75 50,98 7,75 7,25" fill={color} /></svg>;
-    case 'heart': return <svg width={px} height={px} viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill={color} /></svg>;
-    default: return <svg width={px} height={px} viewBox="0 0 100 100"><path d={type.startsWith('M') ? type : ''} fill={color} /><circle cx="50" cy="50" r="45" fill={color} /></svg>;
-  }
+  // Try library first
+  const libItem = getObjectById(type);
+  if (libItem) return libItem.render(color, px);
+  // Fallback for unknown types
+  return <div style={{ width: px, height: px, borderRadius: '50%', backgroundColor: color }} />;
 }
 
 export default function InteractiveCanvas({ objects, onObjectsChange, selectedId, onSelectObject, width = 500, height = 500, showGrid = false }: Props) {
@@ -86,12 +82,11 @@ export default function InteractiveCanvas({ objects, onObjectsChange, selectedId
         style={{ position: 'relative', width, height, backgroundColor: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden', cursor: dragging ? 'grabbing' : 'default', userSelect: 'none' }}>
         {showGrid && [25,50,75].map(p => (<React.Fragment key={p}><div style={{ position:'absolute', left:`${p}%`, top:0, width:1, height:'100%', backgroundColor:'rgba(0,0,0,0.06)' }} /><div style={{ position:'absolute', top:`${p}%`, left:0, height:1, width:'100%', backgroundColor:'rgba(0,0,0,0.06)' }} /></React.Fragment>))}
         {objects.map(obj => {
-          const px = obj.size * (width / 100);
           const isSelected = obj.id === selectedId;
           return (
             <div key={obj.id} onMouseDown={(e) => handleMouseDown(e, obj)}
               style={{ position: 'absolute', left: `${obj.x}%`, top: `${obj.y}%`, transform: 'translate(-50%, -50%)', cursor: 'grab', zIndex: obj.zIndex ?? 0, outline: isSelected ? '2px dashed #3B82F6' : 'none', outlineOffset: 4, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {renderShape(obj.type, obj.color, obj.size / 5)}
+              {renderShape(obj.type, obj.color, obj.size / 5, obj.label)}
             </div>
           );
         })}

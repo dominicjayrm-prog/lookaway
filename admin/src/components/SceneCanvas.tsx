@@ -1,22 +1,15 @@
 'use client';
 import React from 'react';
 import type { SceneObject } from '@/lib/types';
+import { getObjectById } from '@/data/objectLibrary';
 
 interface SceneCanvasProps { objects: SceneObject[]; width?: number; height?: number; showGrid?: boolean; }
 
 function Shape({ obj, px }: { obj: SceneObject; px: number }) {
-  const s = { width: px, height: px, display: 'flex', alignItems: 'center' as const, justifyContent: 'center' as const };
-  switch (obj.type) {
-    case 'circle': return <div style={{ ...s, borderRadius: '50%', backgroundColor: obj.color }} />;
-    case 'square': return <div style={{ ...s, borderRadius: 4, backgroundColor: obj.color }} />;
-    case 'triangle': return <div style={{ width: 0, height: 0, borderLeft: `${px/2}px solid transparent`, borderRight: `${px/2}px solid transparent`, borderBottom: `${px}px solid ${obj.color}` }} />;
-    case 'star': return <div style={{ ...s, fontSize: px * 0.85, lineHeight: 1, color: obj.color }}>&#9733;</div>;
-    case 'diamond': return <div style={{ width: px*0.7, height: px*0.7, backgroundColor: obj.color, borderRadius: 3, transform: 'rotate(45deg)' }} />;
-    case 'hexagon': return <div style={{ ...s, backgroundColor: obj.color, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />;
-    case 'heart': return <div style={{ ...s, fontSize: px * 0.85, lineHeight: 1, color: obj.color }}>&#9829;</div>;
-    case 'number': case 'letter': return <div style={{ ...s, fontSize: px*0.55, fontWeight: 700, color: obj.color }}>{obj.label ?? '?'}</div>;
-    default: return null;
-  }
+  const libItem = getObjectById(obj.type);
+  if (libItem) return libItem.render(obj.color, px);
+  // Fallback
+  return <div style={{ width: px, height: px, borderRadius: '50%', backgroundColor: obj.color }} />;
 }
 
 export default function SceneCanvas({ objects, width = 400, height = 400, showGrid = false }: SceneCanvasProps) {

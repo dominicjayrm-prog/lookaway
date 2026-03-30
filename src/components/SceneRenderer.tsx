@@ -5,11 +5,26 @@ import Svg, { Path } from 'react-native-svg';
 import { Card } from './Card';
 import { borderRadius } from '@/src/theme/spacing';
 import type { SceneObject, ShapeType } from '@/src/types/game';
+import { getGameObjectById } from '@/src/data/objectLibrary';
 
 interface SceneRendererProps { objects: SceneObject[]; visible: boolean; }
 
 const SHAPE_COLORS: Record<string, string> = { red:'#FF6B6B', blue:'#0984E3', green:'#00B894', yellow:'#FDCB6E', purple:'#6C5CE7', orange:'#E17055', pink:'#FD79A8', teal:'#00CEC9', brown:'#8B6914', grey:'#636E72', gray:'#636E72', black:'#1A1A18', white:'#FFFFFF' };
 function resolveColor(color: string): string { return SHAPE_COLORS[color.toLowerCase()] ?? color; }
+
+/** Resolve the object type to a renderable shape type using the library */
+function resolveShapeType(type: string): ShapeType {
+  const libItem = getGameObjectById(type);
+  if (libItem) return libItem.shapeType as ShapeType;
+  return type as ShapeType;
+}
+
+/** Resolve the label for number/letter objects using the library */
+function resolveLabel(type: string, label?: string): string | undefined {
+  if (label) return label;
+  const libItem = getGameObjectById(type);
+  return libItem?.label;
+}
 
 const ShapeComponent = React.memo(function ShapeComponent({ object, index }: { object: SceneObject; index: number }) {
   const opacity = useSharedValue(0);
@@ -17,9 +32,11 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index }: { o
   const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const resolved = resolveColor(object.color);
   const sizePx = object.size * 1.2;
+  const shapeType = resolveShapeType(object.type);
+  const label = resolveLabel(object.type, object.label);
   return (
     <Animated.View style={[styles.objectWrapper, { left: `${object.x}%`, top: `${object.y}%`, zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
-      <ShapeRenderer type={object.type} color={resolved} size={sizePx} label={object.label} />
+      <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} />
     </Animated.View>
   );
 });
