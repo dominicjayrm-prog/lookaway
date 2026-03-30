@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { TabTransition } from '@/src/components/TabTransition';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { useGameStore } from '@/src/store';
@@ -32,6 +33,7 @@ export default function DailyTab() {
   const todayFormatted = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
+    <TabTransition>
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
@@ -91,6 +93,7 @@ export default function DailyTab() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </TabTransition>
   );
 }
 

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { TabTransition } from '@/src/components/TabTransition';
 import { POWER_UP_COSTS, LIVES_CONFIG, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
 
 const POWER_UPS: { id: PowerUpId; icon: string; name: string; description: string; tint: string; tintMid: string; tintStrong: string }[] = [
@@ -39,6 +40,7 @@ export default function ShopTab() {
   };
 
   return (
+    <TabTransition>
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Shop</Text>
@@ -143,6 +145,7 @@ export default function ShopTab() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </TabTransition>
   );
 }
 

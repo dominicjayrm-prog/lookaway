@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '@/src/components/ProgressBar';
+import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing, shadows } from '@/src/theme/spacing';
@@ -24,6 +25,7 @@ export default function JourneyTab() {
   const router = useRouter();
   const { colors } = useTheme();
   return (
+    <TabTransition>
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Journey</Text>
@@ -68,6 +70,7 @@ export default function JourneyTab() {
         })}
       </ScrollView>
     </SafeAreaView>
+    </TabTransition>
   );
 }
 
