@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '@/src/providers/AuthProvider';
+import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -9,6 +9,15 @@ import { useGameStore } from '@/src/store';
 function LifeRegenChecker() {
   const checkLifeRegen = useGameStore((s) => s.checkLifeRegen);
   useEffect(() => { checkLifeRegen(); const id = setInterval(checkLifeRegen, 60000); return () => clearInterval(id); }, [checkLifeRegen]);
+  return null;
+}
+
+function CloudSyncLoader() {
+  const loadFromCloud = useGameStore((s) => s.loadFromCloud);
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user?.id) { loadFromCloud(user.id); }
+  }, [user?.id, loadFromCloud]);
   return null;
 }
 
@@ -40,6 +49,7 @@ export default function RootLayout() {
       <AuthProvider>
         <MobileContainer>
           <LifeRegenChecker />
+          <CloudSyncLoader />
           <ThemedStack />
         </MobileContainer>
       </AuthProvider>

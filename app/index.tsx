@@ -26,15 +26,17 @@ export default function Index() {
     );
   }
 
-  // Show onboarding on first launch
-  if (!onboarded) {
-    return <Redirect href="/onboarding" />;
-  }
-
+  // Already logged in — go straight to app
   if (session) {
     return <Redirect href="/(tabs)" />;
   }
 
+  // New user who hasn't seen onboarding — show it
+  if (!onboarded) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  // Seen onboarding but not logged in — go to login
   return <Redirect href="/(auth)/login" />;
 }
 

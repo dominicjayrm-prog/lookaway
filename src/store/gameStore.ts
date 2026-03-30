@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Level, GameState } from '@/src/types/game';
 import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
+import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
 import { supabase } from '@/src/lib/supabase';
 
 /** Get current user ID for economy logging */
@@ -53,6 +54,15 @@ function saveState(state: GameStore) {
       powerUps: state.powerUps,
     }));
   } catch {}
+
+  // Also sync to Supabase (debounced, fire and forget)
+  clearTimeout((saveState as any)._syncTimer);
+  (saveState as any)._syncTimer = setTimeout(() => {
+    const uid = getUserId();
+    if (uid && !uid.startsWith('anon-')) {
+      saveProgressToSupabase(uid, state).catch(() => {});
+    }
+  }, 2000);
 }
 
 export interface GameStore {
@@ -82,6 +92,10 @@ export interface GameStore {
 
   // Level completion with economy
   recordLevelComplete: (id: string, stars: number, pct: number) => number; // returns gems earned
+
+  // Cloud sync
+  syncToCloud: () => void;
+  loadFromCloud: (userId: string) => Promise<void>;
 
   // Helpers
   getNextUnplayedLevelId: () => string;
@@ -228,6 +242,30 @@ export const useGameStore = create<GameStore>((set, get) => {
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
+
+    // Cloud sync
+    syncToCloud: () => {
+      const uid = getUserId();
+      if (uid && !uid.startsWith('anon-')) {
+        saveProgressToSupabase(uid, get()).catch(() => {});
+      }
+    },
+    loadFromCloud: async (userId: string) => {
+      const cloud = await loadProgressFromSupabase(userId);
+      if (cloud) {
+        set({
+          gems: cloud.gems,
+          lives: cloud.lives,
+          livesLastLostAt: cloud.livesLastLostAt,
+          streakCount: cloud.streakCount,
+          totalStars: cloud.totalStars,
+          highestWorld: cloud.highestWorld,
+          levelProgress: cloud.levelProgress,
+          completedScores: cloud.completedScores,
+        });
+        setTimeout(() => saveState(get()), 0);
+      }
+    },
     startLevel: (level) => set({ currentLevel: level, gameState: 'MEMORISE' as GameState, currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
     setGameState: (gameState) => set({ gameState }),
     selectOption: (index) => set({ selectedOption: index }),
