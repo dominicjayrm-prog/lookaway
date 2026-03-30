@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated as RNAnimated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -239,9 +239,9 @@ function Page4({ colors, onFinish }: { colors: any; onFinish: () => void }) {
       </AnimatedItem>
       {ready && (
         <AnimatedItem delay={0}>
-          <TouchableOpacity onPress={onFinish} activeOpacity={0.85} style={[styles.ctaButton, { backgroundColor: colors.accent }]}>
+          <Pressable onPress={onFinish} style={[styles.ctaButton, { backgroundColor: colors.accent }]}>
             <Text style={styles.ctaButtonText}>Start playing</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={{ fontSize: 12, color: colors.textLight, marginTop: 8, textAlign: 'center' }}>Free to play. No account needed.</Text>
         </AnimatedItem>
       )}
@@ -291,9 +291,9 @@ export default function OnboardingScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Skip */}
       {page < 3 && (
-        <TouchableOpacity onPress={() => goToPage(3)} style={styles.skipButton} activeOpacity={0.7}>
+        <Pressable onPress={() => goToPage(3)} style={styles.skipButton}>
           <Text style={[styles.skipText, { color: colors.textLight }]}>Skip</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {/* Content — animated wrapper */}
@@ -310,13 +310,13 @@ export default function OnboardingScreen() {
         {page < 3 && (
           <View style={styles.navButtons}>
             {page > 0 && (
-              <TouchableOpacity onPress={prev} disabled={transitioning} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]} activeOpacity={0.8}>
+              <Pressable onPress={prev} disabled={transitioning} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.backButtonText, { color: colors.textMid }]}>Back</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
-            <TouchableOpacity onPress={next} disabled={transitioning} style={[styles.nextButton, { backgroundColor: colors.accent, flex: page > 0 ? 2 : 1 }]} activeOpacity={0.85}>
+            <Pressable onPress={next} disabled={transitioning} style={[styles.nextButton, { backgroundColor: colors.accent, flex: page > 0 ? 2 : 1 }]}>
               <Text style={styles.nextButtonText}>Next</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
       </View>

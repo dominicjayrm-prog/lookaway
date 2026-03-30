@@ -85,7 +85,7 @@ export default function DailyTab() {
 
         {/* Start button with scene count */}
         <Pressable
-          style={({ pressed }) => [styles.startButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
+          style={[styles.startButton, { backgroundColor: colors.accent }]}
           onPress={() => router.push(MODE_ROUTES[todayMode] as any)}
         >
           <Text style={styles.startButtonText}>Start {modeInfo.name} — {MODE_SCENE_TEXT[todayMode]}</Text>

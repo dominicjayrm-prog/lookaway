@@ -85,7 +85,7 @@ export default function AuthScreen() {
             your account, then come back and sign in.
           </Text>
           <Pressable
-            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
+            style={[styles.primaryButton, { backgroundColor: colors.accent }]}
             onPress={() => {
               setMode('login');
               setSignUpSuccess(false);
@@ -102,7 +102,7 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
         <ScrollView
@@ -183,7 +183,7 @@ export default function AuthScreen() {
             )}
 
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled, pressed && { opacity: 0.85 }]}
+              style={[styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -203,7 +203,7 @@ export default function AuthScreen() {
                 ? "Don't have an account?"
                 : 'Already have an account?'}
             </Text>
-            <Pressable onPress={toggleMode} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+            <Pressable onPress={toggleMode} style={{ padding: 4 }}>
               <Text style={[styles.toggleLink, { color: colors.accent }]}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>
