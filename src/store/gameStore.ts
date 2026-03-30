@@ -1,8 +1,16 @@
 import { create } from 'zustand';
 import type { Level, GameState } from '@/src/types/game';
+import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, type PowerUpId } from '@/src/utils/scoring';
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
 function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
+
+export interface PowerUpInventory {
+  slowTime: number;
+  peek: number;
+  fiftyFifty: number;
+  skip: number;
+}
 
 // Manual localStorage persistence
 function loadState(): Partial<GameStore> {
@@ -19,36 +27,73 @@ function saveState(state: GameStore) {
     if (typeof window === 'undefined') return;
     localStorage.setItem('lookaway-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
-      streakCount: state.streakCount, totalStars: state.totalStars, highestWorld: state.highestWorld,
+      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed,
+      totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
+      powerUps: state.powerUps,
     }));
   } catch {}
 }
 
 export interface GameStore {
-  gems: number; lives: number; maxLives: number; livesLastLostAt: number | null; streakCount: number; totalStars: number; highestWorld: number;
-  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>; completedScores: number[];
-  currentLevel: Level | null; gameState: GameState; currentSceneIndex: number; currentQuestionIndex: number; answers: Answer[]; selectedOption: number | null; revealedCorrect: number | null; score: number;
-  addGems: (a: number) => void; spendGems: (a: number) => boolean; loseLife: () => void; refillLives: () => void; addStars: (c: number) => void; incrementStreak: () => void; resetStreak: () => void; checkLifeRegen: () => void;
-  recordLevelComplete: (id: string, stars: number, pct: number) => void; getNextUnplayedLevelId: () => string; getMemoryScore: () => number; getCompletedLevelCount: () => number;
-  startLevel: (l: Level) => void; setGameState: (s: GameState) => void; selectOption: (i: number | null) => void; revealAnswer: () => void; nextQuestion: () => void; nextScene: () => void; completeLevel: () => void; resetGame: () => void;
+  gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
+  streakCount: number; streakMilestonesClaimed: number[];
+  totalStars: number; highestWorld: number;
+  powerUps: PowerUpInventory;
+  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
+  completedScores: number[];
+  currentLevel: Level | null; gameState: GameState; currentSceneIndex: number; currentQuestionIndex: number;
+  answers: Answer[]; selectedOption: number | null; revealedCorrect: number | null; score: number;
   _hydrated: boolean;
+
+  // Economy
+  addGems: (a: number) => void;
+  spendGems: (a: number) => boolean;
+  loseLife: () => void;
+  refillLives: () => void;
+  refillLivesWithGems: () => boolean;
+  addStars: (c: number) => void;
+  incrementStreak: () => void;
+  resetStreak: () => void;
+  checkLifeRegen: () => void;
+  buyPowerUp: (id: PowerUpId, qty?: number) => boolean;
+  usePowerUp: (id: PowerUpId) => boolean;
+  getPowerUpCount: (id: PowerUpId) => number;
+
+  // Level completion with economy
+  recordLevelComplete: (id: string, stars: number, pct: number) => number; // returns gems earned
+
+  // Helpers
+  getNextUnplayedLevelId: () => string;
+  getMemoryScore: () => number;
+  getCompletedLevelCount: () => number;
+
+  // Gameplay
+  startLevel: (l: Level) => void;
+  setGameState: (s: GameState) => void;
+  selectOption: (i: number | null) => void;
+  revealAnswer: () => void;
+  nextQuestion: () => void;
+  nextScene: () => void;
+  completeLevel: () => void;
+  resetGame: () => void;
 }
 
-export const LIFE_REGEN_MS = 30 * 60 * 1000;
+export const LIFE_REGEN_MS = LIVES_CONFIG.regenTimeMinutes * 60 * 1000;
 
 export const useGameStore = create<GameStore>((set, get) => {
-  // Load saved state
   const saved = loadState();
 
   return {
-    gems: (saved as any).gems ?? 100,
-    lives: (saved as any).lives ?? 5,
-    maxLives: (saved as any).maxLives ?? 5,
+    gems: (saved as any).gems ?? INITIAL_GEMS,
+    lives: (saved as any).lives ?? LIVES_CONFIG.maxLives,
+    maxLives: (saved as any).maxLives ?? LIVES_CONFIG.maxLives,
     livesLastLostAt: (saved as any).livesLastLostAt ?? null,
     streakCount: (saved as any).streakCount ?? 0,
+    streakMilestonesClaimed: (saved as any).streakMilestonesClaimed ?? [],
     totalStars: (saved as any).totalStars ?? 0,
     highestWorld: (saved as any).highestWorld ?? 1,
+    powerUps: (saved as any).powerUps ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
     levelProgress: (saved as any).levelProgress ?? {},
     completedScores: (saved as any).completedScores ?? [],
     currentLevel: null,
@@ -63,13 +108,83 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     addGems: (amount) => { set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
-    loseLife: () => { set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: Date.now() })); setTimeout(() => saveState(get()), 0); },
+    loseLife: () => { set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() })); setTimeout(() => saveState(get()), 0); },
     refillLives: () => { set((s) => ({ lives: s.maxLives, livesLastLostAt: null })); setTimeout(() => saveState(get()), 0); },
+    refillLivesWithGems: () => {
+      const { gems } = get();
+      if (gems < LIVES_CONFIG.gemRefillCost) return false;
+      set((s) => ({ gems: s.gems - LIVES_CONFIG.gemRefillCost, lives: s.maxLives, livesLastLostAt: null }));
+      setTimeout(() => saveState(get()), 0);
+      return true;
+    },
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
     incrementStreak: () => { set((s) => ({ streakCount: s.streakCount + 1 })); setTimeout(() => saveState(get()), 0); },
     resetStreak: () => { set({ streakCount: 0 }); setTimeout(() => saveState(get()), 0); },
-    checkLifeRegen: () => { const { lives, maxLives, livesLastLostAt } = get(); if (lives >= maxLives || !livesLastLostAt) return; const elapsed = Date.now() - livesLastLostAt; const regen = Math.floor(elapsed / LIFE_REGEN_MS); if (regen > 0) { const nl = Math.min(maxLives, lives + regen); set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) }); setTimeout(() => saveState(get()), 0); } },
-    recordLevelComplete: (levelId, stars, scorePercent) => { set((s) => { const e = s.levelProgress[levelId]; return { levelProgress: { ...s.levelProgress, [levelId]: { stars: e ? Math.max(e.stars, stars) : stars, bestScore: e ? Math.max(e.bestScore, scorePercent) : scorePercent, attempts: e ? e.attempts + 1 : 1 } }, completedScores: [...s.completedScores, scorePercent] }; }); setTimeout(() => saveState(get()), 0); },
+    checkLifeRegen: () => {
+      const { lives, maxLives, livesLastLostAt } = get();
+      if (lives >= maxLives || !livesLastLostAt) return;
+      const elapsed = Date.now() - livesLastLostAt;
+      const regen = Math.floor(elapsed / LIFE_REGEN_MS);
+      if (regen > 0) {
+        const nl = Math.min(maxLives, lives + regen);
+        set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) });
+        setTimeout(() => saveState(get()), 0);
+      }
+    },
+
+    // Power-up inventory
+    buyPowerUp: (id, qty = 1) => {
+      const { POWER_UP_COSTS, bundlePrice } = require('@/src/utils/scoring');
+      const cost = bundlePrice(POWER_UP_COSTS[id], qty);
+      const { gems } = get();
+      if (gems < cost) return false;
+      set((s) => ({
+        gems: s.gems - cost,
+        powerUps: { ...s.powerUps, [id]: s.powerUps[id] + qty },
+      }));
+      setTimeout(() => saveState(get()), 0);
+      return true;
+    },
+    usePowerUp: (id) => {
+      const { powerUps } = get();
+      if (powerUps[id] <= 0) return false;
+      set((s) => ({
+        powerUps: { ...s.powerUps, [id]: s.powerUps[id] - 1 },
+      }));
+      setTimeout(() => saveState(get()), 0);
+      return true;
+    },
+    getPowerUpCount: (id) => get().powerUps[id],
+
+    // Level completion with replay economy
+    recordLevelComplete: (levelId, stars, scorePercent) => {
+      const existing = get().levelProgress[levelId];
+      let gemsEarned = 0;
+
+      if (existing) {
+        // Replay: only earn difference if improved
+        gemsEarned = calculateReplayReward(existing.stars, stars);
+      } else {
+        // First completion
+        gemsEarned = GEM_REWARDS[stars as 0 | 1 | 2 | 3] ?? 0;
+      }
+
+      set((s) => ({
+        gems: s.gems + gemsEarned,
+        levelProgress: {
+          ...s.levelProgress,
+          [levelId]: {
+            stars: existing ? Math.max(existing.stars, stars) : stars,
+            bestScore: existing ? Math.max(existing.bestScore, scorePercent) : scorePercent,
+            attempts: existing ? existing.attempts + 1 : 1,
+          },
+        },
+        completedScores: [...s.completedScores, scorePercent],
+      }));
+      setTimeout(() => saveState(get()), 0);
+      return gemsEarned;
+    },
+
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
