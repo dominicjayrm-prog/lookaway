@@ -305,7 +305,7 @@ const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldI
       });
     }
     return result;
-  }, [worldId, mapHeight]);
+  }, [worldId, mapHeight, mapWidth]);
 
   return (
     <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
@@ -332,7 +332,8 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.popupBackdrop} onPress={onClose}>
+      <View style={styles.popupBackdrop}>
+        <Pressable style={styles.popupBackdropTouchable} onPress={onClose} />
         <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={[styles.popupCircle, { backgroundColor: worldColor }]}>
             <Text style={styles.popupCircleNum}>{levelNum}</Text>
@@ -359,7 +360,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
             </Pressable>
           </View>
         </View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   // Header
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10, zIndex: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  backButton: { padding: 8 },
+  backButton: { padding: 12, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: 8 },
   headerTitle: { fontSize: 17, fontWeight: '800' },
   headerSubtitle: { fontSize: 11, fontWeight: '700', marginTop: 1 },
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   // Scroll
   scrollArea: { flex: 1 },
   // Nodes
-  nodeWrapper: { position: 'absolute', alignItems: 'center' },
+  nodeWrapper: { position: 'absolute', alignItems: 'center', minWidth: 48, minHeight: 48 },
   nodeCircle: { alignItems: 'center', justifyContent: 'center' },
   completedNum: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
   lockedNum: { fontSize: 14, fontWeight: '700', color: '#B2BEC3' },
@@ -399,6 +400,7 @@ const styles = StyleSheet.create({
   playButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   // Popup
   popupBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
+  popupBackdropTouchable: { ...StyleSheet.absoluteFillObject },
   popupCard: { width: '100%', maxWidth: 300, borderRadius: 20, padding: 24, alignItems: 'center' },
   popupCircle: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   popupCircleNum: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
