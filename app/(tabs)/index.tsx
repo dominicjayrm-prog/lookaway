@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,17 +79,16 @@ export default function PlayTab() {
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </View>
-            <TouchableOpacity
+            <Pressable
               style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
-              activeOpacity={0.8}
-              onPress={() => router.push('/profile')}
+                           onPress={() => router.push('/profile')}
             >
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
               ) : (
                 <Text style={styles.profileInitials}>{initials}</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -118,13 +117,13 @@ export default function PlayTab() {
           </View>
 
           {/* Play button */}
-          <TouchableOpacity style={styles.heroPlayButton} activeOpacity={0.85} onPress={() => router.push(`/game/${nextLevelId}`)}>
+          <Pressable style={styles.heroPlayButton} onPress={() => router.push(`/game/${nextLevelId}`)}>
             <Text style={styles.heroPlayText}>Play</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Daily challenge card */}
-        <TouchableOpacity style={[styles.dailyCard, { backgroundColor: colors.card }]} activeOpacity={0.92} onPress={() => router.push('/game/daily')}>
+        <Pressable style={[styles.dailyCard, { backgroundColor: colors.card }]} onPress={() => router.push('/game/daily')}>
           <View style={[styles.dailyIconBg, { backgroundColor: colors.wrongSoft }]}>
             <CalendarIcon size={22} color={colors.wrong} />
           </View>
@@ -136,7 +135,7 @@ export default function PlayTab() {
             <Text style={[styles.dailySub, { color: colors.textMid }]}>5 scenes, 25 questions. Same for everyone.</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-        </TouchableOpacity>
+        </Pressable>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
@@ -169,9 +168,9 @@ export default function PlayTab() {
         <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
           <View style={styles.journeyHeader}>
             <Text style={[styles.journeyTitle, { color: colors.text }]}>Your Journey</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/journey')}>
+            <Pressable onPress={() => router.push('/(tabs)/journey')}>
               <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>See all {'>'}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <View style={styles.journeyPills}>
             {WORLD_NAMES.map((name, i) => {
