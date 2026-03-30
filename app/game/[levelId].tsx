@@ -11,7 +11,7 @@ import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
 import { fetchLevelById } from '@/src/data/levels';
-import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
+import { getStarsForScore } from '@/src/utils/scoring';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -22,7 +22,7 @@ export default function GameScreen() {
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, loseLife, recordLevelComplete, score } = useGameStore();
+  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, score } = useGameStore();
 
   const [level, setLevel] = useState<Level | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,15 +75,10 @@ export default function GameScreen() {
   const handleNextScene = useCallback(() => { nextScene(); }, [nextScene]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE' && level) {
-      const stars = getStarsForScore(score, level);
-      addGems(GEM_REWARDS[stars]);
-      addStars(stars);
-      recordLevelComplete(level.id, stars, score);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (gameState === 'COMPLETE' || gameState === 'FAILED') {
+      Haptics.notificationAsync(gameState === 'COMPLETE' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
       router.replace('/game/result');
     }
-    if (gameState === 'FAILED') { loseLife(); router.replace('/game/result'); }
   }, [gameState]);
 
   if (loading) {
