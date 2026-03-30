@@ -28,11 +28,11 @@ function randomCorrectIndex(): 0|1|2|3 { return Math.floor(Math.random() * 4) as
 function autoGenerateQuestions(objects: SceneObject[]): Question[] {
   if (!objects || objects.length === 0) return [];
   const questions: Question[] = [];
-
-  // 1. Count question
   const colorCounts: Record<string, number> = {};
   objects.forEach(o => { colorCounts[o.color] = (colorCounts[o.color] || 0) + 1; });
   const colors = Object.keys(colorCounts);
+
+  // 1. Count question
   if (colors.length > 0) {
     const targetColor = colors[Math.floor(Math.random() * colors.length)];
     const correct = colorCounts[targetColor];
@@ -120,6 +120,8 @@ function BuilderInner() {
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['Basic Shapes']));
   const [error, setError] = useState<string|null>(null);
   const [success, setSuccess] = useState<string|null>(null);
+  const [showLibrary, setShowLibrary] = useState(true);
+  const [showQuestions, setShowQuestions] = useState(true);
 
   const filteredLib = useMemo(() => {
     if (!search) return objectLibrary;
@@ -187,140 +189,194 @@ function BuilderInner() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left: Object Library */}
-      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto p-3 flex-shrink-0">
-        <h3 className="text-sm font-bold text-slate-900 mb-2">Object Library</h3>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search objects..." className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm mb-3" />
-        <div className="flex gap-1 flex-wrap mb-3">{PALETTE.map(c=>(<button key={c} onClick={()=>setActiveColor(c)} style={{width:20,height:20,borderRadius:'50%',backgroundColor:c,border:activeColor===c?'2px solid #1A1A18':'1px solid #ddd',cursor:'pointer'}} />))}</div>
-        {objectCategories.map(cat=>{
-          const items=filteredLib.filter(o=>o.category===cat.name);
-          if(items.length===0)return null;
-          const isOpen=expandedCats.has(cat.name);
-          return(<div key={cat.id} className="mb-3">
-            <button onClick={()=>setExpandedCats(prev=>{const n=new Set(prev);n.has(cat.name)?n.delete(cat.name):n.add(cat.name);return n;})} className="w-full flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider py-1.5 hover:text-slate-700">
-              <span>{cat.name} ({items.length})</span><span className="text-[10px]">{isOpen?'\u25B2':'\u25BC'}</span>
-            </button>
-            {isOpen&&<div className="grid grid-cols-4 gap-1.5 mt-1">{items.map(obj=>(<button key={obj.id} onClick={()=>setActiveTool(activeTool===obj.id?null:obj.id)} title={obj.name} className={`w-12 h-12 rounded-lg flex items-center justify-center border transition-all ${activeTool===obj.id?'border-purple-500 bg-purple-50 ring-2 ring-purple-300 scale-105':'border-gray-100 hover:bg-gray-50 hover:border-gray-200'}`}>
-              <LibraryThumbnail item={obj} size={28} color={activeColor} />
-            </button>))}</div>}
-          </div>);
-        })}
-        {activeTool&&<div className="mt-3 p-2 bg-purple-50 rounded-lg"><p className="text-xs text-purple-700 font-medium">Click canvas to place:</p><p className="text-xs text-purple-600">{objectLibrary.find(o=>o.id===activeTool)?.name}</p></div>}
-      </div>
+      {/* Left: Object Library (collapsible) */}
+      {showLibrary && (
+        <div className="w-60 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Objects</h3>
+            <button onClick={()=>setShowLibrary(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none" title="Hide library">&times;</button>
+          </div>
+          <div className="p-3 flex-1 overflow-y-auto">
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." className="w-full rounded-lg border border-gray-200 px-2.5 py-1 text-xs mb-2.5" />
+            <div className="flex gap-1 flex-wrap mb-2.5">{PALETTE.map(c=>(<button key={c} onClick={()=>setActiveColor(c)} style={{width:18,height:18,borderRadius:'50%',backgroundColor:c,border:activeColor===c?'2px solid #1A1A18':'1px solid #ddd',cursor:'pointer'}} />))}</div>
+            {objectCategories.map(cat=>{
+              const items=filteredLib.filter(o=>o.category===cat.name);
+              if(items.length===0)return null;
+              const isOpen=expandedCats.has(cat.name);
+              return(<div key={cat.id} className="mb-2">
+                <button onClick={()=>setExpandedCats(prev=>{const n=new Set(prev);n.has(cat.name)?n.delete(cat.name):n.add(cat.name);return n;})} className="w-full flex justify-between items-center text-[10px] font-semibold text-slate-500 uppercase tracking-wider py-1 hover:text-slate-700">
+                  <span>{cat.name} ({items.length})</span><span className="text-[9px]">{isOpen?'\u25B2':'\u25BC'}</span>
+                </button>
+                {isOpen&&<div className="grid grid-cols-4 gap-1 mt-1">{items.map(obj=>(<button key={obj.id} onClick={()=>setActiveTool(activeTool===obj.id?null:obj.id)} title={obj.name} className={`w-11 h-11 rounded-lg flex items-center justify-center border transition-all ${activeTool===obj.id?'border-purple-500 bg-purple-50 ring-2 ring-purple-300 scale-105':'border-gray-100 hover:bg-gray-50 hover:border-gray-200'}`}>
+                  <LibraryThumbnail item={obj} size={26} color={activeColor} />
+                </button>))}</div>}
+              </div>);
+            })}
+          </div>
+          {activeTool&&<div className="p-2.5 bg-purple-50 border-t border-purple-100"><p className="text-[10px] text-purple-700 font-medium">Placing: {objectLibrary.find(o=>o.id===activeTool)?.name}</p><button onClick={()=>setActiveTool(null)} className="text-[10px] text-purple-500 hover:text-purple-700 mt-0.5">Cancel</button></div>}
+        </div>
+      )}
 
       {/* Center: Canvas + Controls */}
-      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-slate-900">Challenge Builder</h1>
-            <div className="flex items-end gap-3">
-              <div><label className="text-xs text-slate-500">Date</label><input type="date" value={date} onChange={e=>onDateChange(e.target.value)} className="block rounded border border-gray-300 px-2 py-1 text-sm" /></div>
-              <div><label className="text-xs text-slate-500">Mode</label><select value={mode} onChange={e=>setMode(e.target.value as Mode)} className="block rounded border border-gray-300 px-2 py-1 text-sm">{Object.entries(ML).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
-              <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-purple-700 disabled:opacity-50">{loading?'Generating...':'Generate'}</button>
-            </div>
+      <div className="flex-1 overflow-y-auto bg-gray-50 flex flex-col min-w-0">
+        {/* Top bar */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-wrap sticky top-0 z-10">
+          {/* Panel toggles */}
+          <button onClick={()=>setShowLibrary(!showLibrary)} className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${showLibrary?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} title="Toggle object library">
+            {showLibrary ? '\u25C0 Objects' : 'Objects \u25B6'}
+          </button>
+          <div className="w-px h-5 bg-gray-200" />
+
+          {/* Date + Mode + Difficulty */}
+          <div className="flex items-center gap-2">
+            <input type="date" value={date} onChange={e=>onDateChange(e.target.value)} className="rounded-md border border-gray-300 px-2 py-1 text-xs" />
+            <select value={mode} onChange={e=>setMode(e.target.value as Mode)} className="rounded-md border border-gray-300 px-2 py-1 text-xs">{Object.entries(ML).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
+            <select value={diff} onChange={e=>setDiff(e.target.value as Diff)} className="rounded-md border border-gray-300 px-2 py-1 text-xs">
+              <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+            </select>
           </div>
-          {error&&<div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">{error}</div>}
-          {success&&<div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2">{success}</div>}
-          {scenes.length>0&&(<>
-            <div className="flex gap-1 mb-3">{scenes.map((_,i)=>{const s=scenes[i];const hasObjs=(s?.objects?.length??0)>=3;const hasQs=(s?.questions?.length??0)>=1;return(<button key={i} onClick={()=>{setActiveScene(i);setSelectedId(null);}} className={`px-3 py-1.5 text-xs rounded-lg font-medium flex items-center gap-1 ${i===activeScene?'bg-purple-600 text-white':'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><span className={`w-2 h-2 rounded-full ${hasObjs&&hasQs?'bg-green-400':hasObjs?'bg-yellow-400':'bg-red-400'}`}/>Scene {i+1}</button>);})}</div>
-            <div className="flex gap-2 mb-3">
+
+          <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-4 py-1.5 text-xs font-semibold hover:bg-purple-700 disabled:opacity-50 transition-colors">{loading?'Generating...':'Generate'}</button>
+
+          <div className="flex-1" />
+
+          <button onClick={()=>setShowQuestions(!showQuestions)} className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${showQuestions?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} title="Toggle questions panel">
+            {showQuestions ? 'Questions \u25B6' : '\u25C0 Questions'}
+          </button>
+        </div>
+
+        {/* Alerts */}
+        <div className="px-4">
+          {error&&<div className="mt-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">{error}</div>}
+          {success&&<div className="mt-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg px-3 py-2">{success}</div>}
+        </div>
+
+        {/* Canvas area */}
+        <div className="flex-1 p-4 flex flex-col items-center">
+          {scenes.length > 0 ? (<>
+            {/* Scene tabs */}
+            <div className="flex gap-1 mb-3 self-start">{scenes.map((_,i)=>{const s=scenes[i];const hasObjs=(s?.objects?.length??0)>=3;const hasQs=(s?.questions?.length??0)>=1;return(<button key={i} onClick={()=>{setActiveScene(i);setSelectedId(null);}} className={`px-3 py-1.5 text-xs rounded-lg font-medium flex items-center gap-1.5 transition-colors ${i===activeScene?'bg-purple-600 text-white shadow-sm':'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><span className={`w-1.5 h-1.5 rounded-full ${hasObjs&&hasQs?'bg-green-400':hasObjs?'bg-yellow-400':'bg-red-400'}`}/>Scene {i+1}</button>);})}</div>
+
+            {/* Canvas toolbar */}
+            <div className="flex gap-2 mb-3 self-start">
               <button onClick={()=>setShowGrid(!showGrid)} className={`px-2 py-1 text-xs rounded ${showGrid?'bg-purple-100 text-purple-700':'bg-gray-100 text-gray-600'}`}>Grid</button>
               <button onClick={()=>{if(confirm('Clear all objects?'))updateSceneObjects([]);}} className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200">Clear</button>
               <span className="text-xs text-slate-400 py-1">{scene?.objects?.length??0} objects</span>
             </div>
-            <div onClick={handleCanvasClick} style={{cursor:activeTool?'crosshair':'default'}}>
-              <InteractiveCanvas objects={scene?.objects??[]} onObjectsChange={updateSceneObjects} selectedId={selectedId} onSelectObject={setSelectedId} width={500} height={500} showGrid={showGrid} />
-            </div>
-          </>)}
-          {scenes.length>0&&<div className="mt-6 flex gap-3">
-            <button onClick={()=>approve('live')} disabled={approving} className="bg-green-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50">{approving?'Publishing...':'Approve & Publish'}</button>
-            <button onClick={()=>approve('draft')} disabled={approving} className="bg-white border border-gray-200 text-gray-700 rounded-lg px-5 py-2 text-sm font-medium hover:bg-gray-50">Save as Draft</button>
-            <button onClick={generate} disabled={loading} className="bg-orange-500 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-orange-600 disabled:opacity-50">Regenerate</button>
-          </div>}
-        </div>
-      </div>
 
-      {/* Right: Questions Editor */}
-      <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto p-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">Questions {scene?`(${scene.questions?.length??0}/${maxQuestions})`:''}</h3>
-          {scene && scene.objects?.length > 0 && (
-            <button onClick={autoGenerateAll} className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-lg hover:bg-purple-100 font-medium">
-              Auto-generate all
-            </button>
+            {/* The canvas */}
+            <div onClick={handleCanvasClick} style={{cursor:activeTool?'crosshair':'default', maxWidth: 560}} className="w-full">
+              <InteractiveCanvas objects={scene?.objects??[]} onObjectsChange={updateSceneObjects} selectedId={selectedId} onSelectObject={setSelectedId} width={560} height={560} showGrid={showGrid} />
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-4 flex gap-3 self-start">
+              <button onClick={()=>approve('live')} disabled={approving} className="bg-green-600 text-white rounded-lg px-4 py-1.5 text-xs font-semibold hover:bg-green-700 disabled:opacity-50">{approving?'Publishing...':'Approve & Publish'}</button>
+              <button onClick={()=>approve('draft')} disabled={approving} className="bg-white border border-gray-200 text-gray-700 rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-gray-50">Save as Draft</button>
+              <button onClick={generate} disabled={loading} className="bg-orange-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-orange-600 disabled:opacity-50">Regenerate</button>
+            </div>
+          </>) : (
+            /* Empty state - no scenes yet */
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-5xl mb-4">🎨</div>
+                <h2 className="text-lg font-semibold text-slate-700 mb-1">No challenge loaded</h2>
+                <p className="text-sm text-slate-400 mb-4">Pick a date and click Generate to start building.</p>
+                <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-purple-700 disabled:opacity-50">{loading?'Generating...':'Generate Challenge'}</button>
+              </div>
+            </div>
           )}
         </div>
-
-        {scene?.questions?.map((q:any,qi:number)=>(
-          <div key={q.id || qi} className="border border-gray-100 rounded-lg p-3 mb-3 bg-white shadow-sm">
-            {/* Header: number + category */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">{qi+1}</span>
-              <select value={q.category} onChange={e=>updateQuestion(qi,'category',e.target.value)} className="text-xs border border-gray-200 rounded px-1.5 py-0.5 bg-gray-50">
-                {Q_CATEGORIES.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-              </select>
-              <div className="flex-1" />
-              <button onClick={()=>regenerateQuestion(qi)} title="Regenerate this question" className="text-xs text-blue-600 hover:text-blue-800 px-1">🔄</button>
-              <button onClick={()=>deleteQuestion(qi)} disabled={(scene.questions?.length??0)<=1} title="Delete question" className="text-xs text-red-500 hover:text-red-700 px-1 disabled:opacity-30 disabled:cursor-not-allowed">🗑</button>
-            </div>
-
-            {/* Question text */}
-            <textarea
-              value={q.text}
-              onChange={e=>updateQuestion(qi,'text',e.target.value)}
-              placeholder="Type your question here..."
-              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 mb-2 resize-none focus:border-purple-300 focus:ring-1 focus:ring-purple-200 outline-none"
-              rows={2}
-            />
-
-            {/* 2x2 option grid */}
-            <div className="grid grid-cols-2 gap-1.5 mb-2">
-              {(q.options||['','','','']).map((opt:string,oi:number)=>(
-                <div key={oi} className="flex items-center gap-1">
-                  <button
-                    onClick={()=>updateQuestion(qi,'correctIndex',oi)}
-                    className={`w-5 h-5 rounded-full text-[10px] font-bold flex-shrink-0 flex items-center justify-center transition-colors ${oi===q.correctIndex?'bg-green-500 text-white shadow-sm':'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
-                  >
-                    {oi===q.correctIndex ? '✓' : String.fromCharCode(65+oi)}
-                  </button>
-                  <input
-                    value={opt}
-                    onChange={e=>{const opts=[...(q.options||['','','',''])];opts[oi]=e.target.value;updateQuestion(qi,'options',opts);}}
-                    placeholder={`Option ${String.fromCharCode(65+oi)}`}
-                    className={`flex-1 text-xs border rounded px-1.5 py-1 outline-none transition-colors ${oi===q.correctIndex?'border-green-300 bg-green-50 focus:border-green-400':'border-gray-200 focus:border-purple-300'}`}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Correct answer label */}
-            <div className="flex gap-1">
-              {['A','B','C','D'].map((letter, oi) => (
-                <button key={oi} onClick={()=>updateQuestion(qi,'correctIndex',oi)}
-                  className={`flex-1 text-[10px] font-semibold py-0.5 rounded transition-colors ${oi===q.correctIndex?'bg-green-100 text-green-700 border border-green-300':'bg-gray-50 text-gray-400 border border-gray-100 hover:bg-gray-100'}`}>
-                  {letter}{oi===q.correctIndex?' ✓':''}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        {/* Add question button */}
-        {scene && (scene.questions?.length??0) < maxQuestions && (
-          <button onClick={addQuestion} className="w-full py-2 text-sm text-purple-600 border border-dashed border-purple-300 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-colors font-medium">
-            + Add question
-          </button>
-        )}
-
-        {/* Empty state */}
-        {!scene&&(
-          <div className="text-center py-8">
-            <div className="text-4xl mb-3">🧠</div>
-            <p className="text-sm text-slate-500 mb-1">No challenge loaded yet.</p>
-            <p className="text-xs text-slate-400">Click Generate to create a challenge, or start adding objects to the canvas manually.</p>
-          </div>
-        )}
       </div>
+
+      {/* Right: Questions Editor (collapsible) */}
+      {showQuestions && (
+        <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto flex-shrink-0 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 sticky top-0 bg-white z-10">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Questions {scene?`(${scene.questions?.length??0}/${maxQuestions})`:''}</h3>
+            <div className="flex items-center gap-2">
+              {scene && scene.objects?.length > 0 && (
+                <button onClick={autoGenerateAll} className="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded hover:bg-purple-100 font-semibold">
+                  Auto-generate
+                </button>
+              )}
+              <button onClick={()=>setShowQuestions(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none" title="Hide questions">&times;</button>
+            </div>
+          </div>
+
+          <div className="p-3 flex-1 overflow-y-auto">
+            {scene?.questions?.map((q:any,qi:number)=>(
+              <div key={q.id || qi} className="border border-gray-100 rounded-lg p-3 mb-3 bg-white shadow-sm">
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">{qi+1}</span>
+                  <select value={q.category} onChange={e=>updateQuestion(qi,'category',e.target.value)} className="text-[10px] border border-gray-200 rounded px-1.5 py-0.5 bg-gray-50">
+                    {Q_CATEGORIES.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+                  </select>
+                  <div className="flex-1" />
+                  <button onClick={()=>regenerateQuestion(qi)} title="Regenerate" className="text-[10px] text-blue-600 hover:text-blue-800 px-1">{'\u{1F504}'}</button>
+                  <button onClick={()=>deleteQuestion(qi)} disabled={(scene.questions?.length??0)<=1} title="Delete" className="text-[10px] text-red-500 hover:text-red-700 px-1 disabled:opacity-30 disabled:cursor-not-allowed">{'\u{1F5D1}'}</button>
+                </div>
+
+                {/* Question text */}
+                <textarea
+                  value={q.text}
+                  onChange={e=>updateQuestion(qi,'text',e.target.value)}
+                  placeholder="Type your question here..."
+                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 mb-2 resize-none focus:border-purple-300 focus:ring-1 focus:ring-purple-200 outline-none"
+                  rows={2}
+                />
+
+                {/* Options */}
+                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                  {(q.options||['','','','']).map((opt:string,oi:number)=>(
+                    <div key={oi} className="flex items-center gap-1">
+                      <button
+                        onClick={()=>updateQuestion(qi,'correctIndex',oi)}
+                        className={`w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full text-[9px] font-bold flex-shrink-0 flex items-center justify-center transition-colors ${oi===q.correctIndex?'bg-green-500 text-white':'bg-gray-200 text-gray-500 hover:bg-gray-300'}`}
+                      >
+                        {oi===q.correctIndex ? '\u2713' : String.fromCharCode(65+oi)}
+                      </button>
+                      <input
+                        value={opt}
+                        onChange={e=>{const opts=[...(q.options||['','','',''])];opts[oi]=e.target.value;updateQuestion(qi,'options',opts);}}
+                        placeholder={`Option ${String.fromCharCode(65+oi)}`}
+                        className={`flex-1 text-[10px] border rounded px-1.5 py-1 outline-none transition-colors min-w-0 ${oi===q.correctIndex?'border-green-300 bg-green-50 focus:border-green-400':'border-gray-200 focus:border-purple-300'}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Correct answer pills */}
+                <div className="flex gap-0.5">
+                  {['A','B','C','D'].map((letter, oi) => (
+                    <button key={oi} onClick={()=>updateQuestion(qi,'correctIndex',oi)}
+                      className={`flex-1 text-[9px] font-semibold py-0.5 rounded transition-colors ${oi===q.correctIndex?'bg-green-100 text-green-700 border border-green-300':'bg-gray-50 text-gray-400 border border-gray-100 hover:bg-gray-100'}`}>
+                      {letter}{oi===q.correctIndex?' \u2713':''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Add question */}
+            {scene && (scene.questions?.length??0) < maxQuestions && (
+              <button onClick={addQuestion} className="w-full py-2 text-xs text-purple-600 border border-dashed border-purple-300 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-colors font-medium">
+                + Add question
+              </button>
+            )}
+
+            {/* Empty state */}
+            {!scene&&(
+              <div className="text-center py-8">
+                <div className="text-3xl mb-2">{'\u{1F9E0}'}</div>
+                <p className="text-xs text-slate-500 mb-1">No challenge loaded yet.</p>
+                <p className="text-[10px] text-slate-400">Click Generate to create a challenge, or start adding objects to the canvas manually.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
