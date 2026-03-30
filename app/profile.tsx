@@ -52,10 +52,15 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace('/(auth)/login');
-  };
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut();
+      // Small delay to let auth state clear before navigating
+      setTimeout(() => router.replace('/(auth)/login'), 200);
+    } catch {
+      router.replace('/(auth)/login');
+    }
+  }, [signOut, router]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>

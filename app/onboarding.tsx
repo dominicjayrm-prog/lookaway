@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated as RNAnimated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -219,23 +219,41 @@ export default function OnboardingScreen() {
 
   const finish = useCallback(() => {
     try { localStorage.setItem('lookaway_onboarded', 'true'); } catch {}
-    router.replace('/(tabs)');
+    router.replace('/(auth)/login');
   }, [router]);
 
-  const next = () => setPage(p => Math.min(p + 1, 3));
-  const prev = () => setPage(p => Math.max(p - 1, 0));
+  // Animated transition
+  const fadeAnim = useRef(new RNAnimated.Value(1)).current;
+  const slideAnim = useRef(new RNAnimated.Value(0)).current;
+
+  const animateTo = useCallback((newPage: number) => {
+    RNAnimated.parallel([
+      RNAnimated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      RNAnimated.timing(slideAnim, { toValue: -20, duration: 150, useNativeDriver: true }),
+    ]).start(() => {
+      setPage(newPage);
+      slideAnim.setValue(20);
+      RNAnimated.parallel([
+        RNAnimated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        RNAnimated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 60, friction: 10 }),
+      ]).start();
+    });
+  }, [fadeAnim, slideAnim]);
+
+  const next = () => animateTo(Math.min(page + 1, 3));
+  const prev = () => animateTo(Math.max(page - 1, 0));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Skip */}
       {page < 3 && (
-        <TouchableOpacity onPress={() => setPage(3)} style={styles.skipButton} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => animateTo(3)} style={styles.skipButton} activeOpacity={0.7}>
           <Text style={[styles.skipText, { color: colors.textLight }]}>Skip</Text>
         </TouchableOpacity>
       )}
 
       {/* Content */}
-      <View style={styles.contentArea}>
+      <RNAnimated.View style={[styles.contentArea, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         {page === 0 && (
           <View style={styles.pageCenter}>
             <MiniLogo size={52} />
@@ -318,7 +336,7 @@ export default function OnboardingScreen() {
             )}
           </View>
         )}
-      </View>
+      </RNAnimated.View>
 
       {/* Bottom nav */}
       <View style={styles.bottomNav}>

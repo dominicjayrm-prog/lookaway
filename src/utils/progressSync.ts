@@ -1,0 +1,110 @@
+import { supabase } from '@/src/lib/supabase';
+
+/**
+ * Sync user progress to Supabase. Fire and forget.
+ */
+export async function saveProgressToSupabase(userId: string, state: {
+  gems: number;
+  lives: number;
+  livesLastLostAt: number | null;
+  streakCount: number;
+  totalStars: number;
+  highestWorld: number;
+  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
+  completedScores: number[];
+}) {
+  try {
+    // Update profile
+    const memoryScore = state.completedScores.length > 0
+      ? Math.round(state.completedScores.reduce((a, v) => a + v, 0) / state.completedScores.length)
+      : 0;
+
+    await supabase.from('profiles').upsert({
+      id: userId,
+      gems: state.gems,
+      lives: state.lives,
+      lives_last_lost_at: state.livesLastLostAt ? new Date(state.livesLastLostAt).toISOString() : null,
+      streak_count: state.streakCount,
+      total_stars: state.totalStars,
+      highest_world: state.highestWorld,
+      memory_score_avg: memoryScore,
+    }, { onConflict: 'id' });
+
+    // Upsert level progress
+    const entries = Object.entries(state.levelProgress);
+    if (entries.length > 0) {
+      const rows = entries.map(([levelId, p]) => ({
+        user_id: userId,
+        level_id: levelId,
+        stars: p.stars,
+        best_score: p.bestScore,
+        attempts: p.attempts,
+        completed_at: new Date().toISOString(),
+      }));
+
+      for (const row of rows) {
+        await supabase.from('user_progress').upsert(row, {
+          onConflict: 'user_id,level_id',
+        });
+      }
+    }
+  } catch (e) {
+    // Silent fail — don't block gameplay
+  }
+}
+
+/**
+ * Load user progress from Supabase on login.
+ */
+export async function loadProgressFromSupabase(userId: string): Promise<{
+  gems: number;
+  lives: number;
+  livesLastLostAt: number | null;
+  streakCount: number;
+  totalStars: number;
+  highestWorld: number;
+  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
+  completedScores: number[];
+} | null> {
+  try {
+    // Load profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!profile) return null;
+
+    // Load level progress
+    const { data: progress } = await supabase
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', userId);
+
+    const levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }> = {};
+    const completedScores: number[] = [];
+
+    (progress ?? []).forEach((p: any) => {
+      levelProgress[p.level_id] = {
+        stars: p.stars,
+        bestScore: p.best_score,
+        attempts: p.attempts,
+      };
+      if (p.best_score > 0) completedScores.push(p.best_score);
+    });
+
+    return {
+      gems: profile.gems ?? 50,
+      lives: profile.lives ?? 5,
+      livesLastLostAt: profile.lives_last_lost_at ? new Date(profile.lives_last_lost_at).getTime() : null,
+      streakCount: profile.streak_count ?? 0,
+      totalStars: profile.total_stars ?? 0,
+      highestWorld: profile.highest_world ?? 1,
+      levelProgress,
+      completedScores,
+    };
+  } catch {
+    return null;
+  }
+}
