@@ -185,7 +185,7 @@ function Page1({ colors }: { colors: any }) {
     <View style={styles.pageCenter}>
       <AnimatedItem delay={0}><MiniLogo size={52} /></AnimatedItem>
       <AnimatedItem delay={100} style={{ marginTop: 12 }}><Text style={[styles.wordmark, { color: colors.text }]}>Look<Text style={{ color: colors.accent }}>Away</Text></Text></AnimatedItem>
-      <AnimatedItem delay={250} style={{ marginVertical: 12 }}><BlinkingEye active colors={colors} /></AnimatedItem>
+      <AnimatedItem delay={250} style={{ marginVertical: 12 }}><BlinkingEye active={true} colors={colors} /></AnimatedItem>
       <AnimatedItem delay={400}><Text style={[styles.heading, { color: colors.text }]}>{'How much can\nyou remember?'}</Text></AnimatedItem>
       <AnimatedItem delay={550}><Text style={[styles.subtext, { color: colors.textMid }]}>A scene flashes before your eyes. Shapes, colours, positions. Then it vanishes. Can you recall what you saw?</Text></AnimatedItem>
     </View>

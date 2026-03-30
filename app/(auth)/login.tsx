@@ -4,7 +4,7 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,13 +15,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { LookAwayLogo } from '@/src/components/LookAwayLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
 type Mode = 'login' | 'signup';
 
 export default function AuthScreen() {
+  const { colors } = useTheme();
   const { signIn, signUp } = useAuth();
   const params = useLocalSearchParams<{ mode?: string }>();
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'login');
@@ -75,17 +76,16 @@ export default function AuthScreen() {
 
   if (signUpSuccess) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.successContainer}>
           <LookAwayLogo size={64} />
-          <Text style={styles.successTitle}>Check your email</Text>
-          <Text style={styles.successBody}>
+          <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
+          <Text style={[styles.successBody, { color: colors.textMid }]}>
             We sent a confirmation link to {email}. Tap the link to activate
             your account, then come back and sign in.
           </Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.85}
+          <Pressable
+            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
             onPress={() => {
               setMode('login');
               setSignUpSuccess(false);
@@ -93,14 +93,14 @@ export default function AuthScreen() {
             }}
           >
             <Text style={styles.primaryButtonText}>Back to sign in</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -115,14 +115,14 @@ export default function AuthScreen() {
             <View style={styles.wordmarkWrap}>
               <Wordmark size={28} />
             </View>
-            <Text style={styles.tagline}>Memorise. Look away. Answer.</Text>
+            <Text style={[styles.tagline, { color: colors.textMid }]}>Memorise. Look away. Answer.</Text>
           </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>
+          <View style={[styles.formCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.formTitle, { color: colors.text }]}>
               {mode === 'login' ? 'Welcome back' : 'Create account'}
             </Text>
-            <Text style={styles.formSubtitle}>
+            <Text style={[styles.formSubtitle, { color: colors.textMid }]}>
               {mode === 'login'
                 ? 'Sign in to continue your journey'
                 : 'Start training your memory today'}
@@ -130,9 +130,9 @@ export default function AuthScreen() {
 
             {mode === 'signup' && (
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Display name</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Display name</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
                   placeholder="What should we call you?"
                   placeholderTextColor={colors.textLight}
                   value={displayName}
@@ -144,9 +144,9 @@ export default function AuthScreen() {
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
                 placeholder="your@email.com"
                 placeholderTextColor={colors.textLight}
                 value={email}
@@ -159,9 +159,9 @@ export default function AuthScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
                 placeholder="At least 6 characters"
                 placeholderTextColor={colors.textLight}
                 value={password}
@@ -174,13 +174,12 @@ export default function AuthScreen() {
 
             {error && (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={[styles.errorText, { color: colors.wrong }]}>{error}</Text>
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.buttonDisabled]}
-              activeOpacity={0.85}
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled, pressed && { opacity: 0.85 }]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -191,20 +190,20 @@ export default function AuthScreen() {
                   {mode === 'login' ? 'Sign in' : 'Create account'}
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleText}>
+            <Text style={[styles.toggleText, { color: colors.textMid }]}>
               {mode === 'login'
                 ? "Don't have an account?"
                 : 'Already have an account?'}
             </Text>
-            <TouchableOpacity onPress={toggleMode} activeOpacity={0.7}>
-              <Text style={styles.toggleLink}>
+            <Pressable onPress={toggleMode} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+              <Text style={[styles.toggleLink, { color: colors.accent }]}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -213,27 +212,27 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: spacing.xl, justifyContent: 'center' },
   logoSection: { alignItems: 'center', marginBottom: spacing.xxxl },
   wordmarkWrap: { marginTop: spacing.md },
-  tagline: { fontSize: 14, color: colors.textMid, marginTop: spacing.sm },
-  formCard: { backgroundColor: colors.card, borderRadius: 20, padding: spacing.xxl, ...shadows.card },
-  formTitle: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
-  formSubtitle: { fontSize: typography.sizes.md, color: colors.textMid, marginBottom: spacing.xxl },
+  tagline: { fontSize: 14, marginTop: spacing.sm },
+  formCard: { borderRadius: 20, padding: spacing.xxl, ...shadows.card },
+  formTitle: { fontSize: 22, fontWeight: '700', marginBottom: spacing.xs },
+  formSubtitle: { fontSize: typography.sizes.md, marginBottom: spacing.xxl },
   inputContainer: { marginBottom: spacing.lg },
-  inputLabel: { fontSize: typography.sizes.sm, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
-  input: { backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, color: colors.text, borderWidth: 1, borderColor: 'transparent' },
+  inputLabel: { fontSize: typography.sizes.sm, fontWeight: '600', marginBottom: spacing.sm },
+  input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, borderWidth: 1, borderColor: 'transparent' },
   errorContainer: { backgroundColor: 'rgba(255,107,107,0.08)', borderRadius: borderRadius.sm, padding: spacing.md, marginBottom: spacing.lg },
-  errorText: { fontSize: typography.sizes.sm, color: colors.wrong, textAlign: 'center' },
-  primaryButton: { backgroundColor: colors.accent, borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center', justifyContent: 'center', minHeight: 52, width: '100%' },
+  errorText: { fontSize: typography.sizes.sm, textAlign: 'center' },
+  primaryButton: { borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 52, width: '100%' },
   primaryButtonText: { color: '#FFFFFF', fontSize: typography.sizes.lg, fontWeight: '700' },
   buttonDisabled: { opacity: 0.6 },
   toggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxl, paddingBottom: spacing.xxxl },
-  toggleText: { fontSize: typography.sizes.md, color: colors.textMid },
-  toggleLink: { fontSize: typography.sizes.md, fontWeight: '700', color: colors.accent },
+  toggleText: { fontSize: typography.sizes.md },
+  toggleLink: { fontSize: typography.sizes.md, fontWeight: '700' },
   successContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xxl, gap: spacing.lg },
-  successTitle: { fontSize: 22, fontWeight: '700', color: colors.text, marginTop: spacing.md },
-  successBody: { fontSize: typography.sizes.md, color: colors.textMid, textAlign: 'center', lineHeight: 22 },
+  successTitle: { fontSize: 22, fontWeight: '700', marginTop: spacing.md },
+  successBody: { fontSize: typography.sizes.md, textAlign: 'center', lineHeight: 22 },
 });
