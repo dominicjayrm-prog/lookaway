@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { LookAwayLogo } from '@/src/components/LookAwayLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -22,7 +23,8 @@ type Mode = 'login' | 'signup';
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<Mode>('login');
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
