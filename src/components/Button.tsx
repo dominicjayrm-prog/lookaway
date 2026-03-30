@@ -5,18 +5,11 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  Platform,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { borderRadius, spacing } from '@/src/theme/spacing';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -39,50 +32,51 @@ export const Button = React.memo(function Button({
   textStyle,
   icon,
 }: ButtonProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  }, [scale]);
+  const { colors } = useTheme();
 
   const handlePress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Haptics only on native — crashes on web
+    if (Platform.OS !== 'web') {
+      try {
+        const Haptics = require('expo-haptics');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
     onPress();
   }, [onPress]);
 
-  const containerStyle = [
-    styles.base,
-    styles[variant],
-    disabled && styles.disabled,
-    style,
-  ];
+  const variantStyles: Record<ButtonVariant, ViewStyle> = {
+    primary: { backgroundColor: colors.accent },
+    secondary: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.accent },
+    ghost: { backgroundColor: 'transparent' },
+  };
 
-  const labelStyle = [
-    styles.text,
-    styles[`${variant}Text` as keyof typeof styles] as TextStyle,
-    disabled && styles.disabledText,
-    textStyle,
-  ];
+  const variantTextStyles: Record<ButtonVariant, TextStyle> = {
+    primary: { color: '#FFFFFF' },
+    secondary: { color: colors.accent },
+    ghost: { color: colors.accent },
+  };
 
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
       disabled={disabled}
-      style={[animatedStyle, ...containerStyle]}
+      style={({ pressed }) => [
+        styles.base,
+        variantStyles[variant],
+        disabled && styles.disabled,
+        pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+        style,
+      ]}
     >
       {icon}
-      <Text style={labelStyle}>{title}</Text>
-    </AnimatedPressable>
+      <Text style={[
+        styles.text,
+        variantTextStyles[variant],
+        disabled && { color: colors.textLight },
+        textStyle,
+      ]}>{title}</Text>
+    </Pressable>
   );
 });
 
@@ -97,34 +91,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: spacing.sm,
   },
-  primary: {
-    backgroundColor: colors.accent,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-  },
   disabled: {
     opacity: 0.4,
   },
   text: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
-  },
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: colors.accent,
-  },
-  ghostText: {
-    color: colors.accent,
-  },
-  disabledText: {
-    color: colors.textLight,
   },
 });
