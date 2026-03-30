@@ -33,13 +33,54 @@ function getUserId(): string {
 }
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
-function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
+function buildLevelIds(): string[] {
+  const counts = [20, 30, 35, 35, 40, 40];
+  const ids: string[] = [];
+  for (let w = 0; w < counts.length; w++) {
+    for (let l = 1; l <= counts[w]; l++) ids.push(`w${w + 1}-l${l}`);
+  }
+  return ids;
+}
 
 export interface PowerUpInventory {
   slowTime: number;
   peek: number;
   fiftyFifty: number;
   skip: number;
+}
+
+// One-time migration: move w1-lX progress to w2-lX (world restructure)
+function migrateWorldProgress() {
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+    if (localStorage.getItem('lookaway_world_migrated')) return;
+
+    const saved = localStorage.getItem('lookaway-progress');
+    if (!saved) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+
+    const data = JSON.parse(saved);
+    if (!data.levelProgress) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+
+    const newProgress: Record<string, unknown> = {};
+    let changed = false;
+
+    for (const [key, value] of Object.entries(data.levelProgress)) {
+      if (key.startsWith('w1-l')) {
+        newProgress[key.replace('w1-l', 'w2-l')] = value;
+        changed = true;
+      } else {
+        newProgress[key] = value;
+      }
+    }
+
+    if (changed) {
+      data.levelProgress = newProgress;
+      localStorage.setItem('lookaway-progress', JSON.stringify(data));
+    }
+    localStorage.setItem('lookaway_world_migrated', 'true');
+  } catch (e) {
+    console.warn('World migration failed:', e);
+  }
 }
 
 // Manual localStorage persistence
@@ -267,6 +308,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
     hydrate: () => {
       if (get()._hydrated) return;
+      migrateWorldProgress();
       const saved = loadState();
       const hasData = saved && typeof (saved as Record<string, unknown>).gems === 'number';
       if (hasData) {

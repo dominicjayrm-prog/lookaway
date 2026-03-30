@@ -13,7 +13,7 @@ export interface WorldConfig {
 export const WORLDS: WorldConfig[] = [
   {
     id: 1, name: 'Shape Basics', color: '#00B894',
-    levelRange: [1, 35],
+    levelRange: [1, 20],
     allowedCategories: ['basic'],
     viewingTimeRange: [5.0, 4.5],
     objectCountRange: [4, 7],
@@ -22,7 +22,7 @@ export const WORLDS: WorldConfig[] = [
   },
   {
     id: 2, name: 'Colour & Position', color: '#0984E3',
-    levelRange: [36, 70],
+    levelRange: [21, 50],
     allowedCategories: ['basic'],
     viewingTimeRange: [4.5, 4.0],
     objectCountRange: [5, 8],
@@ -31,7 +31,7 @@ export const WORLDS: WorldConfig[] = [
   },
   {
     id: 3, name: 'Numbers & Letters', color: '#6C5CE7',
-    levelRange: [71, 105],
+    levelRange: [51, 85],
     allowedCategories: ['basic', 'numbers', 'letters'],
     viewingTimeRange: [4.0, 3.5],
     objectCountRange: [5, 8],
@@ -40,7 +40,7 @@ export const WORLDS: WorldConfig[] = [
   },
   {
     id: 4, name: 'Moving Objects', color: '#F9A825',
-    levelRange: [106, 140],
+    levelRange: [86, 120],
     allowedCategories: ['basic', 'numbers', 'letters'],
     viewingTimeRange: [4.0, 3.5],
     objectCountRange: [5, 7],
@@ -49,7 +49,7 @@ export const WORLDS: WorldConfig[] = [
   },
   {
     id: 5, name: 'Photographic', color: '#FF6B6B',
-    levelRange: [36 + 35 + 35 + 35, 175],
+    levelRange: [121, 160],
     allowedCategories: ['basic', 'everyday', 'animals', 'food'],
     viewingTimeRange: [3.5, 3.0],
     objectCountRange: [6, 9],
@@ -58,7 +58,7 @@ export const WORLDS: WorldConfig[] = [
   },
   {
     id: 6, name: 'Mastermind', color: '#1A1A18',
-    levelRange: [176, 200],
+    levelRange: [161, 200],
     allowedCategories: ['basic', 'numbers', 'letters', 'everyday', 'animals', 'food', 'patterns'],
     viewingTimeRange: [3.0, 2.5],
     objectCountRange: [7, 10],
@@ -67,14 +67,10 @@ export const WORLDS: WorldConfig[] = [
   },
 ];
 
-// Fix World 5 range
-WORLDS[4].levelRange = [141, 175];
-
-export const LEVELS_PER_WORLD = 35;
 export const TOTAL_LEVELS = 200;
-// Exception: W6 has 25 levels
+const WORLD_LEVEL_COUNTS: Record<number, number> = { 1: 20, 2: 30, 3: 35, 4: 35, 5: 40, 6: 40 };
 export function levelsInWorld(worldId: number): number {
-  return worldId === 6 ? 25 : 35;
+  return WORLD_LEVEL_COUNTS[worldId] ?? 35;
 }
 
 export function getWorldForLevel(levelNumber: number): WorldConfig | undefined {
@@ -86,12 +82,12 @@ export function getWorldConfig(worldId: number, levelInWorld: number) {
   if (!world) return null;
 
   switch (worldId) {
-    case 1: // Shape Basics — EASIEST
+    case 1: // Shape Basics — EASIEST (20 levels)
       return {
         ...world,
-        viewTime: levelInWorld <= 15 ? 5.0 : 4.5,
-        suggestedObjectCount: levelInWorld <= 5 ? 4 : levelInWorld <= 15 ? 5 : levelInWorld <= 25 ? 6 : 7,
-        difficulty: levelInWorld <= 15 ? 'easy' : levelInWorld <= 30 ? 'medium' : 'hard',
+        viewTime: levelInWorld <= 10 ? 5.0 : 4.5,
+        suggestedObjectCount: levelInWorld <= 5 ? 4 : levelInWorld <= 10 ? 5 : levelInWorld <= 15 ? 6 : 7,
+        difficulty: levelInWorld <= 8 ? 'easy' : levelInWorld <= 16 ? 'medium' : 'hard',
       };
     case 2: // Colour & Position
       return {
