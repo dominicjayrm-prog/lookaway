@@ -49,7 +49,7 @@ export default function SpeedGameScreen() {
     if (revealTimeout.current) { clearTimeout(revealTimeout.current); revealTimeout.current = null; }
     if (transitionTimeout.current) { clearTimeout(transitionTimeout.current); transitionTimeout.current = null; }
   }, []);
-  useEffect(() => clearTimeouts, [clearTimeouts]);
+  useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
   const handleStart = useCallback(() => { startLevel(speedLevel); }, [speedLevel, startLevel]);
   const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 500); }, [setGameState, clearTimeouts]);
@@ -100,6 +100,16 @@ export default function SpeedGameScreen() {
           <Text style={styles.levelSubtitle}>1 question per scene</Text>
           <Button title="Start" onPress={handleStart} style={styles.startButton} />
         </Animated.View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentScene || !currentQuestion) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={styles.levelSubtitle}>Loading...</Text>
+        </View>
       </SafeAreaView>
     );
   }

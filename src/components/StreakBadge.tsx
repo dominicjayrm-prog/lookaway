@@ -7,7 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -20,6 +20,7 @@ export const StreakBadge = React.memo(function StreakBadge({
   streak,
   pulse = false,
 }: StreakBadgeProps) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
 
   useEffect(() => {
@@ -41,9 +42,9 @@ export const StreakBadge = React.memo(function StreakBadge({
   if (streak === 0) return null;
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
-      <Text style={styles.icon}>\uD83D\uDD25</Text>
-      <Text style={styles.count}>{streak}</Text>
+    <Animated.View style={[styles.container, { backgroundColor: colors.goldSoft }, animatedStyle]}>
+      <Text style={styles.icon}>{'\uD83D\uDD25'}</Text>
+      <Text style={[styles.count, { color: colors.gold }]}>{streak}</Text>
     </Animated.View>
   );
 });
@@ -53,7 +54,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.goldSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 999,
@@ -64,6 +64,5 @@ const styles = StyleSheet.create({
   count: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: colors.gold,
   },
 });

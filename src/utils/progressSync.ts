@@ -49,7 +49,7 @@ export async function saveProgressToSupabase(userId: string, state: {
       }
     }
   } catch (e) {
-    // Silent fail — don't block gameplay
+    console.warn('Progress sync error:', e);
   }
 }
 
@@ -85,7 +85,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
     const levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }> = {};
     const completedScores: number[] = [];
 
-    (progress ?? []).forEach((p: any) => {
+    (progress ?? []).forEach((p: { level_id: string; stars: number; best_score: number; attempts: number }) => {
       levelProgress[p.level_id] = {
         stars: p.stars,
         bestScore: p.best_score,
@@ -104,7 +104,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       levelProgress,
       completedScores,
     };
-  } catch {
+  } catch (e) {
+    console.warn('Progress sync error:', e);
     return null;
   }
 }

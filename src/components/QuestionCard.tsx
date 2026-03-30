@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card } from './Card';
 import { OptionButton } from './OptionButton';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -27,6 +27,8 @@ export const QuestionCard = React.memo(function QuestionCard({
   questionNumber,
   totalQuestions,
 }: QuestionCardProps) {
+  const { colors } = useTheme();
+
   const getOptionState = (index: number): OptionState => {
     if (revealedCorrectIndex === null) {
       return index === selectedIndex ? 'selected' : 'default';
@@ -38,10 +40,10 @@ export const QuestionCard = React.memo(function QuestionCard({
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.counter}>
+      <Text style={[styles.counter, { color: colors.textLight }]}>
         QUESTION {questionNumber} OF {totalQuestions}
       </Text>
-      <Text style={styles.question}>{questionText}</Text>
+      <Text style={[styles.question, { color: colors.text }]}>{questionText}</Text>
       <View style={styles.options}>
         {options.map((option, index) => (
           <OptionButton
@@ -64,13 +66,11 @@ const styles = StyleSheet.create({
   counter: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
-    color: colors.textLight,
     letterSpacing: 1,
   },
   question: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
     lineHeight: 28,
   },
   options: {

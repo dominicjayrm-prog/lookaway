@@ -2,7 +2,18 @@ import type { Level, Scene } from '@/src/types/game';
 import { supabase } from '@/src/lib/supabase';
 
 /** Convert a Supabase campaign_levels row to the game's Level format */
-function dbRowToLevel(row: any): Level {
+interface CampaignLevelRow {
+  id: string;
+  world_id: number;
+  level_number: number;
+  title: string;
+  scene_data: { objects?: unknown[]; questions?: unknown[] } | null;
+  view_time?: number;
+  required_score?: number;
+  par_score?: number;
+}
+
+function dbRowToLevel(row: CampaignLevelRow): Level {
   const sceneData = row.scene_data ?? { objects: [], questions: [] };
   const scene: Scene = {
     id: `${row.id}-s1`,

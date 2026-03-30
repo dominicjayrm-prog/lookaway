@@ -89,6 +89,12 @@ export default function DailyGameScreen() {
         </Animated.View>
       )}
 
+      {gameState === 'MEMORISE' && !currentScene && (
+        <View style={styles.centered}>
+          <Text style={styles.levelSubtitle}>Loading...</Text>
+        </View>
+      )}
+
       {gameState === 'MEMORISE' && currentScene && (
         <Animated.View entering={FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime} running={true} onComplete={handleMemoriseComplete} style={styles.timer} />

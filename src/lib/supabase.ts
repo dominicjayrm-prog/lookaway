@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
-let storage: any = undefined; // Use Supabase default (localStorage) on web
+let storage: Record<string, unknown> | undefined = undefined; // Use Supabase default (localStorage) on web
 
 if (Platform.OS !== 'web') {
   // Only import AsyncStorage on native platforms

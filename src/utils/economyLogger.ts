@@ -18,7 +18,7 @@ export function logEconomyEvent(
       details: details ?? {},
     })
     .then(() => {})
-    .catch(() => {});
+    .catch((e) => console.warn('Economy log error:', e));
 }
 
 // Event type constants

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { borderRadius, spacing } from '@/src/theme/spacing';
 
@@ -13,13 +13,17 @@ interface BadgeProps {
 
 export const Badge = React.memo(function Badge({
   label,
-  color = colors.accent,
-  bgColor = colors.accentSoft,
+  color,
+  bgColor,
   style,
 }: BadgeProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  const resolvedBgColor = bgColor ?? colors.accentSoft;
+
   return (
-    <View style={[styles.badge, { backgroundColor: bgColor }, style]}>
-      <Text style={[styles.text, { color }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: resolvedBgColor }, style]}>
+      <Text style={[styles.text, { color: resolvedColor }]}>{label}</Text>
     </View>
   );
 });

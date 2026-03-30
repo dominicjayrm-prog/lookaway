@@ -9,7 +9,7 @@ import Animated, {
   useAnimatedReaction,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 
 interface CountdownTimerProps {
   duration: number; // total seconds
@@ -26,6 +26,7 @@ export const CountdownTimer = React.memo(function CountdownTimer({
   height = 6,
   style,
 }: CountdownTimerProps) {
+  const { colors } = useTheme();
   const progress = useSharedValue(1);
 
   useEffect(() => {
@@ -65,13 +66,17 @@ export const CountdownTimer = React.memo(function CountdownTimer({
     },
   );
 
+  const correctColor = colors.correct;
+  const goldColor = colors.gold;
+  const wrongColor = colors.wrong;
+
   const fillStyle = useAnimatedStyle(() => {
     const p = progress.value;
-    let barColor: string = colors.correct;
+    let barColor: string = correctColor;
     if (p <= 0.15) {
-      barColor = colors.wrong;
+      barColor = wrongColor;
     } else if (p <= 0.4) {
-      barColor = colors.gold;
+      barColor = goldColor;
     }
     return {
       width: `${p * 100}%` as `${number}%`,
@@ -81,7 +86,7 @@ export const CountdownTimer = React.memo(function CountdownTimer({
 
   return (
     <View
-      style={[styles.track, { height, borderRadius: height / 2 }, style]}
+      style={[styles.track, { height, borderRadius: height / 2, backgroundColor: colors.border }, style]}
     >
       <Animated.View
         style={[styles.fill, { borderRadius: height / 2 }, fillStyle]}
@@ -93,7 +98,6 @@ export const CountdownTimer = React.memo(function CountdownTimer({
 const styles = StyleSheet.create({
   track: {
     width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.06)',
     overflow: 'hidden',
   },
   fill: {

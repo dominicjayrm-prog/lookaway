@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
@@ -8,16 +9,46 @@ import { useGameStore } from '@/src/store';
 
 function LifeRegenChecker() {
   const checkLifeRegen = useGameStore((s) => s.checkLifeRegen);
-  useEffect(() => { checkLifeRegen(); const id = setInterval(checkLifeRegen, 60000); return () => clearInterval(id); }, [checkLifeRegen]);
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    // Check immediately + on interval
+    checkLifeRegen();
+    const id = setInterval(checkLifeRegen, 60000);
+
+    // Also check when app returns from background (iOS suspends intervals)
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        checkLifeRegen();
+      }
+      appState.current = next;
+    });
+
+    return () => { clearInterval(id); sub.remove(); };
+  }, [checkLifeRegen]);
+
   return null;
 }
 
 function CloudSyncLoader() {
   const loadFromCloud = useGameStore((s) => s.loadFromCloud);
+  const saveState = useGameStore((s) => s.saveState);
   const { user } = useAuth();
+
   useEffect(() => {
     if (user?.id) { loadFromCloud(user.id); }
   }, [user?.id, loadFromCloud]);
+
+  // Sync progress when app goes to background (iOS may kill the app after this)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'background' || next === 'inactive') {
+        saveState();
+      }
+    });
+    return () => sub.remove();
+  }, [saveState]);
+
   return null;
 }
 

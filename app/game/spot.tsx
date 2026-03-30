@@ -40,15 +40,16 @@ export default function SpotGameScreen() {
   const mag = String.fromCodePoint(0x1F50D);
 
   const [state, dispatch] = useReducer(reducer, { phase:'READY', roundIndex:0, results:[], tapCorrect:null, modifiedShownAt:0, cardW:300, cardH:300 });
-  const round = challenge.rounds[state.roundIndex];
+  const round = challenge.rounds[state.roundIndex] ?? null;
 
   const clearTimer = useCallback(() => { if(timerRef.current){clearTimeout(timerRef.current);timerRef.current=null;} }, []);
-  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => { return clearTimer; }, [clearTimer]);
 
   const handleOriginalComplete = useCallback(() => { dispatch({type:'SHOW_BLANK'}); clearTimer(); timerRef.current=setTimeout(()=>dispatch({type:'SHOW_MODIFIED'}),2000); }, [clearTimer]);
 
   const handleTap = useCallback((e: GestureResponderEvent) => {
     if(state.phase!=='SHOW_MODIFIED') return;
+    if(!round?.change?.targetArea) return;
     const {locationX, locationY} = e.nativeEvent;
     const tapX = (locationX/state.cardW)*100;
     const tapY = (locationY/state.cardH)*100;
@@ -118,7 +119,7 @@ export default function SpotGameScreen() {
         })}
       </View>
 
-      {state.phase==='SHOW_ORIGINAL' && (
+      {state.phase==='SHOW_ORIGINAL' && round && (
         <Animated.View entering={FadeIn} style={s.gameArea}>
           <CountdownTimer duration={round.viewTime} running={true} onComplete={handleOriginalComplete} style={s.timer}/>
           <Text style={s.phaseLabel}>Memorise this scene</Text>
@@ -132,7 +133,7 @@ export default function SpotGameScreen() {
         </Animated.View>
       )}
 
-      {state.phase==='SHOW_MODIFIED' && (
+      {state.phase==='SHOW_MODIFIED' && round && (
         <Animated.View entering={FadeIn} style={s.gameArea}>
           <Text style={s.tapLabel}>TAP THE CHANGE</Text>
           <Pressable onPress={handleTap} onLayout={(e)=>{const{width,height}=e.nativeEvent.layout;dispatch({type:'LAYOUT',w:width,h:height});}}>
@@ -141,7 +142,7 @@ export default function SpotGameScreen() {
         </Animated.View>
       )}
 
-      {state.phase==='FEEDBACK' && (
+      {state.phase==='FEEDBACK' && round && (
         <Animated.View entering={FadeIn} style={s.centered}>
           <Text style={[s.feedbackText,{color:state.tapCorrect?colors.correct:colors.wrong}]}>{state.tapCorrect?'Correct!':'Wrong!'}</Text>
           <Text style={s.feedbackDesc}>{round.change.description}</Text>

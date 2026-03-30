@@ -39,7 +39,7 @@ function worldBadgeBg(c: string): string { return c === '#1A1A18' ? 'rgba(26,26,
 export default function JourneyTab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { totalStars, getCompletedLevelCount } = useGameStore();
+  const { totalStars, getCompletedLevelCount, getNextUnplayedLevelId } = useGameStore();
   const completedCount = getCompletedLevelCount();
 
   return (
@@ -96,7 +96,7 @@ export default function JourneyTab() {
                 <TouchableOpacity
                   style={styles.continueButton}
                   activeOpacity={0.85}
-                  onPress={() => router.push('/game/w1-l1')}
+                  onPress={() => router.push(`/game/${getNextUnplayedLevelId()}`)}
                 >
                   <Text style={styles.continueButtonText}>Continue</Text>
                 </TouchableOpacity>
