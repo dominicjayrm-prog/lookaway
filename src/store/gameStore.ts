@@ -113,6 +113,10 @@ export interface GameStore {
   getMemoryScore: () => number;
   getCompletedLevelCount: () => number;
 
+  // Hydration — re-read localStorage after mount (fixes SSR/static export)
+  hydrate: () => void;
+  saveState: () => void;
+
   // Gameplay
   startLevel: (l: Level) => void;
   setGameState: (s: GameState) => void;
@@ -253,6 +257,33 @@ export const useGameStore = create<GameStore>((set, get) => {
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
+
+    // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
+    hydrate: () => {
+      if (get()._hydrated) return;
+      const saved = loadState();
+      const hasData = saved && typeof (saved as Record<string, unknown>).gems === 'number';
+      if (hasData) {
+        const s = saved as Record<string, unknown>;
+        set({
+          gems: s.gems as number ?? INITIAL_GEMS,
+          lives: s.lives as number ?? LIVES_CONFIG.maxLives,
+          maxLives: s.maxLives as number ?? LIVES_CONFIG.maxLives,
+          livesLastLostAt: s.livesLastLostAt as number | null ?? null,
+          streakCount: s.streakCount as number ?? 0,
+          streakMilestonesClaimed: s.streakMilestonesClaimed as number[] ?? [],
+          totalStars: s.totalStars as number ?? 0,
+          highestWorld: s.highestWorld as number ?? 1,
+          powerUps: s.powerUps as PowerUpInventory ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
+          levelProgress: s.levelProgress as Record<string, { stars: number; bestScore: number; attempts: number }> ?? {},
+          completedScores: s.completedScores as number[] ?? [],
+          _hydrated: true,
+        });
+      } else {
+        set({ _hydrated: true });
+      }
+    },
+    saveState: () => saveState(get()),
 
     // Cloud sync
     syncToCloud: () => {

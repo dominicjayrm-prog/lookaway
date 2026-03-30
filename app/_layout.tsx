@@ -7,6 +7,12 @@ import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
 
+function StoreHydrator() {
+  const hydrate = useGameStore((s) => s.hydrate);
+  useEffect(() => { hydrate(); }, [hydrate]);
+  return null;
+}
+
 function LifeRegenChecker() {
   const checkLifeRegen = useGameStore((s) => s.checkLifeRegen);
   const appState = useRef(AppState.currentState);
@@ -79,6 +85,7 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <MobileContainer>
+          <StoreHydrator />
           <LifeRegenChecker />
           <CloudSyncLoader />
           <ThemedStack />
