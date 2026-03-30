@@ -1,5 +1,71 @@
-import type { Level } from '@/src/types/game';
+import type { Level, Scene } from '@/src/types/game';
+import { supabase } from '@/src/lib/supabase';
 
+/** Convert a Supabase campaign_levels row to the game's Level format */
+function dbRowToLevel(row: any): Level {
+  const sceneData = row.scene_data ?? { objects: [], questions: [] };
+  const scene: Scene = {
+    id: `${row.id}-s1`,
+    viewTime: row.view_time ?? 4,
+    objects: sceneData.objects ?? [],
+    questions: sceneData.questions ?? [],
+  };
+  return {
+    id: row.id,
+    worldId: row.world_id,
+    levelNumber: row.level_number,
+    title: row.title,
+    scenes: [scene],
+    requiredScore: 60,
+    parScore: 100,
+  };
+}
+
+/** Fetch a single level from Supabase, fall back to hardcoded */
+export async function fetchLevelById(id: string): Promise<Level | undefined> {
+  try {
+    const { data, error } = await supabase
+      .from('campaign_levels')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'complete')
+      .single();
+    if (data && !error) return dbRowToLevel(data);
+  } catch { /* fall through */ }
+  return getLevelById(id);
+}
+
+/** Fetch all levels for a world from Supabase, fall back to hardcoded */
+export async function fetchWorldLevels(worldId: number): Promise<Level[]> {
+  try {
+    const { data, error } = await supabase
+      .from('campaign_levels')
+      .select('*')
+      .eq('world_id', worldId)
+      .eq('status', 'complete')
+      .order('level_number', { ascending: true });
+    if (data && data.length > 0 && !error) return data.map(dbRowToLevel);
+  } catch { /* fall through */ }
+  return LEVELS.filter(l => l.worldId === worldId);
+}
+
+/** Fetch all levels from Supabase, fall back to hardcoded */
+export async function fetchAllLevels(): Promise<Level[]> {
+  try {
+    const { data, error } = await supabase
+      .from('campaign_levels')
+      .select('*')
+      .eq('status', 'complete')
+      .order('world_id', { ascending: true })
+      .order('level_number', { ascending: true });
+    if (data && data.length > 0 && !error) return data.map(dbRowToLevel);
+  } catch { /* fall through */ }
+  return LEVELS;
+}
+
+// ═══════════════════════════════════════════════════════════
+// HARDCODED FALLBACK LEVELS (World 1, levels 1-10)
+// ═══════════════════════════════════════════════════════════
 export const LEVELS: Level[] = [
   { id: 'w1-l1', worldId: 1, levelNumber: 1, title: 'Shape Basics', requiredScore: 60, parScore: 100, scenes: [{ id: 'w1-l1-s1', viewTime: 5, objects: [{ id: 'o1', type: 'circle', color: '#FF6B6B', x: 22, y: 28, size: 38 },{ id: 'o2', type: 'circle', color: '#0984E3', x: 72, y: 25, size: 32 },{ id: 'o3', type: 'square', color: '#00B894', x: 25, y: 72, size: 36 },{ id: 'o4', type: 'triangle', color: '#F9CA24', x: 70, y: 70, size: 34 }], questions: [{ id: 'q1', text: 'How many shapes were there in total?', options: ['3','4','5','6'], correctIndex: 1, category: 'count', timeLimit: 8 },{ id: 'q2', text: 'What colour was the square?', options: ['Red','Blue','Green','Yellow'], correctIndex: 2, category: 'color', timeLimit: 8 },{ id: 'q3', text: 'Which shape was in the top-right area?', options: ['Square','Triangle','Circle','Star'], correctIndex: 2, category: 'position', timeLimit: 8 },{ id: 'q4', text: 'Were there more circles or triangles?', options: ['More circles','More triangles','Same number','No triangles'], correctIndex: 0, category: 'comparison', timeLimit: 8 },{ id: 'q5', text: 'Was there a star in the scene?', options: ['Yes','No','Two of them','It was behind a square'], correctIndex: 1, category: 'presence', timeLimit: 8 }]}]},
   { id: 'w1-l2', worldId: 1, levelNumber: 2, title: 'Colour Count', requiredScore: 60, parScore: 100, scenes: [{ id: 'w1-l2-s1', viewTime: 5, objects: [{ id: 'o1', type: 'circle', color: '#FF6B6B', x: 20, y: 30, size: 40 },{ id: 'o2', type: 'circle', color: '#FF6B6B', x: 75, y: 25, size: 28 },{ id: 'o3', type: 'square', color: '#0984E3', x: 22, y: 72, size: 34 },{ id: 'o4', type: 'triangle', color: '#00B894', x: 72, y: 70, size: 36 }], questions: [{ id: 'q1', text: 'How many red circles were there?', options: ['1','2','3','4'], correctIndex: 1, category: 'count', timeLimit: 8 },{ id: 'q2', text: 'What colour was the triangle?', options: ['Red','Blue','Green','Yellow'], correctIndex: 2, category: 'color', timeLimit: 8 },{ id: 'q3', text: 'Where was the blue square?', options: ['Top-left','Top-right','Bottom-left','Bottom-right'], correctIndex: 2, category: 'position', timeLimit: 8 },{ id: 'q4', text: 'Which red circle was larger?', options: ['The one on the left','The one on the right','They were the same size','There was only one'], correctIndex: 0, category: 'comparison', timeLimit: 8 },{ id: 'q5', text: 'Was there a yellow shape in the scene?', options: ['Yes, a circle','Yes, a square','Yes, a triangle','No'], correctIndex: 3, category: 'presence', timeLimit: 8 }]}]},
