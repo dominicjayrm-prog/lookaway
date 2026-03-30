@@ -1,16 +1,14 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect, Polygon, Defs, LinearGradient, Stop, G } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL_COUNTS, getMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
-import { LEVELS, getLevelById } from '@/src/data/levels';
-import { spacing } from '@/src/theme/spacing';
+import { getLevelById } from '@/src/data/levels';
 
-const SCREEN_W = Dimensions.get('window').width;
-const MAP_W = Math.min(SCREEN_W, 430);
+const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
 const CHECKPOINT_SIZE = 48;
 const BOSS_SIZE = 56;
@@ -54,6 +52,7 @@ export default function WorldMapScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  const [mapWidth, setMapWidth] = useState(DEFAULT_MAP_W);
 
   const worldColor = WORLD_COLORS[worldId] ?? '#00B894';
   const worldLightColor = WORLD_LIGHT_COLORS[worldId] ?? 'rgba(0,184,148,0.12)';
@@ -83,22 +82,25 @@ export default function WorldMapScreen() {
 
   const [popup, setPopup] = useState<number | null>(null);
 
-  // Auto-scroll to current level on mount
+  // Auto-scroll to current level on mount and when level changes
   useEffect(() => {
     if (path.length === 0) return;
     const idx = Math.min(currentLevel - 1, path.length - 1);
     const targetY = Math.max(0, path[idx].y - 350);
     setTimeout(() => scrollRef.current?.scrollTo({ y: targetY, animated: false }), 100);
-  }, []);
+  }, [currentLevel, path]);
 
   const handleNodeTap = useCallback((levelNum: number) => {
     const state = getNodeState(levelNum, completedUpTo, totalLevels);
-    if (state === 'far-locked' || state === 'boss-locked') return;
+    if (state === 'completed' || state === 'boss-completed') {
+      setPopup(levelNum);
+      return;
+    }
     if (state === 'current') {
       router.push(`/game/w${worldId}-l${levelNum}`);
       return;
     }
-    setPopup(levelNum);
+    // Locked nodes — do nothing
   }, [completedUpTo, totalLevels, worldId, router]);
 
   const handlePlay = useCallback(() => {
@@ -115,8 +117,8 @@ export default function WorldMapScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       {/* ── HEADER ── */}
-      <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.94)' : colors.bg }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
+      <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.bg }]}>
+        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
         <View style={styles.headerCenter}>
@@ -135,26 +137,26 @@ export default function WorldMapScreen() {
       </View>
 
       {/* ── MAP ── */}
-      <ScrollView ref={scrollRef} style={styles.scrollArea} contentContainerStyle={{ height: mapHeight + 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={styles.scrollArea} contentContainerStyle={{ height: mapHeight + 100 }} showsVerticalScrollIndicator={false} onLayout={(e) => setMapWidth(Math.min(e.nativeEvent.layout.width, 430))}>
         {/* Background gradient tint */}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
 
         {/* Background decorations */}
-        <BackgroundDecorations worldId={worldId} worldColor={worldColor} mapHeight={mapHeight} />
+        <BackgroundDecorations worldId={worldId} worldColor={worldColor} mapHeight={mapHeight} mapWidth={mapWidth} />
 
         {/* SVG paths */}
-        <Svg style={StyleSheet.absoluteFill} width={MAP_W} height={mapHeight + 100}>
+        <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
           {/* Completed path glow */}
           {completedUpTo > 0 && (
-            <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), MAP_W)} stroke={worldColor} strokeWidth={24} strokeOpacity={0.08} fill="none" strokeLinecap="round" />
+            <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={24} strokeOpacity={0.08} fill="none" strokeLinecap="round" />
           )}
           {/* Completed path solid */}
           {completedUpTo > 0 && (
-            <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), MAP_W)} stroke={worldColor} strokeWidth={4} fill="none" strokeLinecap="round" />
+            <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={4} fill="none" strokeLinecap="round" />
           )}
           {/* Locked path dashed */}
           {completedUpTo < path.length && (
-            <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, MAP_W)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />
+            <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, mapWidth)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />
           )}
         </Svg>
 
@@ -166,7 +168,7 @@ export default function WorldMapScreen() {
           const checkpoint = getCheckpoint(levelNum, totalLevels);
           const isBoss = levelNum === totalLevels;
           const nodeSize = isBoss ? BOSS_SIZE : checkpoint ? CHECKPOINT_SIZE : NODE_SIZE;
-          const px = (pos.x / 100) * MAP_W - nodeSize / 2;
+          const px = (pos.x / 100) * mapWidth - nodeSize / 2;
 
           return (
             <Pressable
@@ -201,20 +203,20 @@ export default function WorldMapScreen() {
         })}
 
         {/* START marker */}
-        <View style={[styles.markerPill, { top: (path[0]?.y ?? 2050) + 40, left: MAP_W / 2 - 30 }]}>
+        <View style={[styles.markerPill, { top: (path[0]?.y ?? 2050) + 40, left: mapWidth / 2 - 30 }]}>
           <Text style={[styles.markerText, { color: worldColor }]}>START</Text>
         </View>
 
         {/* FINISH marker */}
-        <View style={[styles.markerPill, { top: (path[path.length - 1]?.y ?? 250) - 50, left: MAP_W / 2 - 45 }]}>
+        <View style={[styles.markerPill, { top: (path[path.length - 1]?.y ?? 250) - 50, left: mapWidth / 2 - 45 }]}>
           <Text style={[styles.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>
-            {completedUpTo >= totalLevels ? 'COMPLETE!' : `WORLD ${worldId + 1} AWAITS`}
+            {completedUpTo >= totalLevels ? 'COMPLETE!' : worldId < 6 ? `WORLD ${worldId + 1} AWAITS` : 'THE SUMMIT'}
           </Text>
         </View>
       </ScrollView>
 
       {/* ── BOTTOM BAR ── */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.94)' : colors.bg }]}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.bg }]}>
         <View style={styles.bottomInfo}>
           <Text style={[styles.bottomTitle, { color: colors.text }]}>Level {currentLevel}: {currentLevelTitle}</Text>
           <Text style={[styles.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
@@ -286,7 +288,7 @@ const LevelNode = React.memo(function LevelNode({ state, levelNum, worldColor, n
 });
 
 /* ── BACKGROUND DECORATIONS ── */
-const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldId, worldColor, mapHeight }: { worldId: number; worldColor: string; mapHeight: number }) {
+const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldId, worldColor, mapHeight, mapWidth }: { worldId: number; worldColor: string; mapHeight: number; mapWidth: number }) {
   const shapes = useMemo(() => {
     const result: { x: number; y: number; size: number; opacity: number; type: 'circle' | 'square' | 'triangle' }[] = [];
     const rng = (seed: number) => { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; };
@@ -295,7 +297,7 @@ const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldI
     const count = Math.round(mapHeight / 80);
     for (let i = 0; i < count; i++) {
       result.push({
-        x: r() * MAP_W,
+        x: r() * mapWidth,
         y: r() * mapHeight,
         size: 6 + r() * 14,
         opacity: 0.03 + r() * 0.06,
@@ -306,7 +308,7 @@ const BackgroundDecorations = React.memo(function BackgroundDecorations({ worldI
   }, [worldId, mapHeight]);
 
   return (
-    <Svg style={StyleSheet.absoluteFill} width={MAP_W} height={mapHeight + 100}>
+    <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
       {shapes.map((s, i) => {
         if (s.type === 'circle') return <Circle key={i} cx={s.x} cy={s.y} r={s.size / 2} fill={worldColor} opacity={s.opacity} />;
         if (s.type === 'square') return <Rect key={i} x={s.x - s.size / 2} y={s.y - s.size / 2} width={s.size} height={s.size} rx={2} fill={worldColor} opacity={s.opacity} />;
@@ -331,7 +333,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.popupBackdrop} onPress={onClose}>
-        <Pressable style={[styles.popupCard, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+        <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={[styles.popupCircle, { backgroundColor: worldColor }]}>
             <Text style={styles.popupCircleNum}>{levelNum}</Text>
           </View>
@@ -356,7 +358,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
               <Text style={[styles.popupCloseText, { color: colors.textMid }]}>Close</Text>
             </Pressable>
           </View>
-        </Pressable>
+        </View>
       </Pressable>
     </Modal>
   );
