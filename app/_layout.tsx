@@ -38,22 +38,32 @@ function LifeRegenChecker() {
 
 function CloudSyncLoader() {
   const loadFromCloud = useGameStore((s) => s.loadFromCloud);
+  const syncToCloud = useGameStore((s) => s.syncToCloud);
   const saveState = useGameStore((s) => s.saveState);
   const { user } = useAuth();
+  const appState = useRef(AppState.currentState);
 
+  // Load from cloud on login
   useEffect(() => {
     if (user?.id) { loadFromCloud(user.id); }
   }, [user?.id, loadFromCloud]);
 
-  // Sync progress when app goes to background (iOS may kill the app after this)
+  // Sync on foreground (pull latest from other devices) + save on background
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (next === 'background' || next === 'inactive') {
-        saveState();
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        // Returning to foreground — pull latest cloud data
+        if (user?.id) { loadFromCloud(user.id); }
       }
+      if (next === 'background' || next === 'inactive') {
+        // Going to background — push local state to cloud + localStorage
+        saveState();
+        syncToCloud();
+      }
+      appState.current = next;
     });
     return () => sub.remove();
-  }, [saveState]);
+  }, [user?.id, loadFromCloud, saveState, syncToCloud]);
 
   return null;
 }

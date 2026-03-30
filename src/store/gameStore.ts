@@ -247,6 +247,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       }));
       setTimeout(() => saveState(get()), 0);
 
+      // Immediately sync to cloud so progress is saved even if app is killed
+      const uid = getUserId();
+      if (uid && !uid.startsWith('anon-')) {
+        setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => console.warn('Post-level sync failed:', e)), 500);
+      }
+
       // Log to economy tracker
       if (gemsEarned > 0) {
         logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars, scorePercent, replay: !!existing });
@@ -294,19 +300,39 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     loadFromCloud: async (userId: string) => {
       const cloud = await loadProgressFromSupabase(userId);
-      if (cloud) {
-        set({
-          gems: cloud.gems,
-          lives: cloud.lives,
-          livesLastLostAt: cloud.livesLastLostAt,
-          streakCount: cloud.streakCount,
-          totalStars: cloud.totalStars,
-          highestWorld: cloud.highestWorld,
-          levelProgress: cloud.levelProgress,
-          completedScores: cloud.completedScores,
-        });
-        setTimeout(() => saveState(get()), 0);
+      if (!cloud) return;
+      const local = get();
+
+      // Merge level progress — keep the best from either source
+      const mergedProgress = { ...cloud.levelProgress };
+      for (const [id, lp] of Object.entries(local.levelProgress)) {
+        const cp = mergedProgress[id];
+        if (!cp) {
+          mergedProgress[id] = lp;
+        } else {
+          mergedProgress[id] = {
+            stars: Math.max(cp.stars, lp.stars),
+            bestScore: Math.max(cp.bestScore, lp.bestScore),
+            attempts: Math.max(cp.attempts, lp.attempts),
+          };
+        }
       }
+
+      // Recalculate total stars from merged progress
+      const mergedTotalStars = Object.values(mergedProgress).reduce((sum, p) => sum + p.stars, 0);
+      const mergedScores = Object.values(mergedProgress).filter(p => p.bestScore > 0).map(p => p.bestScore);
+
+      set({
+        gems: Math.max(cloud.gems, local.gems),
+        lives: Math.max(cloud.lives, local.lives),
+        livesLastLostAt: cloud.livesLastLostAt,
+        streakCount: Math.max(cloud.streakCount, local.streakCount),
+        totalStars: mergedTotalStars,
+        highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
+        levelProgress: mergedProgress,
+        completedScores: mergedScores,
+      });
+      setTimeout(() => saveState(get()), 0);
     },
     startLevel: (level) => set({ currentLevel: level, gameState: 'MEMORISE' as GameState, currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
     setGameState: (gameState) => set({ gameState }),
