@@ -1,26 +1,56 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown, SlideInRight } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '@/src/components/Card';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
+function loadProfilePic(): string | null {
+  try { return localStorage.getItem('lookaway-profile-pic'); } catch { return null; }
+}
+function saveProfilePic(uri: string | null) {
+  try { if (uri) localStorage.setItem('lookaway-profile-pic', uri); else localStorage.removeItem('lookaway-profile-pic'); } catch {}
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { mode, colors, isDark, toggleTheme } = useTheme();
-  const { gems, lives, totalStars, streakCount, getCompletedLevelCount, getMemoryScore } = useGameStore();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore } = useGameStore();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const email = user?.email || 'Guest';
   const initials = displayName.slice(0, 2).toUpperCase();
+  const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
+
+  const handlePickPhoto = useCallback(() => {
+    if (Platform.OS === 'web') {
+      // Web: use file input
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const uri = reader.result as string;
+          setProfilePic(uri);
+          saveProfilePic(uri);
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    } else {
+      Alert.alert('Coming soon', 'Photo picker will be available on mobile devices.');
+    }
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,9 +71,18 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Avatar + name */}
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
-          <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8} style={styles.avatarContainer}>
+            {profilePic ? (
+              <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            <View style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.bg }]}>
+              <Ionicons name="camera" size={14} color={colors.accent} />
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
         </Animated.View>
@@ -188,7 +227,9 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
 
   avatarSection: { alignItems: 'center', paddingVertical: spacing.xxl },
-  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  avatarContainer: { position: 'relative' as const, marginBottom: spacing.md },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  cameraButton: { position: 'absolute' as const, bottom: 0, right: -2, width: 28, height: 28, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const, borderWidth: 2 },
   avatarText: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
   displayName: { fontSize: 22, fontWeight: '700', marginBottom: spacing.xs },
   email: { fontSize: typography.sizes.md },

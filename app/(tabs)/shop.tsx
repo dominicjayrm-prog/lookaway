@@ -5,8 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
 import { useGameStore } from '@/src/store';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { POWER_UP_COSTS, LIVES_CONFIG, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
-import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
@@ -26,6 +26,7 @@ const GEM_PACKS = [
 const gemIcon = '\u{1F48E}';
 
 export default function ShopTab() {
+  const { colors } = useTheme();
   const { gems, powerUps, buyPowerUp, refillLivesWithGems, refillLives } = useGameStore();
 
   const handleBuyPowerUp = (id: PowerUpId, qty: number) => {
@@ -50,18 +51,18 @@ export default function ShopTab() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Shop</Text>
-        <View style={styles.gemDisplay}>
+        <Text style={[styles.title, { color: colors.text }]}>Shop</Text>
+        <View style={[styles.gemDisplay, { backgroundColor: colors.accentSoft }]}>
           <Text style={styles.gemEmoji}>{gemIcon}</Text>
-          <Text style={styles.gemCount}>{gems.toLocaleString()}</Text>
+          <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Power-ups with owned count */}
-        <Text style={styles.sectionTitle}>Power-ups</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
         <View style={styles.powerUpGrid}>
           {POWER_UPS.map((p) => {
             const owned = powerUps[p.id];
@@ -78,7 +79,7 @@ export default function ShopTab() {
                   <View style={[styles.powerUpIconCircle, { backgroundColor: p.tintMid }]}>
                     <Text style={styles.powerUpIcon}>{p.icon}</Text>
                   </View>
-                  <Text style={styles.powerUpName}>{p.name}</Text>
+                  <Text style={[styles.powerUpName, { color: colors.text }]}>{p.name}</Text>
                   <Text style={styles.powerUpDescription}>{p.description}</Text>
                   <Text style={styles.ownedText}>Owned: {owned}</Text>
                   <Button
@@ -102,13 +103,13 @@ export default function ShopTab() {
         </View>
 
         {/* Gem packs */}
-        <Text style={styles.sectionTitle}>Gem packs</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
         <View style={styles.gemPackRow}>
           {GEM_PACKS.map((pack) => (
             <Card key={pack.id} style={{ ...styles.gemPackCard, paddingTop: pack.badge ? 36 : spacing.xl }}>
               {pack.badge && <View style={styles.bestValueBadge}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
               <Text style={styles.packGemEmoji}>{gemIcon}</Text>
-              <Text style={styles.packGemAmount}>{pack.gems.toLocaleString()}</Text>
+              <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
               <Text style={styles.packGemsLabel}>gems</Text>
               <Button title={pack.price} variant="secondary" onPress={handleIAP} style={styles.packButton} textStyle={styles.packButtonText} />
             </Card>
@@ -116,7 +117,7 @@ export default function ShopTab() {
         </View>
 
         {/* Lives — £0.99 first (most prominent), then unlimited, then gems (last) */}
-        <Text style={styles.sectionTitle}>Lives</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
         <Card style={styles.livesCard}>
           {/* Cash refill — most prominent */}
           <View style={styles.livesRow}>
@@ -169,14 +170,14 @@ export default function ShopTab() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.lg },
-  title: { fontSize: 24, fontWeight: typography.weights.heavy, color: colors.text, letterSpacing: -0.3 },
-  gemDisplay: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.accentSoft, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: borderRadius.pill },
+  title: { fontSize: 24, fontWeight: typography.weights.heavy, letterSpacing: -0.3 },
+  gemDisplay: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: borderRadius.pill },
   gemEmoji: { fontSize: 22 },
-  gemCount: { fontSize: typography.sizes.xl, fontWeight: typography.weights.heavy, color: colors.accent },
+  gemCount: { fontSize: typography.sizes.xl, fontWeight: typography.weights.heavy },
   scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 60 },
-  sectionTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
+  sectionTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, marginTop: spacing.xl, marginBottom: spacing.md },
 
   // Power-ups
   powerUpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   ownedBadgeText: { fontSize: 11, fontWeight: '800' as const, color: '#FFFFFF' },
   powerUpIconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center' as const, justifyContent: 'center' as const },
   powerUpIcon: { fontSize: 24 },
-  powerUpName: { fontSize: typography.sizes.md, fontWeight: typography.weights.bold, color: colors.text },
+  powerUpName: { fontSize: typography.sizes.md, fontWeight: typography.weights.bold },
   powerUpDescription: { fontSize: typography.sizes.xs, color: colors.textMid, textAlign: 'center' as const },
   ownedText: { fontSize: 10, fontWeight: '600' as const, color: colors.textLight, marginTop: 2 },
   buyButton: { minHeight: 32, paddingVertical: 6, paddingHorizontal: spacing.md, marginTop: spacing.xs },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,8 @@ export default function PlayTab() {
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
+  let profilePic: string | null = null;
+  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('lookaway-profile-pic') : null; } catch {}
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -40,11 +42,15 @@ export default function PlayTab() {
             <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
           </View>
           <TouchableOpacity
-            style={[styles.profileButton, { backgroundColor: colors.accent }]}
+            style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
             activeOpacity={0.8}
             onPress={() => router.push('/profile')}
           >
-            <Text style={styles.profileInitials}>{initials}</Text>
+            {profilePic ? (
+              <Image source={{ uri: profilePic }} style={styles.profileImage} />
+            ) : (
+              <Text style={styles.profileInitials}>{initials}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -105,7 +111,8 @@ const styles = StyleSheet.create({
   livesPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999 },
   gemPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999 },
   gemCount: { fontSize: typography.sizes.sm, fontWeight: typography.weights.bold },
-  profileButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  profileButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' as const },
+  profileImage: { width: 32, height: 32, borderRadius: 16 },
   profileInitials: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   logoSection: { alignItems: 'center', paddingTop: spacing.xxxl, paddingBottom: spacing.xxl },
   wordmarkWrap: { marginTop: spacing.md },
