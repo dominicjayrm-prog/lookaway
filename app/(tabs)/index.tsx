@@ -1,20 +1,48 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LookAwayLogo } from '@/src/components/LookAwayLogo';
-import { Wordmark } from '@/src/components/Wordmark';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { LEVELS } from '@/src/data/levels';
-import { typography } from '@/src/theme/typography';
-import { spacing, shadows } from '@/src/theme/spacing';
+import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, G, Line, Polygon } from 'react-native-svg';
+
+const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
+const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
+const EMDASH = String.fromCharCode(8212);
+
+function MiniEyeIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 36 36">
+      <Path d="M2 18Q18 6 34 18Q18 30 2 18Z" fill="rgba(255,255,255,0.3)" stroke="white" strokeWidth={2} />
+      <Circle cx={18} cy={18} r={5} fill="white" />
+      <Circle cx={18} cy={18} r={2.5} fill="rgba(108,92,231,0.5)" />
+    </Svg>
+  );
+}
+
+function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: string }) {
+  return <Svg width={size} height={size} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
+}
+
+function CalendarIcon({ size = 22, color = '#FF6B6B' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={3} y={4} width={18} height={18} rx={3} fill="none" stroke={color} strokeWidth={1.8} />
+      <Line x1={3} y1={9} x2={21} y2={9} stroke={color} strokeWidth={1.8} />
+      <Line x1={8} y1={2} x2={8} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Line x1={16} y1={2} x2={16} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Circle cx={8} cy={14} r={1.2} fill={color} /><Circle cx={12} cy={14} r={1.2} fill={color} /><Circle cx={16} cy={14} r={1.2} fill={color} />
+      <Circle cx={8} cy={18} r={1.2} fill={color} /><Circle cx={12} cy={18} r={1.2} fill={color} />
+    </Svg>
+  );
+}
 
 export default function PlayTab() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount } = useGameStore();
   const nextLevelId = getNextUnplayedLevelId();
@@ -23,119 +51,222 @@ export default function PlayTab() {
   const nextLevelTitle = nextLevel?.title ?? 'Shape Basics';
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
+  const worldProgress = Math.max(0, nextLevelNumber - 1) / 35;
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
   try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('lookaway-profile-pic') : null; } catch {}
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={styles.topBar}>
-        <View style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={16} color={i < lives ? colors.wrong : colors.textLight} />
-          ))}
-        </View>
-        <View style={styles.topBarRight}>
-          <View style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
-            <Ionicons name="diamond" size={14} color={colors.accent} />
-            <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <View style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
+            ))}
           </View>
-          <TouchableOpacity
-            style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
-            activeOpacity={0.8}
-            onPress={() => router.push('/profile')}
-          >
-            {profilePic ? (
-              <Image source={{ uri: profilePic }} style={styles.profileImage} />
-            ) : (
-              <Text style={styles.profileInitials}>{initials}</Text>
-            )}
+          <View style={styles.topBarRight}>
+            <View style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="diamond" size={13} color={colors.accent} />
+              <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
+              activeOpacity={0.8}
+              onPress={() => router.push('/profile')}
+            >
+              {profilePic ? (
+                <Image source={{ uri: profilePic }} style={styles.profileImage} />
+              ) : (
+                <Text style={styles.profileInitials}>{initials}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Hero card — purple gradient */}
+        <View style={styles.heroCard}>
+          {/* Logo row */}
+          <View style={styles.heroLogoRow}>
+            <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.heroLogoText}>Look<Text style={{ fontWeight: '800' }}>Away</Text></Text>
+              <Text style={styles.heroLogoSub}>Memorise. Look away. Answer.</Text>
+            </View>
+          </View>
+
+          {/* Level info */}
+          <Text style={styles.heroContinueLabel}>CONTINUE</Text>
+          <Text style={styles.heroLevelTitle}>{`World 1 ${EMDASH} Level ${nextLevelNumber}`}</Text>
+          <Text style={styles.heroLevelSubtitle}>{nextLevelTitle}</Text>
+
+          {/* Progress bar */}
+          <View style={styles.heroProgressRow}>
+            <View style={styles.heroProgressTrack}>
+              <View style={[styles.heroProgressFill, { width: `${Math.round(worldProgress * 100)}%` }]} />
+            </View>
+            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/35</Text>
+          </View>
+
+          {/* Play button */}
+          <TouchableOpacity style={styles.heroPlayButton} activeOpacity={0.85} onPress={() => router.push(`/game/${nextLevelId}`)}>
+            <Text style={styles.heroPlayText}>Play</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      <View style={styles.logoSection}>
-        <LookAwayLogo size={48} />
-        <View style={styles.wordmarkWrap}><Wordmark size={24} /></View>
-        <Text style={[styles.tagline, { color: colors.textMid }]}>Memorise. Look away. Answer.</Text>
-      </View>
-
-      <View style={[styles.continueCard, { backgroundColor: colors.card }, shadows.card]}>
-        <Text style={[styles.continueLabel, { color: colors.accent }]}>CONTINUE</Text>
-        <Text style={[styles.continueTitle, { color: colors.text }]}>{`World 1 ${String.fromCharCode(8212)} Level ${nextLevelNumber}`}</Text>
-        <Text style={[styles.continueSubtitle, { color: colors.textMid }]}>{nextLevelTitle}</Text>
-        <TouchableOpacity style={[styles.playButton, { backgroundColor: colors.accent }]} activeOpacity={0.85} onPress={() => router.push(`/game/${nextLevelId}`)}>
-          <Text style={styles.playButtonText}>Play</Text>
+        {/* Daily challenge card */}
+        <TouchableOpacity style={[styles.dailyCard, { backgroundColor: colors.card }]} activeOpacity={0.92} onPress={() => router.push('/game/daily')}>
+          <View style={[styles.dailyIconBg, { backgroundColor: colors.wrongSoft }]}>
+            <CalendarIcon size={22} color={colors.wrong} />
+          </View>
+          <View style={styles.dailyContent}>
+            <View style={styles.dailyTopRow}>
+              <Text style={[styles.dailyTitle, { color: colors.text }]}>Daily Challenge</Text>
+              <Text style={[styles.dailyDate, { color: colors.textLight }]}>{todayDate}</Text>
+            </View>
+            <Text style={[styles.dailySub, { color: colors.textMid }]}>5 scenes, 25 questions. Same for everyone.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
         </TouchableOpacity>
-      </View>
 
-      <View style={[styles.dailyCard, { backgroundColor: colors.card, borderLeftColor: colors.accent }, shadows.card]}>
-        <View style={styles.dailyHeader}>
-          <Text style={[styles.dailyLabel, { color: colors.accent }]}>DAILY CHALLENGE</Text>
-          <Text style={[styles.dailyDate, { color: colors.textMid }]}>{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
-        </View>
-        <TouchableOpacity style={[styles.dailyButton, { borderColor: colors.accent }]} activeOpacity={0.85} onPress={() => router.push('/game/daily')}>
-          <Text style={[styles.dailyButtonText, { color: colors.accent }]}>Play today's challenge</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.statsCard, { backgroundColor: colors.card }, shadows.card]}>
+        {/* Stats row */}
         <View style={styles.statsRow}>
-          <View style={styles.statColumn}>
-            <Text style={[styles.statLabel, { color: colors.textMid }]}>Memory score</Text>
-            <Text style={[styles.statValueMemory, { color: colors.accent }]}>{completedCount > 0 ? `${memoryScore}%` : `${String.fromCharCode(8212)}%`}</Text>
-            {completedCount === 0 && <Text style={[styles.statHint, { color: colors.textLight }]}>Play your first level!</Text>}
+          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statIconBg, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="pulse" size={14} color={colors.accent} />
+            </View>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>BRAIN</Text>
+            <Text style={[styles.statValue, { color: completedCount > 0 ? colors.accent : colors.textLight }]}>
+              {completedCount > 0 ? `${memoryScore}%` : EMDASH}
+            </Text>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statColumn}>
-            <Text style={[styles.statLabel, { color: colors.textMid }]}>Total stars</Text>
-            <Text style={[styles.statValueStars, { color: colors.gold }]}>{totalStars}/600</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statIconBg, { backgroundColor: colors.goldSoft }]}>
+              <StarIcon size={13} color={colors.gold} />
+            </View>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>STARS</Text>
+            <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statColumn}>
-            <Text style={[styles.statLabel, { color: colors.textMid }]}>Streak</Text>
-            <Text style={[styles.statValueStreak, { color: colors.wrong }]}>{streakCount}</Text>
-            {streakCount === 0 && <Text style={[styles.statHint, { color: colors.textLight }]}>Play daily!</Text>}
+          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
+              <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
+            </View>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
+            <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
           </View>
         </View>
-      </View>
+
+        {/* Your Journey */}
+        <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
+          <View style={styles.journeyHeader}>
+            <Text style={[styles.journeyTitle, { color: colors.text }]}>Your Journey</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/journey')}>
+              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>See all {'>'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.journeyPills}>
+            {WORLD_NAMES.map((name, i) => {
+              const wc = WORLD_COLORS[i];
+              const isActive = i === 0;
+              const isLocked = i > 0;
+              return (
+                <View key={i} style={[styles.worldPill, { backgroundColor: isActive ? wc + '12' : colors.surface, borderWidth: isActive ? 1.5 : 0, borderColor: isActive ? wc + '33' : 'transparent', opacity: isLocked ? 0.5 : 1 }]}>
+                  <Text style={[styles.worldPillNum, { color: isActive ? wc : colors.textMid }]}>{i + 1}</Text>
+                  <Text style={[styles.worldPillName, { color: isActive ? wc : colors.textLight }]}>{name}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Friends placeholder */}
+        <View style={[styles.friendsCard, { backgroundColor: colors.card }]}>
+          <View style={styles.friendsHeader}>
+            <Text style={[styles.friendsTitle, { color: colors.text }]}>Friends</Text>
+            <View style={[styles.comingSoonPill, { backgroundColor: colors.accentSoft, borderColor: colors.accentMid }]}>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: colors.accent }}>Coming soon</Text>
+            </View>
+          </View>
+          <View style={styles.friendsAvatars}>
+            {['#6C5CE7','#00B894','#FF6B6B','#0984E3','#D4A012'].map((c, i) => (
+              <View key={i} style={[styles.friendAvatar, { backgroundColor: c + '40', marginLeft: i > 0 ? -8 : 0, borderColor: colors.card }]}>
+                <Ionicons name="person" size={16} color={c + '80'} />
+              </View>
+            ))}
+          </View>
+          <Text style={[styles.friendsText, { color: colors.textMid }]}>Challenge friends, compare scores</Text>
+          <Text style={[styles.friendsSub, { color: colors.textLight }]}>Add friends and see who remembers more</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: spacing.lg },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.md },
-  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  livesPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999 },
-  gemPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999 },
-  gemCount: { fontSize: typography.sizes.sm, fontWeight: typography.weights.bold },
-  profileButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' as const },
+  container: { flex: 1 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20 },
+  topBarRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  livesPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  gemPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
+  gemCount: { fontSize: 12, fontWeight: '700' },
+  profileButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileImage: { width: 32, height: 32, borderRadius: 16 },
   profileInitials: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
-  logoSection: { alignItems: 'center', paddingTop: spacing.xxxl, paddingBottom: spacing.xxl },
-  wordmarkWrap: { marginTop: spacing.md },
-  tagline: { fontSize: 14, marginTop: spacing.sm },
-  continueCard: { borderRadius: 16, padding: spacing.lg, marginBottom: spacing.lg },
-  continueLabel: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5, marginBottom: spacing.sm },
-  continueTitle: { fontSize: 18, fontWeight: '700', marginBottom: spacing.xs },
-  continueSubtitle: { fontSize: 14, marginBottom: spacing.lg },
-  playButton: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  playButtonText: { color: '#FFFFFF', fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold },
-  dailyCard: { borderRadius: 16, padding: spacing.lg, borderLeftWidth: 3, marginBottom: spacing.lg },
-  dailyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  dailyLabel: { fontSize: 10, fontWeight: '600', letterSpacing: 1.5 },
-  dailyDate: { fontSize: typography.sizes.sm },
-  dailyButton: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  dailyButtonText: { fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold },
-  statsCard: { borderRadius: 16, padding: 20 },
-  statsRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  statColumn: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, alignSelf: 'stretch' },
-  statLabel: { fontSize: 10, marginBottom: spacing.xs },
-  statValueMemory: { fontSize: 20, fontWeight: '700' },
-  statValueStars: { fontSize: 20, fontWeight: '700' },
-  statValueStreak: { fontSize: 20, fontWeight: '700' },
-  statHint: { fontSize: 10, marginTop: spacing.xs, textAlign: 'center' },
+
+  // Hero card
+  heroCard: { marginHorizontal: 16, marginTop: 8, borderRadius: 24, paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24, backgroundColor: '#6C5CE7', shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 32, elevation: 6,
+    // Gradient workaround: use solid purple (RN doesn't support CSS gradients natively)
+  },
+  heroLogoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  heroLogoBg: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroLogoText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  heroLogoSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
+  heroContinueLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 1.5, color: 'rgba(255,255,255,0.5)', marginBottom: 4 },
+  heroLevelTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 },
+  heroLevelSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginBottom: 16 },
+  heroProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
+  heroProgressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' },
+  heroProgressFill: { height: '100%', borderRadius: 2, backgroundColor: '#FFFFFF' },
+  heroProgressText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
+  heroPlayButton: { backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+  heroPlayText: { fontSize: 17, fontWeight: '700', color: '#6C5CE7' },
+
+  // Daily card
+  dailyCard: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 },
+  dailyIconBg: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  dailyContent: { flex: 1 },
+  dailyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
+  dailyTitle: { fontSize: 13, fontWeight: '700' },
+  dailyDate: { fontSize: 11 },
+  dailySub: { fontSize: 12 },
+
+  // Stats
+  statsRow: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 14 },
+  statCard: { flex: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  statIconBg: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
+  statValue: { fontSize: 20, fontWeight: '800' },
+
+  // Journey
+  journeyCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  journeyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  journeyTitle: { fontSize: 13, fontWeight: '700' },
+  journeyPills: { flexDirection: 'row', gap: 6 },
+  worldPill: { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
+  worldPillNum: { fontSize: 12, fontWeight: '700' },
+  worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
+
+  // Friends
+  friendsCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  friendsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  friendsTitle: { fontSize: 13, fontWeight: '700' },
+  comingSoonPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
+  friendsAvatars: { flexDirection: 'row', marginBottom: 10 },
+  friendAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
+  friendsText: { fontSize: 13, fontWeight: '600' },
+  friendsSub: { fontSize: 11, marginTop: 2 },
 });

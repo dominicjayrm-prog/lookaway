@@ -26,14 +26,15 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.tabBarInactive,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: -2 },
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopWidth: 1,
           borderTopColor: colors.tabBarBorder,
-          height: 80,
-          paddingBottom: 28,
-          paddingTop: 8,
+          height: 76,
+          paddingBottom: 24,
+          paddingTop: 6,
           elevation: 0,
           shadowOpacity: 0,
         },
@@ -63,9 +64,9 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   activeIconContainer: {
-    borderRadius: 999,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   inactiveIconContainer: {
     paddingHorizontal: 16,
