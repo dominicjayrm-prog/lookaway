@@ -88,7 +88,7 @@ export default function DailyTab() {
           style={({ pressed }) => [styles.startButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
           onPress={() => router.push(MODE_ROUTES[todayMode] as any)}
         >
-          <Text style={styles.startButtonText}>Start {modeInfo.name} \u2014 {MODE_SCENE_TEXT[todayMode]}</Text>
+          <Text style={styles.startButtonText}>Start {modeInfo.name} — {MODE_SCENE_TEXT[todayMode]}</Text>
         </Pressable>
 
         {/* This week */}
