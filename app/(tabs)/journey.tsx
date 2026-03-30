@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressBar } from '@/src/components/ProgressBar';
@@ -92,14 +92,13 @@ export default function JourneyTab() {
                 <Text style={[styles.completedText, { color: colors.textLight }]}>{`${completed}/${world.levels} completed`}</Text>
               </View>
 
-              {isCurrent && (
-                <TouchableOpacity
-                  style={styles.continueButton}
-                  activeOpacity={0.85}
-                  onPress={() => router.push(`/game/${getNextUnplayedLevelId()}`)}
+              {world.unlocked && (
+                <Pressable
+                  style={[styles.continueButton, { backgroundColor: accent }]}
+                  onPress={() => router.push(`/world/${world.id}`)}
                 >
-                  <Text style={styles.continueButtonText}>Continue</Text>
-                </TouchableOpacity>
+                  <Text style={styles.continueButtonText}>{isCurrent ? 'Continue' : 'View Map'}</Text>
+                </Pressable>
               )}
               {!world.unlocked && <Text style={[styles.lockedMessage, { color: colors.textMid }]}>{`Complete World ${world.id - 1} to unlock`}</Text>}
             </View>
