@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -16,6 +16,8 @@ export const LivesIndicator = React.memo(function LivesIndicator({
   maxLives = 5,
   regenTimeLeft,
 }: LivesIndicatorProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.hearts}>
@@ -29,7 +31,7 @@ export const LivesIndicator = React.memo(function LivesIndicator({
         ))}
       </View>
       {lives < maxLives && regenTimeLeft && (
-        <Text style={styles.timer}>{regenTimeLeft}</Text>
+        <Text style={[styles.timer, { color: colors.textMid }]}>{regenTimeLeft}</Text>
       )}
     </View>
   );
@@ -48,6 +50,5 @@ const styles = StyleSheet.create({
   timer: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.medium,
-    color: colors.textMid,
   },
 });

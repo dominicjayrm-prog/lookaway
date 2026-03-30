@@ -4,44 +4,45 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Button
           title="Back"
           variant="ghost"
           onPress={() => router.back()}
         />
-        <Text style={styles.title}>Settings</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
         <View style={styles.spacer} />
       </View>
 
       <Card style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Sound effects</Text>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Sound effects</Text>
           <Switch
             value={true}
             trackColor={{ true: colors.accent, false: colors.surface }}
           />
         </View>
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Haptic feedback</Text>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Haptic feedback</Text>
           <Switch
             value={true}
             trackColor={{ true: colors.accent, false: colors.surface }}
           />
         </View>
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Notifications</Text>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Notifications</Text>
           <Switch
             value={true}
             trackColor={{ true: colors.accent, false: colors.surface }}
@@ -51,8 +52,8 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Version</Text>
-          <Text style={styles.rowValue}>1.0.0</Text>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Version</Text>
+          <Text style={[styles.rowValue, { color: colors.textMid }]}>1.0.0</Text>
         </View>
       </Card>
     </SafeAreaView>
@@ -62,7 +63,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
     paddingHorizontal: spacing.lg,
   },
   header: {
@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.text,
   },
   spacer: {
     width: 60,
@@ -91,15 +90,12 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: typography.sizes.lg,
-    color: colors.text,
   },
   rowValue: {
     fontSize: typography.sizes.md,
-    color: colors.textMid,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border,
     marginVertical: spacing.xs,
   },
 });

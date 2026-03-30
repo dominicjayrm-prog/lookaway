@@ -5,6 +5,9 @@ import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
 import { supabase } from '@/src/lib/supabase';
 
+/** In-memory fallback for platforms where localStorage is unavailable */
+let _memoryUserId: string | null = null;
+
 /** Get current user ID for economy logging */
 function getUserId(): string {
   try {
@@ -12,15 +15,21 @@ function getUserId(): string {
     const session = (supabase as any).auth?.session?.();
     if (session?.user?.id) return session.user.id;
   } catch {}
-  // Fallback: try localStorage
+  // Fallback: try localStorage (works on web, may throw on native iOS)
   try {
     const stored = localStorage.getItem('lookaway-user-id');
     if (stored) return stored;
     const id = `anon-${Date.now()}`;
     localStorage.setItem('lookaway-user-id', id);
     return id;
-  } catch {}
-  return 'anonymous';
+  } catch (e) {
+    console.warn('localStorage unavailable, using in-memory fallback:', e);
+  }
+  // Final fallback: in-memory ID for native platforms
+  if (!_memoryUserId) {
+    _memoryUserId = `anon-${Date.now()}`;
+  }
+  return _memoryUserId;
 }
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
@@ -53,14 +62,16 @@ function saveState(state: GameStore) {
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
     }));
-  } catch {}
+  } catch (e) {
+    console.warn('Save state failed:', e);
+  }
 
   // Also sync to Supabase (debounced, fire and forget)
   clearTimeout((saveState as any)._syncTimer);
   (saveState as any)._syncTimer = setTimeout(() => {
     const uid = getUserId();
     if (uid && !uid.startsWith('anon-')) {
-      saveProgressToSupabase(uid, state).catch(() => {});
+      saveProgressToSupabase(uid, state).catch((e) => console.warn('Sync failed:', e));
     }
   }, 2000);
 }
@@ -247,7 +258,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     syncToCloud: () => {
       const uid = getUserId();
       if (uid && !uid.startsWith('anon-')) {
-        saveProgressToSupabase(uid, get()).catch(() => {});
+        saveProgressToSupabase(uid, get()).catch((e) => console.warn('Sync failed:', e));
       }
     },
     loadFromCloud: async (userId: string) => {

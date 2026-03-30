@@ -7,8 +7,12 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 function hasSeenOnboarding(): boolean {
   try {
     if (typeof window === 'undefined') return false;
+    if (typeof localStorage === 'undefined') return false;
     return localStorage.getItem('lookaway_onboarded') === 'true';
-  } catch { return false; }
+  } catch {
+    // localStorage may throw on native iOS even if window exists
+    return false;
+  }
 }
 
 export default function Index() {

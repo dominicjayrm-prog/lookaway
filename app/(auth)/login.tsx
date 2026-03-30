@@ -139,6 +139,7 @@ export default function AuthScreen() {
                   onChangeText={setDisplayName}
                   autoCapitalize="words"
                   autoCorrect={false}
+                  returnKeyType="next"
                 />
               </View>
             )}
@@ -155,6 +156,7 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                returnKeyType="next"
               />
             </View>
 
@@ -169,6 +171,8 @@ export default function AuthScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
               />
             </View>
 
