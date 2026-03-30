@@ -84,20 +84,53 @@ export function getWorldForLevel(levelNumber: number): WorldConfig | undefined {
 export function getWorldConfig(worldId: number, levelInWorld: number) {
   const world = WORLDS[worldId - 1];
   if (!world) return null;
-  const total = levelsInWorld(worldId);
-  const progress = levelInWorld / total; // 0-1
 
-  // Interpolate viewing time: starts at range[0], ends at range[1]
-  const viewTime = Math.round((world.viewingTimeRange[0] + (world.viewingTimeRange[1] - world.viewingTimeRange[0]) * progress) * 10) / 10;
-
-  // Interpolate object count
-  const objCount = Math.round(world.objectCountRange[0] + (world.objectCountRange[1] - world.objectCountRange[0]) * progress);
-
-  return {
-    ...world,
-    viewTime,
-    suggestedObjectCount: objCount,
-  };
+  switch (worldId) {
+    case 1: // Shape Basics — EASIEST
+      return {
+        ...world,
+        viewTime: levelInWorld <= 15 ? 5.0 : 4.5,
+        suggestedObjectCount: levelInWorld <= 5 ? 4 : levelInWorld <= 15 ? 5 : levelInWorld <= 25 ? 6 : 7,
+        difficulty: levelInWorld <= 15 ? 'easy' : levelInWorld <= 30 ? 'medium' : 'hard',
+      };
+    case 2: // Colour & Position
+      return {
+        ...world,
+        viewTime: levelInWorld <= 15 ? 4.5 : 4.0,
+        suggestedObjectCount: levelInWorld <= 10 ? 5 : levelInWorld <= 20 ? 6 : levelInWorld <= 30 ? 7 : 8,
+        difficulty: levelInWorld <= 12 ? 'easy' : levelInWorld <= 25 ? 'medium' : 'hard',
+      };
+    case 3: // Numbers & Letters
+      return {
+        ...world,
+        viewTime: levelInWorld <= 15 ? 4.0 : 3.5,
+        suggestedObjectCount: levelInWorld <= 10 ? 5 : levelInWorld <= 20 ? 6 : levelInWorld <= 30 ? 7 : 8,
+        difficulty: levelInWorld <= 12 ? 'easy' : levelInWorld <= 25 ? 'medium' : 'hard',
+      };
+    case 4: // Moving Objects
+      return {
+        ...world,
+        viewTime: levelInWorld <= 18 ? 4.0 : 3.5,
+        suggestedObjectCount: levelInWorld <= 12 ? 5 : levelInWorld <= 24 ? 6 : 7,
+        difficulty: levelInWorld <= 12 ? 'easy' : levelInWorld <= 25 ? 'medium' : 'hard',
+      };
+    case 5: // Photographic
+      return {
+        ...world,
+        viewTime: levelInWorld <= 18 ? 3.5 : 3.0,
+        suggestedObjectCount: levelInWorld <= 10 ? 6 : levelInWorld <= 20 ? 7 : levelInWorld <= 30 ? 8 : 9,
+        difficulty: levelInWorld <= 12 ? 'easy' : levelInWorld <= 25 ? 'medium' : 'hard',
+      };
+    case 6: // Mastermind — HARDEST
+      return {
+        ...world,
+        viewTime: levelInWorld <= 12 ? 3.0 : 2.5,
+        suggestedObjectCount: levelInWorld <= 8 ? 7 : levelInWorld <= 16 ? 8 : levelInWorld <= 20 ? 9 : 10,
+        difficulty: levelInWorld <= 8 ? 'medium' : 'hard',
+      };
+    default:
+      return { ...world, viewTime: 4.0, suggestedObjectCount: 5, difficulty: 'medium' };
+  }
 }
 
 export interface CampaignLevel {
