@@ -33,13 +33,54 @@ function getUserId(): string {
 }
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
-function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
+function buildLevelIds(): string[] {
+  const counts = [20, 30, 35, 35, 40, 40];
+  const ids: string[] = [];
+  for (let w = 0; w < counts.length; w++) {
+    for (let l = 1; l <= counts[w]; l++) ids.push(`w${w + 1}-l${l}`);
+  }
+  return ids;
+}
 
 export interface PowerUpInventory {
   slowTime: number;
   peek: number;
   fiftyFifty: number;
   skip: number;
+}
+
+// One-time migration: move w1-lX progress to w2-lX (world restructure)
+function migrateWorldProgress() {
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+    if (localStorage.getItem('lookaway_world_migrated')) return;
+
+    const saved = localStorage.getItem('lookaway-progress');
+    if (!saved) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+
+    const data = JSON.parse(saved);
+    if (!data.levelProgress) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+
+    const newProgress: Record<string, unknown> = {};
+    let changed = false;
+
+    for (const [key, value] of Object.entries(data.levelProgress)) {
+      if (key.startsWith('w1-l')) {
+        newProgress[key.replace('w1-l', 'w2-l')] = value;
+        changed = true;
+      } else {
+        newProgress[key] = value;
+      }
+    }
+
+    if (changed) {
+      data.levelProgress = newProgress;
+      localStorage.setItem('lookaway-progress', JSON.stringify(data));
+    }
+    localStorage.setItem('lookaway_world_migrated', 'true');
+  } catch (e) {
+    console.warn('World migration failed:', e);
+  }
 }
 
 // Manual localStorage persistence
@@ -112,6 +153,10 @@ export interface GameStore {
   getNextUnplayedLevelId: () => string;
   getMemoryScore: () => number;
   getCompletedLevelCount: () => number;
+
+  // Hydration — re-read localStorage after mount (fixes SSR/static export)
+  hydrate: () => void;
+  saveState: () => void;
 
   // Gameplay
   startLevel: (l: Level) => void;
@@ -243,6 +288,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       }));
       setTimeout(() => saveState(get()), 0);
 
+      // Immediately sync to cloud so progress is saved even if app is killed
+      const uid = getUserId();
+      if (uid && !uid.startsWith('anon-')) {
+        setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => console.warn('Post-level sync failed:', e)), 500);
+      }
+
       // Log to economy tracker
       if (gemsEarned > 0) {
         logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars, scorePercent, replay: !!existing });
@@ -254,6 +305,34 @@ export const useGameStore = create<GameStore>((set, get) => {
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
 
+    // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
+    hydrate: () => {
+      if (get()._hydrated) return;
+      migrateWorldProgress();
+      const saved = loadState();
+      const hasData = saved && typeof (saved as Record<string, unknown>).gems === 'number';
+      if (hasData) {
+        const s = saved as Record<string, unknown>;
+        set({
+          gems: s.gems as number ?? INITIAL_GEMS,
+          lives: s.lives as number ?? LIVES_CONFIG.maxLives,
+          maxLives: s.maxLives as number ?? LIVES_CONFIG.maxLives,
+          livesLastLostAt: s.livesLastLostAt as number | null ?? null,
+          streakCount: s.streakCount as number ?? 0,
+          streakMilestonesClaimed: s.streakMilestonesClaimed as number[] ?? [],
+          totalStars: s.totalStars as number ?? 0,
+          highestWorld: s.highestWorld as number ?? 1,
+          powerUps: s.powerUps as PowerUpInventory ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
+          levelProgress: s.levelProgress as Record<string, { stars: number; bestScore: number; attempts: number }> ?? {},
+          completedScores: s.completedScores as number[] ?? [],
+          _hydrated: true,
+        });
+      } else {
+        set({ _hydrated: true });
+      }
+    },
+    saveState: () => saveState(get()),
+
     // Cloud sync
     syncToCloud: () => {
       const uid = getUserId();
@@ -263,19 +342,39 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     loadFromCloud: async (userId: string) => {
       const cloud = await loadProgressFromSupabase(userId);
-      if (cloud) {
-        set({
-          gems: cloud.gems,
-          lives: cloud.lives,
-          livesLastLostAt: cloud.livesLastLostAt,
-          streakCount: cloud.streakCount,
-          totalStars: cloud.totalStars,
-          highestWorld: cloud.highestWorld,
-          levelProgress: cloud.levelProgress,
-          completedScores: cloud.completedScores,
-        });
-        setTimeout(() => saveState(get()), 0);
+      if (!cloud) return;
+      const local = get();
+
+      // Merge level progress — keep the best from either source
+      const mergedProgress = { ...cloud.levelProgress };
+      for (const [id, lp] of Object.entries(local.levelProgress)) {
+        const cp = mergedProgress[id];
+        if (!cp) {
+          mergedProgress[id] = lp;
+        } else {
+          mergedProgress[id] = {
+            stars: Math.max(cp.stars, lp.stars),
+            bestScore: Math.max(cp.bestScore, lp.bestScore),
+            attempts: Math.max(cp.attempts, lp.attempts),
+          };
+        }
       }
+
+      // Recalculate total stars from merged progress
+      const mergedTotalStars = Object.values(mergedProgress).reduce((sum, p) => sum + p.stars, 0);
+      const mergedScores = Object.values(mergedProgress).filter(p => p.bestScore > 0).map(p => p.bestScore);
+
+      set({
+        gems: Math.max(cloud.gems, local.gems),
+        lives: Math.max(cloud.lives, local.lives),
+        livesLastLostAt: cloud.livesLastLostAt,
+        streakCount: Math.max(cloud.streakCount, local.streakCount),
+        totalStars: mergedTotalStars,
+        highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
+        levelProgress: mergedProgress,
+        completedScores: mergedScores,
+      });
+      setTimeout(() => saveState(get()), 0);
     },
     startLevel: (level) => set({ currentLevel: level, gameState: 'MEMORISE' as GameState, currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
     setGameState: (gameState) => set({ gameState }),

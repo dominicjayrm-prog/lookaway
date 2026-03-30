@@ -13,12 +13,12 @@ const WORLD_COLORS: Record<number, string> = { 1: '#00B894', 2: '#0984E3', 3: '#
 const LOCKED_BORDERS: Record<number, string> = { 2: 'rgba(9,132,227,0.2)', 3: 'rgba(108,92,231,0.2)', 4: 'rgba(249,168,37,0.2)', 5: 'rgba(255,107,107,0.2)', 6: 'rgba(26,26,24,0.15)' };
 
 const WORLDS = [
-  { id: 1, name: 'Shape Basics', subtitle: 'Learn the fundamentals with simple shapes', levels: 35, unlocked: true, icon: '\u{1F535}', iconBg: 'rgba(0,184,148,0.12)' },
-  { id: 2, name: 'Colour & Position', subtitle: 'Test your spatial and colour memory', levels: 35, unlocked: false, icon: '\u{1F3A8}', iconBg: 'rgba(9,132,227,0.12)' },
+  { id: 1, name: 'Shape Basics', subtitle: 'Learn the fundamentals with simple shapes', levels: 20, unlocked: true, icon: '\u{1F535}', iconBg: 'rgba(0,184,148,0.12)' },
+  { id: 2, name: 'Colour & Position', subtitle: 'Test your spatial and colour memory', levels: 30, unlocked: false, icon: '\u{1F3A8}', iconBg: 'rgba(9,132,227,0.12)' },
   { id: 3, name: 'Numbers & Letters', subtitle: 'Alphanumeric memory challenges', levels: 35, unlocked: false, icon: '\u{1F522}', iconBg: 'rgba(108,92,231,0.12)' },
   { id: 4, name: 'Moving Objects', subtitle: 'Track objects in motion', levels: 35, unlocked: false, icon: '\u{1F3AC}', iconBg: 'rgba(249,168,37,0.12)' },
-  { id: 5, name: 'Real Scenes', subtitle: 'Memorise realistic illustrations', levels: 30, unlocked: false, icon: '\u{1F4F8}', iconBg: 'rgba(255,107,107,0.12)' },
-  { id: 6, name: 'Master Challenge', subtitle: 'The ultimate memory test', levels: 30, unlocked: false, icon: '\u{1F9E0}', iconBg: 'rgba(26,26,24,0.12)' },
+  { id: 5, name: 'Real Scenes', subtitle: 'Memorise realistic illustrations', levels: 40, unlocked: false, icon: '\u{1F4F8}', iconBg: 'rgba(255,107,107,0.12)' },
+  { id: 6, name: 'Master Challenge', subtitle: 'The ultimate memory test', levels: 40, unlocked: false, icon: '\u{1F9E0}', iconBg: 'rgba(26,26,24,0.12)' },
 ];
 
 function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: string }) {

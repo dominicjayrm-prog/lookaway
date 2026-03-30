@@ -12,6 +12,7 @@ import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, G, Line, Polygon }
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
+const WORLD_LEVEL_COUNTS = [20, 30, 35, 35, 40, 40];
 const EMDASH = String.fromCharCode(8212);
 
 function MiniEyeIcon() {
@@ -52,7 +53,9 @@ export default function PlayTab() {
   const nextLevelTitle = nextLevel?.title ?? 'Shape Basics';
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
-  const worldProgress = Math.max(0, nextLevelNumber - 1) / 35;
+  const currentWorldId = nextLevel?.worldId ?? 1;
+  const currentWorldLevels = WORLD_LEVEL_COUNTS[(currentWorldId - 1)] ?? 20;
+  const worldProgress = Math.max(0, nextLevelNumber - 1) / currentWorldLevels;
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
@@ -111,7 +114,7 @@ export default function PlayTab() {
             <View style={styles.heroProgressTrack}>
               <View style={[styles.heroProgressFill, { width: `${Math.round(worldProgress * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/35</Text>
+            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/{currentWorldLevels}</Text>
           </View>
 
           {/* Play button */}

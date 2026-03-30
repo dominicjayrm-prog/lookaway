@@ -1,16 +1,43 @@
-import React, { useMemo, useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, Animated as RNAnimated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StarRating } from '@/src/components/StarRating';
 import { Button } from '@/src/components/Button';
-import { Card } from '@/src/components/Card';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore } from '@/src/utils/scoring';
 import { getNextLevelId } from '@/src/data/levels';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+
+function GemRewardAnimation({ amount, colors }: { amount: number; colors: Record<string, string> }) {
+  const scale = useRef(new RNAnimated.Value(0)).current;
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+  const translateY = useRef(new RNAnimated.Value(20)).current;
+  const gemIcon = String.fromCodePoint(0x1f48e);
+
+  useEffect(() => {
+    // Delay then spring in
+    const timer = setTimeout(() => {
+      RNAnimated.parallel([
+        RNAnimated.spring(scale, { toValue: 1, tension: 60, friction: 6, useNativeDriver: true }),
+        RNAnimated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        RNAnimated.spring(translateY, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
+      ]).start();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [scale, opacity, translateY]);
+
+  return (
+    <RNAnimated.View style={[styles.gemReward, { opacity, transform: [{ scale }, { translateY }] }]}>
+      <View style={[styles.gemRewardPill, { backgroundColor: colors.goldSoft }]}>
+        <Text style={styles.gemRewardIcon}>{gemIcon}</Text>
+        <Text style={[styles.gemRewardText, { color: colors.gold }]}>+{amount} gems</Text>
+      </View>
+    </RNAnimated.View>
+  );
+}
 
 export default function ResultScreen() {
   const { colors } = useTheme();
@@ -23,7 +50,6 @@ export default function ResultScreen() {
   const totalCount = answers.length;
   const isPerfect = totalCount > 0 && correctCount === totalCount;
   const nextLevelId = useMemo(() => (level ? getNextLevelId(level.id) : null), [level]);
-  const gemIcon = String.fromCodePoint(0x1f48e);
 
   const [gemsEarned, setGemsEarned] = useState(0);
   const [processed, setProcessed] = useState(false);
@@ -38,7 +64,6 @@ export default function ResultScreen() {
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
     } else {
-      // Failed — lose a life
       loseLife();
     }
   }, [passed, processed, level, stars, score, recordLevelComplete, loseLife, addStars]);
@@ -68,22 +93,27 @@ export default function ResultScreen() {
         )}
         <Text style={[styles.scoreText, { color: colors.text }]}>{score}%</Text>
         <Text style={[styles.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
+
+        {/* Gem reward animation */}
         {passed && gemsEarned > 0 && (
-          <Card style={styles.rewardCard}>
-            <Text style={[styles.rewardLabel, { color: colors.textMid }]}>Gems earned</Text>
-            <Text style={[styles.rewardValue, { color: colors.gold }]}>+{gemsEarned} {gemIcon}</Text>
-          </Card>
+          <GemRewardAnimation amount={gemsEarned} colors={colors} />
         )}
         {passed && gemsEarned === 0 && (
           <Text style={[styles.noGemsText, { color: colors.textLight }]}>Already completed — improve your stars to earn more gems!</Text>
         )}
+
         {!passed && level && <Text style={[styles.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>}
+
         <View style={styles.buttons}>
           {passed ? (
             <>
-              {nextLevelId ? <Button title="Next level" onPress={handleNextLevel} /> : <Text style={[styles.worldCompleteText, { color: colors.accent }]}>World 1 Complete!</Text>}
+              {nextLevelId ? (
+                <Button title="Next level" onPress={handleNextLevel} />
+              ) : (
+                <Text style={[styles.worldCompleteText, { color: colors.accent }]}>World 1 Complete!</Text>
+              )}
               <Button title="Replay" variant="secondary" onPress={handleRetry} />
-              {!nextLevelId && <Button title="Back to map" variant="ghost" onPress={handleBackToMap} />}
+              <Button title="Back to map" variant="ghost" onPress={handleBackToMap} />
             </>
           ) : (
             <>
@@ -107,9 +137,10 @@ const styles = StyleSheet.create({
   perfectText: { fontSize: 16, fontWeight: '800', letterSpacing: 2, color: '#D4A012' },
   scoreText: { fontSize: 56, fontWeight: typography.weights.black },
   scoreLabel: { fontSize: typography.sizes.md },
-  rewardCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: 240 },
-  rewardLabel: { fontSize: typography.sizes.md },
-  rewardValue: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold },
+  gemReward: { alignItems: 'center' },
+  gemRewardPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
+  gemRewardIcon: { fontSize: 22 },
+  gemRewardText: { fontSize: 18, fontWeight: '700' },
   noGemsText: { fontSize: typography.sizes.sm, textAlign: 'center', maxWidth: 240 },
   requireText: { fontSize: typography.sizes.md },
   worldCompleteText: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, textAlign: 'center', marginBottom: spacing.sm },
