@@ -157,15 +157,6 @@ function BuilderInner() {
   const deleteQuestion = useCallback((qi:number)=>{
     setScenes(prev=>prev.map((s,i)=>{if(i!==activeScene)return s;const qs=[...(s.questions||[])];qs.splice(qi,1);return{...s,questions:qs};}));
   },[activeScene]);
-  const addQuestion = useCallback(()=>{
-    const maxQ = mode === 'speed' ? 1 : 5;
-    setScenes(prev=>prev.map((s,i)=>{
-      if(i!==activeScene)return s;
-      if((s.questions||[]).length >= maxQ) return s;
-      const newQ: Question = { id: generateId(), text: '', options: ['','','',''], correctIndex: 0, category: 'count', timeLimit: 8 };
-      return{...s,questions:[...(s.questions||[]),newQ]};
-    }));
-  },[activeScene, mode]);
   const regenerateQuestion = useCallback((qi:number)=>{
     const scene = scenes[activeScene];
     if(!scene?.objects?.length) return;
@@ -183,6 +174,27 @@ function BuilderInner() {
     const generated = autoGenerateQuestions(scene.objects);
     setScenes(prev=>prev.map((s,i)=>i===activeScene?{...s,questions:generated}:s));
   },[activeScene, scenes]);
+
+  const createEmptyScene = useCallback(()=>{
+    const sceneCount = mode === 'classic' ? 5 : mode === 'speed' ? 10 : 5;
+    const newScenes: Scene[] = [];
+    for (let i = 0; i < sceneCount; i++) {
+      newScenes.push({ id: `scene-${i}`, viewTime: 4, objects: [], questions: [] });
+    }
+    setScenes(newScenes);
+    setActiveScene(0);
+  },[mode]);
+
+  const addSceneQuestion = useCallback(()=>{
+    const maxQ = mode === 'speed' ? 1 : 5;
+    if (!scenes[activeScene]) return;
+    setScenes(prev=>prev.map((s,i)=>{
+      if(i!==activeScene)return s;
+      if((s.questions||[]).length >= maxQ) return s;
+      const newQ: Question = { id: generateId(), text: '', options: ['','','',''], correctIndex: 0, category: 'count', timeLimit: 8 };
+      return{...s,questions:[...(s.questions||[]),newQ]};
+    }));
+  },[activeScene, mode, scenes]);
 
   const scene=scenes[activeScene];
   const maxQuestions = mode === 'speed' ? 1 : 5;
@@ -278,11 +290,14 @@ function BuilderInner() {
           </>) : (
             /* Empty state - no scenes yet */
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-5xl mb-4">🎨</div>
+              <div className="text-center max-w-sm">
+                <div className="text-5xl mb-4">{'\u{1F3A8}'}</div>
                 <h2 className="text-lg font-semibold text-slate-700 mb-1">No challenge loaded</h2>
-                <p className="text-sm text-slate-400 mb-4">Pick a date and click Generate to start building.</p>
-                <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-6 py-2 text-sm font-semibold hover:bg-purple-700 disabled:opacity-50">{loading?'Generating...':'Generate Challenge'}</button>
+                <p className="text-sm text-slate-400 mb-5">Generate a challenge with AI, or build one from scratch by placing objects and writing questions yourself.</p>
+                <div className="flex gap-3 justify-center">
+                  <button onClick={generate} disabled={loading} className="bg-purple-600 text-white rounded-lg px-5 py-2 text-sm font-semibold hover:bg-purple-700 disabled:opacity-50">{loading?'Generating...':'Generate with AI'}</button>
+                  <button onClick={createEmptyScene} className="bg-white border border-gray-300 text-gray-700 rounded-lg px-5 py-2 text-sm font-medium hover:bg-gray-50">Start from scratch</button>
+                </div>
               </div>
             </div>
           )}
@@ -359,19 +374,41 @@ function BuilderInner() {
               </div>
             ))}
 
-            {/* Add question */}
+            {/* Add question button */}
             {scene && (scene.questions?.length??0) < maxQuestions && (
-              <button onClick={addQuestion} className="w-full py-2 text-xs text-purple-600 border border-dashed border-purple-300 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-colors font-medium">
+              <button onClick={addSceneQuestion} className="w-full py-2 text-xs text-purple-600 border border-dashed border-purple-300 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-colors font-medium">
                 + Add question
               </button>
             )}
 
-            {/* Empty state */}
+            {/* Empty state: scenes exist but no questions yet */}
+            {scene && (!scene.questions || scene.questions.length === 0) && (
+              <div className="text-center py-6">
+                <div className="text-3xl mb-2">{'\u{270F}\u{FE0F}'}</div>
+                <p className="text-xs text-slate-700 font-medium mb-1">No questions yet</p>
+                <p className="text-[10px] text-slate-400 mb-3">Add questions manually or auto-generate them from the objects on the canvas.</p>
+                <div className="flex flex-col gap-2">
+                  <button onClick={addSceneQuestion} className="w-full py-1.5 text-xs text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 font-medium">
+                    + Write a question
+                  </button>
+                  {scene.objects?.length > 0 && (
+                    <button onClick={autoGenerateAll} className="w-full py-1.5 text-xs text-white bg-purple-600 rounded-lg hover:bg-purple-700 font-medium">
+                      Auto-generate from objects
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Empty state: no scenes at all */}
             {!scene&&(
               <div className="text-center py-8">
                 <div className="text-3xl mb-2">{'\u{1F9E0}'}</div>
                 <p className="text-xs text-slate-500 mb-1">No challenge loaded yet.</p>
-                <p className="text-[10px] text-slate-400">Click Generate to create a challenge, or start adding objects to the canvas manually.</p>
+                <p className="text-[10px] text-slate-400 mb-3">Generate a challenge or start from scratch to begin adding questions.</p>
+                <button onClick={createEmptyScene} className="text-xs text-purple-600 border border-purple-300 rounded-lg px-3 py-1.5 hover:bg-purple-50 font-medium">
+                  Start from scratch
+                </button>
               </div>
             )}
           </div>
