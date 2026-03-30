@@ -1,6 +1,26 @@
 import { create } from 'zustand';
 import type { Level, GameState } from '@/src/types/game';
-import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, type PowerUpId } from '@/src/utils/scoring';
+import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
+import { supabase } from '@/src/lib/supabase';
+
+/** Get current user ID for economy logging */
+function getUserId(): string {
+  try {
+    // @ts-ignore - access session synchronously from cache
+    const session = (supabase as any).auth?.session?.();
+    if (session?.user?.id) return session.user.id;
+  } catch {}
+  // Fallback: try localStorage
+  try {
+    const stored = localStorage.getItem('lookaway-user-id');
+    if (stored) return stored;
+    const id = `anon-${Date.now()}`;
+    localStorage.setItem('lookaway-user-id', id);
+    return id;
+  } catch {}
+  return 'anonymous';
+}
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
 function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
@@ -83,6 +103,12 @@ export const LIFE_REGEN_MS = LIVES_CONFIG.regenTimeMinutes * 60 * 1000;
 
 export const useGameStore = create<GameStore>((set, get) => {
   const saved = loadState();
+  const isNewPlayer = (saved as any).gems === undefined;
+
+  // Log starting gems for brand new players
+  if (isNewPlayer) {
+    setTimeout(() => logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' }), 1000);
+  }
 
   return {
     gems: (saved as any).gems ?? INITIAL_GEMS,
@@ -108,13 +134,22 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     addGems: (amount) => { set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
-    loseLife: () => { set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() })); setTimeout(() => saveState(get()), 0); },
-    refillLives: () => { set((s) => ({ lives: s.maxLives, livesLastLostAt: null })); setTimeout(() => saveState(get()), 0); },
+    loseLife: () => {
+      set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() }));
+      setTimeout(() => saveState(get()), 0);
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_LOST, -1, { levelId: get().currentLevel?.id });
+    },
+    refillLives: () => {
+      set((s) => ({ lives: s.maxLives, livesLastLostAt: null }));
+      setTimeout(() => saveState(get()), 0);
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.IAP_LIVES, LIVES_CONFIG.maxLives, { method: 'iap' });
+    },
     refillLivesWithGems: () => {
       const { gems } = get();
       if (gems < LIVES_CONFIG.gemRefillCost) return false;
       set((s) => ({ gems: s.gems - LIVES_CONFIG.gemRefillCost, lives: s.maxLives, livesLastLostAt: null }));
       setTimeout(() => saveState(get()), 0);
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_SPEND_LIVES, -LIVES_CONFIG.gemRefillCost);
       return true;
     },
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
@@ -129,12 +164,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         const nl = Math.min(maxLives, lives + regen);
         set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) });
         setTimeout(() => saveState(get()), 0);
+        logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, regen);
       }
     },
 
     // Power-up inventory
     buyPowerUp: (id, qty = 1) => {
-      const { POWER_UP_COSTS, bundlePrice } = require('@/src/utils/scoring');
       const cost = bundlePrice(POWER_UP_COSTS[id], qty);
       const { gems } = get();
       if (gems < cost) return false;
@@ -143,6 +178,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         powerUps: { ...s.powerUps, [id]: s.powerUps[id] + qty },
       }));
       setTimeout(() => saveState(get()), 0);
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_SPEND_POWERUP, -cost, { powerUp: id, qty });
       return true;
     },
     usePowerUp: (id) => {
@@ -152,6 +188,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         powerUps: { ...s.powerUps, [id]: s.powerUps[id] - 1 },
       }));
       setTimeout(() => saveState(get()), 0);
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.POWERUP_USED, -1, { powerUp: id, levelId: get().currentLevel?.id });
       return true;
     },
     getPowerUpCount: (id) => get().powerUps[id],
@@ -162,10 +199,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       let gemsEarned = 0;
 
       if (existing) {
-        // Replay: only earn difference if improved
         gemsEarned = calculateReplayReward(existing.stars, stars);
       } else {
-        // First completion
         gemsEarned = GEM_REWARDS[stars as 0 | 1 | 2 | 3] ?? 0;
       }
 
@@ -182,6 +217,11 @@ export const useGameStore = create<GameStore>((set, get) => {
         completedScores: [...s.completedScores, scorePercent],
       }));
       setTimeout(() => saveState(get()), 0);
+
+      // Log to economy tracker
+      if (gemsEarned > 0) {
+        logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars, scorePercent, replay: !!existing });
+      }
       return gemsEarned;
     },
 
