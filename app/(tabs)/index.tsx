@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'rea
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { TabTransition } from '@/src/components/TabTransition';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -60,6 +61,7 @@ export default function PlayTab() {
   const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
+    <TabTransition>
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Top bar */}
@@ -203,6 +205,7 @@ export default function PlayTab() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </TabTransition>
   );
 }
 
