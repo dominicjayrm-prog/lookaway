@@ -20,7 +20,7 @@ function saveProfilePic(uri: string | null) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
   const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore } = useGameStore();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
@@ -121,7 +121,10 @@ export default function ProfileScreen() {
                 <View style={[styles.settingsIcon, { backgroundColor: isDark ? 'rgba(124,108,247,0.12)' : colors.accentSoft }]}>
                   <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.accent} />
                 </View>
-                <Text style={[styles.settingsLabel, { color: colors.text }]}>Dark mode</Text>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Dark mode</Text>
+                  <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 1 }}>{isManual ? 'Manual' : 'Following system'}</Text>
+                </View>
               </View>
               <Switch
                 value={isDark}
@@ -130,6 +133,19 @@ export default function ProfileScreen() {
                 thumbColor="#FFFFFF"
               />
             </View>
+            {isManual && (
+              <>
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <TouchableOpacity style={styles.settingsRow} onPress={resetToSystem}>
+                  <View style={styles.settingsRowLeft}>
+                    <View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}>
+                      <Ionicons name="sync" size={16} color={colors.textMid} />
+                    </View>
+                    <Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </Animated.View>
 
