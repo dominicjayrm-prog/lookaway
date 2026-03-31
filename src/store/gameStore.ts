@@ -173,12 +173,6 @@ export const LIFE_REGEN_MS = LIVES_CONFIG.regenTimeMinutes * 60 * 1000;
 
 export const useGameStore = create<GameStore>((set, get) => {
   const saved = loadState();
-  const isNewPlayer = (saved as any).gems === undefined;
-
-  // Log starting gems for brand new players
-  if (isNewPlayer) {
-    setTimeout(() => logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' }), 1000);
-  }
 
   return {
     gems: (saved as any).gems ?? INITIAL_GEMS,
@@ -231,10 +225,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       const elapsed = Date.now() - livesLastLostAt;
       const regen = Math.floor(elapsed / LIFE_REGEN_MS);
       if (regen > 0) {
+        const actualRegen = Math.min(regen, maxLives - lives); // Cap to max lives deficit
         const nl = Math.min(maxLives, lives + regen);
         set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) });
         setTimeout(() => saveState(get()), 0);
-        logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, regen);
+        if (actualRegen > 0) logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, actualRegen);
       }
     },
 
@@ -329,6 +324,13 @@ export const useGameStore = create<GameStore>((set, get) => {
         });
       } else {
         set({ _hydrated: true });
+        // Brand new player — log starting gems once
+        try {
+          if (typeof localStorage !== 'undefined' && !localStorage.getItem('lookaway_starting_gems_logged')) {
+            localStorage.setItem('lookaway_starting_gems_logged', 'true');
+            logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' });
+          }
+        } catch {}
       }
     },
     saveState: () => saveState(get()),

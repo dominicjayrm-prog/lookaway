@@ -12,6 +12,10 @@ export default async function EconomyPage() {
   const { data: allEvents } = await supabase.from('economy_events').select('event_type, amount, created_at');
   const events = allEvents ?? [];
 
+  // Get actual gem balance from player profiles (ground truth)
+  const { data: profiles } = await supabase.from('profiles').select('gems');
+  const actualGemsInCirculation = (profiles ?? []).reduce((s, p) => s + (p.gems ?? 0), 0);
+
   const todayEvents = events.filter(e => e.created_at?.startsWith(todayStr));
   const earnTypes = ['gem_earn_level', 'gem_earn_daily', 'gem_earn_streak'];
   const spendTypes = ['gem_spend_powerup', 'gem_spend_lives'];
@@ -65,7 +69,7 @@ export default async function EconomyPage() {
 
       {/* Top stat cards */}
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCard('Total gems in circulation', netCirculation, '#6C5CE7')}
+        {statCard('Total gems in circulation', actualGemsInCirculation, '#6C5CE7')}
         {statCard('Gems earned today', todayEarned, '#00B894')}
         {statCard('Gems spent today', todaySpent, '#FF6B6B')}
         {statCard('Net flow today', todayNet >= 0 ? `+${todayNet}` : `${todayNet}`, todayNet >= 0 ? '#F9A825' : '#00B894')}
