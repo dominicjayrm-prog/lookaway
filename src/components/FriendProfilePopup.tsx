@@ -47,8 +47,8 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
 
           {/* Online status */}
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: online ? '#00B894' : colors.textLight }]} />
-            <Text style={[styles.statusText, { color: online ? '#00B894' : colors.textMid }]}>
+            <View style={[styles.statusDot, { backgroundColor: online ? colors.correct : colors.textLight }]} />
+            <Text style={[styles.statusText, { color: online ? colors.correct : colors.textMid }]}>
               {online ? 'Online now' : 'Offline'}
             </Text>
           </View>
@@ -71,7 +71,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
           </View>
 
           {/* Challenge button */}
-          <Pressable style={styles.challengeButton} onPress={() => onChallenge(profile.id)}>
+          <Pressable style={[styles.challengeButton, { backgroundColor: colors.accent }]} onPress={() => onChallenge(profile.id)}>
             <Text style={styles.challengeText}>Challenge @{profile.username}</Text>
           </Pressable>
 
@@ -104,11 +104,11 @@ const styles = StyleSheet.create({
   statValueRow: { flexDirection: 'row', alignItems: 'center' },
   statValue: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold },
   statLabel: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, marginTop: 2 },
-  challengeButton: { backgroundColor: '#6C5CE7', borderRadius: 14, paddingVertical: 14, width: '100%', alignItems: 'center', marginBottom: spacing.sm },
+  challengeButton: { borderRadius: 14, paddingVertical: 14, width: '100%', alignItems: 'center', marginBottom: spacing.sm },
   challengeText: { fontSize: 16, fontWeight: typography.weights.bold, color: '#FFFFFF' },
   closeButton: { borderRadius: 14, paddingVertical: 14, width: '100%', alignItems: 'center', marginBottom: spacing.lg },
   closeText: { fontSize: 16, fontWeight: typography.weights.semibold },
-  removeButton: { paddingVertical: spacing.xs },
+  removeButton: { paddingVertical: spacing.xs, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 12, fontWeight: typography.weights.medium },
 });
 

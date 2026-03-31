@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -9,7 +10,6 @@ import { supabase } from '@/src/lib/supabase';
 import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
-import { createChallenge } from '@/src/utils/challengeFlow';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
@@ -25,6 +25,7 @@ function SectionLabel({ label, colors }: { label: string; colors: Record<string,
 }
 
 export default function FriendsTab() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
   const userId = user?.id;
@@ -39,6 +40,8 @@ export default function FriendsTab() {
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Load username
   useEffect(() => {
@@ -100,18 +103,10 @@ export default function FriendsTab() {
     } catch {}
   }, [userId]);
 
-  const handleChallenge = useCallback(async (friendId: string) => {
-    if (!userId) return;
+  const handleChallenge = useCallback((friendId: string) => {
     setSelectedFriend(null);
-    Alert.alert('Creating challenge...', 'Picking 5 levels for you both.');
-    const challengeId = await createChallenge(userId, friendId);
-    if (challengeId) {
-      Alert.alert('Challenge sent!', 'Your friend will see it in their Friends tab.');
-      loadData();
-    } else {
-      Alert.alert('Error', 'Could not create challenge. Try again.');
-    }
-  }, [userId, loadData]);
+    router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create' } });
+  }, [router]);
 
   const handleRemoveFriend = useCallback(async (friendshipId: string) => {
     Alert.alert('Remove friend?', 'You can always add them back later.', [
@@ -129,7 +124,7 @@ export default function FriendsTab() {
   return (
     <TabTransition>
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -144,7 +139,7 @@ export default function FriendsTab() {
         {/* Search */}
         <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: searchFocused ? colors.accent : colors.border }]}>
           <Ionicons name="search-outline" size={18} color={searchFocused ? colors.accent : colors.textLight} style={styles.searchIcon} />
-          <TextInput style={[styles.searchInput, { color: colors.text }]} placeholder="Add friend by username..." placeholderTextColor={colors.textLight} value={searchText} onChangeText={setSearchText} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
+          <TextInput ref={searchInputRef} style={[styles.searchInput, { color: colors.text }]} placeholder="Add friend by username..." placeholderTextColor={colors.textLight} value={searchText} onChangeText={setSearchText} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
           {searchText.length > 0 && <Pressable onPress={() => setSearchText('')}><Ionicons name="close-circle" size={18} color={colors.textLight} /></Pressable>}
         </View>
 
@@ -206,7 +201,7 @@ export default function FriendsTab() {
                   <Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text>
                 </View>
                 {c.my_score === null ? (
-                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]}>
+                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } })}>
                     <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text>
                   </Pressable>
                 ) : (
@@ -230,7 +225,7 @@ export default function FriendsTab() {
             <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
               <View style={{ position: 'relative' }}>
                 <Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} />
-                {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card }]} />}
+                {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card, backgroundColor: colors.correct }]} />}
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.friendName, { color: colors.text }]}>@{f.profile.username}</Text>
@@ -249,7 +244,7 @@ export default function FriendsTab() {
               const won = (r.my_score ?? 0) > (r.their_score ?? 0);
               const tied = r.my_score === r.their_score;
               return (
-                <View key={r.id} style={[styles.resultCard, { backgroundColor: colors.card }]}>
+                <Pressable key={r.id} style={[styles.resultCard, { backgroundColor: colors.card }]} onPress={() => router.push({ pathname: '/game/challenge-result', params: { challengeId: r.id } })}>
                   <View style={[styles.resultBadge, { backgroundColor: tied ? colors.goldSoft : won ? colors.correctSoft : colors.wrongSoft }]}>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: tied ? colors.gold : won ? colors.correct : colors.wrong }}>{tied ? 'T' : won ? 'W' : 'L'}</Text>
                   </View>
@@ -257,7 +252,7 @@ export default function FriendsTab() {
                     <Text style={[{ fontSize: 13, fontWeight: '600', color: colors.text }]}>vs @{r.opponent.username}</Text>
                     <Text style={{ fontSize: 11, color: colors.textMid }}>{r.my_score}% — {r.their_score}%</Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </>
@@ -266,13 +261,13 @@ export default function FriendsTab() {
         {/* Invite card */}
         <SectionLabel label="INVITE FRIENDS" colors={colors} />
         <View style={[styles.inviteCard, { backgroundColor: colors.card }]}>
-          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => { /* scroll to search */ }}>
+          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => { scrollRef.current?.scrollTo({ y: 0, animated: true }); setTimeout(() => searchInputRef.current?.focus(), 300); }}>
             <Ionicons name="search-outline" size={20} color={colors.accent} />
             <Text style={[styles.inviteRowText, { color: colors.text }]}>Add by username</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
           <Pressable style={styles.inviteRow} onPress={handleShare}>
-            <Ionicons name="share-outline" size={20} color="#00B894" />
+            <Ionicons name="share-outline" size={20} color={colors.correct} />
             <Text style={[styles.inviteRowText, { color: colors.text }]}>Share invite link</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
@@ -314,7 +309,7 @@ const styles = StyleSheet.create({
   requestCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   requestName: { fontSize: 14, fontWeight: '600' },
   acceptBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, marginRight: 6 },
-  declineBtn: { padding: 6 },
+  declineBtn: { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   challengeCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   challengeText: { fontSize: 13, fontWeight: '600' },
   playBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 10 },
@@ -323,7 +318,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
   friendCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   friendName: { fontSize: 14, fontWeight: '600' },
-  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: '#00B894', borderWidth: 2 },
+  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   resultCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   resultBadge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   inviteCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
