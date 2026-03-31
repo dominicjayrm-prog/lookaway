@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
+import { updateOnlineStatus } from '@/src/utils/friends';
+import { expireOldChallenges } from '@/src/utils/challengeFlow';
 
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
@@ -43,9 +45,15 @@ function CloudSyncLoader() {
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
 
-  // Load from cloud on login
+  // Load from cloud on login + update online status + expire old challenges
   useEffect(() => {
-    if (user?.id) { loadFromCloud(user.id); }
+    if (!user?.id) return;
+    loadFromCloud(user.id);
+    updateOnlineStatus(user.id);
+    expireOldChallenges();
+    // Update online status every 5 minutes
+    const interval = setInterval(() => updateOnlineStatus(user.id), 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [user?.id, loadFromCloud]);
 
   // Sync on foreground (pull latest from other devices) + save on background

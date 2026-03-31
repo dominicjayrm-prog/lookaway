@@ -6,8 +6,10 @@ import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
-import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
+import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
+import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
+import { createChallenge } from '@/src/utils/challengeFlow';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
@@ -35,6 +37,7 @@ export default function FriendsTab() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [results, setResults] = useState<Challenge[]>([]);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Load username
@@ -96,6 +99,30 @@ export default function FriendsTab() {
       await Share.share({ message: `Think you've got a good memory? Challenge me on LookAway! 👁 playlookaway.app/invite/${userId}` });
     } catch {}
   }, [userId]);
+
+  const handleChallenge = useCallback(async (friendId: string) => {
+    if (!userId) return;
+    setSelectedFriend(null);
+    Alert.alert('Creating challenge...', 'Picking 5 levels for you both.');
+    const challengeId = await createChallenge(userId, friendId);
+    if (challengeId) {
+      Alert.alert('Challenge sent!', 'Your friend will see it in their Friends tab.');
+      loadData();
+    } else {
+      Alert.alert('Error', 'Could not create challenge. Try again.');
+    }
+  }, [userId, loadData]);
+
+  const handleRemoveFriend = useCallback(async (friendshipId: string) => {
+    Alert.alert('Remove friend?', 'You can always add them back later.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: async () => {
+        await removeFriend(friendshipId);
+        setSelectedFriend(null);
+        loadData();
+      }},
+    ]);
+  }, [loadData]);
 
   const isOnline = (lastSeen: string | null) => lastSeen ? Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000 : false;
 
@@ -200,7 +227,7 @@ export default function FriendsTab() {
           </View>
         ) : (
           friends.map((f) => (
-            <View key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]}>
+            <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
               <View style={{ position: 'relative' }}>
                 <Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} />
                 {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card }]} />}
@@ -210,7 +237,7 @@ export default function FriendsTab() {
                 <Text style={{ fontSize: 11, color: colors.textLight }}>{isOnline(f.profile.last_seen) ? 'Online now' : 'Offline'} · World {f.profile.highest_world} · {'\u2B50'} {f.profile.total_stars}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </View>
+            </Pressable>
           ))
         )}
 
@@ -251,6 +278,18 @@ export default function FriendsTab() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Friend profile popup */}
+      {selectedFriend && (
+        <FriendProfilePopup
+          visible={true}
+          friend={selectedFriend}
+          colors={colors}
+          onClose={() => setSelectedFriend(null)}
+          onChallenge={handleChallenge}
+          onRemove={handleRemoveFriend}
+        />
+      )}
     </SafeAreaView>
     </TabTransition>
   );
