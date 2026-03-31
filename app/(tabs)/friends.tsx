@@ -39,6 +39,8 @@ export default function FriendsTab() {
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Load username
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function FriendsTab() {
   return (
     <TabTransition>
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View>
@@ -144,7 +146,7 @@ export default function FriendsTab() {
         {/* Search */}
         <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: searchFocused ? colors.accent : colors.border }]}>
           <Ionicons name="search-outline" size={18} color={searchFocused ? colors.accent : colors.textLight} style={styles.searchIcon} />
-          <TextInput style={[styles.searchInput, { color: colors.text }]} placeholder="Add friend by username..." placeholderTextColor={colors.textLight} value={searchText} onChangeText={setSearchText} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
+          <TextInput ref={searchInputRef} style={[styles.searchInput, { color: colors.text }]} placeholder="Add friend by username..." placeholderTextColor={colors.textLight} value={searchText} onChangeText={setSearchText} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} autoCapitalize="none" autoCorrect={false} returnKeyType="search" />
           {searchText.length > 0 && <Pressable onPress={() => setSearchText('')}><Ionicons name="close-circle" size={18} color={colors.textLight} /></Pressable>}
         </View>
 
@@ -266,7 +268,7 @@ export default function FriendsTab() {
         {/* Invite card */}
         <SectionLabel label="INVITE FRIENDS" colors={colors} />
         <View style={[styles.inviteCard, { backgroundColor: colors.card }]}>
-          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => { /* scroll to search */ }}>
+          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => { scrollRef.current?.scrollTo({ y: 0, animated: true }); setTimeout(() => searchInputRef.current?.focus(), 300); }}>
             <Ionicons name="search-outline" size={20} color={colors.accent} />
             <Text style={[styles.inviteRowText, { color: colors.text }]}>Add by username</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
