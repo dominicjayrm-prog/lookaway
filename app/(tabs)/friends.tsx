@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -9,7 +10,6 @@ import { supabase } from '@/src/lib/supabase';
 import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
-import { createChallenge } from '@/src/utils/challengeFlow';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
@@ -25,6 +25,7 @@ function SectionLabel({ label, colors }: { label: string; colors: Record<string,
 }
 
 export default function FriendsTab() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
   const userId = user?.id;
@@ -102,18 +103,10 @@ export default function FriendsTab() {
     } catch {}
   }, [userId]);
 
-  const handleChallenge = useCallback(async (friendId: string) => {
-    if (!userId) return;
+  const handleChallenge = useCallback((friendId: string) => {
     setSelectedFriend(null);
-    Alert.alert('Creating challenge...', 'Picking 5 levels for you both.');
-    const challengeId = await createChallenge(userId, friendId);
-    if (challengeId) {
-      Alert.alert('Challenge sent!', 'Your friend will see it in their Friends tab.');
-      loadData();
-    } else {
-      Alert.alert('Error', 'Could not create challenge. Try again.');
-    }
-  }, [userId, loadData]);
+    router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create' } });
+  }, [router]);
 
   const handleRemoveFriend = useCallback(async (friendshipId: string) => {
     Alert.alert('Remove friend?', 'You can always add them back later.', [
@@ -208,7 +201,7 @@ export default function FriendsTab() {
                   <Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text>
                 </View>
                 {c.my_score === null ? (
-                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]}>
+                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } })}>
                     <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text>
                   </Pressable>
                 ) : (
@@ -251,7 +244,7 @@ export default function FriendsTab() {
               const won = (r.my_score ?? 0) > (r.their_score ?? 0);
               const tied = r.my_score === r.their_score;
               return (
-                <View key={r.id} style={[styles.resultCard, { backgroundColor: colors.card }]}>
+                <Pressable key={r.id} style={[styles.resultCard, { backgroundColor: colors.card }]} onPress={() => router.push({ pathname: '/game/challenge-result', params: { challengeId: r.id } })}>
                   <View style={[styles.resultBadge, { backgroundColor: tied ? colors.goldSoft : won ? colors.correctSoft : colors.wrongSoft }]}>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: tied ? colors.gold : won ? colors.correct : colors.wrong }}>{tied ? 'T' : won ? 'W' : 'L'}</Text>
                   </View>
@@ -259,7 +252,7 @@ export default function FriendsTab() {
                     <Text style={[{ fontSize: 13, fontWeight: '600', color: colors.text }]}>vs @{r.opponent.username}</Text>
                     <Text style={{ fontSize: 11, color: colors.textMid }}>{r.my_score}% — {r.their_score}%</Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </>
