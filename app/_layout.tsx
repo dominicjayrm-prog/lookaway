@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Linking } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
+import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
+import { registerPushToken } from '@/src/utils/notifications';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -12,6 +14,32 @@ import { expireOldChallenges } from '@/src/utils/challengeFlow';
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
   useEffect(() => { hydrate(); }, [hydrate]);
+  return null;
+}
+
+function DeepLinkHandler() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Handle incoming deep links
+    const handleUrl = ({ url }: { url: string }) => {
+      const inviterId = parseInviteUrl(url);
+      if (inviterId) storePendingInvite(inviterId);
+    };
+
+    // Check initial URL (app opened from link)
+    Linking.getInitialURL().then(url => { if (url) handleUrl({ url }); });
+
+    // Listen for future links
+    const sub = Linking.addEventListener('url', handleUrl);
+    return () => sub.remove();
+  }, []);
+
+  // Process pending invite after auth
+  useEffect(() => {
+    if (user?.id) processPendingInvite(user.id);
+  }, [user?.id]);
+
   return null;
 }
 
@@ -51,6 +79,7 @@ function CloudSyncLoader() {
     loadFromCloud(user.id);
     updateOnlineStatus(user.id);
     expireOldChallenges();
+    registerPushToken(user.id);
     // Update online status every 5 minutes
     const interval = setInterval(() => updateOnlineStatus(user.id), 5 * 60 * 1000);
     return () => clearInterval(interval);
@@ -108,6 +137,7 @@ export default function RootLayout() {
       <AuthProvider>
         <MobileContainer>
           <StoreHydrator />
+          <DeepLinkHandler />
           <LifeRegenChecker />
           <CloudSyncLoader />
           <ThemedStack />

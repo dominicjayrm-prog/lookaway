@@ -14,7 +14,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.playlookaway.lookaway"
+      "bundleIdentifier": "app.playlookaway.lookaway",
+      "associatedDomains": ["applinks:playlookaway.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +24,14 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "app.playlookaway.lookaway"
+      "package": "app.playlookaway.lookaway",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "https", "host": "playlookaway.app", "pathPrefix": "/invite" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
