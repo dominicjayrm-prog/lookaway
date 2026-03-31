@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Animated as RNAnimated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
@@ -96,6 +96,35 @@ export default function WorldMapScreen() {
     return () => { cancelled = true; };
   }, [worldId]);
 
+  // ── ENTRY ANIMATIONS ──
+  const headerAnim = useRef(new RNAnimated.Value(0)).current;
+  const bottomAnim = useRef(new RNAnimated.Value(0)).current;
+  const pathAnim = useRef(new RNAnimated.Value(0)).current;
+  const nodeAnims = useRef(path.map(() => new RNAnimated.Value(0))).current;
+
+  useEffect(() => {
+    // Header slides down
+    RNAnimated.timing(headerAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+
+    // Path draws in
+    RNAnimated.timing(pathAnim, { toValue: 1, duration: 600, delay: 200, useNativeDriver: true }).start();
+
+    // Nodes stagger from bottom (level 1) to top — each delayed 40ms
+    const staggered = path.map((_, idx) => {
+      const reverseIdx = path.length - 1 - idx; // bottom first
+      return RNAnimated.timing(nodeAnims[idx], {
+        toValue: 1,
+        duration: 350,
+        delay: 300 + reverseIdx * 40,
+        useNativeDriver: true,
+      });
+    });
+    RNAnimated.parallel(staggered).start();
+
+    // Bottom bar slides up
+    RNAnimated.timing(bottomAnim, { toValue: 1, duration: 400, delay: 250, useNativeDriver: true }).start();
+  }, []);
+
   // Auto-scroll to current level on mount and when level changes
   useEffect(() => {
     if (path.length === 0) return;
@@ -127,7 +156,7 @@ export default function WorldMapScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       {/* ── HEADER ── */}
-      <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.bg }]}>
+      <RNAnimated.View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.bg, opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
@@ -144,7 +173,7 @@ export default function WorldMapScreen() {
             <Text style={[styles.pillText, { color: worldColor }]}>{completedUpTo}/{totalLevels}</Text>
           </View>
         </View>
-      </View>
+      </RNAnimated.View>
 
       {/* ── MAP ── */}
       <ScrollView ref={scrollRef} style={styles.scrollArea} contentContainerStyle={{ height: mapHeight + 100 }} showsVerticalScrollIndicator={false} onLayout={(e) => setMapWidth(Math.min(e.nativeEvent.layout.width, 430))}>
@@ -155,6 +184,7 @@ export default function WorldMapScreen() {
         <BackgroundDecorations worldId={worldId} worldColor={worldColor} mapHeight={mapHeight} mapWidth={mapWidth} />
 
         {/* SVG paths */}
+        <RNAnimated.View style={{ ...StyleSheet.absoluteFillObject, opacity: pathAnim }}>
         <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
           {/* Completed path glow */}
           {completedUpTo > 0 && (
@@ -169,6 +199,7 @@ export default function WorldMapScreen() {
             <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, mapWidth)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />
           )}
         </Svg>
+        </RNAnimated.View>
 
         {/* Level nodes */}
         {path.map((pos, idx) => {
@@ -180,11 +211,15 @@ export default function WorldMapScreen() {
           const nodeSize = isBoss ? BOSS_SIZE : checkpoint ? CHECKPOINT_SIZE : NODE_SIZE;
           const px = (pos.x / 100) * mapWidth - nodeSize / 2;
 
+          const anim = nodeAnims[idx];
           return (
-            <Pressable
+            <RNAnimated.View
               key={levelNum}
+              style={[styles.nodeWrapper, { left: px, top: pos.y - nodeSize / 2, width: nodeSize, height: nodeSize + 30, opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }, { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] }]}
+            >
+            <Pressable
               onPress={() => handleNodeTap(levelNum)}
-              style={[styles.nodeWrapper, { left: px, top: pos.y - nodeSize / 2, width: nodeSize, height: nodeSize + 30 }]}
+              style={{ alignItems: 'center' }}
             >
               {/* Checkpoint badge above */}
               {checkpoint && (
@@ -209,6 +244,7 @@ export default function WorldMapScreen() {
               {/* PLAY label for current */}
               {state === 'current' && <Text style={[styles.playLabel, { color: worldColor }]}>PLAY</Text>}
             </Pressable>
+            </RNAnimated.View>
           );
         })}
 
@@ -226,7 +262,7 @@ export default function WorldMapScreen() {
       </ScrollView>
 
       {/* ── BOTTOM BAR ── */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.bg }]}>
+      <RNAnimated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.bg, opacity: bottomAnim, transform: [{ translateY: bottomAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }]}>
         <View style={styles.bottomInfo}>
           <Text style={[styles.bottomTitle, { color: colors.text }]}>Level {currentLevel}: {currentLevelTitle}</Text>
           <Text style={[styles.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
@@ -236,7 +272,7 @@ export default function WorldMapScreen() {
             <Text style={styles.playButtonText}>Play</Text>
           </Pressable>
         )}
-      </View>
+      </RNAnimated.View>
 
       {/* ── POPUP ── */}
       {popup !== null && (
