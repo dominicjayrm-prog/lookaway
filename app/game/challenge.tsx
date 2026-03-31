@@ -141,7 +141,7 @@ export default function ChallengeGameScreen() {
     }, 800);
   }, [selectedOption, currentQuestion, questionIdx, totalQuestions]);
 
-  const handleNextScene = useCallback(() => {
+  const handleNextScene = useCallback(async () => {
     const next = sceneIdx + 1;
     if (next < totalScenes) {
       setSceneIdx(next);
@@ -158,7 +158,8 @@ export default function ChallengeGameScreen() {
       const stars = pct === 100 ? 3 : pct >= 80 ? 2 : pct >= 60 ? 1 : 0;
 
       if (dbChallengeId && userId) {
-        recordChallengeScore(dbChallengeId, userId, pct, stars);
+        const saved = await recordChallengeScore(dbChallengeId, userId, pct, stars);
+        if (!saved) console.warn('Failed to save challenge score');
       }
     }
   }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId]);
@@ -175,7 +176,9 @@ export default function ChallengeGameScreen() {
 
   // Completed scenes count for progress bar
   const completedScenes = phase === 'complete' ? totalScenes : sceneIdx;
-  const sceneAnswers = answers.slice(sceneIdx * 5, sceneIdx * 5 + 5);
+  const questionsPerScene = levels.map(l => l.scenes[0]?.questions.length ?? 0);
+  const sceneOffset = questionsPerScene.slice(0, sceneIdx).reduce((a, b) => a + b, 0);
+  const sceneAnswers = answers.slice(sceneOffset, sceneOffset + (questionsPerScene[sceneIdx] ?? 0));
   const sceneCorrect = sceneAnswers.filter(a => a.correct).length;
 
   if (phase === 'loading') {

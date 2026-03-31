@@ -28,7 +28,7 @@ function DeepLinkHandler() {
     };
 
     // Check initial URL (app opened from link)
-    Linking.getInitialURL().then(url => { if (url) handleUrl({ url }); });
+    Linking.getInitialURL().then(url => { if (url) handleUrl({ url }); }).catch(() => {});
 
     // Listen for future links
     const sub = Linking.addEventListener('url', handleUrl);

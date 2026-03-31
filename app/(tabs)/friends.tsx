@@ -225,7 +225,7 @@ export default function FriendsTab() {
             <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
               <View style={{ position: 'relative' }}>
                 <Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} />
-                {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card }]} />}
+                {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card, backgroundColor: colors.correct }]} />}
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.friendName, { color: colors.text }]}>@{f.profile.username}</Text>
@@ -267,7 +267,7 @@ export default function FriendsTab() {
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
           <Pressable style={styles.inviteRow} onPress={handleShare}>
-            <Ionicons name="share-outline" size={20} color="#00B894" />
+            <Ionicons name="share-outline" size={20} color={colors.correct} />
             <Text style={[styles.inviteRowText, { color: colors.text }]}>Share invite link</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   requestCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   requestName: { fontSize: 14, fontWeight: '600' },
   acceptBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, marginRight: 6 },
-  declineBtn: { padding: 6 },
+  declineBtn: { padding: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   challengeCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   challengeText: { fontSize: 13, fontWeight: '600' },
   playBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 10 },
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
   friendCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   friendName: { fontSize: 14, fontWeight: '600' },
-  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: '#00B894', borderWidth: 2 },
+  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   resultCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   resultBadge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   inviteCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
