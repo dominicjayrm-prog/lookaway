@@ -77,6 +77,7 @@ function ThemedStack() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="username" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="game/[levelId]" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/daily" options={{ gestureEnabled: false }} />

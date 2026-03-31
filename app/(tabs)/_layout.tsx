@@ -15,7 +15,7 @@ const TAB_CONFIG: {
 }[] = [
   { name: 'index', title: 'Play', icon: 'play-circle-outline', iconFocused: 'play-circle' },
   { name: 'journey', title: 'Journey', icon: 'map-outline', iconFocused: 'map' },
-  { name: 'daily', title: 'Daily', icon: 'calendar-outline', iconFocused: 'calendar' },
+  { name: 'friends', title: 'Friends', icon: 'people-outline', iconFocused: 'people' },
   { name: 'shop', title: 'Shop', icon: 'diamond-outline', iconFocused: 'diamond' },
 ];
 

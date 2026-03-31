@@ -8,7 +8,7 @@ import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { LEVELS } from '@/src/data/levels';
-import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, G, Line, Polygon } from 'react-native-svg';
+import Svg, { Path, Circle, Polygon } from 'react-native-svg';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -29,18 +29,6 @@ function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: str
   return <Svg width={size} height={size} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
 }
 
-function CalendarIcon({ size = 22, color = '#FF6B6B' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Rect x={3} y={4} width={18} height={18} rx={3} fill="none" stroke={color} strokeWidth={1.8} />
-      <Line x1={3} y1={9} x2={21} y2={9} stroke={color} strokeWidth={1.8} />
-      <Line x1={8} y1={2} x2={8} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={16} y1={2} x2={16} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Circle cx={8} cy={14} r={1.2} fill={color} /><Circle cx={12} cy={14} r={1.2} fill={color} /><Circle cx={16} cy={14} r={1.2} fill={color} />
-      <Circle cx={8} cy={18} r={1.2} fill={color} /><Circle cx={12} cy={18} r={1.2} fill={color} />
-    </Svg>
-  );
-}
 
 export default function PlayTab() {
   const router = useRouter();
@@ -60,8 +48,6 @@ export default function PlayTab() {
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
   try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('lookaway-profile-pic') : null; } catch {}
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
     <TabTransition>
@@ -122,21 +108,6 @@ export default function PlayTab() {
           </Pressable>
         </View>
 
-        {/* Daily challenge card */}
-        <Pressable style={[styles.dailyCard, { backgroundColor: colors.card }]} onPress={() => router.push('/game/daily')}>
-          <View style={[styles.dailyIconBg, { backgroundColor: colors.wrongSoft }]}>
-            <CalendarIcon size={22} color={colors.wrong} />
-          </View>
-          <View style={styles.dailyContent}>
-            <View style={styles.dailyTopRow}>
-              <Text style={[styles.dailyTitle, { color: colors.text }]}>Daily Challenge</Text>
-              <Text style={[styles.dailyDate, { color: colors.textLight }]}>{todayDate}</Text>
-            </View>
-            <Text style={[styles.dailySub, { color: colors.textMid }]}>5 scenes, 25 questions. Same for everyone.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-        </Pressable>
-
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
@@ -187,24 +158,6 @@ export default function PlayTab() {
           </View>
         </View>
 
-        {/* Friends placeholder */}
-        <View style={[styles.friendsCard, { backgroundColor: colors.card }]}>
-          <View style={styles.friendsHeader}>
-            <Text style={[styles.friendsTitle, { color: colors.text }]}>Friends</Text>
-            <View style={[styles.comingSoonPill, { backgroundColor: colors.accentSoft, borderColor: colors.accentMid }]}>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: colors.accent }}>Coming soon</Text>
-            </View>
-          </View>
-          <View style={styles.friendsAvatars}>
-            {['#6C5CE7','#00B894','#FF6B6B','#0984E3','#D4A012'].map((c, i) => (
-              <View key={i} style={[styles.friendAvatar, { backgroundColor: c + '40', marginLeft: i > 0 ? -8 : 0, borderColor: colors.card }]}>
-                <Ionicons name="person" size={16} color={c + '80'} />
-              </View>
-            ))}
-          </View>
-          <Text style={[styles.friendsText, { color: colors.textMid }]}>Challenge friends, compare scores</Text>
-          <Text style={[styles.friendsSub, { color: colors.textLight }]}>Add friends and see who remembers more</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
     </TabTransition>
@@ -240,15 +193,6 @@ const styles = StyleSheet.create({
   heroPlayButton: { backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
   heroPlayText: { fontSize: 17, fontWeight: '700', color: '#6C5CE7' },
 
-  // Daily card
-  dailyCard: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 },
-  dailyIconBg: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dailyContent: { flex: 1 },
-  dailyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
-  dailyTitle: { fontSize: 13, fontWeight: '700' },
-  dailyDate: { fontSize: 11 },
-  dailySub: { fontSize: 12 },
-
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 14 },
   statCard: { flex: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
@@ -265,13 +209,4 @@ const styles = StyleSheet.create({
   worldPillNum: { fontSize: 12, fontWeight: '700' },
   worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
 
-  // Friends
-  friendsCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
-  friendsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  friendsTitle: { fontSize: 13, fontWeight: '700' },
-  comingSoonPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
-  friendsAvatars: { flexDirection: 'row', marginBottom: 10 },
-  friendAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  friendsText: { fontSize: 13, fontWeight: '600' },
-  friendsSub: { fontSize: 11, marginTop: 2 },
 });

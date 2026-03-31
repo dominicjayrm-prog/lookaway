@@ -8,11 +8,12 @@ interface NavItem { href: string; label: string; icon: string; children?: { href
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: String.fromCodePoint(0x1F4CA) },
-  { href: '/challenges', label: 'Daily Challenges', icon: String.fromCodePoint(0x1F4C5), children: [
-    { href: '/challenges/calendar', label: 'Calendar' },
-    { href: '/challenges/builder', label: 'Challenge Builder' },
-    { href: '/challenges/review', label: 'Review Queue' },
-  ]},
+  // Hidden — daily challenge feature paused, may return later
+  // { href: '/challenges', label: 'Daily Challenges', icon: String.fromCodePoint(0x1F4C5), children: [
+  //   { href: '/challenges/calendar', label: 'Calendar' },
+  //   { href: '/challenges/builder', label: 'Challenge Builder' },
+  //   { href: '/challenges/review', label: 'Review Queue' },
+  // ]},
   { href: '/levels', label: 'Campaign Levels', icon: String.fromCodePoint(0x1F3AE) },
   { href: '/users', label: 'Users', icon: String.fromCodePoint(0x1F465) },
   { href: '/analytics', label: 'Analytics', icon: String.fromCodePoint(0x1F4C8) },
