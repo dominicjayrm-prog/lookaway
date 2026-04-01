@@ -13,8 +13,10 @@ export interface SceneObject {
   id: string;
   type: ShapeType;
   color: string;
-  x: number; // 0-100 percentage position
-  y: number; // 0-100 percentage position
+  x: number; // 0-100 percentage position (start position)
+  y: number; // 0-100 percentage position (start position)
+  endX?: number; // End position for moving objects (World 4+)
+  endY?: number; // End position for moving objects (World 4+)
   size: number; // Relative size 20-60
   rotation?: number;
   label?: string; // For number/letter types

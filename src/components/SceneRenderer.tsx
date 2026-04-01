@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, FadeIn } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, FadeIn, Easing } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { Card } from './Card';
 import { borderRadius } from '@/src/theme/spacing';
 import type { SceneObject, ShapeType } from '@/src/types/game';
 import { getGameObjectById } from '@/src/data/objectLibrary';
 
-interface SceneRendererProps { objects: SceneObject[]; visible: boolean; }
+interface SceneRendererProps { objects: SceneObject[]; visible: boolean; viewTime?: number; }
 
 const SHAPE_COLORS: Record<string, string> = { red:'#FF6B6B', blue:'#0984E3', green:'#00B894', yellow:'#FDCB6E', purple:'#6C5CE7', orange:'#E17055', pink:'#FD79A8', teal:'#00CEC9', brown:'#8B6914', grey:'#636E72', gray:'#636E72', black:'#1A1A18', white:'#FFFFFF' };
 function resolveColor(color: string): string { return SHAPE_COLORS[color.toLowerCase()] ?? color; }
@@ -26,17 +26,39 @@ function resolveLabel(type: string, label?: string): string | undefined {
   return libItem?.label;
 }
 
-const ShapeComponent = React.memo(function ShapeComponent({ object, index }: { object: SceneObject; index: number }) {
+const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewTime }: { object: SceneObject; index: number; viewTime?: number }) {
   const opacity = useSharedValue(0);
-  useEffect(() => { opacity.value = withDelay(index * 50, withTiming(1, { duration: 200 })); }, [index, opacity]);
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const hasMovement = object.endX != null && object.endY != null;
+  const posX = useSharedValue(object.x);
+  const posY = useSharedValue(object.y);
+
+  useEffect(() => {
+    opacity.value = withDelay(index * 50, withTiming(1, { duration: 200 }));
+    // Animate movement if endX/endY are set (World 4+)
+    if (hasMovement && viewTime) {
+      posX.value = object.x;
+      posY.value = object.y;
+      const duration = viewTime * 1000;
+      posX.value = withDelay(200, withTiming(object.endX!, { duration, easing: Easing.inOut(Easing.quad) }));
+      posY.value = withDelay(200, withTiming(object.endY!, { duration, easing: Easing.inOut(Easing.quad) }));
+    }
+  }, [index, opacity, hasMovement, viewTime, object.x, object.y, object.endX, object.endY, posX, posY]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (hasMovement) {
+      return { opacity: opacity.value, left: `${posX.value}%`, top: `${posY.value}%` };
+    }
+    return { opacity: opacity.value };
+  });
+
   const resolved = resolveColor(object.color);
   const sizePx = object.size * 1.2;
   const shapeType = resolveShapeType(object.type);
   const label = resolveLabel(object.type, object.label);
-  const content = object.content; // World 3+: number/letter displayed inside any shape
+  const content = object.content;
+  const staticPos = hasMovement ? {} : { left: `${object.x}%`, top: `${object.y}%` };
   return (
-    <Animated.View style={[styles.objectWrapper, { left: `${object.x}%`, top: `${object.y}%`, zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
+    <Animated.View style={[styles.objectWrapper, staticPos, { zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
       <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} />
       {content && (
         <Text style={[styles.contentText, { fontSize: sizePx * 0.4, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }]}>{content}</Text>
@@ -59,12 +81,12 @@ function ShapeRenderer({ type, color, size, label }: { type: ShapeType; color: s
   }
 }
 
-export const SceneRenderer = React.memo(function SceneRenderer({ objects, visible }: SceneRendererProps) {
+export const SceneRenderer = React.memo(function SceneRenderer({ objects, visible, viewTime }: SceneRendererProps) {
   if (!visible) return null;
   return (
     <Animated.View entering={FadeIn.duration(300)}>
       <Card style={styles.sceneCard} padded={false}>
-        <View style={styles.canvas}>{objects.map((obj, i) => <ShapeComponent key={obj.id} object={obj} index={i} />)}</View>
+        <View style={styles.canvas}>{objects.map((obj, i) => <ShapeComponent key={obj.id} object={obj} index={i} viewTime={viewTime} />)}</View>
       </Card>
     </Animated.View>
   );

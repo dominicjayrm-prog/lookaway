@@ -222,7 +222,7 @@ export default function ChallengeGameScreen() {
         <View style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime} running onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={[styles.memoriseText, { color: colors.textMid }]}>Memorise this scene!</Text>
-          <SceneRenderer objects={currentScene.objects} visible />
+          <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime} />
         </View>
       )}
 
