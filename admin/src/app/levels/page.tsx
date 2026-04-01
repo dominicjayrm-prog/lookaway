@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { WORLDS, TOTAL_LEVELS, levelsInWorld } from '@/data/worldConfig';
 import LevelBrowser from './level-browser';
 
+export const dynamic = 'force-dynamic'; // Always fetch fresh data from Supabase
+
 export default async function LevelsPage() {
   // Fetch all campaign levels from Supabase
   const { data: levels } = await supabase
