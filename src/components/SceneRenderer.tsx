@@ -61,7 +61,9 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewT
     <Animated.View style={[styles.objectWrapper, staticPos, { zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
       <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} />
       {content && (
-        <Text style={[styles.contentText, { fontSize: sizePx * 0.4, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }]}>{content}</Text>
+        <View style={[styles.contentOverlay, { width: sizePx, height: sizePx }]}>
+          <Text style={[styles.contentText, { fontSize: Math.max(sizePx * 0.38, 12), textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }]}>{content}</Text>
+        </View>
       )}
     </Animated.View>
   );
@@ -99,5 +101,6 @@ const styles = StyleSheet.create({
   shape: { alignItems: 'center', justifyContent: 'center' },
   labelShape: { alignItems: 'center', justifyContent: 'center' },
   labelText: { color: '#FFFFFF', fontWeight: '700' },
-  contentText: { position: 'absolute', color: '#FFFFFF', fontWeight: '800' },
+  contentOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  contentText: { color: '#FFFFFF', fontWeight: '800' },
 });
