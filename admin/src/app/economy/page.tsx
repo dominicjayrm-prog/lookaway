@@ -11,8 +11,8 @@ export default async function EconomyPage() {
   const weekAgoStr = `${weekAgo.getFullYear()}-${pad(weekAgo.getMonth() + 1)}-${pad(weekAgo.getDate())}`;
 
   // Fetch aggregate stats
-  const { data: allEvents } = await supabase.from('economy_events').select('event_type, amount, created_at');
-  const events = allEvents ?? [];
+  const { data: allEvents } = await supabase.from('economy_events').select('event_type, amount, created_at, details');
+  const events = (allEvents ?? []).filter((e: any) => e.details?.reason !== 'starting_gems'); // Exclude starting gems spam
 
   // Get actual gem balance from player profiles (ground truth)
   const { data: profiles } = await supabase.from('profiles').select('gems');

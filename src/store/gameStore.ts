@@ -334,13 +334,6 @@ export const useGameStore = create<GameStore>((set, get) => {
         });
       } else {
         set({ _hydrated: true });
-        // Brand new player — log starting gems once
-        try {
-          if (typeof localStorage !== 'undefined' && !localStorage.getItem('lookaway_starting_gems_logged')) {
-            localStorage.setItem('lookaway_starting_gems_logged', 'true');
-            logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' });
-          }
-        } catch {}
       }
     },
     saveState: () => saveState(get()),
