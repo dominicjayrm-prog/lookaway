@@ -27,11 +27,11 @@ function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
 
-export default function LevelPreview({ objects, questions }: { objects: SceneObject[]; questions: Question[]; content: any }) {
+export default function LevelPreview({ objects, questions, content }: { objects: SceneObject[]; questions: Question[]; content: any }) {
   const [showAnswers, setShowAnswers] = useState(false);
   const [showEndPositions, setShowEndPositions] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [animProgress, setAnimProgress] = useState(0); // 0 to 1
+  const [animProgress, setAnimProgress] = useState(0);
   const animRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -154,7 +154,7 @@ export default function LevelPreview({ objects, questions }: { objects: SceneObj
                   </span>
                 )}
                 {/* Movement indicator */}
-                {isMoving && !showEndPositions && (
+                {isMoving && !showEndPositions && !isPlaying && (
                   <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 border border-white" title="Moving object" />
                 )}
                 {/* Tooltip */}
