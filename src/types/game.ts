@@ -18,6 +18,7 @@ export interface SceneObject {
   size: number; // Relative size 20-60
   rotation?: number;
   label?: string; // For number/letter types
+  content?: string; // Number or letter displayed inside the shape (World 3+)
   zIndex?: number;
 }
 
