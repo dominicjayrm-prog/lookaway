@@ -4,8 +4,9 @@ import LevelPreview from './level-preview';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PreviewPage({ searchParams }: { searchParams: { id?: string } }) {
-  const levelId = searchParams.id;
+export default async function PreviewPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  const params = await searchParams;
+  const levelId = params.id;
   if (!levelId) {
     return (
       <div className="p-8 max-w-4xl mx-auto">
