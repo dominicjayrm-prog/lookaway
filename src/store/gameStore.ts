@@ -110,14 +110,15 @@ function saveState(state: GameStore) {
   // Also sync to Supabase (debounced, fire and forget)
   clearTimeout((saveState as any)._syncTimer);
   (saveState as any)._syncTimer = setTimeout(() => {
-    const uid = getUserId();
-    if (uid && !uid.startsWith('anon-')) {
+    const uid = state._authUserId;
+    if (uid) {
       saveProgressToSupabase(uid, state).catch((e) => console.warn('Sync failed:', e));
     }
   }, 2000);
 }
 
 export interface GameStore {
+  _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
   streakCount: number; streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
@@ -157,6 +158,7 @@ export interface GameStore {
   // Hydration — re-read localStorage after mount (fixes SSR/static export)
   hydrate: () => void;
   saveState: () => void;
+  setAuthUserId: (id: string) => void;
 
   // Gameplay
   startLevel: (l: Level) => void;
@@ -195,6 +197,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     selectedOption: null,
     revealedCorrect: null,
     score: 0,
+    _authUserId: null,
     _hydrated: false,
 
     addGems: (amount) => { set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
@@ -293,8 +296,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       setTimeout(() => saveState(get()), 0);
 
       // Immediately sync to cloud so progress is saved even if app is killed
-      const uid = getUserId();
-      if (uid && !uid.startsWith('anon-')) {
+      const uid = get()._authUserId;
+      if (uid) {
         setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => console.warn('Post-level sync failed:', e)), 500);
       }
 
@@ -334,21 +337,15 @@ export const useGameStore = create<GameStore>((set, get) => {
         });
       } else {
         set({ _hydrated: true });
-        // Brand new player — log starting gems once
-        try {
-          if (typeof localStorage !== 'undefined' && !localStorage.getItem('lookaway_starting_gems_logged')) {
-            localStorage.setItem('lookaway_starting_gems_logged', 'true');
-            logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' });
-          }
-        } catch {}
       }
     },
     saveState: () => saveState(get()),
+    setAuthUserId: (id: string) => set({ _authUserId: id }),
 
     // Cloud sync
     syncToCloud: () => {
-      const uid = getUserId();
-      if (uid && !uid.startsWith('anon-')) {
+      const uid = get()._authUserId;
+      if (uid) {
         saveProgressToSupabase(uid, get()).catch((e) => console.warn('Sync failed:', e));
       }
     },
@@ -356,6 +353,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const cloud = await loadProgressFromSupabase(userId);
       if (!cloud) return;
       const local = get();
+      const localHasProgress = Object.keys(local.levelProgress).length > 0;
 
       // Merge level progress — keep the best from either source
       const mergedProgress = { ...cloud.levelProgress };
@@ -376,10 +374,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       const mergedTotalStars = Object.values(mergedProgress).reduce((sum, p) => sum + p.stars, 0);
       const mergedScores = Object.values(mergedProgress).filter(p => p.bestScore > 0).map(p => p.bestScore);
 
+      // For gems/lives: if local has real progress, trust local (it's more current).
+      // Only use cloud values if local is fresh/empty (new device).
       set({
-        gems: Math.max(cloud.gems, local.gems),
-        lives: Math.max(cloud.lives, local.lives),
-        livesLastLostAt: cloud.livesLastLostAt,
+        gems: localHasProgress ? local.gems : cloud.gems,
+        lives: localHasProgress ? local.lives : cloud.lives,
+        livesLastLostAt: localHasProgress ? local.livesLastLostAt : cloud.livesLastLostAt,
         streakCount: Math.max(cloud.streakCount, local.streakCount),
         totalStars: mergedTotalStars,
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),

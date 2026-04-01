@@ -70,12 +70,14 @@ function CloudSyncLoader() {
   const loadFromCloud = useGameStore((s) => s.loadFromCloud);
   const syncToCloud = useGameStore((s) => s.syncToCloud);
   const saveState = useGameStore((s) => s.saveState);
+  const setAuthUserId = useGameStore((s) => s.setAuthUserId);
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
 
   // Load from cloud on login + update online status + expire old challenges
   useEffect(() => {
     if (!user?.id) return;
+    setAuthUserId(user.id); // Store real auth ID for cloud sync
     loadFromCloud(user.id);
     updateOnlineStatus(user.id);
     expireOldChallenges();
