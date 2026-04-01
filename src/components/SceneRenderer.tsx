@@ -34,9 +34,13 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index }: { o
   const sizePx = object.size * 1.2;
   const shapeType = resolveShapeType(object.type);
   const label = resolveLabel(object.type, object.label);
+  const content = object.content; // World 3+: number/letter displayed inside any shape
   return (
     <Animated.View style={[styles.objectWrapper, { left: `${object.x}%`, top: `${object.y}%`, zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
       <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} />
+      {content && (
+        <Text style={[styles.contentText, { fontSize: sizePx * 0.4, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }]}>{content}</Text>
+      )}
     </Animated.View>
   );
 });
@@ -73,4 +77,5 @@ const styles = StyleSheet.create({
   shape: { alignItems: 'center', justifyContent: 'center' },
   labelShape: { alignItems: 'center', justifyContent: 'center' },
   labelText: { color: '#FFFFFF', fontWeight: '700' },
+  contentText: { position: 'absolute', color: '#FFFFFF', fontWeight: '800' },
 });
