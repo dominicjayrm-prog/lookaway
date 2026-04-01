@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getObjectById } from '@/data/objectLibrary';
 
 interface SceneObject {
@@ -23,11 +23,49 @@ interface Question {
   timeLimit: number;
 }
 
-export default function LevelPreview({ objects, questions }: { objects: SceneObject[]; questions: Question[]; content: any }) {
+function easeInOut(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+export default function LevelPreview({ objects, questions, content }: { objects: SceneObject[]; questions: Question[]; content: any }) {
   const [showAnswers, setShowAnswers] = useState(false);
   const [showEndPositions, setShowEndPositions] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [animProgress, setAnimProgress] = useState(0);
+  const animRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   const hasMovement = objects.some(o => o.endX != null || o.endY != null);
+  const viewTime = content?.viewTime ?? content?.view_time ?? 4;
+
+  const startAnimation = useCallback(() => {
+    setIsPlaying(true);
+    setAnimProgress(0);
+    startTimeRef.current = performance.now();
+    const duration = viewTime * 1000;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+      setAnimProgress(progress);
+      if (progress < 1) {
+        animRef.current = requestAnimationFrame(tick);
+      } else {
+        setIsPlaying(false);
+      }
+    };
+    animRef.current = requestAnimationFrame(tick);
+  }, [viewTime]);
+
+  const stopAnimation = useCallback(() => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    setIsPlaying(false);
+    setAnimProgress(0);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, []);
   const hasContent = objects.some(o => o.content);
 
   return (
@@ -39,6 +77,14 @@ export default function LevelPreview({ objects, questions }: { objects: SceneObj
           <div className="flex gap-2">
             {hasMovement && (
               <button
+                onClick={isPlaying ? stopAnimation : startAnimation}
+                className={`text-xs px-3 py-1 rounded-lg font-medium ${isPlaying ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+              >
+                {isPlaying ? `⏸ Playing... ${Math.round(animProgress * 100)}%` : `▶ Play animation (${viewTime}s)`}
+              </button>
+            )}
+            {hasMovement && !isPlaying && (
+              <button
                 onClick={() => setShowEndPositions(!showEndPositions)}
                 className={`text-xs px-3 py-1 rounded-lg font-medium ${showEndPositions ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-slate-500 hover:bg-gray-200'}`}
               >
@@ -49,11 +95,38 @@ export default function LevelPreview({ objects, questions }: { objects: SceneObj
         </div>
 
         <div className="w-full aspect-square bg-gray-50 rounded-xl relative overflow-hidden border border-gray-100">
+          {/* Movement path lines */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+            {objects.filter(o => o.endX != null || o.endY != null).map((obj) => (
+              <line
+                key={`path-${obj.id}`}
+                x1={`${obj.x}%`} y1={`${obj.y}%`}
+                x2={`${obj.endX ?? obj.x}%`} y2={`${obj.endY ?? obj.y}%`}
+                stroke="#6C5CE7" strokeWidth="1.5" strokeDasharray="4,4" opacity="0.3"
+              />
+            ))}
+            {/* Start dots */}
+            {objects.filter(o => o.endX != null || o.endY != null).map((obj) => (
+              <circle key={`start-${obj.id}`} cx={`${obj.x}%`} cy={`${obj.y}%`} r="3" fill="#6C5CE7" opacity="0.4" />
+            ))}
+            {/* End dots */}
+            {objects.filter(o => o.endX != null || o.endY != null).map((obj) => (
+              <circle key={`end-${obj.id}`} cx={`${obj.endX ?? obj.x}%`} cy={`${obj.endY ?? obj.y}%`} r="3" fill="#FF6B6B" opacity="0.4" />
+            ))}
+          </svg>
           {objects.map((obj) => {
             const libItem = getObjectById(obj.type);
-            const x = showEndPositions && obj.endX != null ? obj.endX : obj.x;
-            const y = showEndPositions && obj.endY != null ? obj.endY : obj.y;
             const isMoving = obj.endX != null || obj.endY != null;
+            let x = obj.x;
+            let y = obj.y;
+            if (isPlaying && isMoving) {
+              const eased = easeInOut(animProgress);
+              x = obj.x + ((obj.endX ?? obj.x) - obj.x) * eased;
+              y = obj.y + ((obj.endY ?? obj.y) - obj.y) * eased;
+            } else if (showEndPositions && isMoving) {
+              x = obj.endX ?? obj.x;
+              y = obj.endY ?? obj.y;
+            }
             const sz = Math.max(obj.size * 0.7, 20);
 
             return (
@@ -81,7 +154,7 @@ export default function LevelPreview({ objects, questions }: { objects: SceneObj
                   </span>
                 )}
                 {/* Movement indicator */}
-                {isMoving && !showEndPositions && (
+                {isMoving && !showEndPositions && !isPlaying && (
                   <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 border border-white" title="Moving object" />
                 )}
                 {/* Tooltip */}
@@ -96,9 +169,11 @@ export default function LevelPreview({ objects, questions }: { objects: SceneObj
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 mt-3 text-[10px] text-slate-400">
-          {hasMovement && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" /> Moving object</span>}
+          {hasMovement && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-500" /> Start position</span>}
+          {hasMovement && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> End position</span>}
+          {hasMovement && <span className="flex items-center gap-1"><span className="w-4 border-t border-dashed border-purple-400" /> Movement path</span>}
           {hasContent && <span className="flex items-center gap-1"><span className="font-bold text-slate-600">A</span> Has content</span>}
-          <span>{objects.length} objects total</span>
+          <span>{objects.length} objects &middot; {objects.filter(o => o.endX != null).length} moving</span>
         </div>
       </div>
 
