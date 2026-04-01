@@ -98,7 +98,7 @@ function saveState(state: GameStore) {
     if (typeof window === 'undefined') return;
     localStorage.setItem('lookaway-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
-      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed,
+      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
@@ -119,7 +119,7 @@ function saveState(state: GameStore) {
 
 export interface GameStore {
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
-  streakCount: number; streakMilestonesClaimed: number[];
+  streakCount: number; streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -180,6 +180,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     maxLives: (saved as any).maxLives ?? LIVES_CONFIG.maxLives,
     livesLastLostAt: (saved as any).livesLastLostAt ?? null,
     streakCount: (saved as any).streakCount ?? 0,
+    lastPlayDate: (saved as any).lastPlayDate ?? null,
     streakMilestonesClaimed: (saved as any).streakMilestonesClaimed ?? [],
     totalStars: (saved as any).totalStars ?? 0,
     highestWorld: (saved as any).highestWorld ?? 1,
@@ -217,8 +218,16 @@ export const useGameStore = create<GameStore>((set, get) => {
       return true;
     },
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
-    incrementStreak: () => { set((s) => ({ streakCount: s.streakCount + 1 })); setTimeout(() => saveState(get()), 0); },
-    resetStreak: () => { set({ streakCount: 0 }); setTimeout(() => saveState(get()), 0); },
+    incrementStreak: () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { lastPlayDate, streakCount } = get();
+      if (lastPlayDate === today) return; // Already played today
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const newStreak = lastPlayDate === yesterday ? streakCount + 1 : 1; // Continue or restart
+      set({ streakCount: newStreak, lastPlayDate: today });
+      setTimeout(() => saveState(get()), 0);
+    },
+    resetStreak: () => { set({ streakCount: 0, lastPlayDate: null }); setTimeout(() => saveState(get()), 0); },
     checkLifeRegen: () => {
       const { lives, maxLives, livesLastLostAt } = get();
       if (lives >= maxLives || !livesLastLostAt) return;
@@ -315,6 +324,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           livesLastLostAt: s.livesLastLostAt as number | null ?? null,
           streakCount: s.streakCount as number ?? 0,
           streakMilestonesClaimed: s.streakMilestonesClaimed as number[] ?? [],
+          lastPlayDate: s.lastPlayDate as string | null ?? null,
           totalStars: s.totalStars as number ?? 0,
           highestWorld: s.highestWorld as number ?? 1,
           powerUps: s.powerUps as PowerUpInventory ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },

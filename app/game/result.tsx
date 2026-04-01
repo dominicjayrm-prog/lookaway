@@ -48,7 +48,7 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
 export default function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, levelProgress } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, incrementStreak, levelProgress } = useGameStore();
 
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
@@ -87,6 +87,7 @@ export default function ResultScreen() {
       const earned = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
+      incrementStreak(); // Track daily play streak
     } else {
       loseLife();
     }
