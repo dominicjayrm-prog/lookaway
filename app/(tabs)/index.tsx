@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import { TabTransition } from '@/src/components/TabTransition';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { LEVELS } from '@/src/data/levels';
+import { fetchLevelById } from '@/src/data/levels';
 import Svg, { Path, Circle, Polygon } from 'react-native-svg';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
@@ -36,14 +36,21 @@ export default function PlayTab() {
   const { user } = useAuth();
   const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount } = useGameStore();
   const nextLevelId = getNextUnplayedLevelId();
-  const nextLevel = LEVELS.find((l) => l.id === nextLevelId);
-  const nextLevelNumber = nextLevel?.levelNumber ?? 1;
-  const nextLevelTitle = nextLevel?.title ?? 'Shape Basics';
-  const completedCount = getCompletedLevelCount();
-  const memoryScore = getMemoryScore();
-  const currentWorldId = nextLevel?.worldId ?? 1;
+
+  // Parse world/level from ID format "w1-l3"
+  const idMatch = nextLevelId.match(/^w(\d+)-l(\d+)$/);
+  const currentWorldId = idMatch ? parseInt(idMatch[1], 10) : 1;
+  const nextLevelNumber = idMatch ? parseInt(idMatch[2], 10) : 1;
   const currentWorldLevels = WORLD_LEVEL_COUNTS[(currentWorldId - 1)] ?? 20;
+  const completedCount = getCompletedLevelCount();
   const worldProgress = Math.max(0, nextLevelNumber - 1) / currentWorldLevels;
+  const memoryScore = getMemoryScore();
+
+  // Fetch level title from Supabase
+  const [nextLevelTitle, setNextLevelTitle] = useState('Loading...');
+  useEffect(() => {
+    fetchLevelById(nextLevelId).then(l => setNextLevelTitle(l?.title ?? `Level ${nextLevelNumber}`));
+  }, [nextLevelId, nextLevelNumber]);
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
