@@ -9,9 +9,13 @@ import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
+import { PowerUpBar } from '@/src/components/PowerUpBar';
+import { SlowTimeButton } from '@/src/components/SlowTimeButton';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { useGameStore } from '@/src/store';
 import { fetchLevelById } from '@/src/data/levels';
 import { getStarsForScore } from '@/src/utils/scoring';
+import type { PowerUpId } from '@/src/utils/scoring';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -26,6 +30,13 @@ export default function GameScreen() {
 
   const [level, setLevel] = useState<Level | null>(null);
   const [loading, setLoading] = useState(true);
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<PowerUpId, boolean>>({ slowTime: false, peek: false, fiftyFifty: false, skip: false });
+  const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
+  const [showPeekScene, setShowPeekScene] = useState(false);
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [timerBonus, setTimerBonus] = useState(0);
+  const usePowerUp = useGameStore((s) => s.usePowerUp);
+  const powerUps = useGameStore((s) => s.powerUps);
 
   // Fetch level from Supabase (async), fall back to hardcoded
   useEffect(() => {
@@ -72,7 +83,48 @@ export default function GameScreen() {
     if (selectedOption === null) { selectOption(null); revealAnswer(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
-  const handleNextScene = useCallback(() => { nextScene(); }, [nextScene]);
+  const handleNextScene = useCallback(() => { setHiddenOptions([]); nextScene(); }, [nextScene]);
+
+  // Power-up handlers
+  const handleSlowTime = useCallback(() => {
+    if (usedPowerUps.slowTime) return;
+    if (powerUps.slowTime <= 0) { setBuyPopupId('slowTime'); return; }
+    usePowerUp('slowTime');
+    setUsedPowerUps(p => ({ ...p, slowTime: true }));
+    setTimerBonus(3);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp]);
+
+  const handleQuestionPowerUp = useCallback((id: PowerUpId) => {
+    if (usedPowerUps[id]) return;
+    if (powerUps[id] <= 0) { setBuyPopupId(id); return; }
+
+    if (id === 'peek') {
+      usePowerUp('peek');
+      setUsedPowerUps(p => ({ ...p, peek: true }));
+      setShowPeekScene(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setTimeout(() => setShowPeekScene(false), 1500);
+    } else if (id === 'fiftyFifty' && currentQuestion) {
+      usePowerUp('fiftyFifty');
+      setUsedPowerUps(p => ({ ...p, fiftyFifty: true }));
+      const wrong = currentQuestion.options.map((_, i) => i).filter(i => i !== currentQuestion.correctIndex);
+      const shuffled = [...wrong].sort(() => Math.random() - 0.5);
+      setHiddenOptions(shuffled.slice(0, 2));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else if (id === 'skip' && currentQuestion) {
+      usePowerUp('skip');
+      setUsedPowerUps(p => ({ ...p, skip: true }));
+      handleSelectOption(currentQuestion.correctIndex);
+    }
+  }, [usedPowerUps, powerUps, usePowerUp, currentQuestion, handleSelectOption]);
+
+  const handleBuyPopupPurchased = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    // Auto-use after buying
+    if (id === 'slowTime') handleSlowTime();
+    else handleQuestionPowerUp(id);
+  }, [handleSlowTime, handleQuestionPowerUp]);
 
   useEffect(() => {
     if (gameState === 'COMPLETE' || gameState === 'FAILED') {
@@ -109,9 +161,10 @@ export default function GameScreen() {
 
       {gameState === 'MEMORISE' && currentScene && (
         <Animated.View entering={FadeIn} style={styles.gameArea}>
-          <CountdownTimer duration={currentScene.viewTime} running={true} onComplete={handleMemoriseComplete} style={styles.timer} />
+          <CountdownTimer duration={currentScene.viewTime + timerBonus} running={!buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={styles.memoriseText}>Memorise this scene!</Text>
           <SceneRenderer objects={currentScene.objects} visible={true} />
+          <SlowTimeButton used={usedPowerUps.slowTime} onUse={handleSlowTime} />
         </Animated.View>
       )}
 
@@ -123,8 +176,13 @@ export default function GameScreen() {
 
       {gameState === 'QUESTION' && currentQuestion && (
         <Animated.View entering={FadeIn} style={styles.gameArea}>
-          <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
-          <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentQuestionIndex + 1} totalQuestions={totalQuestions} />
+          <CountdownTimer duration={currentQuestion.timeLimit} running={!showPeekScene && !buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
+          {showPeekScene && currentScene ? (
+            <SceneRenderer objects={currentScene.objects} visible={true} />
+          ) : (
+            <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentQuestionIndex + 1} totalQuestions={totalQuestions} hiddenOptions={hiddenOptions} />
+          )}
+          <PowerUpBar usedThisLevel={usedPowerUps} onUsePowerUp={handleQuestionPowerUp} />
         </Animated.View>
       )}
 
@@ -141,6 +199,9 @@ export default function GameScreen() {
           <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />
         </Animated.View>
       )}
+
+      {/* Buy power-up popup (pauses game timers) */}
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupPurchased} />
     </SafeAreaView>
   );
 }
