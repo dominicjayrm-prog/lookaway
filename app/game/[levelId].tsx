@@ -163,7 +163,7 @@ export default function GameScreen() {
         <Animated.View entering={FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime + timerBonus} running={!buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={styles.memoriseText}>Memorise this scene!</Text>
-          <SceneRenderer objects={currentScene.objects} visible={true} />
+          <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
           <SlowTimeButton used={usedPowerUps.slowTime} onUse={handleSlowTime} />
         </Animated.View>
       )}
@@ -178,7 +178,7 @@ export default function GameScreen() {
         <Animated.View entering={FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={!showPeekScene && !buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
           {showPeekScene && currentScene ? (
-            <SceneRenderer objects={currentScene.objects} visible={true} />
+            <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
           ) : (
             <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentQuestionIndex + 1} totalQuestions={totalQuestions} hiddenOptions={hiddenOptions} />
           )}
