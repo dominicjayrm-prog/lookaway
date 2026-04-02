@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGameStore } from '@/src/store';
@@ -76,12 +76,12 @@ export default function ShopTab() {
                   <View style={[styles.ownedPill, owned > 0 ? { backgroundColor: 'rgba(0,184,148,0.1)' } : { backgroundColor: 'transparent' }]}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: owned > 0 ? '#00B894' : colors.textLight }}>Owned: {owned}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => handleBuyPowerUp(p.id, 1)} style={[styles.buyBtn, { borderColor: p.tintStrong }]}>
+                  <Pressable onPress={() => handleBuyPowerUp(p.id, 1)} style={[styles.buyBtn, { borderColor: p.tintStrong }]}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: p.tintStrong }}>{GEM} {cost}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleBuyPowerUp(p.id, 3)}>
+                  </Pressable>
+                  <Pressable onPress={() => handleBuyPowerUp(p.id, 3)}>
                     <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMid, marginTop: 4 }}>3 for {GEM} {bundleCost}</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             );
@@ -92,7 +92,7 @@ export default function ShopTab() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
         <View style={styles.gemPackRow}>
           {GEM_PACKS.map((pack) => (
-            <TouchableOpacity key={pack.id} onPress={handleIAP} activeOpacity={0.9} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
+            <Pressable key={pack.id} onPress={handleIAP} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
               {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
               <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
               <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
@@ -100,7 +100,7 @@ export default function ShopTab() {
               <View style={[styles.packBtn, { borderColor: colors.accent }]}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent }}>{pack.price}</Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
 
@@ -108,7 +108,7 @@ export default function ShopTab() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
         <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
           {/* £0.99 refill — most prominent */}
-          <TouchableOpacity style={styles.livesRow} onPress={handleIAP} activeOpacity={0.8}>
+          <Pressable style={styles.livesRow} onPress={handleIAP}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
                 <Ionicons name="heart" size={20} color={colors.accent} />
@@ -121,12 +121,12 @@ export default function ShopTab() {
             <View style={[styles.cashBtn, { backgroundColor: colors.accent }]}>
               <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{'\u00A3'}0.99</Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
 
           {/* Unlimited hour */}
-          <TouchableOpacity style={styles.livesRow} onPress={handleIAP} activeOpacity={0.8}>
+          <Pressable style={styles.livesRow} onPress={handleIAP}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
                 <Ionicons name="infinite" size={22} color={colors.gold} />
@@ -139,12 +139,12 @@ export default function ShopTab() {
             <View style={[styles.outlineBtn, { borderColor: colors.accent }]}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{'\u00A3'}1.99</Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
 
           {/* Gem refill — de-emphasised */}
-          <TouchableOpacity style={styles.livesRow} onPress={handleGemRefillLives} activeOpacity={0.8}>
+          <Pressable style={styles.livesRow} onPress={handleGemRefillLives}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
                 <Ionicons name="heart-outline" size={18} color={colors.textLight} />
@@ -155,7 +155,7 @@ export default function ShopTab() {
               </View>
             </View>
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* ── Remove ads ── */}
@@ -170,9 +170,9 @@ export default function ShopTab() {
               <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>Remove all interstitial and banner ads forever</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={handleIAP} style={[styles.removeAdsBtn, { borderColor: colors.accent }]} activeOpacity={0.85}>
+          <Pressable onPress={handleIAP} style={[styles.removeAdsBtn, { borderColor: colors.accent }]}>
             <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 {'\u2014'} one time</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>

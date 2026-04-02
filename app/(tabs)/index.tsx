@@ -34,8 +34,8 @@ export default function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount } = useGameStore();
-  const nextLevelId = getNextUnplayedLevelId();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress } = useGameStore();
+  const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
   // Parse world/level from ID format "w1-l3"
   const idMatch = nextLevelId.match(/^w(\d+)-l(\d+)$/);
@@ -98,7 +98,7 @@ export default function PlayTab() {
 
           {/* Level info */}
           <Text style={styles.heroContinueLabel}>CONTINUE</Text>
-          <Text style={styles.heroLevelTitle}>{`World 1 ${EMDASH} Level ${nextLevelNumber}`}</Text>
+          <Text style={styles.heroLevelTitle}>{`World ${currentWorldId} ${EMDASH} Level ${nextLevelNumber}`}</Text>
           <Text style={styles.heroLevelSubtitle}>{nextLevelTitle}</Text>
 
           {/* Progress bar */}
