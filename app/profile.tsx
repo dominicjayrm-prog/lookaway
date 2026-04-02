@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -66,9 +66,9 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* Header */}
       <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
@@ -76,7 +76,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Avatar + name */}
         <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
-          <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8} style={styles.avatarContainer}>
+          <Pressable onPress={handlePickPhoto} style={styles.avatarContainer}>
             {profilePic ? (
               <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
             ) : (
@@ -87,7 +87,7 @@ export default function ProfileScreen() {
             <View style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.bg }]}>
               <Ionicons name="camera" size={14} color={colors.accent} />
             </View>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
           <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
         </Animated.View>
@@ -141,14 +141,14 @@ export default function ProfileScreen() {
             {isManual && (
               <>
                 <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <TouchableOpacity style={styles.settingsRow} onPress={resetToSystem}>
+                <Pressable style={styles.settingsRow} onPress={resetToSystem}>
                   <View style={styles.settingsRowLeft}>
                     <View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}>
                       <Ionicons name="sync" size={16} color={colors.textMid} />
                     </View>
                     <Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text>
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               </>
             )}
           </View>
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(500)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SOCIAL</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <TouchableOpacity style={styles.settingsRow}>
+            <Pressable style={styles.settingsRow}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
                   <Ionicons name="people" size={18} color={colors.blue} />
@@ -181,9 +181,9 @@ export default function ProfileScreen() {
                 <Text style={[styles.comingSoon, { color: colors.textLight }]}>Coming soon</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
               </View>
-            </TouchableOpacity>
+            </Pressable>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity style={styles.settingsRow}>
+            <Pressable style={styles.settingsRow}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
                   <Ionicons name="trophy" size={18} color={colors.gold} />
@@ -194,7 +194,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.comingSoon, { color: colors.textLight }]}>Coming soon</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </Animated.View>
 
@@ -202,7 +202,7 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(600)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>ACCOUNT</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <TouchableOpacity style={styles.settingsRow} onPress={handleSignOut}>
+            <Pressable style={styles.settingsRow} onPress={handleSignOut}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}>
                   <Ionicons name="log-out" size={18} color={colors.wrong} />
@@ -210,7 +210,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </Animated.View>
 
@@ -241,7 +241,7 @@ function SettingsRow({ icon, label, colors }: { icon: string; label: string; col
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  backButton: { width: 40, height: 40, minWidth: 44, minHeight: 44, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold },
   headerSpacer: { width: 40 },
 
