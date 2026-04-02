@@ -51,6 +51,28 @@ export default function PlayTab() {
   useEffect(() => {
     fetchLevelById(nextLevelId).then(l => setNextLevelTitle(l?.title ?? `Level ${nextLevelNumber}`));
   }, [nextLevelId, nextLevelNumber]);
+
+  // Contextual hero subtitle
+  const heroSubtitle = (() => {
+    const remaining = currentWorldLevels - (nextLevelNumber - 1);
+    if (nextLevelNumber === 1) return `Welcome to World ${currentWorldId}`;
+    if (remaining <= 3) return `${remaining} level${remaining !== 1 ? 's' : ''} to finish World ${currentWorldId}!`;
+    if (streakCount >= 3) return `${streakCount}-day streak! Keep it going`;
+    const subs = ['Keep pushing forward', 'Your memory is getting sharper', "Let's test that memory", 'Ready for the next challenge?'];
+    return subs[nextLevelNumber % subs.length];
+  })();
+
+  // Best level (highest 3-star level)
+  const bestLevel = (() => {
+    let best = 0;
+    for (const [id, p] of Object.entries(levelProgress)) {
+      if (p.stars === 3) {
+        const m = id.match(/l(\d+)$/);
+        if (m) best = Math.max(best, parseInt(m[1], 10));
+      }
+    }
+    return best;
+  })();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
@@ -99,7 +121,7 @@ export default function PlayTab() {
           {/* Level info */}
           <Text style={styles.heroContinueLabel}>CONTINUE</Text>
           <Text style={styles.heroLevelTitle}>{`World ${currentWorldId} ${EMDASH} Level ${nextLevelNumber}`}</Text>
-          <Text style={styles.heroLevelSubtitle}>{nextLevelTitle}</Text>
+          <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
           {/* Progress bar */}
           <View style={styles.heroProgressRow}>
@@ -119,7 +141,7 @@ export default function PlayTab() {
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
             <View style={[styles.statIconBg, { backgroundColor: colors.accentSoft }]}>
-              <Ionicons name="pulse" size={14} color={colors.accent} />
+              <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>BRAIN</Text>
             <Text style={[styles.statValue, { color: completedCount > 0 ? colors.accent : colors.textLight }]}>
@@ -153,16 +175,52 @@ export default function PlayTab() {
           <View style={styles.journeyPills}>
             {WORLD_NAMES.map((name, i) => {
               const wc = WORLD_COLORS[i];
-              const isActive = i === 0;
-              const isLocked = i > 0;
+              const isCurrentWorld = i + 1 === currentWorldId;
+              const isCompleted = i + 1 < currentWorldId;
+              const isLocked = i + 1 > currentWorldId;
               return (
-                <View key={i} style={[styles.worldPill, { backgroundColor: isActive ? wc + '12' : colors.surface, borderWidth: isActive ? 1.5 : 0, borderColor: isActive ? wc + '33' : 'transparent', opacity: isLocked ? 0.5 : 1 }]}>
-                  <Text style={[styles.worldPillNum, { color: isActive ? wc : colors.textMid }]}>{i + 1}</Text>
-                  <Text style={[styles.worldPillName, { color: isActive ? wc : colors.textLight }]}>{name}</Text>
+                <View key={i} style={[styles.worldPill, {
+                  backgroundColor: isCurrentWorld || isCompleted ? wc + '12' : wc + '06',
+                  borderWidth: isCurrentWorld ? 1.5 : isCompleted ? 1 : 1,
+                  borderColor: isCurrentWorld ? wc + '35' : isCompleted ? wc + '20' : wc + '10',
+                  opacity: isLocked ? 0.7 : 1,
+                }]}>
+                  <Text style={[styles.worldPillNum, { color: isCurrentWorld || isCompleted ? wc : wc + '80' }]}>{i + 1}</Text>
+                  <Text style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}>{name}</Text>
                 </View>
               );
             })}
           </View>
+        </View>
+
+        {/* Memory Insights */}
+        <View style={[styles.insightsCard, { backgroundColor: colors.card }]}>
+          <View style={styles.insightsHeader}>
+            <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
+            <Text style={[styles.insightsTitle, { color: colors.text }]}>Memory Insights</Text>
+          </View>
+          {completedCount === 0 ? (
+            <Text style={[styles.insightsEmpty, { color: colors.textMid }]}>Play your first level to start tracking your memory progress!</Text>
+          ) : (
+            <View style={styles.insightsGrid}>
+              <View style={[styles.insightMini, { backgroundColor: colors.accentSoft }]}>
+                <Text style={[styles.insightLabel, { color: colors.textLight }]}>BEST LEVEL</Text>
+                <Text style={[styles.insightValue, { color: colors.accent }]}>{bestLevel > 0 ? `Level ${bestLevel}` : EMDASH}</Text>
+              </View>
+              <View style={[styles.insightMini, { backgroundColor: colors.correctSoft }]}>
+                <Text style={[styles.insightLabel, { color: colors.textLight }]}>ACCURACY</Text>
+                <Text style={[styles.insightValue, { color: colors.correct }]}>{memoryScore}%</Text>
+              </View>
+              <View style={[styles.insightMini, { backgroundColor: colors.blueSoft }]}>
+                <Text style={[styles.insightLabel, { color: colors.textLight }]}>LEVELS PLAYED</Text>
+                <Text style={[styles.insightValue, { color: colors.blue }]}>{completedCount}</Text>
+              </View>
+              <View style={[styles.insightMini, { backgroundColor: colors.goldSoft }]}>
+                <Text style={[styles.insightLabel, { color: colors.textLight }]}>TOTAL STARS</Text>
+                <Text style={[styles.insightValue, { color: colors.gold }]}>{totalStars}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
       </ScrollView>
@@ -216,4 +274,13 @@ const styles = StyleSheet.create({
   worldPillNum: { fontSize: 12, fontWeight: '700' },
   worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
 
+  // Memory Insights
+  insightsCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  insightsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  insightsTitle: { fontSize: 13, fontWeight: '700' },
+  insightsEmpty: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingVertical: 8 },
+  insightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  insightMini: { width: '47%', borderRadius: 14, padding: 14 },
+  insightLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
+  insightValue: { fontSize: 18, fontWeight: '800' },
 });
