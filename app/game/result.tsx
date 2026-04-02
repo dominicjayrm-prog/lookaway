@@ -7,6 +7,8 @@ import { useGameStore } from '@/src/store';
 import { getStarsForScore } from '@/src/utils/scoring';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { WORLD_LEVEL_COUNTS, WORLD_NAMES } from '@/src/data/worldPaths';
+import { checkStreakMilestone } from '@/src/data/streakMilestones';
+import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -48,7 +50,7 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
 export default function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, incrementStreak, levelProgress } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, incrementStreak, addGems, levelProgress, streakCount, streakMilestonesClaimed } = useGameStore();
 
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
@@ -61,6 +63,7 @@ export default function ResultScreen() {
   const [wasReplay, setWasReplay] = useState(false);
   const [improved, setImproved] = useState(false);
   const [processed, setProcessed] = useState(false);
+  const [celebration, setCelebration] = useState<{ days: number; gems: number; title: string; color: string } | null>(null);
 
   // Parse level info
   const parsed = level ? parseLevelId(level.id) : null;
@@ -88,6 +91,13 @@ export default function ResultScreen() {
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
       incrementStreak(); // Track daily play streak
+      // Check for streak milestone (after incrementStreak updates the count)
+      setTimeout(() => {
+        const newStreak = useGameStore.getState().streakCount;
+        const claimed = useGameStore.getState().streakMilestonesClaimed;
+        const milestone = checkStreakMilestone(newStreak, claimed);
+        if (milestone) setCelebration(milestone);
+      }, 100);
     } else {
       loseLife();
     }
@@ -210,6 +220,25 @@ export default function ResultScreen() {
           </>
         )}
       </View>
+
+      {/* Streak celebration overlay */}
+      {celebration && (
+        <StreakCelebration
+          visible
+          days={celebration.days}
+          gems={celebration.gems}
+          title={celebration.title}
+          color={celebration.color}
+          onDismiss={() => {
+            // Award gems and mark milestone as claimed
+            addGems(celebration.gems);
+            useGameStore.setState((s) => ({
+              streakMilestonesClaimed: [...s.streakMilestonesClaimed, celebration.days],
+            }));
+            setCelebration(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
