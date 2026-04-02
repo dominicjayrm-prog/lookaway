@@ -8,7 +8,9 @@ import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { fetchLevelById } from '@/src/data/levels';
-import Svg, { Path, Circle, Polygon } from 'react-native-svg';
+import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
+import type { ActivityEvent } from '@/src/utils/activity';
+import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -29,6 +31,88 @@ function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: str
   return <Svg width={size} height={size} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
 }
 
+
+function ActivityIcon({ type, color }: { type: string; color: string }) {
+  switch (type) {
+    case 'level_complete': return <Svg width={14} height={14} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
+    case 'world_complete': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M6,4 L6,2 L18,2 L18,4 M5,4 L19,4 L19,8 C19,11 17,13 14,13 L14,16 L17,19 L17,20 L7,20 L7,19 L10,16 L10,13 C7,13 5,11 5,8Z" fill={color} /></Svg>;
+    case 'streak_milestone': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,2 C12,2 8,8 8,12 C8,15 10,17 12,17 C14,17 16,15 16,12 C16,8 12,2 12,2Z" fill={color} /></Svg>;
+    case 'challenge_won': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M5,16 L3,6 L8,10 L12,4 L16,10 L21,6 L19,16Z" fill={color} /><Rect x={4} y={16} width={16} height={3} rx={1} fill={color} /></Svg>;
+    case 'challenge_lost': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M5,16 L3,6 L8,10 L12,4 L16,10 L21,6 L19,16Z" fill={color} /><Rect x={4} y={16} width={16} height={3} rx={1} fill={color} /></Svg>;
+    case 'friend_added': return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill={color} /><Path d="M4,21 Q4,14 12,14 Q20,14 20,21" fill={color} /></Svg>;
+    case 'star_improved': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,4 L5,12 L9,12 L9,20 L15,20 L15,12 L19,12Z" fill={color} /></Svg>;
+    case 'powerup_bought': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={color} /></Svg>;
+    default: return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={8} fill={color} /></Svg>;
+  }
+}
+
+function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: string; main: string; sub: string } {
+  const d = event.data;
+  const t = getTimeAgo(event.timestamp);
+  switch (event.type) {
+    case 'level_complete': return { iconColor: '#D4A012', iconBg: 'rgba(212,160,18,0.1)', main: `Completed ${d.title || `Level ${d.levelNumber}`}`, sub: `World ${d.worldId} · ${d.stars} star${(d.stars as number) !== 1 ? 's' : ''} · ${t}` };
+    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Finished ${d.worldName}!`, sub: `World complete · ${t}` };
+    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: `${d.days}-day streak!`, sub: `Earned ${d.gems} gems · ${t}` };
+    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Beat @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
+    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: `Lost to @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
+    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Added @${d.username}`, sub: `New friend · ${t}` };
+    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Improved Level ${d.levelNumber}`, sub: `${d.oldStars}→${d.newStars} stars · ${t}` };
+    case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Bought power-up`, sub: `Shop · ${t}` };
+    default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: 'Activity', sub: t };
+  }
+}
+
+function RecentActivityCard({ colors, router }: { colors: Record<string, string>; router: ReturnType<typeof useRouter> }) {
+  const [activities, setActivities] = useState<ActivityEvent[]>([]);
+  useEffect(() => { setActivities(getRecentActivity(3)); }, []);
+
+  return (
+    <View style={[actStyles.card, { backgroundColor: colors.card }]}>
+      <Text style={[actStyles.title, { color: colors.text }]}>Recent Activity</Text>
+      {activities.length === 0 ? (
+        <View style={actStyles.emptyContainer}>
+          <Text style={[actStyles.emptyTitle, { color: colors.textMid }]}>Your story starts here</Text>
+          <Text style={[actStyles.emptySub, { color: colors.textLight }]}>Complete a level to see your activity appear!</Text>
+        </View>
+      ) : (
+        activities.map((event, i) => {
+          const display = getActivityDisplay(event);
+          return (
+            <Pressable key={event.id} style={[actStyles.row, i < activities.length - 1 && { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' }]}
+              onPress={() => {
+                if (event.type === 'level_complete' || event.type === 'star_improved') router.push(`/world/${event.data.worldId}`);
+                else if (event.type === 'world_complete') router.push('/(tabs)/journey');
+                else if (event.type === 'challenge_won' || event.type === 'challenge_lost' || event.type === 'friend_added') router.push('/(tabs)/friends');
+                else if (event.type === 'powerup_bought') router.push('/(tabs)/shop');
+              }}
+            >
+              <View style={[actStyles.iconBox, { backgroundColor: display.iconBg }]}>
+                <ActivityIcon type={event.type} color={display.iconColor} />
+              </View>
+              <View style={actStyles.textCol}>
+                <Text style={[actStyles.mainText, { color: colors.text }]} numberOfLines={1}>{display.main}</Text>
+                <Text style={[actStyles.subText, { color: colors.textLight }]} numberOfLines={1}>{display.sub}</Text>
+              </View>
+            </Pressable>
+          );
+        })
+      )}
+    </View>
+  );
+}
+
+const actStyles = StyleSheet.create({
+  card: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  title: { fontSize: 13, fontWeight: '700', marginBottom: 8 },
+  emptyContainer: { alignItems: 'center', paddingVertical: 12 },
+  emptyTitle: { fontSize: 14, fontWeight: '600' },
+  emptySub: { fontSize: 12, marginTop: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+  iconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  textCol: { flex: 1 },
+  mainText: { fontSize: 13, fontWeight: '600' },
+  subText: { fontSize: 11, marginTop: 1 },
+});
 
 export default function PlayTab() {
   const router = useRouter();
@@ -62,17 +146,6 @@ export default function PlayTab() {
     return subs[nextLevelNumber % subs.length];
   })();
 
-  // Best level (highest 3-star level)
-  const bestLevel = (() => {
-    let best = 0;
-    for (const [id, p] of Object.entries(levelProgress)) {
-      if (p.stars === 3) {
-        const m = id.match(/l(\d+)$/);
-        if (m) best = Math.max(best, parseInt(m[1], 10));
-      }
-    }
-    return best;
-  })();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
@@ -193,35 +266,8 @@ export default function PlayTab() {
           </View>
         </View>
 
-        {/* Memory Insights */}
-        <View style={[styles.insightsCard, { backgroundColor: colors.card }]}>
-          <View style={styles.insightsHeader}>
-            <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
-            <Text style={[styles.insightsTitle, { color: colors.text }]}>Memory Insights</Text>
-          </View>
-          {completedCount === 0 ? (
-            <Text style={[styles.insightsEmpty, { color: colors.textMid }]}>Play your first level to start tracking your memory progress!</Text>
-          ) : (
-            <View style={styles.insightsGrid}>
-              <View style={[styles.insightMini, { backgroundColor: colors.accentSoft }]}>
-                <Text style={[styles.insightLabel, { color: colors.textLight }]}>BEST LEVEL</Text>
-                <Text style={[styles.insightValue, { color: colors.accent }]}>{bestLevel > 0 ? `Level ${bestLevel}` : EMDASH}</Text>
-              </View>
-              <View style={[styles.insightMini, { backgroundColor: colors.correctSoft }]}>
-                <Text style={[styles.insightLabel, { color: colors.textLight }]}>ACCURACY</Text>
-                <Text style={[styles.insightValue, { color: colors.correct }]}>{memoryScore}%</Text>
-              </View>
-              <View style={[styles.insightMini, { backgroundColor: colors.blueSoft }]}>
-                <Text style={[styles.insightLabel, { color: colors.textLight }]}>LEVELS PLAYED</Text>
-                <Text style={[styles.insightValue, { color: colors.blue }]}>{completedCount}</Text>
-              </View>
-              <View style={[styles.insightMini, { backgroundColor: colors.goldSoft }]}>
-                <Text style={[styles.insightLabel, { color: colors.textLight }]}>TOTAL STARS</Text>
-                <Text style={[styles.insightValue, { color: colors.gold }]}>{totalStars}</Text>
-              </View>
-            </View>
-          )}
-        </View>
+        {/* Recent Activity */}
+        <RecentActivityCard colors={colors} router={router} />
 
       </ScrollView>
     </SafeAreaView>
@@ -274,13 +320,4 @@ const styles = StyleSheet.create({
   worldPillNum: { fontSize: 12, fontWeight: '700' },
   worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
 
-  // Memory Insights
-  insightsCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
-  insightsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  insightsTitle: { fontSize: 13, fontWeight: '700' },
-  insightsEmpty: { fontSize: 13, textAlign: 'center', lineHeight: 18, paddingVertical: 8 },
-  insightsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  insightMini: { width: '47%', borderRadius: 14, padding: 14 },
-  insightLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
-  insightValue: { fontSize: 18, fontWeight: '800' },
 });

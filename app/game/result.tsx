@@ -9,6 +9,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { WORLD_LEVEL_COUNTS, WORLD_NAMES } from '@/src/data/worldPaths';
 import { checkStreakMilestone } from '@/src/data/streakMilestones';
 import { StreakCelebration } from '@/src/components/StreakCelebration';
+import { logActivity } from '@/src/utils/activity';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -90,7 +91,17 @@ export default function ResultScreen() {
       const earned = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
-      incrementStreak(); // Track daily play streak
+      incrementStreak();
+
+      // Log activity
+      if (didImprove) {
+        logActivity('star_improved', { levelId: level.id, worldId, levelNumber: levelNum, oldStars: existing.stars, newStars: stars });
+      } else if (!isReplay) {
+        logActivity('level_complete', { levelId: level.id, worldId, levelNumber: levelNum, title: level.title, stars, score });
+        if (isLastLevelOfWorld) {
+          logActivity('world_complete', { worldId, worldName: WORLD_NAMES[worldId] ?? `World ${worldId}` });
+        }
+      }
       // Check for streak milestone (after incrementStreak updates the count)
       setTimeout(() => {
         const newStreak = useGameStore.getState().streakCount;
@@ -230,8 +241,8 @@ export default function ResultScreen() {
           title={celebration.title}
           color={celebration.color}
           onDismiss={() => {
-            // Award gems and mark milestone as claimed
             addGems(celebration.gems);
+            logActivity('streak_milestone', { days: celebration.days, gems: celebration.gems, title: celebration.title });
             useGameStore.setState((s) => ({
               streakMilestonesClaimed: [...s.streakMilestonesClaimed, celebration.days],
             }));
