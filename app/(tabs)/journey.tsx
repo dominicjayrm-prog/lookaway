@@ -39,8 +39,24 @@ function worldBadgeBg(c: string): string { return c === '#1A1A18' ? 'rgba(26,26,
 export default function JourneyTab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { totalStars, getCompletedLevelCount, getNextUnplayedLevelId } = useGameStore();
-  const completedCount = getCompletedLevelCount();
+  const { totalStars, levelProgress } = useGameStore();
+
+  // Calculate per-world completion counts from levelProgress keys (e.g. "w1-l3")
+  function getWorldCompleted(worldId: number, totalLevels: number): number {
+    let count = 0;
+    for (let i = 1; i <= totalLevels; i++) {
+      if (levelProgress[`w${worldId}-l${i}`]) count++;
+    }
+    return count;
+  }
+
+  // A world is unlocked if it's World 1 OR the previous world is fully completed
+  function isWorldUnlocked(worldId: number): boolean {
+    if (worldId === 1) return true;
+    const prevWorld = WORLDS.find(w => w.id === worldId - 1);
+    if (!prevWorld) return false;
+    return getWorldCompleted(prevWorld.id, prevWorld.levels) >= prevWorld.levels;
+  }
 
   return (
     <TabTransition>
@@ -55,8 +71,9 @@ export default function JourneyTab() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {WORLDS.map((world) => {
           const accent = WORLD_COLORS[world.id];
-          const isCurrent = world.id === 1;
-          const completed = isCurrent ? completedCount : 0;
+          const unlocked = isWorldUnlocked(world.id);
+          const completed = getWorldCompleted(world.id, world.levels);
+          const isCurrent = unlocked && completed < world.levels;
           const progress = completed / world.levels;
           const lockedBorder = LOCKED_BORDERS[world.id];
 
@@ -66,21 +83,21 @@ export default function JourneyTab() {
               { backgroundColor: colors.card },
               shadows.card,
               isCurrent && { borderWidth: 2, borderColor: accent },
-              !world.unlocked && lockedBorder && { borderLeftWidth: 3, borderLeftColor: lockedBorder },
+              !unlocked && lockedBorder && { borderLeftWidth: 3, borderLeftColor: lockedBorder },
             ]}>
               <View style={styles.worldBadgeRow}>
                 <View style={[styles.worldBadge, { backgroundColor: worldBadgeBg(accent) }]}>
-                  <Text style={[styles.worldBadgeText, { color: accent, opacity: world.unlocked ? 1 : 0.5 }]}>WORLD {world.id}</Text>
+                  <Text style={[styles.worldBadgeText, { color: accent, opacity: unlocked ? 1 : 0.5 }]}>WORLD {world.id}</Text>
                 </View>
-                {!world.unlocked && <LockIcon size={16} color={colors.textLight} />}
+                {!unlocked && <LockIcon size={16} color={colors.textLight} />}
               </View>
               <View style={styles.worldInfoRow}>
-                <View style={[styles.worldIcon, { backgroundColor: world.iconBg, opacity: world.unlocked ? 1 : 0.4 }]}>
+                <View style={[styles.worldIcon, { backgroundColor: world.iconBg, opacity: unlocked ? 1 : 0.4 }]}>
                   <Text style={styles.worldIconEmoji}>{world.icon}</Text>
                 </View>
                 <View style={styles.worldInfoText}>
-                  <Text style={[styles.worldName, { color: colors.text, opacity: world.unlocked ? 1 : 0.6 }]}>{world.name}</Text>
-                  <Text style={[styles.worldSubtitle, { color: colors.textMid, opacity: world.unlocked ? 1 : 0.5 }]}>{`${world.levels} levels \u2014 ${world.subtitle}`}</Text>
+                  <Text style={[styles.worldName, { color: colors.text, opacity: unlocked ? 1 : 0.6 }]}>{world.name}</Text>
+                  <Text style={[styles.worldSubtitle, { color: colors.textMid, opacity: unlocked ? 1 : 0.5 }]}>{`${world.levels} levels \u2014 ${world.subtitle}`}</Text>
                 </View>
               </View>
 
@@ -92,7 +109,7 @@ export default function JourneyTab() {
                 <Text style={[styles.completedText, { color: colors.textLight }]}>{`${completed}/${world.levels} completed`}</Text>
               </View>
 
-              {world.unlocked && (
+              {unlocked && (
                 <Pressable
                   style={[styles.continueButton, { backgroundColor: accent }]}
                   onPress={() => router.push(`/world/${world.id}`)}
@@ -100,7 +117,7 @@ export default function JourneyTab() {
                   <Text style={styles.continueButtonText}>{isCurrent ? 'Continue' : 'View Map'}</Text>
                 </Pressable>
               )}
-              {!world.unlocked && <Text style={[styles.lockedMessage, { color: colors.textMid }]}>{`Complete World ${world.id - 1} to unlock`}</Text>}
+              {!unlocked && <Text style={[styles.lockedMessage, { color: colors.textMid }]}>{`Complete World ${world.id - 1} to unlock`}</Text>}
             </View>
           );
         })}
