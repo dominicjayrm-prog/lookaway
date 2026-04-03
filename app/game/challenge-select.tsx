@@ -50,7 +50,7 @@ export default function ChallengeSelectScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Classic — full width */}
         <Pressable
-          style={[styles.classicCard, { backgroundColor: CHALLENGE_MODES.classic.color, borderWidth: selectedMode === 'classic' ? 3 : 0, borderColor: '#FFF' }]}
+          style={[styles.classicCard, { backgroundColor: CHALLENGE_MODES.classic.color, borderWidth: 3, borderColor: selectedMode === 'classic' ? '#FFF' : 'transparent' }]}
           onPress={() => setSelectedMode('classic')}
         >
           <View style={styles.classicRow}>
@@ -82,7 +82,7 @@ export default function ChallengeSelectScreen() {
             return (
               <Pressable
                 key={id}
-                style={[styles.modeCard, { backgroundColor: colors.card, borderWidth: isSelected ? 2.5 : 0, borderColor: isSelected ? mode.color : 'transparent' }]}
+                style={[styles.modeCard, { backgroundColor: colors.card, borderWidth: 2.5, borderColor: isSelected ? mode.color : 'transparent' }]}
                 onPress={() => setSelectedMode(id)}
               >
                 <View style={[styles.modeIconBg, { backgroundColor: mode.color }]}>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
 
   // Mode grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  modeCard: { width: '48%', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2, position: 'relative' },
+  modeCard: { flexBasis: '47%', flexGrow: 1, borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2, position: 'relative' },
   modeIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   exclusiveBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, alignSelf: 'flex-start', marginBottom: 4 },
   exclusiveBadgeText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.8 },
