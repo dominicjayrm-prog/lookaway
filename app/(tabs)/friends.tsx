@@ -104,9 +104,10 @@ export default function FriendsTab() {
   }, [userId]);
 
   const handleChallenge = useCallback((friendId: string) => {
+    const friend = friends.find(f => f.profile.id === friendId);
     setSelectedFriend(null);
-    router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create' } });
-  }, [router]);
+    router.push({ pathname: '/game/challenge-select', params: { friendId, friendUsername: friend?.profile.username ?? 'friend' } });
+  }, [router, friends]);
 
   const handleRemoveFriend = useCallback(async (friendshipId: string) => {
     Alert.alert('Remove friend?', 'You can always add them back later.', [
@@ -196,12 +197,19 @@ export default function FriendsTab() {
                 <Avatar username={c.opponent.username} color={c.opponent.avatar_color} size={34} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.challengeText, { color: colors.text }]}>
-                    {c.my_score === null ? `@${c.opponent.username} challenged you` : `You vs @${c.opponent.username}`}
+                    {c.my_score === null ? `@${c.opponent.username} challenged you${c.mode !== 'classic' ? ` to ${c.mode.replace(/_/g, ' ')}` : ''}` : `You vs @${c.opponent.username}`}
                   </Text>
                   <Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text>
                 </View>
                 {c.my_score === null ? (
-                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } })}>
+                  <Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => {
+                    const cMode = (c as any).mode ?? 'classic';
+                    if (cMode === 'classic') {
+                      router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } });
+                    } else {
+                      router.push({ pathname: '/game/challenge-mode', params: { challengeId: c.id, mode: cMode, action: 'play' } });
+                    }
+                  }}>
                     <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text>
                   </Pressable>
                 ) : (

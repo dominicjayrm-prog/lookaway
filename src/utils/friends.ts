@@ -33,6 +33,7 @@ export interface Challenge {
   their_score: number | null;
   status: string;
   created_at: string;
+  mode: string;
 }
 
 // ─── User search ─────────────────────────────────────────────────────
@@ -174,7 +175,7 @@ export async function getActiveChallenges(userId: string): Promise<Challenge[]> 
   const { data, error } = await supabase
     .from('friend_challenges')
     .select(`
-      id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at,
+      id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode,
       challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen),
       challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen)
     `)
@@ -199,6 +200,7 @@ export async function getActiveChallenges(userId: string): Promise<Challenge[]> 
       their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null,
       status: row.status as string,
       created_at: row.created_at as string,
+      mode: (row.mode as string) ?? 'classic',
     };
   });
 }
@@ -210,7 +212,7 @@ export async function getRecentResults(
   const { data, error } = await supabase
     .from('friend_challenges')
     .select(`
-      id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at,
+      id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode,
       challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen),
       challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen)
     `)
@@ -236,6 +238,7 @@ export async function getRecentResults(
       their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null,
       status: row.status as string,
       created_at: row.created_at as string,
+      mode: (row.mode as string) ?? 'classic',
     };
   });
 }
