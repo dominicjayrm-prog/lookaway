@@ -9,6 +9,10 @@ import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
 import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
+import SequenceGame from '@/src/components/modes/SequenceGame';
+import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
+import ColourChainGame from '@/src/components/modes/ColourChainGame';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'error';
 
@@ -139,6 +143,29 @@ export default function ChallengeModeScreen() {
     }
   }, [roundIdx, modeData, roundScores, dbChallengeId, userId, mode, action, friendId]);
 
+  // ─── SHARED COMPLETION HANDLER (for non-speed-recall modes) ───
+  const handleModeComplete = useCallback((rawScore: number) => {
+    const pct = getScorePercentage(mode ?? 'classic', rawScore);
+    setTotalScore(rawScore);
+    setPhase('complete');
+
+    if (dbChallengeId && userId) {
+      recordChallengeScore(dbChallengeId, userId, pct, 0);
+    } else if (action === 'create' && friendId && userId) {
+      (async () => {
+        const { data: inserted } = await supabase.from('friend_challenges').insert({
+          challenger_id: userId, challenged_id: friendId, level_ids: [],
+          mode, mode_data: modeData,
+          challenger_score: pct, status: 'pending',
+        }).select('id').single();
+        if (inserted?.id) setDbChallengeId(inserted.id);
+      })();
+    }
+  }, [mode, dbChallengeId, userId, action, friendId, modeData]);
+
+  // Which modes use their own component vs inline speed recall
+  const isExternalMode = mode && ['snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
+
   // ─── RENDER ───
   if (phase === 'loading') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.textMid }]}>Loading {modeConfig?.name}...</Text></SafeAreaView>;
   if (phase === 'error') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.wrong }]}>Could not load challenge</Text><Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={s.btnText}>Go back</Text></Pressable></SafeAreaView>;
@@ -169,8 +196,21 @@ export default function ChallengeModeScreen() {
           <Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text>
           <Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text>
           <Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text>
-          <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={startRound}><Text style={s.btnText}>Start</Text></Pressable>
+          <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
+            if (isExternalMode) setPhase('show'); // 'show' acts as "playing" for external modes
+            else startRound();
+          }}><Text style={s.btnText}>Start</Text></Pressable>
         </View>
+      )}
+
+      {/* External mode games */}
+      {phase === 'show' && isExternalMode && modeData && (
+        <>
+          {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+          {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+          {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+          {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        </>
       )}
 
       {/* SPEED RECALL: Show scene */}
