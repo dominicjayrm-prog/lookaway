@@ -90,6 +90,8 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     </View>
   );
 
+  if (!currentRound && (phase === 'recall' || phase === 'feedback')) return null;
+
   return (
     <View style={s.container}>
       {phase === 'show_grid' && (

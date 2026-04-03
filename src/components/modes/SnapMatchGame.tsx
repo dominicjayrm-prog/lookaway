@@ -108,7 +108,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
   if (!round) return null;
 
-  const changeTypeLabel = ['Colour change', 'Position shift', 'Shape added', 'Shape removed', 'Shape type change'][roundIdx % 5] ?? '';
+  const changeTypeMap: Record<string, string> = { colour: 'Colour change', position: 'Position shift', added: 'Shape added', removed: 'Shape removed', type: 'Shape type change' };
+  const changeTypeLabel = changeTypeMap[round.changeType] ?? '';
 
   return (
     <View style={s.container}>

@@ -71,6 +71,8 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
     const expectedOrder = tappedOrder.length; // 0-based: which position in sequence they should tap next
     const correctShapeIndex = shapes.findIndex((s: any) => s.order === expectedOrder + 1);
 
+    if (correctShapeIndex === -1) return; // invalid data — skip
+
     if (shapeIndex === correctShapeIndex) {
       // Correct!
       const newTapped = [...tappedOrder, shapeIndex];

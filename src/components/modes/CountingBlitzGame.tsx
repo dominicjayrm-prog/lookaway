@@ -20,11 +20,12 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const eventTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
 
-  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); if (intervalRef.current) clearInterval(intervalRef.current); }; }, []);
+  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); if (intervalRef.current) clearInterval(intervalRef.current); eventTimersRef.current.forEach(t => clearTimeout(t)); eventTimersRef.current = []; }; }, []);
 
   const startChaos = useCallback(() => {
     if (!round) return;
@@ -46,13 +47,17 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
     }, 100);
 
     // Schedule shape appearances
+    eventTimersRef.current.forEach(t => clearTimeout(t));
+    eventTimersRef.current = [];
     round.events.forEach((ev: any) => {
-      setTimeout(() => {
+      const t = setTimeout(() => {
         setVisibleShapes(prev => [...prev, { ...ev, key: ev.id }]);
-        setTimeout(() => {
+        const t2 = setTimeout(() => {
           setVisibleShapes(prev => prev.filter(s => s.key !== ev.id));
         }, ev.duration * 1000);
+        eventTimersRef.current.push(t2);
       }, ev.appearAt * 1000);
+      eventTimersRef.current.push(t);
     });
 
     // End after 5 seconds

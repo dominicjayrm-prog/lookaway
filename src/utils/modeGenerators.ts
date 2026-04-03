@@ -95,7 +95,7 @@ export function generateSnapMatchData() {
 // ─── SEQUENCE ───
 export function generateSequenceData() {
   const shapeCounts = [5, 6, 7, 7, 8];
-  const types = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'pentagon', 'oval'];
+  const types = ['circle', 'square', 'triangle', 'star', 'diamond'];
   const colors = ['#FF6B6B', '#0984E3', '#00B894', '#D4A012', '#6C5CE7', '#E17055', '#FD79A8', '#00CEC9'];
   const rounds = shapeCounts.map((count, r) => {
     const shapes: any[] = [];
@@ -127,7 +127,8 @@ export function generateCountingBlitzData() {
     const askColor = colors[r % 3];
     const correct = counts[askColor.name];
     const opts = new Set([correct]);
-    while (opts.size < 4) { const o = correct + Math.floor(Math.random() * 5) - 2; if (o > 0) opts.add(o); }
+    let iterations = 0;
+    while (opts.size < 4 && iterations < 100) { const o = correct + Math.floor(Math.random() * 5) - 2; if (o > 0) opts.add(o); iterations++; }
     const options = Array.from(opts).sort((a, b) => a - b);
     return { events, askColor, correctCount: correct, options, correctIndex: options.indexOf(correct) };
   });
