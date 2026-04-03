@@ -104,9 +104,10 @@ export default function FriendsTab() {
   }, [userId]);
 
   const handleChallenge = useCallback((friendId: string) => {
+    const friend = friends.find(f => f.profile.id === friendId);
     setSelectedFriend(null);
-    router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create' } });
-  }, [router]);
+    router.push({ pathname: '/game/challenge-select', params: { friendId, friendUsername: friend?.profile.username ?? 'friend' } });
+  }, [router, friends]);
 
   const handleRemoveFriend = useCallback(async (friendshipId: string) => {
     Alert.alert('Remove friend?', 'You can always add them back later.', [
