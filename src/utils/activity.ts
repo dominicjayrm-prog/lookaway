@@ -5,7 +5,7 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
-const STORAGE_KEY = 'lookaway_activity';
+const STORAGE_KEY = 'blanked_activity';
 const MAX_EVENTS = 20;
 
 export function logActivity(type: string, data: Record<string, unknown>): void {

@@ -170,7 +170,7 @@ export default function GameScreen() {
 
       {gameState === 'TRANSITION' && (
         <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}>
-          <Text style={styles.lookAwayText}>Look away!</Text>
+          <Text style={styles.blankText}>Go blank!</Text>
         </Animated.View>
       )}
 
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
   memoriseText: { fontSize: typography.sizes.lg, fontWeight: typography.weights.medium, color: colors.textMid, textAlign: 'center' },
-  lookAwayText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
   sceneScoreTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   sceneScoreBody: { fontSize: typography.sizes.lg, color: colors.textMid },
   errorText: { fontSize: typography.sizes.lg, color: colors.textMid, textAlign: 'center', marginBottom: spacing.lg },

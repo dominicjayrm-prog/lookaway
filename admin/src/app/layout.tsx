@@ -6,7 +6,7 @@ import { Sidebar } from './sidebar';
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
-export const metadata: Metadata = { title: 'LOOKAWAY Admin', description: 'Admin panel for LOOKAWAY game' };
+export const metadata: Metadata = { title: 'BLANKED Admin', description: 'Admin panel for BLANKED game' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

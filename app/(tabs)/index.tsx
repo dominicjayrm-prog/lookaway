@@ -149,7 +149,7 @@ export default function PlayTab() {
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
-  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('lookaway-profile-pic') : null; } catch {}
+  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
 
   return (
     <TabTransition>
@@ -186,8 +186,8 @@ export default function PlayTab() {
           <View style={styles.heroLogoRow}>
             <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
             <View style={{ marginLeft: 10 }}>
-              <Text style={styles.heroLogoText}>Look<Text style={{ fontWeight: '800' }}>Away</Text></Text>
-              <Text style={styles.heroLogoSub}>Memorise. Look away. Answer.</Text>
+              <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
+              <Text style={styles.heroLogoSub}>Don't blank.</Text>
             </View>
           </View>
 

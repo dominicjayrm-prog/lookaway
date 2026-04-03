@@ -99,7 +99,7 @@ export default function FriendsTab() {
 
   const handleShare = useCallback(async () => {
     try {
-      await Share.share({ message: `Think you've got a good memory? Challenge me on LookAway! 👁 playlookaway.app/invite/${userId}` });
+      await Share.share({ message: `Think you've got a good memory? Challenge me on Blanked! 👁 playblanked.app/invite/${userId}` });
     } catch {}
   }, [userId]);
 

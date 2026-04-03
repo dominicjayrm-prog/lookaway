@@ -139,7 +139,7 @@ export default function SpeedGameScreen() {
           <SceneRenderer objects={currentScene.objects} visible={true} />
         </Animated.View>
       )}
-      {gameState === 'TRANSITION' && (<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}><Text style={styles.lookAwayText}>Look away!</Text></Animated.View>)}
+      {gameState === 'TRANSITION' && (<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
       {gameState === 'QUESTION' && currentQuestion && (
         <Animated.View entering={FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
@@ -175,5 +175,5 @@ const styles = StyleSheet.create({
   levelTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
-  lookAwayText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
 });
