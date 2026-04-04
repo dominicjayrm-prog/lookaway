@@ -14,7 +14,7 @@ function ShapeSvg({ type, color, size }: { type: string; color: string; size: nu
   }
 }
 
-type Phase = 'sceneA' | 'blank' | 'sceneB' | 'feedback' | 'round_done';
+type Phase = 'sceneA' | 'blank' | 'sceneB' | 'feedback';
 
 interface Props {
   modeData: any;
@@ -28,54 +28,87 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const [phase, setPhase] = useState<Phase>('sceneA');
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const [responseStartTime, setResponseStartTime] = useState(0);
-  const [lastResult, setLastResult] = useState<{ correct: boolean; score: number; description: string } | null>(null);
+  const [responseTimer, setResponseTimer] = useState(0);
+  const [timerProgress, setTimerProgress] = useState(1); // 1 = full, 0 = empty
+  const [lastResult, setLastResult] = useState<{ correct: boolean; score: number; description: string; time: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
 
-  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
+  // Viewing time per round
+  const viewingTimeMs = roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500;
 
-  // Start Scene A display
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  // Start round — show Scene A with countdown timer
   const startRound = useCallback(() => {
     setLastResult(null);
     setPhase('sceneA');
+    setTimerProgress(1);
+    setResponseTimer(0);
+
+    const startTime = Date.now();
+
+    // Animate timer bar
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 1 - elapsed / viewingTimeMs);
+      setTimerProgress(remaining);
+    }, 50);
+
+    // Transition: sceneA -> blank -> sceneB
     timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setTimerProgress(0);
       setPhase('blank');
       timerRef.current = setTimeout(() => {
         setPhase('sceneB');
         setResponseStartTime(Date.now());
       }, 800);
-    }, 2500);
-  }, []);
+    }, viewingTimeMs);
+  }, [viewingTimeMs]);
 
-  // Auto-start first round
-  useEffect(() => { startRound(); }, [roundIdx]);
+  // Auto-start each round
+  useEffect(() => { if (round) startRound(); }, [roundIdx, round]);
+
+  // Response timer (counts up during Scene B)
+  useEffect(() => {
+    if (phase !== 'sceneB') return;
+    intervalRef.current = setInterval(() => {
+      setResponseTimer(Date.now() - responseStartTime);
+    }, 100);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [phase, responseStartTime]);
 
   const handleTapSceneB = useCallback((tapX: number, tapY: number) => {
     if (phase !== 'sceneB' || !round) return;
-    const elapsed = Date.now() - responseStartTime;
+    if (intervalRef.current) clearInterval(intervalRef.current);
 
-    const { changeType, targetIndex, sceneB, sceneA, removedShape, description } = round;
+    const elapsed = Date.now() - responseStartTime;
+    const { changeType, targetIndex, sceneB, removedShape, description } = round;
     let correct = false;
-    const hitRadius = 12; // percentage points tolerance
 
     if (changeType === 'removed' && removedShape) {
-      // Check if tap is near the removed shape's position
       const dist = Math.sqrt((tapX - removedShape.x) ** 2 + (tapY - removedShape.y) ** 2);
-      correct = dist < hitRadius;
+      correct = dist < 15; // More generous for empty space
     } else {
-      // Check if tap is near the target shape in Scene B
       const target = sceneB[targetIndex];
       if (target) {
         const dist = Math.sqrt((tapX - target.x) ** 2 + (tapY - target.y) ** 2);
-        correct = dist < hitRadius;
+        correct = dist < 12;
       }
     }
 
     const score = correct ? Math.max(10, Math.round(100 - (elapsed / 1000) * 10)) : 0;
-    setLastResult({ correct, score, description });
+    setLastResult({ correct, score, description, time: elapsed });
     setRoundScores(prev => [...prev, score]);
     setPhase('feedback');
 
@@ -96,34 +129,62 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     handleTapSceneB(tapX, tapY);
   }, [handleTapSceneB, canvasSize]);
 
-  const renderScene = (shapes: any[]) => (
+  const renderScene = (shapes: any[], highlightIdx?: number, highlightColor?: string) => (
     <>
-      {shapes.map((sh: any, i: number) => (
-        <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -(sh.size ?? 30) / 2 }, { translateY: -(sh.size ?? 30) / 2 }] }}>
-          <ShapeSvg type={sh.type} color={sh.color} size={sh.size ?? 30} />
-        </View>
-      ))}
+      {shapes.map((sh: any, i: number) => {
+        const isHighlighted = highlightIdx === i;
+        const sz = sh.size ?? 30;
+        return (
+          <View key={`${sh.id ?? i}-${sh.x}-${sh.y}`} style={[
+            { position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }] },
+            isHighlighted && { borderWidth: 3, borderColor: highlightColor ?? colors.correct, borderRadius: sz / 2 + 4, padding: 2 },
+          ]}>
+            <ShapeSvg type={sh.type} color={sh.color} size={sz} />
+          </View>
+        );
+      })}
     </>
   );
 
   if (!round) return null;
 
-  const changeTypeMap: Record<string, string> = { colour: 'Colour change', position: 'Position shift', added: 'Shape added', removed: 'Shape removed', type: 'Shape type change' };
-  const changeTypeLabel = changeTypeMap[round.changeType] ?? '';
+  const responseSeconds = (responseTimer / 1000).toFixed(1);
 
   return (
     <View style={s.container}>
-      {/* Phase labels */}
-      {phase === 'sceneA' && <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE A — Memorise!</Text>}
-      {phase === 'blank' && <Text style={[s.phaseLabel, { color: colors.textMid }]}>Get ready...</Text>}
-      {phase === 'sceneB' && <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE B — What changed?</Text>}
-      {phase === 'feedback' && lastResult && (
-        <Text style={[s.phaseLabel, { color: lastResult.correct ? colors.correct : colors.wrong }]}>
-          {lastResult.correct ? `Correct! ${lastResult.score} pts` : 'Wrong!'}
-        </Text>
+      {/* Phase label */}
+      {phase === 'sceneA' && (
+        <>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE A — Memorise!</Text>
+          {/* Countdown timer bar */}
+          <View style={[s.timerTrack, { backgroundColor: colors.border }]}>
+            <View style={[s.timerFill, {
+              width: `${Math.round(timerProgress * 100)}%`,
+              backgroundColor: timerProgress > 0.4 ? modeColor : timerProgress > 0.15 ? colors.gold : colors.wrong,
+            }]} />
+          </View>
+        </>
       )}
-
-      <Text style={[s.hint, { color: colors.textLight }]}>{changeTypeLabel}</Text>
+      {phase === 'blank' && <Text style={[s.phaseLabel, { color: colors.textMid }]}>Get ready...</Text>}
+      {phase === 'sceneB' && (
+        <>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE B — Tap what changed!</Text>
+          <Text style={[s.responseTime, { color: colors.textMid }]}>{responseSeconds}s</Text>
+          {round.changeType === 'removed' && (
+            <Text style={[s.hint, { color: colors.gold }]}>Something is missing... tap where it was</Text>
+          )}
+        </>
+      )}
+      {phase === 'feedback' && lastResult && (
+        <>
+          <Text style={[s.phaseLabel, { color: lastResult.correct ? colors.correct : colors.wrong }]}>
+            {lastResult.correct ? `Correct! +${lastResult.score} pts` : 'Wrong!'}
+          </Text>
+          {lastResult.correct && (
+            <Text style={[s.responseTime, { color: colors.correct }]}>{(lastResult.time / 1000).toFixed(1)}s</Text>
+          )}
+        </>
+      )}
 
       {/* Canvas */}
       <Pressable
@@ -133,24 +194,50 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
       >
         {phase === 'sceneA' && renderScene(round.sceneA)}
         {phase === 'sceneB' && renderScene(round.sceneB)}
-        {phase === 'feedback' && renderScene(round.sceneB)}
-        {phase === 'blank' && <View style={s.blankOverlay}><Text style={[s.blankText, { color: colors.textLight }]}>...</Text></View>}
+        {phase === 'feedback' && lastResult && (
+          lastResult.correct
+            ? renderScene(round.sceneB, round.targetIndex, colors.correct)
+            : renderScene(round.sceneB, round.targetIndex >= 0 ? round.targetIndex : undefined, '#D4A012')
+        )}
+        {phase === 'blank' && (
+          <View style={s.blankOverlay}>
+            <Text style={[s.blankText, { color: colors.textLight }]}>...</Text>
+          </View>
+        )}
       </Pressable>
 
       {/* Feedback description */}
       {phase === 'feedback' && lastResult && (
         <Text style={[s.description, { color: colors.textMid }]}>{round.description}</Text>
       )}
+
+      {/* Running score tally */}
+      <View style={s.scoreRow}>
+        {roundScores.map((sc, i) => (
+          <View key={i} style={[s.scoreDot, { backgroundColor: sc > 0 ? colors.correct : colors.wrong }]}>
+            <Text style={s.scoreDotText}>{sc > 0 ? '\u2713' : '\u2715'}</Text>
+          </View>
+        ))}
+        {Array.from({ length: totalRounds - roundScores.length }).map((_, i) => (
+          <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
+        ))}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, gap: 8 },
+  container: { flex: 1, gap: 6 },
   phaseLabel: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
-  hint: { fontSize: 11, textAlign: 'center' },
+  timerTrack: { height: 5, borderRadius: 3, overflow: 'hidden', marginHorizontal: 4 },
+  timerFill: { height: '100%', borderRadius: 3 },
+  responseTime: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  hint: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
   canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   blankOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   blankText: { fontSize: 28 },
   description: { fontSize: 13, textAlign: 'center', fontWeight: '600' },
+  scoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 4 },
+  scoreDot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  scoreDotText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
 });
