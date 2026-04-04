@@ -9,9 +9,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
-import { AchievementIcon } from '@/src/components/AchievementIcon';
-import { AchievementDetail } from '@/src/components/AchievementDetail';
-import { loadAllAchievements, loadPlayerProgress, TIER_COLORS, getHighestUnlockedTier, countUnlockedTiers, type Achievement, type PlayerAchievement, type AchievementTier } from '@/src/utils/achievements';
+import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achievement, type PlayerAchievement } from '@/src/utils/achievements';
 
 function loadProfilePic(): string | null { try { return localStorage.getItem('blanked-profile-pic'); } catch { return null; } }
 function saveProfilePic(uri: string | null) { try { if (uri) localStorage.setItem('blanked-profile-pic', uri); else localStorage.removeItem('blanked-profile-pic'); } catch {} }
@@ -29,12 +27,9 @@ export default function ProfileScreen() {
   const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerAchievement>>({});
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
 
   useEffect(() => { loadAllAchievements().then(setAchievements); if (user?.id) loadPlayerProgress(user.id).then(setPlayerProgress); }, [user?.id]);
 
-  const filteredAchievements = activeCategory === 'all' ? achievements : achievements.filter(a => a.category === activeCategory);
   const unlockedCount = countUnlockedTiers(playerProgress);
   const totalTiers = achievements.length * 3;
 
@@ -71,41 +66,28 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        {achievements.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(400).delay(250)}>
-            <View style={styles.achievementHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: 0, marginBottom: 0 }]}>ACHIEVEMENTS</Text>
-              <Text style={[styles.achievementCount, { color: colors.textLight }]}>{unlockedCount}/{totalTiers}</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryScrollContent}>
-              {[{ id: 'all', label: 'All' }, { id: 'campaign', label: 'Campaign' }, { id: 'daily', label: 'Daily' }, { id: 'social', label: 'Social' }, { id: 'streak', label: 'Streak' }, { id: 'mastery', label: 'Mastery' }].map(cat => (
-                <Pressable key={cat.id} style={[styles.categoryPill, { backgroundColor: activeCategory === cat.id ? colors.accent : colors.card }]} onPress={() => setActiveCategory(cat.id)}>
-                  <Text style={[styles.categoryPillText, { color: activeCategory === cat.id ? '#FFF' : colors.textMid }]}>{cat.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <View style={styles.achievementGrid}>
-              {filteredAchievements.map(achievement => {
-                const progress = playerProgress[achievement.id];
-                const tiers: AchievementTier[] = achievement.tiers;
-                const currentProgress = progress?.current_progress ?? 0;
-                const highestTier = getHighestUnlockedTier(progress);
-                const nextTier = tiers.find(t => !progress?.[`${t.tier}_unlocked_at` as keyof PlayerAchievement]);
-                const accentColor = highestTier ? TIER_COLORS[highestTier] : TIER_COLORS.none;
-                return (
-                  <Pressable key={achievement.id} style={[styles.achievementCard, { backgroundColor: colors.card, borderWidth: highestTier ? 1.5 : 1, borderColor: accentColor }]} onPress={() => setSelectedAchievement(achievement)}>
-                    <View style={[styles.achIconBg, { backgroundColor: highestTier ? `${accentColor}15` : 'rgba(0,0,0,0.03)' }]}><AchievementIcon name={achievement.icon} color={highestTier ? accentColor : '#B2BEC3'} size={22} /></View>
-                    <Text style={[styles.achName, { color: highestTier ? colors.text : colors.textMid }]} numberOfLines={1}>{achievement.name}</Text>
-                    <View style={styles.tierDots}>{tiers.map((t, i) => (<View key={i} style={[styles.tierDotSmall, { backgroundColor: progress?.[`${t.tier}_unlocked_at` as keyof PlayerAchievement] ? TIER_COLORS[t.tier] : colors.border }]} />))}</View>
-                    {nextTier ? (<Text style={[styles.achProgress, { color: colors.textLight }]}>{currentProgress}/{nextTier.target}</Text>) : (<Text style={[styles.achComplete, { color: '#D4A012' }]}>COMPLETE \u2713</Text>)}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Animated.View>
-        )}
-
-        <AchievementDetail visible={!!selectedAchievement} achievement={selectedAchievement} progress={selectedAchievement ? playerProgress[selectedAchievement.id] : undefined} onClose={() => setSelectedAchievement(null)} />
+        {/* Achievements card */}
+        <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable style={styles.settingsRow} onPress={() => router.push('/achievements')}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
+                  <Ionicons name="medal" size={18} color={colors.gold} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Achievements</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{unlockedCount}/{totalTiers} unlocked</Text>
+                </View>
+              </View>
+              <View style={styles.settingsRowRight}>
+                <View style={[styles.achCountBadge, { backgroundColor: unlockedCount > 0 ? colors.goldSoft : colors.surface }]}>
+                  <Text style={[styles.achCountText, { color: unlockedCount > 0 ? colors.gold : colors.textLight }]}>{unlockedCount}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(400).delay(300)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>APPEARANCE</Text>
@@ -184,18 +166,6 @@ const styles = StyleSheet.create({
   comingSoon: { fontSize: typography.sizes.xs },
   divider: { height: 1, marginLeft: 62 },
   version: { textAlign: 'center', fontSize: 10, fontWeight: '600', marginTop: spacing.xxl, letterSpacing: 1 },
-  achievementHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm, paddingLeft: spacing.xs },
-  achievementCount: { fontSize: 12, fontWeight: '600' },
-  categoryScroll: { marginBottom: spacing.md, marginHorizontal: -spacing.lg },
-  categoryScrollContent: { paddingHorizontal: spacing.lg, gap: 6 },
-  categoryPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  categoryPillText: { fontSize: 12, fontWeight: '600' },
-  achievementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  achievementCard: { width: '47%', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  achIconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  achName: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
-  tierDots: { flexDirection: 'row', gap: 4, marginBottom: 4 },
-  tierDotSmall: { width: 8, height: 8, borderRadius: 4 },
-  achProgress: { fontSize: 10, fontWeight: '500' },
-  achComplete: { fontSize: 10, fontWeight: '700' },
+  achCountBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, minWidth: 28, alignItems: 'center' },
+  achCountText: { fontSize: 13, fontWeight: '700' },
 });
