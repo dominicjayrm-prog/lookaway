@@ -10,6 +10,8 @@ import { supabase } from '@/src/lib/supabase';
 import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
+import { StatusDot } from '@/src/components/StatusDot';
+import { getOnlineStatus, getLastActiveText } from '@/src/utils/onlineStatus';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
@@ -120,7 +122,11 @@ export default function FriendsTab() {
     ]);
   }, [loadData]);
 
-  const isOnline = (lastSeen: string | null) => lastSeen ? Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000 : false;
+  // Refresh friend statuses periodically while tab is visible
+  useEffect(() => {
+    const refreshInterval = setInterval(() => { if (userId) loadData(); }, 30_000);
+    return () => clearInterval(refreshInterval);
+  }, [userId, loadData]);
 
   return (
     <TabTransition>
@@ -194,7 +200,10 @@ export default function FriendsTab() {
             <SectionLabel label="ACTIVE CHALLENGES" colors={colors} />
             {challenges.map((c) => (
               <View key={c.id} style={[styles.challengeCard, { backgroundColor: colors.card }]}>
-                <Avatar username={c.opponent.username} color={c.opponent.avatar_color} size={34} />
+                <View style={{ position: 'relative' }}>
+                  <Avatar username={c.opponent.username} color={c.opponent.avatar_color} size={34} />
+                  <StatusDot lastActiveAt={c.opponent.last_seen} size={8} borderColor={colors.card} />
+                </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.challengeText, { color: colors.text }]}>
                     {c.my_score === null ? `@${c.opponent.username} challenged you${c.mode !== 'classic' ? ` to ${c.mode.replace(/_/g, ' ')}` : ''}` : `You vs @${c.opponent.username}`}
@@ -233,11 +242,11 @@ export default function FriendsTab() {
             <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
               <View style={{ position: 'relative' }}>
                 <Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} />
-                {isOnline(f.profile.last_seen) && <View style={[styles.onlineDot, { borderColor: colors.card, backgroundColor: colors.correct }]} />}
+                <StatusDot lastActiveAt={f.profile.last_seen} borderColor={colors.card} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.friendName, { color: colors.text }]}>@{f.profile.username}</Text>
-                <Text style={{ fontSize: 11, color: colors.textLight }}>{isOnline(f.profile.last_seen) ? 'Online now' : 'Offline'} · World {f.profile.highest_world} · {'\u2B50'} {f.profile.total_stars}</Text>
+                <Text style={{ fontSize: 11, color: colors.textLight }}>{getLastActiveText(f.profile.last_seen)} · World {f.profile.highest_world} · {'\u2B50'} {f.profile.total_stars}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
             </Pressable>
@@ -326,7 +335,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
   friendCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 14, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   friendName: { fontSize: 14, fontWeight: '600' },
-  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   resultCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   resultBadge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   inviteCard: { borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },

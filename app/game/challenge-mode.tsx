@@ -9,6 +9,7 @@ import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
 import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import { notifyChallengeReceived } from '@/src/utils/notifications';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
@@ -137,7 +138,14 @@ export default function ChallengeModeScreen() {
             challenger_score: getScorePercentage(mode ?? 'speed_recall', total),
             status: 'pending',
           }).select('id').single();
-          if (inserted?.id) setDbChallengeId(inserted.id);
+          if (inserted?.id) {
+            setDbChallengeId(inserted.id);
+            // Notify the challenged friend
+            const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', userId).single();
+            if (myProfile?.username) {
+              notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id);
+            }
+          }
         })();
       }
     }
@@ -158,7 +166,13 @@ export default function ChallengeModeScreen() {
           mode, mode_data: modeData,
           challenger_score: pct, status: 'pending',
         }).select('id').single();
-        if (inserted?.id) setDbChallengeId(inserted.id);
+        if (inserted?.id) {
+            setDbChallengeId(inserted.id);
+            const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', userId).single();
+            if (myProfile?.username) {
+              notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id);
+            }
+          }
       })();
     }
   }, [mode, dbChallengeId, userId, action, friendId, modeData]);

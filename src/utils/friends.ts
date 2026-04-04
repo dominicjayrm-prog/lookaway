@@ -1,5 +1,5 @@
 import { supabase } from '@/src/lib/supabase';
-import { notifyUser } from '@/src/utils/notifications';
+import { notifyFriendRequest } from '@/src/utils/notifications';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ export async function sendFriendRequest(
   // Notify the addressee
   const { data: requesterProfile } = await supabase.from('profiles').select('username').eq('id', requesterId).single();
   if (requesterProfile?.username) {
-    notifyUser(addresseeId, 'New friend request', `@${requesterProfile.username} wants to be your friend!`, { screen: 'friends' });
+    notifyFriendRequest(addresseeId, requesterProfile.username);
   }
 
   return true;

@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Linking } from 'react-native';
-import { Stack } from 'expo-router';
+import { AppState, AppStateStatus, Linking, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
-import { registerPushToken } from '@/src/utils/notifications';
+import { registerPushToken, cancelLivesFullNotification, scheduleStreakReminder } from '@/src/utils/notifications';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -82,8 +82,8 @@ function CloudSyncLoader() {
     updateOnlineStatus(user.id);
     expireOldChallenges();
     registerPushToken(user.id);
-    // Update online status every 5 minutes
-    const interval = setInterval(() => updateOnlineStatus(user.id), 5 * 60 * 1000);
+    // Update online status every 60 seconds (for 3-tier: online/recent/offline)
+    const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
   }, [user?.id, loadFromCloud]);
 
@@ -91,8 +91,8 @@ function CloudSyncLoader() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && next === 'active') {
-        // Returning to foreground — pull latest cloud data
-        if (user?.id) { loadFromCloud(user.id); }
+        // Returning to foreground — pull latest cloud data + update online status
+        if (user?.id) { loadFromCloud(user.id); updateOnlineStatus(user.id); }
       }
       if (next === 'background' || next === 'inactive') {
         // Going to background — push local state to cloud + localStorage
@@ -103,6 +103,67 @@ function CloudSyncLoader() {
     });
     return () => sub.remove();
   }, [user?.id, loadFromCloud, saveState, syncToCloud]);
+
+  return null;
+}
+
+function NotificationHandler() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    let responseSubscription: any;
+    try {
+      const Notifications = require('expo-notifications');
+
+      // Handle notification taps — navigate to appropriate screen
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
+        const data = response?.notification?.request?.content?.data;
+        if (!data?.type) return;
+
+        switch (data.type) {
+          case 'streak_reminder':
+          case 'lives_full':
+          case 'win_back':
+            router.push('/(tabs)');
+            break;
+          case 'friend_challenge':
+            if (data.challengeId) {
+              const cMode = data.mode ?? 'classic';
+              if (cMode === 'classic') {
+                router.push({ pathname: '/game/challenge', params: { challengeId: data.challengeId, mode: 'play' } });
+              } else {
+                router.push({ pathname: '/game/challenge-mode', params: { challengeId: data.challengeId, mode: cMode, action: 'play' } });
+              }
+            }
+            break;
+          case 'challenge_result':
+            if (data.challengeId) router.push({ pathname: '/game/challenge-result', params: { challengeId: data.challengeId } });
+            break;
+          case 'friend_request':
+            router.push('/(tabs)/friends');
+            break;
+          case 'friend_online':
+            router.push('/(tabs)/friends');
+            break;
+        }
+      });
+    } catch {}
+
+    return () => { if (responseSubscription) responseSubscription.remove(); };
+  }, [router]);
+
+  // Cancel lives-full notification when app comes to foreground (they're already in the app)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    cancelLivesFullNotification();
+
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'active') cancelLivesFullNotification();
+    });
+    return () => sub.remove();
+  }, []);
 
   return null;
 }
@@ -144,6 +205,7 @@ export default function RootLayout() {
           <DeepLinkHandler />
           <LifeRegenChecker />
           <CloudSyncLoader />
+          <NotificationHandler />
           <ThemedStack />
         </MobileContainer>
       </AuthProvider>

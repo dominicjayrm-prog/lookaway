@@ -1,15 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StarRating } from '@/src/components/StarRating';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore } from '@/src/utils/scoring';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useAuth } from '@/src/providers/AuthProvider';
 import { WORLD_LEVEL_COUNTS, WORLD_NAMES } from '@/src/data/worldPaths';
 import { checkStreakMilestone } from '@/src/data/streakMilestones';
 import { StreakCelebration } from '@/src/components/StreakCelebration';
+import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
+import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleLivesFullNotification } from '@/src/utils/notifications';
+import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -65,6 +69,8 @@ export default function ResultScreen() {
   const [improved, setImproved] = useState(false);
   const [processed, setProcessed] = useState(false);
   const [celebration, setCelebration] = useState<{ days: number; gems: number; title: string; color: string } | null>(null);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const { user } = useAuth();
 
   // Parse level info
   const parsed = level ? parseLevelId(level.id) : null;
@@ -111,6 +117,31 @@ export default function ResultScreen() {
       }, 100);
     } else {
       loseLife();
+      // Schedule lives full notification when a life is lost
+      const state = useGameStore.getState();
+      scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
+    }
+
+    // After completing a level, schedule/cancel streak reminder + check notification prompt
+    if (passed) {
+      cancelStreakReminder(); // They played today, no reminder needed
+    }
+
+    // Show notification prompt after 1st or 5th level if not asked yet
+    if (Platform.OS !== 'web') {
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const asked = await AsyncStorage.getItem('blanked_notifications_asked');
+        const declined = await AsyncStorage.getItem('blanked_notifications_declined_count');
+        const completedCount = Object.keys(useGameStore.getState().levelProgress).length;
+
+        if (!asked && (completedCount === 1 || completedCount === 5)) {
+          const declinedNum = parseInt(declined ?? '0');
+          if (declinedNum < 2) {
+            setTimeout(() => setShowNotifPrompt(true), 1500);
+          }
+        }
+      } catch {}
     }
   }, [passed, processed, level, stars, score, recordLevelComplete, loseLife, addStars, levelProgress]);
 
@@ -231,6 +262,36 @@ export default function ResultScreen() {
           </>
         )}
       </View>
+
+      {/* Notification permission prompt */}
+      <NotificationPrompt
+        visible={showNotifPrompt}
+        onEnable={async () => {
+          setShowNotifPrompt(false);
+          const granted = await requestNotificationPermission();
+          try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            await AsyncStorage.setItem('blanked_notifications_asked', 'true');
+          } catch {}
+          if (granted && user?.id) {
+            await registerPushToken(user.id);
+            // Schedule streak reminder with current streak
+            const streak = useGameStore.getState().streakCount;
+            if (streak >= 3) scheduleStreakReminder(streak);
+          }
+        }}
+        onDismiss={async () => {
+          setShowNotifPrompt(false);
+          try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const current = parseInt((await AsyncStorage.getItem('blanked_notifications_declined_count')) ?? '0');
+            await AsyncStorage.setItem('blanked_notifications_declined_count', String(current + 1));
+            if (current + 1 >= 2) {
+              await AsyncStorage.setItem('blanked_notifications_asked', 'true'); // Never ask again
+            }
+          } catch {}
+        }}
+      />
 
       {/* Streak celebration overlay */}
       {celebration && (

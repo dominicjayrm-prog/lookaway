@@ -3,6 +3,7 @@ import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { getOnlineStatus, getLastActiveText, STATUS_COLORS } from '@/src/utils/onlineStatus';
 
 interface FriendProfilePopupProps {
   visible: boolean;
@@ -23,14 +24,11 @@ interface FriendProfilePopupProps {
   onRemove: (friendshipId: string) => void;
 }
 
-function isOnline(lastSeen: string | null): boolean {
-  if (!lastSeen) return false;
-  return Date.now() - new Date(lastSeen).getTime() < 5 * 60 * 1000;
-}
-
 function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge, onRemove }: FriendProfilePopupProps) {
   const { profile } = friend;
-  const online = isOnline(profile.last_seen);
+  const status = getOnlineStatus(profile.last_seen);
+  const statusColor = STATUS_COLORS[status];
+  const statusText = getLastActiveText(profile.last_seen);
   const initial = profile.username.charAt(0).toUpperCase();
 
   return (
@@ -47,9 +45,9 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
 
           {/* Online status */}
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: online ? colors.correct : colors.textLight }]} />
-            <Text style={[styles.statusText, { color: online ? colors.correct : colors.textMid }]}>
-              {online ? 'Online now' : 'Offline'}
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: status === 'online' ? colors.correct : colors.textMid }]}>
+              {statusText}
             </Text>
           </View>
 
