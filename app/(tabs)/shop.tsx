@@ -1,35 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
-import { POWER_UP_COSTS, LIVES_CONFIG, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
-
-const POWER_UPS: { id: PowerUpId; icon: string; name: string; description: string; tint: string; tintMid: string; tintStrong: string }[] = [
-  { id: 'slowTime', icon: '\u23F1', name: 'Slow Time', description: '+3s viewing time', tint: 'rgba(9,132,227,0.06)', tintMid: 'rgba(9,132,227,0.12)', tintStrong: '#0984E3' },
-  { id: 'peek', icon: '\u{1F441}', name: 'Peek', description: 'Flash scene 1s', tint: 'rgba(108,92,231,0.06)', tintMid: 'rgba(108,92,231,0.12)', tintStrong: '#6C5CE7' },
-  { id: 'fiftyFifty', icon: '\u2702\uFE0F', name: '50/50', description: 'Remove 2 options', tint: 'rgba(0,184,148,0.06)', tintMid: 'rgba(0,184,148,0.12)', tintStrong: '#00B894' },
-  { id: 'skip', icon: '\u23ED', name: 'Skip', description: 'Skip a question', tint: 'rgba(249,168,37,0.06)', tintMid: 'rgba(249,168,37,0.12)', tintStrong: '#D4A012' },
-];
-
-const GEM_PACKS = [
-  { id: 'gems_100', gems: 100, price: '\u00A30.99', badge: null },
-  { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
-  { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
-];
+import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 
 const GEM = '\u{1F48E}';
 
 export default function ShopTab() {
   const { colors } = useTheme();
   const { gems, powerUps, buyPowerUp, refillLivesWithGems } = useGameStore();
+  const [selectedMode, setSelectedMode] = useState('classic');
 
-  const handleBuyPowerUp = (id: PowerUpId, qty: number) => {
-    const cost = bundlePrice(POWER_UP_COSTS[id], qty);
+  const visiblePowerups = getPowerupsForMode(selectedMode);
+
+  const handleBuyPowerUp = (p: PowerUpDef, qty: number) => {
+    const cost = qty >= 3 ? p.bundleCost : p.cost * qty;
     if (gems < cost) { Alert.alert('Not enough gems', `You need ${GEM} ${cost} gems.`); return; }
-    buyPowerUp(id, qty);
+    buyPowerUp(p.id, qty, p.cost);
   };
 
   const handleIAP = () => { Alert.alert('Coming soon', 'In-app purchases will be available soon!'); };
@@ -54,33 +45,56 @@ export default function ShopTab() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ── Power-ups ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
+
+        {/* Mode selector pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modeScroll} contentContainerStyle={styles.modeScrollContent}>
+          {MODE_FILTERS.map(m => {
+            const isActive = selectedMode === m.id;
+            return (
+              <Pressable
+                key={m.id}
+                style={[styles.modePill, { backgroundColor: isActive ? m.color : colors.card, borderWidth: isActive ? 0 : 1, borderColor: colors.border }]}
+                onPress={() => setSelectedMode(m.id)}
+              >
+                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* Power-up grid */}
         <View style={styles.powerUpGrid}>
-          {POWER_UPS.map((p) => {
-            const owned = powerUps[p.id];
-            const cost = POWER_UP_COSTS[p.id];
-            const bundleCost = bundlePrice(cost, 3);
+          {visiblePowerups.map((p) => {
+            const owned = (powerUps as Record<string, number>)[p.id] ?? 0;
+            const emoji = POWERUP_EMOJIS[p.id] ?? '\u2728';
+            const isUniversal = p.modes.includes('all');
+
             return (
               <View key={p.id} style={styles.powerUpCardWrapper}>
-                <View style={[styles.powerUpCard, { backgroundColor: p.tint }]}>
+                <View style={[styles.powerUpCard, { backgroundColor: p.bgColor }]}>
                   {owned > 0 && (
-                    <View style={[styles.ownedBadge, { backgroundColor: p.tintStrong }]}>
+                    <View style={[styles.ownedBadge, { backgroundColor: p.color }]}>
                       <Text style={styles.ownedBadgeText}>{owned}</Text>
                     </View>
                   )}
-                  <View style={[styles.powerUpIconCircle, { backgroundColor: p.tintMid }]}>
-                    <Text style={styles.powerUpIcon}>{p.icon}</Text>
+                  {isUniversal && (
+                    <View style={[styles.universalBadge, { backgroundColor: colors.goldSoft }]}>
+                      <Text style={[styles.universalBadgeText, { color: colors.gold }]}>ALL MODES</Text>
+                    </View>
+                  )}
+                  <View style={[styles.powerUpIconCircle, { backgroundColor: `${p.color}18` }]}>
+                    <Text style={styles.powerUpIcon}>{emoji}</Text>
                   </View>
                   <Text style={[styles.powerUpName, { color: colors.text }]}>{p.name}</Text>
                   <Text style={[styles.powerUpDesc, { color: colors.textMid }]}>{p.description}</Text>
-                  {/* Owned count — green pill when > 0 */}
                   <View style={[styles.ownedPill, owned > 0 ? { backgroundColor: 'rgba(0,184,148,0.1)' } : { backgroundColor: 'transparent' }]}>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: owned > 0 ? '#00B894' : colors.textLight }}>Owned: {owned}</Text>
                   </View>
-                  <Pressable onPress={() => handleBuyPowerUp(p.id, 1)} style={[styles.buyBtn, { borderColor: p.tintStrong }]}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: p.tintStrong }}>{GEM} {cost}</Text>
+                  <Pressable onPress={() => handleBuyPowerUp(p, 1)} style={[styles.buyBtn, { borderColor: p.color }]}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: p.color }}>{GEM} {p.cost}</Text>
                   </Pressable>
-                  <Pressable onPress={() => handleBuyPowerUp(p.id, 3)}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMid, marginTop: 4 }}>3 for {GEM} {bundleCost}</Text>
+                  <Pressable onPress={() => handleBuyPowerUp(p, 3)}>
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMid, marginTop: 4 }}>3 for {GEM} {p.bundleCost}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -91,7 +105,11 @@ export default function ShopTab() {
         {/* ── Gem packs ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
         <View style={styles.gemPackRow}>
-          {GEM_PACKS.map((pack) => (
+          {[
+            { id: 'gems_100', gems: 100, price: '\u00A30.99', badge: null },
+            { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
+            { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
+          ].map((pack) => (
             <Pressable key={pack.id} onPress={handleIAP} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
               {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
               <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
@@ -107,7 +125,6 @@ export default function ShopTab() {
         {/* ── Lives ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
         <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
-          {/* £0.99 refill — most prominent */}
           <Pressable style={styles.livesRow} onPress={handleIAP}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
@@ -122,10 +139,7 @@ export default function ShopTab() {
               <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{'\u00A3'}0.99</Text>
             </View>
           </Pressable>
-
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-
-          {/* Unlimited hour */}
           <Pressable style={styles.livesRow} onPress={handleIAP}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
@@ -140,10 +154,7 @@ export default function ShopTab() {
               <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{'\u00A3'}1.99</Text>
             </View>
           </Pressable>
-
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-
-          {/* Gem refill — de-emphasised */}
           <Pressable style={styles.livesRow} onPress={handleGemRefillLives}>
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
@@ -189,12 +200,20 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 24, marginBottom: 12 },
 
+  // Mode selector
+  modeScroll: { marginBottom: 12, marginHorizontal: -16 },
+  modeScrollContent: { paddingHorizontal: 16, gap: 6 },
+  modePill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  modePillText: { fontSize: 13, fontWeight: '600' },
+
   // Power-ups
   powerUpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   powerUpCardWrapper: { width: '48%', flexGrow: 1 },
   powerUpCard: { alignItems: 'center', padding: 16, borderRadius: 16, position: 'relative' },
   ownedBadge: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   ownedBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
+  universalBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  universalBadgeText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
   powerUpIconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   powerUpIcon: { fontSize: 24 },
   powerUpName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },

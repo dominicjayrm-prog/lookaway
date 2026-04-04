@@ -69,6 +69,7 @@ export default function ResultScreen() {
   const [celebration, setCelebration] = useState<{ days: number; gems: number; title: string; color: string } | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [achievementUnlocks, setAchievementUnlocks] = useState<AchievementUnlock[]>([]);
+  const [extraLifeSaved, setExtraLifeSaved] = useState(false);
   const { user } = useAuth();
 
   const parsed = level ? parseLevelId(level.id) : null;
@@ -129,9 +130,17 @@ export default function ResultScreen() {
         });
       }
     } else {
-      loseLife();
-      const state = useGameStore.getState();
-      scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
+      // Check for Extra Life power-up before losing a life
+      const hasExtraLife = useGameStore.getState().getPowerUpCount('extra_life') > 0;
+      if (hasExtraLife) {
+        useGameStore.getState().usePowerUp('extra_life');
+        // Show a brief message — the "Extra Life saved you!" is shown in the UI via extraLifeSaved state
+        setExtraLifeSaved(true);
+      } else {
+        loseLife();
+        const state = useGameStore.getState();
+        scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
+      }
     }
 
     if (passed) cancelStreakReminder();
@@ -185,7 +194,11 @@ export default function ResultScreen() {
           <>
             <Text style={[styles.failedTitle, { color: colors.wrong }]}>Not quite...</Text>
             <Text style={[styles.scoreText, { color: colors.text }]}>{correctCount}/{totalCount} correct</Text>
-            <View style={[styles.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={styles.lifeLostIcon}>{HEART}</Text><Text style={[styles.lifeLostText, { color: colors.wrong }]}>-1 life</Text></View>
+            {extraLifeSaved ? (
+              <View style={[styles.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={styles.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[styles.lifeLostText, { color: colors.correct }]}>Extra Life saved you!</Text></View>
+            ) : (
+              <View style={[styles.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={styles.lifeLostIcon}>{HEART}</Text><Text style={[styles.lifeLostText, { color: colors.wrong }]}>-1 life</Text></View>
+            )}
             {level && (<Text style={[styles.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>)}
             <View style={styles.buttons}>
               <Pressable style={styles.primaryButton} onPress={handleRetry}><Text style={styles.primaryButtonText}>Try again</Text></Pressable>
