@@ -4,7 +4,7 @@
  * the same modeData format that the mode components expect.
  */
 
-const SHAPE_TYPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart'];
+const SHAPE_TYPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart', 'pentagon'];
 const ALL_COLORS = [
   { hex: '#FF6B6B', name: 'red' },
   { hex: '#0984E3', name: 'blue' },
