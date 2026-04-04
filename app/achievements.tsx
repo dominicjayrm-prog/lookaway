@@ -131,9 +131,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '800' },
   headerCount: { fontSize: 14, fontWeight: '600', marginRight: 4 },
 
-  categoryScroll: { paddingBottom: spacing.md },
-  categoryScrollContent: { paddingHorizontal: spacing.lg, gap: 6 },
-  categoryPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  categoryScroll: { maxHeight: 44, marginBottom: spacing.md, flexGrow: 0 },
+  categoryScrollContent: { paddingHorizontal: spacing.lg, gap: 6, alignItems: 'center' },
+  categoryPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, height: 36, justifyContent: 'center' },
   categoryPillText: { fontSize: 13, fontWeight: '600' },
 
   gridContainer: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
