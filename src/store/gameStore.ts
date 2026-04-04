@@ -43,11 +43,41 @@ function buildLevelIds(): string[] {
 }
 
 export interface PowerUpInventory {
+  // Universal
+  extra_life: number;
+  // Classic
   slowTime: number;
   peek: number;
   fiftyFifty: number;
   skip: number;
+  // Speed Recall
+  sr_slow_time: number;
+  sr_ghost_outline: number;
+  sr_second_chance: number;
+  // Snap Match
+  sm_slow_flash: number;
+  sm_highlight: number;
+  sm_freeze: number;
+  // Sequence
+  seq_replay_one: number;
+  seq_safety_net: number;
+  // Counting Blitz
+  cb_slow_motion: number;
+  cb_colour_filter: number;
+  // Colour Chain
+  cc_slow_time: number;
+  cc_reveal_one: number;
 }
+
+const DEFAULT_POWERUPS: PowerUpInventory = {
+  extra_life: 0,
+  slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0,
+  sr_slow_time: 0, sr_ghost_outline: 0, sr_second_chance: 0,
+  sm_slow_flash: 0, sm_highlight: 0, sm_freeze: 0,
+  seq_replay_one: 0, seq_safety_net: 0,
+  cb_slow_motion: 0, cb_colour_filter: 0,
+  cc_slow_time: 0, cc_reveal_one: 0,
+};
 
 // One-time migration: move w1-lX progress to w2-lX (world restructure)
 function migrateWorldProgress() {
@@ -139,9 +169,9 @@ export interface GameStore {
   incrementStreak: () => void;
   resetStreak: () => void;
   checkLifeRegen: () => void;
-  buyPowerUp: (id: PowerUpId, qty?: number) => boolean;
-  usePowerUp: (id: PowerUpId) => boolean;
-  getPowerUpCount: (id: PowerUpId) => number;
+  buyPowerUp: (id: string, qty?: number, cost?: number) => boolean;
+  usePowerUp: (id: string) => boolean;
+  getPowerUpCount: (id: string) => number;
 
   // Level completion with economy
   recordLevelComplete: (id: string, stars: number, pct: number) => number; // returns gems earned
@@ -186,7 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     streakMilestonesClaimed: (saved as any).streakMilestonesClaimed ?? [],
     totalStars: (saved as any).totalStars ?? 0,
     highestWorld: (saved as any).highestWorld ?? 1,
-    powerUps: (saved as any).powerUps ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
+    powerUps: (saved as any).powerUps ?? { ...DEFAULT_POWERUPS },
     levelProgress: (saved as any).levelProgress ?? {},
     completedScores: (saved as any).completedScores ?? [],
     currentLevel: null,
@@ -246,29 +276,31 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     // Power-up inventory
-    buyPowerUp: (id, qty = 1) => {
-      const cost = bundlePrice(POWER_UP_COSTS[id], qty);
+    buyPowerUp: (id, qty = 1, costOverride?) => {
+      const singleCost = costOverride ?? (POWER_UP_COSTS as Record<string, number>)[id] ?? 30;
+      const totalCost = bundlePrice(singleCost, qty);
       const { gems } = get();
-      if (gems < cost) return false;
+      if (gems < totalCost) return false;
       set((s) => ({
-        gems: s.gems - cost,
-        powerUps: { ...s.powerUps, [id]: s.powerUps[id] + qty },
+        gems: s.gems - totalCost,
+        powerUps: { ...s.powerUps, [id]: (s.powerUps[id as keyof PowerUpInventory] ?? 0) + qty },
       }));
       setTimeout(() => saveState(get()), 0);
-      logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_SPEND_POWERUP, -cost, { powerUp: id, qty });
+      logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_SPEND_POWERUP, -totalCost, { powerUp: id, qty });
       return true;
     },
     usePowerUp: (id) => {
       const { powerUps } = get();
-      if (powerUps[id] <= 0) return false;
+      const count = powerUps[id as keyof PowerUpInventory] ?? 0;
+      if (count <= 0) return false;
       set((s) => ({
-        powerUps: { ...s.powerUps, [id]: s.powerUps[id] - 1 },
+        powerUps: { ...s.powerUps, [id]: (s.powerUps[id as keyof PowerUpInventory] ?? 0) - 1 },
       }));
       setTimeout(() => saveState(get()), 0);
       logEconomyEvent(getUserId(), ECONOMY_EVENTS.POWERUP_USED, -1, { powerUp: id, levelId: get().currentLevel?.id });
       return true;
     },
-    getPowerUpCount: (id) => get().powerUps[id],
+    getPowerUpCount: (id) => get().powerUps[id as keyof PowerUpInventory] ?? 0,
 
     // Level completion with replay economy
     recordLevelComplete: (levelId, stars, scorePercent) => {
@@ -330,7 +362,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           lastPlayDate: s.lastPlayDate as string | null ?? null,
           totalStars: s.totalStars as number ?? 0,
           highestWorld: s.highestWorld as number ?? 1,
-          powerUps: s.powerUps as PowerUpInventory ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
+          powerUps: { ...DEFAULT_POWERUPS, ...(s.powerUps as Partial<PowerUpInventory> ?? {}) },
           levelProgress: s.levelProgress as Record<string, { stars: number; bestScore: number; attempts: number }> ?? {},
           completedScores: s.completedScores as number[] ?? [],
           _hydrated: true,

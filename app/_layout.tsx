@@ -190,6 +190,7 @@ function ThemedStack() {
         <Stack.Screen name="game/challenge-select" />
         <Stack.Screen name="game/challenge-mode" options={{ gestureEnabled: false }} />
         <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings" />
       </Stack>
     </>
