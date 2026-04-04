@@ -121,7 +121,7 @@ export default function JourneyTab() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Campaign selector */}
         <Text style={[styles.sectionLabel, { color: colors.textLight }]}>CAMPAIGNS</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.campaignScroll} contentContainerStyle={styles.campaignScrollContent}>
+        <View style={styles.campaignGrid}>
           {CAMPAIGN_ORDER.map(id => {
             const c = CAMPAIGNS[id];
             const isActive = activeCampaign === id;
@@ -143,7 +143,7 @@ export default function JourneyTab() {
                     <Text style={{ fontSize: 14, fontWeight: '800', color: c.color }}>{c.name[0]}</Text>
                   )}
                 </View>
-                <Text style={[styles.campaignName, { color: isLocked ? colors.textLight : isActive ? c.color : colors.text }]}>{c.name}</Text>
+                <Text style={[styles.campaignName, { color: isLocked ? colors.textLight : isActive ? c.color : colors.text }]} numberOfLines={1}>{c.name}</Text>
                 {isLocked ? (
                   <Text style={[styles.campaignMeta, { color: colors.textLight }]}>World {c.unlockAfterWorld}</Text>
                 ) : (
@@ -152,7 +152,7 @@ export default function JourneyTab() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* Active campaign description */}
         <View style={[styles.descCard, { backgroundColor: campaign.color + '08', borderColor: campaign.color + '15' }]}>
@@ -284,11 +284,10 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 16, marginBottom: 8 },
 
   // Campaign selector
-  campaignScroll: { marginHorizontal: -spacing.lg, marginBottom: 12 },
-  campaignScrollContent: { paddingHorizontal: spacing.lg, gap: 8 },
-  campaignPill: { width: 100, padding: 12, borderRadius: 16, alignItems: 'center' },
+  campaignGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  campaignPill: { width: '31%', flexGrow: 1, padding: 12, borderRadius: 16, alignItems: 'center' },
   campaignIconBg: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  campaignName: { fontSize: 11, fontWeight: '700' },
+  campaignName: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
   campaignMeta: { fontSize: 9, marginTop: 2 },
 
   // Campaign description
