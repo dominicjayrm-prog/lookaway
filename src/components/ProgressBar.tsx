@@ -6,7 +6,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { borderRadius } from '@/src/theme/spacing';
 
 interface ProgressBarProps {
@@ -20,12 +20,15 @@ interface ProgressBarProps {
 
 export const ProgressBar = React.memo(function ProgressBar({
   progress,
-  color = colors.accent,
-  trackColor = colors.surface,
+  color,
+  trackColor,
   height = 8,
   style,
   duration = 300,
 }: ProgressBarProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  const resolvedTrackColor = trackColor ?? colors.surface;
   const animatedProgress = useSharedValue(0);
 
   useEffect(() => {
@@ -37,14 +40,14 @@ export const ProgressBar = React.memo(function ProgressBar({
 
   const fillStyle = useAnimatedStyle(() => ({
     width: `${animatedProgress.value * 100}%`,
-    backgroundColor: color,
+    backgroundColor: resolvedColor,
   }));
 
   return (
     <View
       style={[
         styles.track,
-        { height, borderRadius: height / 2, backgroundColor: trackColor },
+        { height, borderRadius: height / 2, backgroundColor: resolvedTrackColor },
         style,
       ]}
     >

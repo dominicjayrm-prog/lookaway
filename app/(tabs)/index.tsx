@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,11 +7,14 @@ import { TabTransition } from '@/src/components/TabTransition';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { LEVELS } from '@/src/data/levels';
-import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, G, Line, Polygon } from 'react-native-svg';
+import { fetchLevelById } from '@/src/data/levels';
+import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
+import type { ActivityEvent } from '@/src/utils/activity';
+import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
+const WORLD_LEVEL_COUNTS = [20, 30, 35, 35, 40, 40];
 const EMDASH = String.fromCharCode(8212);
 
 function MiniEyeIcon() {
@@ -28,37 +31,125 @@ function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: str
   return <Svg width={size} height={size} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
 }
 
-function CalendarIcon({ size = 22, color = '#FF6B6B' }: { size?: number; color?: string }) {
+
+function ActivityIcon({ type, color }: { type: string; color: string }) {
+  switch (type) {
+    case 'level_complete': return <Svg width={14} height={14} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={color} /></Svg>;
+    case 'world_complete': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M6,4 L6,2 L18,2 L18,4 M5,4 L19,4 L19,8 C19,11 17,13 14,13 L14,16 L17,19 L17,20 L7,20 L7,19 L10,16 L10,13 C7,13 5,11 5,8Z" fill={color} /></Svg>;
+    case 'streak_milestone': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,2 C12,2 8,8 8,12 C8,15 10,17 12,17 C14,17 16,15 16,12 C16,8 12,2 12,2Z" fill={color} /></Svg>;
+    case 'challenge_won': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M5,16 L3,6 L8,10 L12,4 L16,10 L21,6 L19,16Z" fill={color} /><Rect x={4} y={16} width={16} height={3} rx={1} fill={color} /></Svg>;
+    case 'challenge_lost': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M5,16 L3,6 L8,10 L12,4 L16,10 L21,6 L19,16Z" fill={color} /><Rect x={4} y={16} width={16} height={3} rx={1} fill={color} /></Svg>;
+    case 'friend_added': return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill={color} /><Path d="M4,21 Q4,14 12,14 Q20,14 20,21" fill={color} /></Svg>;
+    case 'star_improved': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,4 L5,12 L9,12 L9,20 L15,20 L15,12 L19,12Z" fill={color} /></Svg>;
+    case 'powerup_bought': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={color} /></Svg>;
+    default: return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={8} fill={color} /></Svg>;
+  }
+}
+
+function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: string; main: string; sub: string } {
+  const d = event.data;
+  const t = getTimeAgo(event.timestamp);
+  switch (event.type) {
+    case 'level_complete': return { iconColor: '#D4A012', iconBg: 'rgba(212,160,18,0.1)', main: `Completed ${d.title || `Level ${d.levelNumber}`}`, sub: `World ${d.worldId} · ${d.stars} star${(d.stars as number) !== 1 ? 's' : ''} · ${t}` };
+    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Finished ${d.worldName}!`, sub: `World complete · ${t}` };
+    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: `${d.days}-day streak!`, sub: `Earned ${d.gems} gems · ${t}` };
+    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Beat @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
+    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: `Lost to @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
+    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Added @${d.username}`, sub: `New friend · ${t}` };
+    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Improved Level ${d.levelNumber}`, sub: `${d.oldStars}→${d.newStars} stars · ${t}` };
+    case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Bought power-up`, sub: `Shop · ${t}` };
+    default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: 'Activity', sub: t };
+  }
+}
+
+function RecentActivityCard({ colors, router }: { colors: Record<string, string>; router: ReturnType<typeof useRouter> }) {
+  const [activities, setActivities] = useState<ActivityEvent[]>([]);
+  useEffect(() => { setActivities(getRecentActivity(3)); }, []);
+
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Rect x={3} y={4} width={18} height={18} rx={3} fill="none" stroke={color} strokeWidth={1.8} />
-      <Line x1={3} y1={9} x2={21} y2={9} stroke={color} strokeWidth={1.8} />
-      <Line x1={8} y1={2} x2={8} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Line x1={16} y1={2} x2={16} y2={6} stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Circle cx={8} cy={14} r={1.2} fill={color} /><Circle cx={12} cy={14} r={1.2} fill={color} /><Circle cx={16} cy={14} r={1.2} fill={color} />
-      <Circle cx={8} cy={18} r={1.2} fill={color} /><Circle cx={12} cy={18} r={1.2} fill={color} />
-    </Svg>
+    <View style={[actStyles.card, { backgroundColor: colors.card }]}>
+      <Text style={[actStyles.title, { color: colors.text }]}>Recent Activity</Text>
+      {activities.length === 0 ? (
+        <View style={actStyles.emptyContainer}>
+          <Text style={[actStyles.emptyTitle, { color: colors.textMid }]}>Your story starts here</Text>
+          <Text style={[actStyles.emptySub, { color: colors.textLight }]}>Complete a level to see your activity appear!</Text>
+        </View>
+      ) : (
+        activities.map((event, i) => {
+          const display = getActivityDisplay(event);
+          return (
+            <Pressable key={event.id} style={[actStyles.row, i < activities.length - 1 && { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' }]}
+              onPress={() => {
+                if (event.type === 'level_complete' || event.type === 'star_improved') router.push(`/world/${event.data.worldId}`);
+                else if (event.type === 'world_complete') router.push('/(tabs)/journey');
+                else if (event.type === 'challenge_won' || event.type === 'challenge_lost' || event.type === 'friend_added') router.push('/(tabs)/friends');
+                else if (event.type === 'powerup_bought') router.push('/(tabs)/shop');
+              }}
+            >
+              <View style={[actStyles.iconBox, { backgroundColor: display.iconBg }]}>
+                <ActivityIcon type={event.type} color={display.iconColor} />
+              </View>
+              <View style={actStyles.textCol}>
+                <Text style={[actStyles.mainText, { color: colors.text }]} numberOfLines={1}>{display.main}</Text>
+                <Text style={[actStyles.subText, { color: colors.textLight }]} numberOfLines={1}>{display.sub}</Text>
+              </View>
+            </Pressable>
+          );
+        })
+      )}
+    </View>
   );
 }
+
+const actStyles = StyleSheet.create({
+  card: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  title: { fontSize: 13, fontWeight: '700', marginBottom: 8 },
+  emptyContainer: { alignItems: 'center', paddingVertical: 12 },
+  emptyTitle: { fontSize: 14, fontWeight: '600' },
+  emptySub: { fontSize: 12, marginTop: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+  iconBox: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  textCol: { flex: 1 },
+  mainText: { fontSize: 13, fontWeight: '600' },
+  subText: { fontSize: 11, marginTop: 1 },
+});
 
 export default function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount } = useGameStore();
-  const nextLevelId = getNextUnplayedLevelId();
-  const nextLevel = LEVELS.find((l) => l.id === nextLevelId);
-  const nextLevelNumber = nextLevel?.levelNumber ?? 1;
-  const nextLevelTitle = nextLevel?.title ?? 'Shape Basics';
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress } = useGameStore();
+  const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
+
+  // Parse world/level from ID format "w1-l3"
+  const idMatch = nextLevelId.match(/^w(\d+)-l(\d+)$/);
+  const currentWorldId = idMatch ? parseInt(idMatch[1], 10) : 1;
+  const nextLevelNumber = idMatch ? parseInt(idMatch[2], 10) : 1;
+  const currentWorldLevels = WORLD_LEVEL_COUNTS[(currentWorldId - 1)] ?? 20;
   const completedCount = getCompletedLevelCount();
+  const worldProgress = Math.max(0, nextLevelNumber - 1) / currentWorldLevels;
   const memoryScore = getMemoryScore();
-  const worldProgress = Math.max(0, nextLevelNumber - 1) / 35;
+
+  // Fetch level title from Supabase
+  const [nextLevelTitle, setNextLevelTitle] = useState('Loading...');
+  useEffect(() => {
+    fetchLevelById(nextLevelId).then(l => setNextLevelTitle(l?.title ?? `Level ${nextLevelNumber}`));
+  }, [nextLevelId, nextLevelNumber]);
+
+  // Contextual hero subtitle
+  const heroSubtitle = (() => {
+    const remaining = currentWorldLevels - (nextLevelNumber - 1);
+    if (nextLevelNumber === 1) return `Welcome to World ${currentWorldId}`;
+    if (remaining <= 3) return `${remaining} level${remaining !== 1 ? 's' : ''} to finish World ${currentWorldId}!`;
+    if (streakCount >= 3) return `${streakCount}-day streak! Keep it going`;
+    const subs = ['Keep pushing forward', 'Your memory is getting sharper', "Let's test that memory", 'Ready for the next challenge?'];
+    return subs[nextLevelNumber % subs.length];
+  })();
+
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   let profilePic: string | null = null;
-  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('lookaway-profile-pic') : null; } catch {}
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
 
   return (
     <TabTransition>
@@ -76,17 +167,16 @@ export default function PlayTab() {
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </View>
-            <TouchableOpacity
+            <Pressable
               style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
-              activeOpacity={0.8}
-              onPress={() => router.push('/profile')}
+                           onPress={() => router.push('/profile')}
             >
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
               ) : (
                 <Text style={styles.profileInitials}>{initials}</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -96,50 +186,35 @@ export default function PlayTab() {
           <View style={styles.heroLogoRow}>
             <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
             <View style={{ marginLeft: 10 }}>
-              <Text style={styles.heroLogoText}>Look<Text style={{ fontWeight: '800' }}>Away</Text></Text>
-              <Text style={styles.heroLogoSub}>Memorise. Look away. Answer.</Text>
+              <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
+              <Text style={styles.heroLogoSub}>Don't blank.</Text>
             </View>
           </View>
 
           {/* Level info */}
           <Text style={styles.heroContinueLabel}>CONTINUE</Text>
-          <Text style={styles.heroLevelTitle}>{`World 1 ${EMDASH} Level ${nextLevelNumber}`}</Text>
-          <Text style={styles.heroLevelSubtitle}>{nextLevelTitle}</Text>
+          <Text style={styles.heroLevelTitle}>{`World ${currentWorldId} ${EMDASH} Level ${nextLevelNumber}`}</Text>
+          <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
           {/* Progress bar */}
           <View style={styles.heroProgressRow}>
             <View style={styles.heroProgressTrack}>
               <View style={[styles.heroProgressFill, { width: `${Math.round(worldProgress * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/35</Text>
+            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/{currentWorldLevels}</Text>
           </View>
 
           {/* Play button */}
-          <TouchableOpacity style={styles.heroPlayButton} activeOpacity={0.85} onPress={() => router.push(`/game/${nextLevelId}`)}>
+          <Pressable style={styles.heroPlayButton} onPress={() => router.push(`/game/${nextLevelId}`)}>
             <Text style={styles.heroPlayText}>Play</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
-
-        {/* Daily challenge card */}
-        <TouchableOpacity style={[styles.dailyCard, { backgroundColor: colors.card }]} activeOpacity={0.92} onPress={() => router.push('/game/daily')}>
-          <View style={[styles.dailyIconBg, { backgroundColor: colors.wrongSoft }]}>
-            <CalendarIcon size={22} color={colors.wrong} />
-          </View>
-          <View style={styles.dailyContent}>
-            <View style={styles.dailyTopRow}>
-              <Text style={[styles.dailyTitle, { color: colors.text }]}>Daily Challenge</Text>
-              <Text style={[styles.dailyDate, { color: colors.textLight }]}>{todayDate}</Text>
-            </View>
-            <Text style={[styles.dailySub, { color: colors.textMid }]}>5 scenes, 25 questions. Same for everyone.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-        </TouchableOpacity>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
             <View style={[styles.statIconBg, { backgroundColor: colors.accentSoft }]}>
-              <Ionicons name="pulse" size={14} color={colors.accent} />
+              <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>BRAIN</Text>
             <Text style={[styles.statValue, { color: completedCount > 0 ? colors.accent : colors.textLight }]}>
@@ -166,43 +241,34 @@ export default function PlayTab() {
         <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
           <View style={styles.journeyHeader}>
             <Text style={[styles.journeyTitle, { color: colors.text }]}>Your Journey</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/journey')}>
+            <Pressable onPress={() => router.push('/(tabs)/journey')}>
               <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>See all {'>'}</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <View style={styles.journeyPills}>
             {WORLD_NAMES.map((name, i) => {
               const wc = WORLD_COLORS[i];
-              const isActive = i === 0;
-              const isLocked = i > 0;
+              const isCurrentWorld = i + 1 === currentWorldId;
+              const isCompleted = i + 1 < currentWorldId;
+              const isLocked = i + 1 > currentWorldId;
               return (
-                <View key={i} style={[styles.worldPill, { backgroundColor: isActive ? wc + '12' : colors.surface, borderWidth: isActive ? 1.5 : 0, borderColor: isActive ? wc + '33' : 'transparent', opacity: isLocked ? 0.5 : 1 }]}>
-                  <Text style={[styles.worldPillNum, { color: isActive ? wc : colors.textMid }]}>{i + 1}</Text>
-                  <Text style={[styles.worldPillName, { color: isActive ? wc : colors.textLight }]}>{name}</Text>
+                <View key={i} style={[styles.worldPill, {
+                  backgroundColor: isCurrentWorld || isCompleted ? wc + '12' : wc + '06',
+                  borderWidth: isCurrentWorld ? 1.5 : isCompleted ? 1 : 1,
+                  borderColor: isCurrentWorld ? wc + '35' : isCompleted ? wc + '20' : wc + '10',
+                  opacity: isLocked ? 0.7 : 1,
+                }]}>
+                  <Text style={[styles.worldPillNum, { color: isCurrentWorld || isCompleted ? wc : wc + '80' }]}>{i + 1}</Text>
+                  <Text style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}>{name}</Text>
                 </View>
               );
             })}
           </View>
         </View>
 
-        {/* Friends placeholder */}
-        <View style={[styles.friendsCard, { backgroundColor: colors.card }]}>
-          <View style={styles.friendsHeader}>
-            <Text style={[styles.friendsTitle, { color: colors.text }]}>Friends</Text>
-            <View style={[styles.comingSoonPill, { backgroundColor: colors.accentSoft, borderColor: colors.accentMid }]}>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: colors.accent }}>Coming soon</Text>
-            </View>
-          </View>
-          <View style={styles.friendsAvatars}>
-            {['#6C5CE7','#00B894','#FF6B6B','#0984E3','#D4A012'].map((c, i) => (
-              <View key={i} style={[styles.friendAvatar, { backgroundColor: c + '40', marginLeft: i > 0 ? -8 : 0, borderColor: colors.card }]}>
-                <Ionicons name="person" size={16} color={c + '80'} />
-              </View>
-            ))}
-          </View>
-          <Text style={[styles.friendsText, { color: colors.textMid }]}>Challenge friends, compare scores</Text>
-          <Text style={[styles.friendsSub, { color: colors.textLight }]}>Add friends and see who remembers more</Text>
-        </View>
+        {/* Recent Activity */}
+        <RecentActivityCard colors={colors} router={router} />
+
       </ScrollView>
     </SafeAreaView>
     </TabTransition>
@@ -238,15 +304,6 @@ const styles = StyleSheet.create({
   heroPlayButton: { backgroundColor: '#FFFFFF', borderRadius: 14, paddingVertical: 15, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
   heroPlayText: { fontSize: 17, fontWeight: '700', color: '#6C5CE7' },
 
-  // Daily card
-  dailyCard: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 2 },
-  dailyIconBg: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dailyContent: { flex: 1 },
-  dailyTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
-  dailyTitle: { fontSize: 13, fontWeight: '700' },
-  dailyDate: { fontSize: 11 },
-  dailySub: { fontSize: 12 },
-
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 14 },
   statCard: { flex: 1, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
@@ -263,13 +320,4 @@ const styles = StyleSheet.create({
   worldPillNum: { fontSize: 12, fontWeight: '700' },
   worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
 
-  // Friends
-  friendsCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
-  friendsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  friendsTitle: { fontSize: 13, fontWeight: '700' },
-  comingSoonPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
-  friendsAvatars: { flexDirection: 'row', marginBottom: 10 },
-  friendAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  friendsText: { fontSize: 13, fontWeight: '600' },
-  friendsSub: { fontSize: 11, marginTop: 2 },
 });

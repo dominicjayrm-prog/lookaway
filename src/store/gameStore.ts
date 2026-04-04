@@ -5,6 +5,9 @@ import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
 import { supabase } from '@/src/lib/supabase';
 
+/** In-memory fallback for platforms where localStorage is unavailable */
+let _memoryUserId: string | null = null;
+
 /** Get current user ID for economy logging */
 function getUserId(): string {
   try {
@@ -12,19 +15,32 @@ function getUserId(): string {
     const session = (supabase as any).auth?.session?.();
     if (session?.user?.id) return session.user.id;
   } catch {}
-  // Fallback: try localStorage
+  // Fallback: try localStorage (works on web, may throw on native iOS)
   try {
-    const stored = localStorage.getItem('lookaway-user-id');
+    const stored = localStorage.getItem('blanked-user-id');
     if (stored) return stored;
     const id = `anon-${Date.now()}`;
-    localStorage.setItem('lookaway-user-id', id);
+    localStorage.setItem('blanked-user-id', id);
     return id;
-  } catch {}
-  return 'anonymous';
+  } catch (e) {
+    console.warn('localStorage unavailable, using in-memory fallback:', e);
+  }
+  // Final fallback: in-memory ID for native platforms
+  if (!_memoryUserId) {
+    _memoryUserId = `anon-${Date.now()}`;
+  }
+  return _memoryUserId;
 }
 
 interface Answer { questionId: string; selectedIndex: number | null; correctIndex: number; isCorrect: boolean; }
-function buildLevelIds(): string[] { const ids: string[] = []; for (let i = 1; i <= 10; i++) ids.push(`w1-l${i}`); return ids; }
+function buildLevelIds(): string[] {
+  const counts = [20, 30, 35, 35, 40, 40];
+  const ids: string[] = [];
+  for (let w = 0; w < counts.length; w++) {
+    for (let l = 1; l <= counts[w]; l++) ids.push(`w${w + 1}-l${l}`);
+  }
+  return ids;
+}
 
 export interface PowerUpInventory {
   slowTime: number;
@@ -33,11 +49,45 @@ export interface PowerUpInventory {
   skip: number;
 }
 
+// One-time migration: move w1-lX progress to w2-lX (world restructure)
+function migrateWorldProgress() {
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+    if (localStorage.getItem('blanked_world_migrated')) return;
+
+    const saved = localStorage.getItem('blanked-progress');
+    if (!saved) { localStorage.setItem('blanked_world_migrated', 'true'); return; }
+
+    const data = JSON.parse(saved);
+    if (!data.levelProgress) { localStorage.setItem('blanked_world_migrated', 'true'); return; }
+
+    const newProgress: Record<string, unknown> = {};
+    let changed = false;
+
+    for (const [key, value] of Object.entries(data.levelProgress)) {
+      if (key.startsWith('w1-l')) {
+        newProgress[key.replace('w1-l', 'w2-l')] = value;
+        changed = true;
+      } else {
+        newProgress[key] = value;
+      }
+    }
+
+    if (changed) {
+      data.levelProgress = newProgress;
+      localStorage.setItem('blanked-progress', JSON.stringify(data));
+    }
+    localStorage.setItem('blanked_world_migrated', 'true');
+  } catch (e) {
+    console.warn('World migration failed:', e);
+  }
+}
+
 // Manual localStorage persistence
 function loadState(): Partial<GameStore> {
   try {
     if (typeof window === 'undefined') return {};
-    const saved = localStorage.getItem('lookaway-progress');
+    const saved = localStorage.getItem('blanked-progress');
     if (!saved) return {};
     return JSON.parse(saved);
   } catch { return {}; }
@@ -46,28 +96,31 @@ function loadState(): Partial<GameStore> {
 function saveState(state: GameStore) {
   try {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('lookaway-progress', JSON.stringify({
+    localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
-      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed,
+      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
     }));
-  } catch {}
+  } catch (e) {
+    console.warn('Save state failed:', e);
+  }
 
   // Also sync to Supabase (debounced, fire and forget)
   clearTimeout((saveState as any)._syncTimer);
   (saveState as any)._syncTimer = setTimeout(() => {
-    const uid = getUserId();
-    if (uid && !uid.startsWith('anon-')) {
-      saveProgressToSupabase(uid, state).catch(() => {});
+    const uid = state._authUserId;
+    if (uid) {
+      saveProgressToSupabase(uid, state).catch((e) => console.warn('Sync failed:', e));
     }
   }, 2000);
 }
 
 export interface GameStore {
+  _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
-  streakCount: number; streakMilestonesClaimed: number[];
+  streakCount: number; streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -102,6 +155,11 @@ export interface GameStore {
   getMemoryScore: () => number;
   getCompletedLevelCount: () => number;
 
+  // Hydration — re-read localStorage after mount (fixes SSR/static export)
+  hydrate: () => void;
+  saveState: () => void;
+  setAuthUserId: (id: string) => void;
+
   // Gameplay
   startLevel: (l: Level) => void;
   setGameState: (s: GameState) => void;
@@ -117,12 +175,6 @@ export const LIFE_REGEN_MS = LIVES_CONFIG.regenTimeMinutes * 60 * 1000;
 
 export const useGameStore = create<GameStore>((set, get) => {
   const saved = loadState();
-  const isNewPlayer = (saved as any).gems === undefined;
-
-  // Log starting gems for brand new players
-  if (isNewPlayer) {
-    setTimeout(() => logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, INITIAL_GEMS, { reason: 'starting_gems' }), 1000);
-  }
 
   return {
     gems: (saved as any).gems ?? INITIAL_GEMS,
@@ -130,6 +182,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     maxLives: (saved as any).maxLives ?? LIVES_CONFIG.maxLives,
     livesLastLostAt: (saved as any).livesLastLostAt ?? null,
     streakCount: (saved as any).streakCount ?? 0,
+    lastPlayDate: (saved as any).lastPlayDate ?? null,
     streakMilestonesClaimed: (saved as any).streakMilestonesClaimed ?? [],
     totalStars: (saved as any).totalStars ?? 0,
     highestWorld: (saved as any).highestWorld ?? 1,
@@ -144,6 +197,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     selectedOption: null,
     revealedCorrect: null,
     score: 0,
+    _authUserId: null,
     _hydrated: false,
 
     addGems: (amount) => { set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
@@ -167,18 +221,27 @@ export const useGameStore = create<GameStore>((set, get) => {
       return true;
     },
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
-    incrementStreak: () => { set((s) => ({ streakCount: s.streakCount + 1 })); setTimeout(() => saveState(get()), 0); },
-    resetStreak: () => { set({ streakCount: 0 }); setTimeout(() => saveState(get()), 0); },
+    incrementStreak: () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { lastPlayDate, streakCount } = get();
+      if (lastPlayDate === today) return; // Already played today
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const newStreak = lastPlayDate === yesterday ? streakCount + 1 : 1; // Continue or restart
+      set({ streakCount: newStreak, lastPlayDate: today });
+      setTimeout(() => saveState(get()), 0);
+    },
+    resetStreak: () => { set({ streakCount: 0, lastPlayDate: null }); setTimeout(() => saveState(get()), 0); },
     checkLifeRegen: () => {
       const { lives, maxLives, livesLastLostAt } = get();
       if (lives >= maxLives || !livesLastLostAt) return;
       const elapsed = Date.now() - livesLastLostAt;
       const regen = Math.floor(elapsed / LIFE_REGEN_MS);
       if (regen > 0) {
+        const actualRegen = Math.min(regen, maxLives - lives); // Cap to max lives deficit
         const nl = Math.min(maxLives, lives + regen);
         set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) });
         setTimeout(() => saveState(get()), 0);
-        logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, regen);
+        if (actualRegen > 0) logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, actualRegen);
       }
     },
 
@@ -232,6 +295,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       }));
       setTimeout(() => saveState(get()), 0);
 
+      // Immediately sync to cloud so progress is saved even if app is killed
+      const uid = get()._authUserId;
+      if (uid) {
+        setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => console.warn('Post-level sync failed:', e)), 500);
+      }
+
       // Log to economy tracker
       if (gemsEarned > 0) {
         logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars, scorePercent, replay: !!existing });
@@ -243,28 +312,81 @@ export const useGameStore = create<GameStore>((set, get) => {
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
 
+    // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
+    hydrate: () => {
+      if (get()._hydrated) return;
+      migrateWorldProgress();
+      const saved = loadState();
+      const hasData = saved && typeof (saved as Record<string, unknown>).gems === 'number';
+      if (hasData) {
+        const s = saved as Record<string, unknown>;
+        set({
+          gems: s.gems as number ?? INITIAL_GEMS,
+          lives: s.lives as number ?? LIVES_CONFIG.maxLives,
+          maxLives: s.maxLives as number ?? LIVES_CONFIG.maxLives,
+          livesLastLostAt: s.livesLastLostAt as number | null ?? null,
+          streakCount: s.streakCount as number ?? 0,
+          streakMilestonesClaimed: s.streakMilestonesClaimed as number[] ?? [],
+          lastPlayDate: s.lastPlayDate as string | null ?? null,
+          totalStars: s.totalStars as number ?? 0,
+          highestWorld: s.highestWorld as number ?? 1,
+          powerUps: s.powerUps as PowerUpInventory ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 },
+          levelProgress: s.levelProgress as Record<string, { stars: number; bestScore: number; attempts: number }> ?? {},
+          completedScores: s.completedScores as number[] ?? [],
+          _hydrated: true,
+        });
+      } else {
+        set({ _hydrated: true });
+      }
+    },
+    saveState: () => saveState(get()),
+    setAuthUserId: (id: string) => set({ _authUserId: id }),
+
     // Cloud sync
     syncToCloud: () => {
-      const uid = getUserId();
-      if (uid && !uid.startsWith('anon-')) {
-        saveProgressToSupabase(uid, get()).catch(() => {});
+      const uid = get()._authUserId;
+      if (uid) {
+        saveProgressToSupabase(uid, get()).catch((e) => console.warn('Sync failed:', e));
       }
     },
     loadFromCloud: async (userId: string) => {
       const cloud = await loadProgressFromSupabase(userId);
-      if (cloud) {
-        set({
-          gems: cloud.gems,
-          lives: cloud.lives,
-          livesLastLostAt: cloud.livesLastLostAt,
-          streakCount: cloud.streakCount,
-          totalStars: cloud.totalStars,
-          highestWorld: cloud.highestWorld,
-          levelProgress: cloud.levelProgress,
-          completedScores: cloud.completedScores,
-        });
-        setTimeout(() => saveState(get()), 0);
+      if (!cloud) return;
+      const local = get();
+      const localHasProgress = Object.keys(local.levelProgress).length > 0;
+
+      // Merge level progress — keep the best from either source
+      const mergedProgress = { ...cloud.levelProgress };
+      for (const [id, lp] of Object.entries(local.levelProgress)) {
+        const cp = mergedProgress[id];
+        if (!cp) {
+          mergedProgress[id] = lp;
+        } else {
+          mergedProgress[id] = {
+            stars: Math.max(cp.stars, lp.stars),
+            bestScore: Math.max(cp.bestScore, lp.bestScore),
+            attempts: Math.max(cp.attempts, lp.attempts),
+          };
+        }
       }
+
+      // Recalculate total stars from merged progress
+      const mergedTotalStars = Object.values(mergedProgress).reduce((sum, p) => sum + p.stars, 0);
+      const mergedScores = Object.values(mergedProgress).filter(p => p.bestScore > 0).map(p => p.bestScore);
+
+      // For gems/lives: if local has real progress, trust local (it's more current).
+      // Only use cloud values if local is fresh/empty (new device).
+      set({
+        gems: localHasProgress ? local.gems : cloud.gems,
+        lives: localHasProgress ? local.lives : cloud.lives,
+        livesLastLostAt: localHasProgress ? local.livesLastLostAt : cloud.livesLastLostAt,
+        streakCount: Math.max(cloud.streakCount, local.streakCount),
+        totalStars: mergedTotalStars,
+        highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
+        levelProgress: mergedProgress,
+        completedScores: mergedScores,
+      });
+      setTimeout(() => saveState(get()), 0);
     },
     startLevel: (level) => set({ currentLevel: level, gameState: 'MEMORISE' as GameState, currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
     setGameState: (gameState) => set({ gameState }),

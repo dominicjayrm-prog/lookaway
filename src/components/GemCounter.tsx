@@ -7,7 +7,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -18,6 +18,7 @@ interface GemCounterProps {
 export const GemCounter = React.memo(function GemCounter({
   count,
 }: GemCounterProps) {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
 
   useEffect(() => {
@@ -32,9 +33,9 @@ export const GemCounter = React.memo(function GemCounter({
   }));
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.accentSoft }, animatedStyle]}>
       <Ionicons name="diamond" size={16} color={colors.accent} />
-      <Text style={styles.count}>{count.toLocaleString()}</Text>
+      <Text style={[styles.count, { color: colors.accent }]}>{count.toLocaleString()}</Text>
     </Animated.View>
   );
 });
@@ -44,7 +45,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.accentSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: 999,
@@ -52,6 +52,5 @@ const styles = StyleSheet.create({
   count: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: colors.accent,
   },
 });

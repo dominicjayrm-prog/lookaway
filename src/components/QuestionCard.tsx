@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card } from './Card';
 import { OptionButton } from './OptionButton';
-import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -16,6 +16,7 @@ interface QuestionCardProps {
   onSelect: (index: number) => void;
   questionNumber: number;
   totalQuestions: number;
+  hiddenOptions?: number[];
 }
 
 export const QuestionCard = React.memo(function QuestionCard({
@@ -26,7 +27,10 @@ export const QuestionCard = React.memo(function QuestionCard({
   onSelect,
   questionNumber,
   totalQuestions,
+  hiddenOptions = [],
 }: QuestionCardProps) {
+  const { colors } = useTheme();
+
   const getOptionState = (index: number): OptionState => {
     if (revealedCorrectIndex === null) {
       return index === selectedIndex ? 'selected' : 'default';
@@ -38,20 +42,24 @@ export const QuestionCard = React.memo(function QuestionCard({
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.counter}>
+      <Text style={[styles.counter, { color: colors.textLight }]}>
         QUESTION {questionNumber} OF {totalQuestions}
       </Text>
-      <Text style={styles.question}>{questionText}</Text>
+      <Text style={[styles.question, { color: colors.text }]}>{questionText}</Text>
       <View style={styles.options}>
-        {options.map((option, index) => (
-          <OptionButton
-            key={index}
-            label={option}
-            state={getOptionState(index)}
-            onPress={() => onSelect(index)}
-            disabled={selectedIndex !== null}
-          />
-        ))}
+        {options.map((option, index) => {
+          const isHidden = hiddenOptions.includes(index);
+          return (
+            <OptionButton
+              key={index}
+              label={option}
+              state={isHidden ? 'dimmed' : getOptionState(index)}
+              onPress={() => onSelect(index)}
+              disabled={selectedIndex !== null || isHidden}
+              style={isHidden ? { opacity: 0.2, transform: [{ scale: 0.95 }] } : undefined}
+            />
+          );
+        })}
       </View>
     </Card>
   );
@@ -64,13 +72,11 @@ const styles = StyleSheet.create({
   counter: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
-    color: colors.textLight,
     letterSpacing: 1,
   },
   question: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
     lineHeight: 28,
   },
   options: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { LookAwayLogo } from '@/src/components/LookAwayLogo';
+import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { supabase } from '@/src/lib/supabase';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
@@ -28,10 +29,26 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [username, setUsernameInput] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
+  const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Debounced username availability check
+  const handleUsernameChange = (text: string) => {
+    const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 16);
+    setUsernameInput(sanitized);
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (sanitized.length < 3) { setUsernameStatus(sanitized.length > 0 ? 'invalid' : 'idle'); return; }
+    if (!/^[a-z0-9_]+$/.test(sanitized)) { setUsernameStatus('invalid'); return; }
+    setUsernameStatus('checking');
+    usernameTimer.current = setTimeout(async () => {
+      const { data } = await supabase.from('profiles').select('username').eq('username', sanitized).single();
+      setUsernameStatus(data ? 'taken' : 'available');
+    }, 300);
+  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -46,6 +63,11 @@ export default function AuthScreen() {
       return;
     }
 
+    if (mode === 'signup' && usernameStatus !== 'available') {
+      setError('Please choose an available username');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -53,10 +75,21 @@ export default function AuthScreen() {
         const result = await signIn(email.trim(), password);
         if (result.error) setError(result.error);
       } else {
-        const result = await signUp(email.trim(), password, displayName.trim() || undefined);
+        const result = await signUp(email.trim(), password, username.trim() || undefined);
         if (result.error) {
           setError(result.error);
         } else {
+          // Save username to profiles after signup
+          if (username.trim()) {
+            const { data: session } = await supabase.auth.getSession();
+            if (session?.session?.user?.id) {
+              await supabase.from('profiles').upsert({
+                id: session.session.user.id,
+                username: username.trim(),
+                display_name: username.trim(),
+              }, { onConflict: 'id' });
+            }
+          }
           setSignUpSuccess(true);
         }
       }
@@ -78,14 +111,14 @@ export default function AuthScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.successContainer}>
-          <LookAwayLogo size={64} />
+          <BlankedLogo size={64} />
           <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
           <Text style={[styles.successBody, { color: colors.textMid }]}>
             We sent a confirmation link to {email}. Tap the link to activate
             your account, then come back and sign in.
           </Text>
           <Pressable
-            style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, pressed && { opacity: 0.85 }]}
+            style={[styles.primaryButton, { backgroundColor: colors.accent }]}
             onPress={() => {
               setMode('login');
               setSignUpSuccess(false);
@@ -102,7 +135,7 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
         <ScrollView
@@ -111,11 +144,11 @@ export default function AuthScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logoSection}>
-            <LookAwayLogo size={64} />
+            <BlankedLogo size={64} />
             <View style={styles.wordmarkWrap}>
               <Wordmark size={28} />
             </View>
-            <Text style={[styles.tagline, { color: colors.textMid }]}>Memorise. Look away. Answer.</Text>
+            <Text style={[styles.tagline, { color: colors.textMid }]}>Don't blank.</Text>
           </View>
 
           <View style={[styles.formCard, { backgroundColor: colors.card }]}>
@@ -130,16 +163,24 @@ export default function AuthScreen() {
 
             {mode === 'signup' && (
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Display name</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
-                  placeholder="What should we call you?"
-                  placeholderTextColor={colors.textLight}
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                />
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
+                <View style={[styles.usernameRow, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.atPrefix, { color: colors.textMid }]}>@</Text>
+                  <TextInput
+                    style={[styles.usernameInput, { color: colors.text }]}
+                    placeholder="choose_a_username"
+                    placeholderTextColor={colors.textLight}
+                    value={username}
+                    onChangeText={handleUsernameChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                  />
+                </View>
+                {usernameStatus === 'available' && <Text style={styles.usernameAvailable}>Available</Text>}
+                {usernameStatus === 'taken' && <Text style={styles.usernameTaken}>Already taken</Text>}
+                {usernameStatus === 'invalid' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>3-16 chars, lowercase letters, numbers, underscores</Text>}
+                {usernameStatus === 'checking' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>Checking...</Text>}
               </View>
             )}
 
@@ -155,6 +196,7 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                returnKeyType="next"
               />
             </View>
 
@@ -169,6 +211,8 @@ export default function AuthScreen() {
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
               />
             </View>
 
@@ -179,7 +223,7 @@ export default function AuthScreen() {
             )}
 
             <Pressable
-              style={({ pressed }) => [styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled, pressed && { opacity: 0.85 }]}
+              style={[styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -199,7 +243,7 @@ export default function AuthScreen() {
                 ? "Don't have an account?"
                 : 'Already have an account?'}
             </Text>
-            <Pressable onPress={toggleMode} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+            <Pressable onPress={toggleMode} style={{ padding: 4 }}>
               <Text style={[styles.toggleLink, { color: colors.accent }]}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>
@@ -224,6 +268,12 @@ const styles = StyleSheet.create({
   inputContainer: { marginBottom: spacing.lg },
   inputLabel: { fontSize: typography.sizes.sm, fontWeight: '600', marginBottom: spacing.sm },
   input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, borderWidth: 1, borderColor: 'transparent' },
+  usernameRow: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14 },
+  atPrefix: { fontSize: typography.sizes.lg, fontWeight: '600', marginRight: 2 },
+  usernameInput: { flex: 1, fontSize: typography.sizes.lg, paddingVertical: 0 },
+  usernameAvailable: { fontSize: 12, fontWeight: '600', color: '#00B894', marginTop: 4 },
+  usernameTaken: { fontSize: 12, fontWeight: '600', color: '#FF6B6B', marginTop: 4 },
+  usernameHint: { fontSize: 12, marginTop: 4 },
   errorContainer: { backgroundColor: 'rgba(255,107,107,0.08)', borderRadius: borderRadius.sm, padding: spacing.md, marginBottom: spacing.lg },
   errorText: { fontSize: typography.sizes.sm, textAlign: 'center' },
   primaryButton: { borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 52, width: '100%' },

@@ -24,7 +24,7 @@ const ThemeContext = createContext<ThemeContextType>({
   resetToSystem: () => {},
 });
 
-const STORAGE_KEY = 'lookaway_theme';
+const STORAGE_KEY = 'blanked_theme';
 
 function getSystemTheme(): ThemeMode {
   try {

@@ -8,11 +8,12 @@ interface NavItem { href: string; label: string; icon: string; children?: { href
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: String.fromCodePoint(0x1F4CA) },
-  { href: '/challenges', label: 'Daily Challenges', icon: String.fromCodePoint(0x1F4C5), children: [
-    { href: '/challenges/calendar', label: 'Calendar' },
-    { href: '/challenges/builder', label: 'Challenge Builder' },
-    { href: '/challenges/review', label: 'Review Queue' },
-  ]},
+  // Hidden — daily challenge feature paused, may return later
+  // { href: '/challenges', label: 'Daily Challenges', icon: String.fromCodePoint(0x1F4C5), children: [
+  //   { href: '/challenges/calendar', label: 'Calendar' },
+  //   { href: '/challenges/builder', label: 'Challenge Builder' },
+  //   { href: '/challenges/review', label: 'Review Queue' },
+  // ]},
   { href: '/levels', label: 'Campaign Levels', icon: String.fromCodePoint(0x1F3AE) },
   { href: '/users', label: 'Users', icon: String.fromCodePoint(0x1F465) },
   { href: '/analytics', label: 'Analytics', icon: String.fromCodePoint(0x1F4C8) },
@@ -33,7 +34,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-64 flex-col bg-[#1A1929] text-white min-h-screen">
       <div className="px-6 py-6">
-        <div className="flex items-center gap-3"><h1 className="text-lg font-bold tracking-tight">LOOKAWAY</h1><span className="inline-block rounded-full bg-purple-600/30 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-300">Admin</span></div>
+        <div className="flex items-center gap-3"><h1 className="text-lg font-bold tracking-tight">BLANKED</h1><span className="inline-block rounded-full bg-purple-600/30 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-300">Admin</span></div>
         <p className="mt-1 text-[11px] text-slate-500">v1.0</p>
       </div>
       <nav className="flex-1 px-3"><ul className="space-y-1">

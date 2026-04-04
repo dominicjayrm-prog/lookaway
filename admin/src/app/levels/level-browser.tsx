@@ -31,17 +31,25 @@ function SceneThumbnail({ objects }: { objects: any[] }) {
         return (
           <div
             key={obj.id}
-            className="absolute"
+            className="absolute flex items-center justify-center"
             style={{
               left: `${obj.x}%`,
               top: `${obj.y}%`,
               transform: 'translate(-50%, -50%)',
-              width: 16,
-              height: 16,
+              width: 18,
+              height: 18,
             }}
           >
-            {libItem ? libItem.render(obj.color, 16) : (
-              <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: obj.color }} />
+            {libItem ? libItem.render(obj.color, 18) : (
+              <div style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: obj.color }} />
+            )}
+            {obj.content && (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-white font-black pointer-events-none"
+                style={{ fontSize: 7, textShadow: '0 0.5px 1px rgba(0,0,0,0.5)' }}
+              >
+                {obj.content}
+              </span>
             )}
           </div>
         );

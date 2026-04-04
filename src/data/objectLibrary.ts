@@ -1,5 +1,5 @@
 /**
- * Object Library for the LOOKAWAY game app.
+ * Object Library for the BLANKED game app.
  * Maps object IDs to their metadata so the SceneRenderer can look up types.
  * The actual rendering is handled by SceneRenderer using react-native-svg.
  * This file mirrors the admin objectLibrary — keep them in sync.

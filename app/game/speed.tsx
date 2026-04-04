@@ -49,7 +49,7 @@ export default function SpeedGameScreen() {
     if (revealTimeout.current) { clearTimeout(revealTimeout.current); revealTimeout.current = null; }
     if (transitionTimeout.current) { clearTimeout(transitionTimeout.current); transitionTimeout.current = null; }
   }, []);
-  useEffect(() => clearTimeouts, [clearTimeouts]);
+  useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
   const handleStart = useCallback(() => { startLevel(speedLevel); }, [speedLevel, startLevel]);
   const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 500); }, [setGameState, clearTimeouts]);
@@ -104,6 +104,16 @@ export default function SpeedGameScreen() {
     );
   }
 
+  if (!currentScene || !currentQuestion) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={styles.levelSubtitle}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -129,7 +139,7 @@ export default function SpeedGameScreen() {
           <SceneRenderer objects={currentScene.objects} visible={true} />
         </Animated.View>
       )}
-      {gameState === 'TRANSITION' && (<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}><Text style={styles.lookAwayText}>Look away!</Text></Animated.View>)}
+      {gameState === 'TRANSITION' && (<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
       {gameState === 'QUESTION' && currentQuestion && (
         <Animated.View entering={FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
@@ -165,5 +175,5 @@ const styles = StyleSheet.create({
   levelTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
-  lookAwayText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
 });
