@@ -184,7 +184,7 @@ function Page1({ colors }: { colors: any }) {
   return (
     <View style={styles.pageCenter}>
       <AnimatedItem delay={0}><MiniLogo size={52} /></AnimatedItem>
-      <AnimatedItem delay={100} style={{ marginTop: 12 }}><Text style={[styles.wordmark, { color: colors.text }]}>Look<Text style={{ color: colors.accent }}>Away</Text></Text></AnimatedItem>
+      <AnimatedItem delay={100} style={{ marginTop: 12 }}><Text style={[styles.wordmark, { color: colors.text }]}>Blank<Text style={{ color: colors.accent }}>ed</Text></Text></AnimatedItem>
       <AnimatedItem delay={250} style={{ marginVertical: 12 }}><BlinkingEye active={true} colors={colors} /></AnimatedItem>
       <AnimatedItem delay={400}><Text style={[styles.heading, { color: colors.text }]}>{'How much can\nyou remember?'}</Text></AnimatedItem>
       <AnimatedItem delay={550}><Text style={[styles.subtext, { color: colors.textMid }]}>A scene flashes before your eyes. Shapes, colours, positions. Then it vanishes. Can you recall what you saw?</Text></AnimatedItem>
@@ -217,6 +217,117 @@ function Page3({ colors }: { colors: any }) {
         </View>
       </AnimatedItem>
       <AnimatedItem delay={500}><QuestionCard colors={colors} /></AnimatedItem>
+    </View>
+  );
+}
+
+const CHALLENGE_MODES_ONBOARDING = [
+  { name: 'Classic', color: '#6C5CE7', desc: '5 campaign scenes head-to-head' },
+  { name: 'Speed Recall', color: '#FF6B6B', desc: 'Tap where shapes were on the canvas' },
+  { name: 'Snap Match', color: '#0984E3', desc: 'Spot the difference between two scenes' },
+  { name: 'Sequence', color: '#D4A012', desc: 'Remember the order shapes appeared' },
+  { name: 'Counting Blitz', color: '#00B894', desc: 'Count colours in a blitz of shapes' },
+  { name: 'Colour Chain', color: '#FD79A8', desc: 'Memorise a colour grid and recall it' },
+];
+
+function PageChallenge({ colors }: { colors: any }) {
+  const [showScore1, setShowScore1] = useState(false);
+  const [showScore2, setShowScore2] = useState(false);
+  const [showWin, setShowWin] = useState(false);
+  const [modeIdx, setModeIdx] = useState(0);
+
+  const avatarFloat1 = useRef(new RNAnimated.Value(0)).current;
+  const avatarFloat2 = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setShowScore1(true), 800);
+    const t2 = setTimeout(() => setShowScore2(true), 1400);
+    const t3 = setTimeout(() => setShowWin(true), 2000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => setModeIdx(prev => (prev + 1) % 6), 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Avatar floating
+  useEffect(() => {
+    const loop1 = () => RNAnimated.sequence([
+      RNAnimated.timing(avatarFloat1, { toValue: -6, duration: 2000, useNativeDriver: true }),
+      RNAnimated.timing(avatarFloat1, { toValue: 0, duration: 2000, useNativeDriver: true }),
+    ]).start(loop1);
+    const loop2 = () => RNAnimated.sequence([
+      RNAnimated.timing(avatarFloat2, { toValue: -8, duration: 2250, useNativeDriver: true }),
+      RNAnimated.timing(avatarFloat2, { toValue: 0, duration: 2250, useNativeDriver: true }),
+    ]).start(loop2);
+    loop1(); loop2();
+  }, [avatarFloat1, avatarFloat2]);
+
+  const activeMode = CHALLENGE_MODES_ONBOARDING[modeIdx];
+
+  return (
+    <View style={styles.pageCenter}>
+      <AnimatedItem delay={0}>
+        <Text style={[styles.heading, { color: colors.text }]}>Challenge your{'\n'}<Text style={{ color: colors.accent }}>friends</Text></Text>
+      </AnimatedItem>
+      <AnimatedItem delay={100}>
+        <Text style={[styles.subtext, { color: colors.textMid }]}>Same scenes. Same questions.{'\n'}Who has the better memory?</Text>
+      </AnimatedItem>
+
+      {/* VS Card */}
+      <AnimatedItem delay={300} style={{ marginVertical: 14 }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 20, width: 280, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 3 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+            {/* You */}
+            <RNAnimated.View style={{ alignItems: 'center', transform: [{ translateY: avatarFloat1 }] }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center', borderWidth: showWin ? 2.5 : 0, borderColor: '#D4A012' }}>
+                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '800' }}>Y</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text, marginTop: 6 }}>You</Text>
+              {showScore1 && (
+                <AnimatedItem delay={0}><Text style={{ fontSize: 22, fontWeight: '800', color: '#00B894', marginTop: 2 }}>92%</Text></AnimatedItem>
+              )}
+            </RNAnimated.View>
+
+            {/* VS / WIN */}
+            <View style={{ width: showWin ? 46 : 42, height: showWin ? 46 : 42, borderRadius: showWin ? 23 : 21, backgroundColor: showWin ? 'rgba(0,184,148,0.12)' : 'rgba(108,92,231,0.08)', borderWidth: showWin ? 2 : 0, borderColor: showWin ? 'rgba(0,184,148,0.3)' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: showWin ? '#00B894' : colors.accent }}>{showWin ? 'WIN' : 'VS'}</Text>
+            </View>
+
+            {/* Opponent */}
+            <RNAnimated.View style={{ alignItems: 'center', transform: [{ translateY: avatarFloat2 }] }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#0984E3', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '800' }}>S</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text, marginTop: 6 }}>@sarah.k</Text>
+              {showScore2 && (
+                <AnimatedItem delay={0}><Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 2 }}>76%</Text></AnimatedItem>
+              )}
+            </RNAnimated.View>
+          </View>
+        </View>
+      </AnimatedItem>
+
+      {/* Mode pills */}
+      <AnimatedItem delay={600}>
+        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: colors.textLight, textAlign: 'center', marginBottom: 8 }}>6 CHALLENGE MODES</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 300 }}>
+          {CHALLENGE_MODES_ONBOARDING.map((m, i) => (
+            <View key={m.name} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: i === modeIdx ? m.color : m.color + '14' }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: i === modeIdx ? '#FFF' : m.color + 'E6' }}>{m.name}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, height: 32 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: activeMode.color + '1F', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 11, fontWeight: '800', color: activeMode.color }}>
+              {['●▲■', '◎', 'A≠B', '1·2·3', '●●●', '▦'][modeIdx]}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.textMid, flex: 1 }}>{activeMode.desc}</Text>
+        </View>
+      </AnimatedItem>
     </View>
   );
 }
@@ -280,18 +391,18 @@ export default function OnboardingScreen() {
   }, [page, transitioning, contentOpacity, contentSlide]);
 
   const finish = useCallback(() => {
-    try { localStorage.setItem('lookaway_onboarded', 'true'); } catch {}
+    try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
-  const next = () => goToPage(Math.min(page + 1, 3));
+  const next = () => goToPage(Math.min(page + 1, 4));
   const prev = () => goToPage(Math.max(page - 1, 0));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Skip */}
-      {page < 3 && (
-        <Pressable onPress={() => goToPage(3)} style={styles.skipButton}>
+      {page < 4 && (
+        <Pressable onPress={() => goToPage(4)} style={styles.skipButton}>
           <Text style={[styles.skipText, { color: colors.textLight }]}>Skip</Text>
         </Pressable>
       )}
@@ -301,13 +412,14 @@ export default function OnboardingScreen() {
         {page === 0 && <Page1 colors={colors} />}
         {page === 1 && <Page2 colors={colors} />}
         {page === 2 && <Page3 colors={colors} />}
-        {page === 3 && <Page4 colors={colors} onFinish={finish} />}
+        {page === 3 && <PageChallenge colors={colors} />}
+        {page === 4 && <Page4 colors={colors} onFinish={finish} />}
       </RNAnimated.View>
 
       {/* Bottom nav */}
       <View style={styles.bottomNav}>
-        <PageDots current={page} total={4} colors={colors} />
-        {page < 3 && (
+        <PageDots current={page} total={5} colors={colors} />
+        {page < 4 && (
           <View style={styles.navButtons}>
             {page > 0 && (
               <Pressable onPress={prev} disabled={transitioning} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}>

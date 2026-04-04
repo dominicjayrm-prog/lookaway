@@ -17,10 +17,10 @@ function getUserId(): string {
   } catch {}
   // Fallback: try localStorage (works on web, may throw on native iOS)
   try {
-    const stored = localStorage.getItem('lookaway-user-id');
+    const stored = localStorage.getItem('blanked-user-id');
     if (stored) return stored;
     const id = `anon-${Date.now()}`;
-    localStorage.setItem('lookaway-user-id', id);
+    localStorage.setItem('blanked-user-id', id);
     return id;
   } catch (e) {
     console.warn('localStorage unavailable, using in-memory fallback:', e);
@@ -53,13 +53,13 @@ export interface PowerUpInventory {
 function migrateWorldProgress() {
   try {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
-    if (localStorage.getItem('lookaway_world_migrated')) return;
+    if (localStorage.getItem('blanked_world_migrated')) return;
 
-    const saved = localStorage.getItem('lookaway-progress');
-    if (!saved) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+    const saved = localStorage.getItem('blanked-progress');
+    if (!saved) { localStorage.setItem('blanked_world_migrated', 'true'); return; }
 
     const data = JSON.parse(saved);
-    if (!data.levelProgress) { localStorage.setItem('lookaway_world_migrated', 'true'); return; }
+    if (!data.levelProgress) { localStorage.setItem('blanked_world_migrated', 'true'); return; }
 
     const newProgress: Record<string, unknown> = {};
     let changed = false;
@@ -75,9 +75,9 @@ function migrateWorldProgress() {
 
     if (changed) {
       data.levelProgress = newProgress;
-      localStorage.setItem('lookaway-progress', JSON.stringify(data));
+      localStorage.setItem('blanked-progress', JSON.stringify(data));
     }
-    localStorage.setItem('lookaway_world_migrated', 'true');
+    localStorage.setItem('blanked_world_migrated', 'true');
   } catch (e) {
     console.warn('World migration failed:', e);
   }
@@ -87,7 +87,7 @@ function migrateWorldProgress() {
 function loadState(): Partial<GameStore> {
   try {
     if (typeof window === 'undefined') return {};
-    const saved = localStorage.getItem('lookaway-progress');
+    const saved = localStorage.getItem('blanked-progress');
     if (!saved) return {};
     return JSON.parse(saved);
   } catch { return {}; }
@@ -96,7 +96,7 @@ function loadState(): Partial<GameStore> {
 function saveState(state: GameStore) {
   try {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('lookaway-progress', JSON.stringify({
+    localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
       streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,

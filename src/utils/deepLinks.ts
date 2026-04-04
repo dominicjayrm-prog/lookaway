@@ -1,6 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
 
-const PENDING_INVITE_KEY = 'lookaway_pending_invite';
+const PENDING_INVITE_KEY = 'blanked_pending_invite';
 
 /** Store a pending invite from a deep link */
 export function storePendingInvite(inviterId: string): void {

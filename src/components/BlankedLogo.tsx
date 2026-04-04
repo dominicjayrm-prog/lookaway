@@ -1,11 +1,11 @@
 import React from 'react';
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, Circle, Line, G } from 'react-native-svg';
 
-interface LookAwayLogoProps {
+interface BlankedLogoProps {
   size?: number;
 }
 
-const LookAwayLogoComponent: React.FC<LookAwayLogoProps> = ({ size = 64 }) => {
+const BlankedLogoComponent: React.FC<BlankedLogoProps> = ({ size = 64 }) => {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64">
       <Defs>
@@ -27,4 +27,4 @@ const LookAwayLogoComponent: React.FC<LookAwayLogoProps> = ({ size = 64 }) => {
   );
 };
 
-export const LookAwayLogo = React.memo(LookAwayLogoComponent);
+export const BlankedLogo = React.memo(BlankedLogoComponent);

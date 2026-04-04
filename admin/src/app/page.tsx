@@ -46,7 +46,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">LOOKAWAY game overview</p>
+      <p className="mt-1 text-sm text-slate-500">BLANKED game overview</p>
 
       {/* Top stats */}
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">

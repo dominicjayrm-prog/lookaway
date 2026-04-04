@@ -11,10 +11,10 @@ import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
 function loadProfilePic(): string | null {
-  try { return localStorage.getItem('lookaway-profile-pic'); } catch { return null; }
+  try { return localStorage.getItem('blanked-profile-pic'); } catch { return null; }
 }
 function saveProfilePic(uri: string | null) {
-  try { if (uri) localStorage.setItem('lookaway-profile-pic', uri); else localStorage.removeItem('lookaway-profile-pic'); } catch {}
+  try { if (uri) localStorage.setItem('blanked-profile-pic', uri); else localStorage.removeItem('blanked-profile-pic'); } catch {}
 }
 
 export default function ProfileScreen() {
@@ -214,7 +214,7 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        <Text style={[styles.version, { color: colors.textLight }]}>LOOKAWAY v1.0.0</Text>
+        <Text style={[styles.version, { color: colors.textLight }]}>BLANKED v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

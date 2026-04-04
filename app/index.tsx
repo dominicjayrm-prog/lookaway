@@ -9,7 +9,7 @@ function hasSeenOnboarding(): boolean {
   try {
     if (typeof window === 'undefined') return false;
     if (typeof localStorage === 'undefined') return false;
-    return localStorage.getItem('lookaway_onboarded') === 'true';
+    return localStorage.getItem('blanked_onboarded') === 'true';
   } catch {
     // localStorage may throw on native iOS even if window exists
     return false;

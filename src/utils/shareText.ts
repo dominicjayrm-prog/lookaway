@@ -17,12 +17,12 @@ export function generateShareText(mode: DailyMode, dateStr: string, result: Shar
   const d = fmtDate(dateStr);
   if (mode === 'classic') {
     const grid = result.sceneResults ? result.sceneResults.map(s => row(s)).join('\n') : (() => { const lines = []; for (let i = 0; i < result.correctAnswers.length; i += 5) lines.push(row(result.correctAnswers.slice(i, i+5))); return lines.join('\n'); })();
-    return `LOOKAWAY ${d}\n${grid}\n${BRAIN} ${result.percentage}% (${result.totalCorrect}/${result.totalQuestions})\nplaylookaway.app`;
+    return `BLANKED ${d}\n${grid}\n${BRAIN} ${result.percentage}% (${result.totalCorrect}/${result.totalQuestions})\nplayblanked.app`;
   }
   if (mode === 'speed') {
     const t = result.timeSeconds != null ? formatTime(result.timeSeconds) : '0:00';
-    return `LOOKAWAY ${LIGHTNING} ${d}\n${result.totalCorrect}/${result.totalQuestions} in ${t}\n${row(result.correctAnswers)}\nplaylookaway.app`;
+    return `BLANKED ${LIGHTNING} ${d}\n${result.totalCorrect}/${result.totalQuestions} in ${t}\n${row(result.correctAnswers)}\nplayblanked.app`;
   }
   const avg = result.avgTimeSeconds != null ? result.avgTimeSeconds.toFixed(1) : '0.0';
-  return `LOOKAWAY ${MAG} ${d}\nFound ${result.totalCorrect}/${result.totalQuestions} changes\n${EYE} Avg time: ${avg}s\n${row(result.correctAnswers)}\nplaylookaway.app`;
+  return `BLANKED ${MAG} ${d}\nFound ${result.totalCorrect}/${result.totalQuestions} changes\n${EYE} Avg time: ${avg}s\n${row(result.correctAnswers)}\nplayblanked.app`;
 }

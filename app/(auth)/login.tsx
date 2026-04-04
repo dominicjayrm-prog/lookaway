@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { LookAwayLogo } from '@/src/components/LookAwayLogo';
+import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -111,7 +111,7 @@ export default function AuthScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.successContainer}>
-          <LookAwayLogo size={64} />
+          <BlankedLogo size={64} />
           <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
           <Text style={[styles.successBody, { color: colors.textMid }]}>
             We sent a confirmation link to {email}. Tap the link to activate
@@ -144,11 +144,11 @@ export default function AuthScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logoSection}>
-            <LookAwayLogo size={64} />
+            <BlankedLogo size={64} />
             <View style={styles.wordmarkWrap}>
               <Wordmark size={28} />
             </View>
-            <Text style={[styles.tagline, { color: colors.textMid }]}>Memorise. Look away. Answer.</Text>
+            <Text style={[styles.tagline, { color: colors.textMid }]}>Don't blank.</Text>
           </View>
 
           <View style={[styles.formCard, { backgroundColor: colors.card }]}>

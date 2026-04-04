@@ -229,7 +229,7 @@ export default function ChallengeGameScreen() {
       {/* Transition */}
       {phase === 'transition' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Look away!</Text>
+          <Text style={[styles.bigTitle, { color: colors.accent }]}>Go blank!</Text>
         </View>
       )}
 
