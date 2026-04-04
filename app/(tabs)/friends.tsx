@@ -90,9 +90,9 @@ export default function FriendsTab() {
   }, [userId]);
 
   const handleAccept = useCallback(async (id: string) => {
-    await acceptFriendRequest(id);
+    await acceptFriendRequest(id, userId);
     loadData();
-  }, [loadData]);
+  }, [loadData, userId]);
 
   const handleDecline = useCallback(async (id: string) => {
     await declineFriendRequest(id);

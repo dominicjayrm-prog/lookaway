@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,9 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { AchievementIcon } from '@/src/components/AchievementIcon';
+import { AchievementDetail } from '@/src/components/AchievementDetail';
+import { loadAllAchievements, loadPlayerProgress, TIER_COLORS, getHighestUnlockedTier, countUnlockedTiers, type Achievement, type PlayerAchievement, type AchievementTier } from '@/src/utils/achievements';
 
 function loadProfilePic(): string | null {
   try { return localStorage.getItem('blanked-profile-pic'); } catch { return null; }
@@ -28,6 +31,21 @@ export default function ProfileScreen() {
   const email = user?.email || 'Guest';
   const initials = displayName.slice(0, 2).toUpperCase();
   const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerAchievement>>({});
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+
+  useEffect(() => {
+    loadAllAchievements().then(setAchievements);
+    if (user?.id) loadPlayerProgress(user.id).then(setPlayerProgress);
+  }, [user?.id]);
+
+  const filteredAchievements = activeCategory === 'all'
+    ? achievements
+    : achievements.filter(a => a.category === activeCategory);
+  const unlockedCount = countUnlockedTiers(playerProgress);
+  const totalTiers = achievements.length * 3;
 
   const handlePickPhoto = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -116,6 +134,83 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Animated.View>
+
+        {/* Achievements */}
+        {achievements.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+            <View style={styles.achievementHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: 0, marginBottom: 0 }]}>ACHIEVEMENTS</Text>
+              <Text style={[styles.achievementCount, { color: colors.textLight }]}>{unlockedCount}/{totalTiers}</Text>
+            </View>
+
+            {/* Category pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryScrollContent}>
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'campaign', label: 'Campaign' },
+                { id: 'daily', label: 'Daily' },
+                { id: 'social', label: 'Social' },
+                { id: 'streak', label: 'Streak' },
+                { id: 'mastery', label: 'Mastery' },
+              ].map(cat => (
+                <Pressable
+                  key={cat.id}
+                  style={[styles.categoryPill, { backgroundColor: activeCategory === cat.id ? colors.accent : colors.card }]}
+                  onPress={() => setActiveCategory(cat.id)}
+                >
+                  <Text style={[styles.categoryPillText, { color: activeCategory === cat.id ? '#FFF' : colors.textMid }]}>{cat.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {/* Achievement grid */}
+            <View style={styles.achievementGrid}>
+              {filteredAchievements.map(achievement => {
+                const progress = playerProgress[achievement.id];
+                const tiers: AchievementTier[] = achievement.tiers;
+                const currentProgress = progress?.current_progress ?? 0;
+                const highestTier = getHighestUnlockedTier(progress);
+                const nextTier = tiers.find(t => !progress?.[`${t.tier}_unlocked_at` as keyof PlayerAchievement]);
+                const accentColor = highestTier ? TIER_COLORS[highestTier] : TIER_COLORS.none;
+
+                return (
+                  <Pressable
+                    key={achievement.id}
+                    style={[styles.achievementCard, {
+                      backgroundColor: colors.card,
+                      borderWidth: highestTier ? 1.5 : 1,
+                      borderColor: accentColor,
+                    }]}
+                    onPress={() => setSelectedAchievement(achievement)}
+                  >
+                    <View style={[styles.achIconBg, { backgroundColor: highestTier ? `${accentColor}15` : 'rgba(0,0,0,0.03)' }]}>
+                      <AchievementIcon name={achievement.icon} color={highestTier ? accentColor : '#B2BEC3'} size={22} />
+                    </View>
+                    <Text style={[styles.achName, { color: highestTier ? colors.text : colors.textMid }]} numberOfLines={1}>{achievement.name}</Text>
+                    <View style={styles.tierDots}>
+                      {tiers.map((t, i) => (
+                        <View key={i} style={[styles.tierDotSmall, { backgroundColor: progress?.[`${t.tier}_unlocked_at` as keyof PlayerAchievement] ? TIER_COLORS[t.tier] : colors.border }]} />
+                      ))}
+                    </View>
+                    {nextTier ? (
+                      <Text style={[styles.achProgress, { color: colors.textLight }]}>{currentProgress}/{nextTier.target}</Text>
+                    ) : (
+                      <Text style={[styles.achComplete, { color: '#D4A012' }]}>COMPLETE {'\u2713'}</Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Achievement detail popup */}
+        <AchievementDetail
+          visible={!!selectedAchievement}
+          achievement={selectedAchievement}
+          progress={selectedAchievement ? playerProgress[selectedAchievement.id] : undefined}
+          onClose={() => setSelectedAchievement(null)}
+        />
 
         {/* Appearance */}
         <Animated.View entering={FadeInDown.duration(400).delay(300)}>
@@ -273,4 +368,20 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginLeft: 62 },
 
   version: { textAlign: 'center', fontSize: 10, fontWeight: '600', marginTop: spacing.xxl, letterSpacing: 1 },
+
+  // Achievements
+  achievementHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.sm, paddingLeft: spacing.xs },
+  achievementCount: { fontSize: 12, fontWeight: '600' },
+  categoryScroll: { marginBottom: spacing.md, marginHorizontal: -spacing.lg },
+  categoryScrollContent: { paddingHorizontal: spacing.lg, gap: 6 },
+  categoryPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  categoryPillText: { fontSize: 12, fontWeight: '600' },
+  achievementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  achievementCard: { width: '47%', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  achIconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  achName: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  tierDots: { flexDirection: 'row', gap: 4, marginBottom: 4 },
+  tierDotSmall: { width: 8, height: 8, borderRadius: 4 },
+  achProgress: { fontSize: 10, fontWeight: '500' },
+  achComplete: { fontSize: 10, fontWeight: '700' },
 });

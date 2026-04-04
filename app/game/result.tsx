@@ -13,6 +13,8 @@ import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleLivesFullNotification } from '@/src/utils/notifications';
+import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
+import { AchievementToast } from '@/src/components/AchievementToast';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -70,6 +72,7 @@ export default function ResultScreen() {
   const [processed, setProcessed] = useState(false);
   const [celebration, setCelebration] = useState<{ days: number; gems: number; title: string; color: string } | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [achievementUnlocks, setAchievementUnlocks] = useState<AchievementUnlock[]>([]);
   const { user } = useAuth();
 
   // Parse level info
@@ -115,6 +118,33 @@ export default function ResultScreen() {
         const milestone = checkStreakMilestone(newStreak, claimed);
         if (milestone) setCelebration(milestone);
       }, 100);
+
+      // Check achievements
+      if (user?.id) {
+        const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
+        const worldLevelCounts = [20, 30, 35, 35, 40, 40];
+        let worldsComplete = 0;
+        let perfectWorlds = 0;
+        const lp = useGameStore.getState().levelProgress;
+        for (let w = 0; w < 6; w++) {
+          const prefix = `w${w + 1}-l`;
+          const wLevels = Array.from({ length: worldLevelCounts[w] }, (_, i) => lp[`${prefix}${i + 1}`]);
+          if (wLevels.every(l => l)) {
+            worldsComplete++;
+            if (wLevels.every(l => l && l.stars >= 3)) perfectWorlds++;
+          }
+        }
+        checkAchievements(user.id, {
+          type: 'level_complete',
+          data: { totalLevelsCompleted: totalCompleted, totalWorldsCompleted: worldsComplete, totalPerfectWorlds: perfectWorlds },
+        }).then(unlocks => {
+          if (unlocks.length > 0) {
+            const totalGems = unlocks.reduce((s, u) => s + u.gems, 0);
+            if (totalGems > 0) addGems(totalGems);
+            setTimeout(() => setAchievementUnlocks(unlocks), 1200);
+          }
+        });
+      }
     } else {
       loseLife();
       // Schedule lives full notification when a life is lost
@@ -129,19 +159,21 @@ export default function ResultScreen() {
 
     // Show notification prompt after 1st or 5th level if not asked yet
     if (Platform.OS !== 'web') {
-      try {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        const asked = await AsyncStorage.getItem('blanked_notifications_asked');
-        const declined = await AsyncStorage.getItem('blanked_notifications_declined_count');
-        const completedCount = Object.keys(useGameStore.getState().levelProgress).length;
+      (async () => {
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const asked = await AsyncStorage.getItem('blanked_notifications_asked');
+          const declined = await AsyncStorage.getItem('blanked_notifications_declined_count');
+          const completedCount = Object.keys(useGameStore.getState().levelProgress).length;
 
-        if (!asked && (completedCount === 1 || completedCount === 5)) {
-          const declinedNum = parseInt(declined ?? '0');
-          if (declinedNum < 2) {
-            setTimeout(() => setShowNotifPrompt(true), 1500);
+          if (!asked && (completedCount === 1 || completedCount === 5)) {
+            const declinedNum = parseInt(declined ?? '0');
+            if (declinedNum < 2) {
+              setTimeout(() => setShowNotifPrompt(true), 1500);
+            }
           }
-        }
-      } catch {}
+        } catch {}
+      })();
     }
   }, [passed, processed, level, stars, score, recordLevelComplete, loseLife, addStars, levelProgress]);
 
@@ -262,6 +294,15 @@ export default function ResultScreen() {
           </>
         )}
       </View>
+
+      {/* Achievement unlock toasts */}
+      {achievementUnlocks.length > 0 && (
+        <AchievementToast
+          unlocks={achievementUnlocks}
+          onDismiss={() => setAchievementUnlocks([])}
+          onTap={() => { setAchievementUnlocks([]); router.push('/profile'); }}
+        />
+      )}
 
       {/* Notification permission prompt */}
       <NotificationPrompt

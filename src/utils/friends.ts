@@ -1,5 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
 import { notifyFriendRequest } from '@/src/utils/notifications';
+import { checkAchievements } from '@/src/utils/achievements';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ export async function sendFriendRequest(
   return true;
 }
 
-export async function acceptFriendRequest(friendshipId: string): Promise<boolean> {
+export async function acceptFriendRequest(friendshipId: string, myUserId?: string): Promise<boolean> {
   const { error } = await supabase
     .from('friendships')
     .update({ status: 'accepted' })
@@ -90,6 +91,17 @@ export async function acceptFriendRequest(friendshipId: string): Promise<boolean
     console.warn('acceptFriendRequest error:', error.message);
     return false;
   }
+
+  // Check popular achievement for both users
+  if (myUserId) {
+    const { count } = await supabase
+      .from('friendships')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${myUserId},addressee_id.eq.${myUserId}`);
+    checkAchievements(myUserId, { type: 'friend_added', data: { totalFriends: count ?? 0 } }).catch(() => {});
+  }
+
   return true;
 }
 

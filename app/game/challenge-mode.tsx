@@ -10,6 +10,7 @@ import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
 import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
 import { notifyChallengeReceived } from '@/src/utils/notifications';
+import { checkAchievements } from '@/src/utils/achievements';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
@@ -140,11 +141,13 @@ export default function ChallengeModeScreen() {
           }).select('id').single();
           if (inserted?.id) {
             setDbChallengeId(inserted.id);
-            // Notify the challenged friend
             const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', userId).single();
             if (myProfile?.username) {
               notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id);
             }
+            // Achievement: challenge sent
+            const { count } = await supabase.from('friend_challenges').select('id', { count: 'exact', head: true }).eq('challenger_id', userId);
+            checkAchievements(userId, { type: 'challenge_sent', data: { totalChallengesSent: count ?? 0 } }).catch(() => {});
           }
         })();
       }
@@ -172,6 +175,8 @@ export default function ChallengeModeScreen() {
             if (myProfile?.username) {
               notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id);
             }
+            const { count } = await supabase.from('friend_challenges').select('id', { count: 'exact', head: true }).eq('challenger_id', userId);
+            checkAchievements(userId, { type: 'challenge_sent', data: { totalChallengesSent: count ?? 0 } }).catch(() => {});
           }
       })();
     }
