@@ -15,6 +15,11 @@ function ShapeSvg({ type, color, size }: { type: string; color: string; size: nu
     case 'oval': return <Svg width={size} height={size} viewBox="0 0 24 24"><Ellipse cx={12} cy={12} rx={10} ry={7} fill={color} /></Svg>;
     case 'cross': return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M8,2 h8 v6 h6 v8 h-6 v6 h-8 v-6 h-6 v-8 h6 z" fill={color} /></Svg>;
     case 'arrow': return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M12,2 L22,12 H16 V22 H8 V12 H2 Z" fill={color} /></Svg>;
+    case 'semicircle': return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M2,14 A10,10 0 0,1 22,14 Z" fill={color} /></Svg>;
+    case 'parallelogram': return <Svg width={size} height={size} viewBox="0 0 24 24"><Polygon points="6,4 22,4 18,20 2,20" fill={color} /></Svg>;
+    case 'trapezoid': return <Svg width={size} height={size} viewBox="0 0 24 24"><Polygon points="6,4 18,4 22,20 2,20" fill={color} /></Svg>;
+    case 'rhombus': return <Svg width={size} height={size} viewBox="0 0 24 24"><Polygon points="12,2 21,12 12,22 3,12" fill={color} /></Svg>;
+    case 'kite': return <Svg width={size} height={size} viewBox="0 0 24 24"><Polygon points="12,2 20,10 12,22 4,10" fill={color} /></Svg>;
     default: return <Svg width={size} height={size} viewBox="0 0 24 24"><SvgCircle cx={12} cy={12} r={10} fill={color} /></Svg>;
   }
 }
