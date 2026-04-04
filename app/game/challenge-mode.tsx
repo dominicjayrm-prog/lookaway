@@ -15,6 +15,7 @@ import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
 import ColourChainGame from '@/src/components/modes/ColourChainGame';
+import SpeedRecallGame from '@/src/components/modes/SpeedRecallGame';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'error';
 
@@ -144,7 +145,7 @@ export default function ChallengeModeScreen() {
     }
   }, [mode, dbChallengeId, userId, action, friendId, modeData]);
 
-  const isExternalMode = mode && ['snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
+  const isExternalMode = mode && ['speed_recall', 'snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
 
   if (phase === 'loading') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.textMid }]}>Loading {modeConfig?.name}...</Text></SafeAreaView>;
   if (phase === 'error') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.wrong }]}>Could not load challenge</Text><Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={s.btnText}>Go back</Text></Pressable></SafeAreaView>;
@@ -163,6 +164,7 @@ export default function ChallengeModeScreen() {
       {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} \u00b7 {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
 
       {phase === 'show' && isExternalMode && modeData && (<>
+        {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
         {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
         {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
         {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
