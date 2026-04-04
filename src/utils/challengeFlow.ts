@@ -1,4 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
+import { notifyChallengeResult } from '@/src/utils/notifications';
+import { checkAchievements } from '@/src/utils/achievements';
 
 /**
  * Create a friend challenge: pick 5 random shared levels, insert row.
@@ -93,6 +95,46 @@ export async function recordChallengeScore(
       .eq('id', challengeId);
 
     if (error) { console.warn('Record challenge score error:', error); return false; }
+
+    // Check challenge achievements (challenge sent for challenger, challenge won for winner)
+    if (update.status === 'completed') {
+      const myScore = score;
+      const theirScore = otherScore as number;
+      if (myScore > theirScore) {
+        // Count total wins for this user
+        const { count } = await supabase
+          .from('friend_challenges')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .or(
+            `and(challenger_id.eq.${userId},challenger_score.gt.challenged_score),and(challenged_id.eq.${userId},challenged_score.gt.challenger_score)`,
+          );
+        checkAchievements(userId, { type: 'challenge_won', data: { totalChallengesWon: count ?? 0 } }).catch(() => {});
+      }
+    }
+
+    // If challenge is now completed, notify the challenger about the result
+    if (update.status === 'completed' && !isChallenger) {
+      // The challenged player just finished — notify the challenger
+      const myScore = score;
+      const theirScore = otherScore as number;
+      // Get username of the player who just finished
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+      if (myProfile?.username) {
+        notifyChallengeResult(
+          challenge.challenger_id,
+          myProfile.username,
+          theirScore, // challenger's score
+          myScore,    // challenged's score
+          challengeId,
+        ).catch(() => {}); // Fire and forget
+      }
+    }
+
     return true;
   } catch (e) {
     console.warn('Record challenge score failed:', e);

@@ -9,6 +9,8 @@ import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
 import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import { notifyChallengeReceived } from '@/src/utils/notifications';
+import { checkAchievements } from '@/src/utils/achievements';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
@@ -47,7 +49,6 @@ export default function ChallengeModeScreen() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
 
-  // Load or generate mode data
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -79,15 +80,11 @@ export default function ChallengeModeScreen() {
 
   useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
-  // ─── SPEED RECALL LOGIC ───
   const currentRound = modeData?.rounds?.[roundIdx];
   const currentShape = currentRound?.shapes?.[shapeIdx];
 
   const startRound = useCallback(() => {
-    setShapeIdx(0);
-    setShapeScores([]);
-    setTapResult(null);
-    setPhase('show');
+    setShapeIdx(0); setShapeScores([]); setTapResult(null); setPhase('show');
     timerRef.current = setTimeout(() => setPhase('recall'), 3000);
   }, []);
 
@@ -98,75 +95,57 @@ export default function ChallengeModeScreen() {
     const tapY = (locationY / canvasSize.h) * 100;
     const dist = Math.sqrt((tapX - currentShape.x) ** 2 + (tapY - currentShape.y) ** 2);
     const score = Math.max(0, Math.round(100 - dist * 2));
-
     setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, score });
     setShapeScores(prev => [...prev, score]);
     setPhase('feedback');
-
     timerRef.current = setTimeout(() => {
       setTapResult(null);
-      if (shapeIdx + 1 < (currentRound?.shapes?.length ?? 0)) {
-        setShapeIdx(prev => prev + 1);
-        setPhase('recall');
-      } else {
-        const roundTotal = [...shapeScores, score].reduce((a, b) => a + b, 0);
-        setRoundScores(prev => [...prev, roundTotal]);
-        setPhase('round_done');
-      }
+      if (shapeIdx + 1 < (currentRound?.shapes?.length ?? 0)) { setShapeIdx(prev => prev + 1); setPhase('recall'); }
+      else { const roundTotal = [...shapeScores, score].reduce((a, b) => a + b, 0); setRoundScores(prev => [...prev, roundTotal]); setPhase('round_done'); }
     }, 1200);
   }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize]);
 
   const nextRound = useCallback(() => {
-    if (roundIdx + 1 < (modeData?.rounds?.length ?? 0)) {
-      setRoundIdx(prev => prev + 1);
-      startRound();
-    } else {
+    if (roundIdx + 1 < (modeData?.rounds?.length ?? 0)) { setRoundIdx(prev => prev + 1); startRound(); }
+    else {
       const total = roundScores.reduce((a, b) => a + b, 0);
-      setTotalScore(total);
-      setPhase('complete');
-      // Save score
-      if (dbChallengeId && userId) {
-        const pct = getScorePercentage(mode ?? 'speed_recall', total);
-        recordChallengeScore(dbChallengeId, userId, pct, 0);
-      } else if (action === 'create' && friendId && userId) {
-        // Create the challenge record
+      setTotalScore(total); setPhase('complete');
+      if (dbChallengeId && userId) { const pct = getScorePercentage(mode ?? 'speed_recall', total); recordChallengeScore(dbChallengeId, userId, pct, 0); }
+      else if (action === 'create' && friendId && userId) {
         (async () => {
-          const { data: inserted } = await supabase.from('friend_challenges').insert({
-            challenger_id: userId, challenged_id: friendId, level_ids: [],
-            mode: mode, mode_data: modeData,
-            challenger_score: getScorePercentage(mode ?? 'speed_recall', total),
-            status: 'pending',
-          }).select('id').single();
-          if (inserted?.id) setDbChallengeId(inserted.id);
+          const { data: inserted } = await supabase.from('friend_challenges').insert({ challenger_id: userId, challenged_id: friendId, level_ids: [], mode: mode, mode_data: modeData, challenger_score: getScorePercentage(mode ?? 'speed_recall', total), status: 'pending' }).select('id').single();
+          if (inserted?.id) {
+            setDbChallengeId(inserted.id);
+            const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', userId).single();
+            if (myProfile?.username) { notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id); }
+            const { count } = await supabase.from('friend_challenges').select('id', { count: 'exact', head: true }).eq('challenger_id', userId);
+            checkAchievements(userId, { type: 'challenge_sent', data: { totalChallengesSent: count ?? 0 } }).catch(() => {});
+          }
         })();
       }
     }
   }, [roundIdx, modeData, roundScores, dbChallengeId, userId, mode, action, friendId]);
 
-  // ─── SHARED COMPLETION HANDLER (for non-speed-recall modes) ───
   const handleModeComplete = useCallback((rawScore: number) => {
     const pct = getScorePercentage(mode ?? 'classic', rawScore);
-    setTotalScore(rawScore);
-    setPhase('complete');
-
-    if (dbChallengeId && userId) {
-      recordChallengeScore(dbChallengeId, userId, pct, 0);
-    } else if (action === 'create' && friendId && userId) {
+    setTotalScore(rawScore); setPhase('complete');
+    if (dbChallengeId && userId) { recordChallengeScore(dbChallengeId, userId, pct, 0); }
+    else if (action === 'create' && friendId && userId) {
       (async () => {
-        const { data: inserted } = await supabase.from('friend_challenges').insert({
-          challenger_id: userId, challenged_id: friendId, level_ids: [],
-          mode, mode_data: modeData,
-          challenger_score: pct, status: 'pending',
-        }).select('id').single();
-        if (inserted?.id) setDbChallengeId(inserted.id);
+        const { data: inserted } = await supabase.from('friend_challenges').insert({ challenger_id: userId, challenged_id: friendId, level_ids: [], mode, mode_data: modeData, challenger_score: pct, status: 'pending' }).select('id').single();
+        if (inserted?.id) {
+            setDbChallengeId(inserted.id);
+            const { data: myProfile } = await supabase.from('profiles').select('username').eq('id', userId).single();
+            if (myProfile?.username) { notifyChallengeReceived(friendId, myProfile.username, modeConfig?.name ?? 'a challenge', inserted.id); }
+            const { count } = await supabase.from('friend_challenges').select('id', { count: 'exact', head: true }).eq('challenger_id', userId);
+            checkAchievements(userId, { type: 'challenge_sent', data: { totalChallengesSent: count ?? 0 } }).catch(() => {});
+          }
       })();
     }
   }, [mode, dbChallengeId, userId, action, friendId, modeData]);
 
-  // Which modes use their own component vs inline speed recall
   const isExternalMode = mode && ['snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
 
-  // ─── RENDER ───
   if (phase === 'loading') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.textMid }]}>Loading {modeConfig?.name}...</Text></SafeAreaView>;
   if (phase === 'error') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.wrong }]}>Could not load challenge</Text><Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={s.btnText}>Go back</Text></Pressable></SafeAreaView>;
 
@@ -174,107 +153,29 @@ export default function ChallengeModeScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Text style={[s.closeX, { color: colors.textMid }]}>{'\u2715'}</Text>
-        </Pressable>
+        <Pressable onPress={() => router.back()} style={s.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}><Text style={[s.closeX, { color: colors.textMid }]}>{'\u2715'}</Text></Pressable>
         <Text style={[s.headerTitle, { color: mColor }]}>{modeConfig?.name}</Text>
         <Text style={[s.headerRound, { color: colors.textMid }]}>Round {roundIdx + 1}/{modeData?.rounds?.length ?? 5}</Text>
       </View>
+      <View style={s.progressRow}>{Array.from({ length: modeData?.rounds?.length ?? 5 }).map((_, i) => (<View key={i} style={[s.progressSeg, { backgroundColor: i <= roundIdx ? mColor : colors.border }]} />))}</View>
 
-      {/* Progress bar */}
-      <View style={s.progressRow}>
-        {Array.from({ length: modeData?.rounds?.length ?? 5 }).map((_, i) => (
-          <View key={i} style={[s.progressSeg, { backgroundColor: i <= roundIdx ? mColor : colors.border }]} />
-        ))}
-      </View>
+      {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} \u00b7 {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
 
-      {/* Ready */}
-      {phase === 'ready' && (
-        <View style={s.centered}>
-          <Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text>
-          <Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text>
-          <Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text>
-          <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
-            if (isExternalMode) setPhase('show'); // 'show' acts as "playing" for external modes
-            else startRound();
-          }}><Text style={s.btnText}>Start</Text></Pressable>
-        </View>
-      )}
+      {phase === 'show' && isExternalMode && modeData && (<>
+        {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+      </>)}
 
-      {/* External mode games */}
-      {phase === 'show' && isExternalMode && modeData && (
-        <>
-          {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-        </>
-      )}
+      {phase === 'show' && !isExternalMode && currentRound && (<View style={s.gameArea}><Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text><View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{currentRound.shapes.map((sh: any, i: number) => (<View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}><ShapeSvg type={sh.type} color={sh.color} size={sh.size} /></View>))}</View></View>)}
 
-      {/* SPEED RECALL: Show scene */}
-      {phase === 'show' && currentRound && (
-        <View style={s.gameArea}>
-          <Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text>
-          <View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-            {currentRound.shapes.map((sh: any, i: number) => (
-              <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}>
-                <ShapeSvg type={sh.type} color={sh.color} size={sh.size} />
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
+      {(phase === 'recall' || phase === 'feedback') && !isExternalMode && currentShape && (<View style={s.gameArea}><View style={s.promptRow}><ShapeSvg type={currentShape.type} color={currentShape.color} size={24} /><Text style={[s.promptText, { color: colors.text }]}>Where was the {currentShape.colorName} {currentShape.type}?</Text></View><Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text><Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{tapResult && (<><View style={{ position: 'absolute', left: `${tapResult.tapX}%`, top: `${tapResult.tapY}%`, width: 12, height: 12, borderRadius: 6, backgroundColor: currentShape.color, transform: [{ translateX: -6 }, { translateY: -6 }] }} /><View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -12 }, { translateY: -12 }] }} /><View style={{ position: 'absolute', left: `${(tapResult.tapX + tapResult.actualX) / 2}%`, top: `${Math.min(tapResult.tapY, tapResult.actualY) - 5}%`, transform: [{ translateX: -20 }] }}><Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text></View></>)}</Pressable></View>)}
 
-      {/* SPEED RECALL: Recall / Feedback */}
-      {(phase === 'recall' || phase === 'feedback') && currentShape && (
-        <View style={s.gameArea}>
-          <View style={s.promptRow}>
-            <ShapeSvg type={currentShape.type} color={currentShape.color} size={24} />
-            <Text style={[s.promptText, { color: colors.text }]}>Where was the {currentShape.colorName} {currentShape.type}?</Text>
-          </View>
-          <Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text>
-          <Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-            {tapResult && (
-              <>
-                {/* Tap marker */}
-                <View style={{ position: 'absolute', left: `${tapResult.tapX}%`, top: `${tapResult.tapY}%`, width: 12, height: 12, borderRadius: 6, backgroundColor: currentShape.color, transform: [{ translateX: -6 }, { translateY: -6 }] }} />
-                {/* Actual position circle */}
-                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -12 }, { translateY: -12 }] }} />
-                {/* Score label */}
-                <View style={{ position: 'absolute', left: `${(tapResult.tapX + tapResult.actualX) / 2}%`, top: `${Math.min(tapResult.tapY, tapResult.actualY) - 5}%`, transform: [{ translateX: -20 }] }}>
-                  <Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text>
-                </View>
-              </>
-            )}
-          </Pressable>
-        </View>
-      )}
+      {phase === 'round_done' && !isExternalMode && (<View style={s.centered}><Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text><Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1]}/500</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}><Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text></Pressable></View>)}
 
-      {/* Round done */}
-      {phase === 'round_done' && (
-        <View style={s.centered}>
-          <Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text>
-          <Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1]}/500</Text>
-          <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}>
-            <Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text>
-          </Pressable>
-        </View>
-      )}
-
-      {/* Complete */}
-      {phase === 'complete' && (
-        <View style={s.centered}>
-          <Text style={[s.bigTitle, { color: mColor }]}>Challenge Complete!</Text>
-          <Text style={[s.bigScore, { color: colors.text }]}>{getScorePercentage(mode ?? 'speed_recall', totalScore)}%</Text>
-          <Text style={[s.subtitle, { color: colors.textMid }]}>{totalScore} / {(modeData?.rounds?.length ?? 5) * 500} points</Text>
-          {action === 'create' && <Text style={[s.sentText, { color: colors.correct }]}>Challenge sent! Waiting for your friend.</Text>}
-          <Pressable style={[s.btn, { backgroundColor: mColor, marginTop: 20 }]} onPress={() => router.replace('/(tabs)/friends')}>
-            <Text style={s.btnText}>Back to friends</Text>
-          </Pressable>
-        </View>
-      )}
+      {phase === 'complete' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>Challenge Complete!</Text><Text style={[s.bigScore, { color: colors.text }]}>{getScorePercentage(mode ?? 'speed_recall', totalScore)}%</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{totalScore} / {(modeData?.rounds?.length ?? 5) * 500} points</Text>{action === 'create' && <Text style={[s.sentText, { color: colors.correct }]}>Challenge sent! Waiting for your friend.</Text>}<Pressable style={[s.btn, { backgroundColor: mColor, marginTop: 20 }]} onPress={() => router.replace('/(tabs)/friends')}><Text style={s.btnText}>Back to friends</Text></Pressable></View>)}
     </SafeAreaView>
   );
 }
