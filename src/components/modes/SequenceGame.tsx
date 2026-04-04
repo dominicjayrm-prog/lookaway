@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle, Rect, Polygon, Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 
@@ -14,7 +14,7 @@ function ShapeSvg({ type, color, size }: { type: string; color: string; size: nu
   }
 }
 
-type Phase = 'showing' | 'recall' | 'wrong' | 'round_done';
+type Phase = 'showing' | 'pause' | 'recall' | 'wrong' | 'round_done';
 
 interface Props {
   modeData: any;
@@ -26,8 +26,8 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('showing');
-  const [showingIdx, setShowingIdx] = useState(-1); // which shape is currently visible during showing phase
-  const [tappedOrder, setTappedOrder] = useState<number[]>([]); // indices tapped by player
+  const [showingIdx, setShowingIdx] = useState(-1);
+  const [tappedOrder, setTappedOrder] = useState<number[]>([]);
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [correctNextIdx, setCorrectNextIdx] = useState<number | null>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
@@ -39,7 +39,6 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
 
   useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
-  // Show shapes one by one
   const startShowing = useCallback(() => {
     setPhase('showing');
     setShowingIdx(-1);
@@ -53,39 +52,40 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
         setShowingIdx(idx);
         idx++;
         timerRef.current = setTimeout(() => {
-          setShowingIdx(-1); // hide
-          timerRef.current = setTimeout(showNext, 300); // brief gap
+          setShowingIdx(-1);
+          timerRef.current = setTimeout(showNext, 300);
         }, 1000);
       } else {
-        // All shown — move to recall
-        timerRef.current = setTimeout(() => setPhase('recall'), 500);
+        timerRef.current = setTimeout(() => setPhase('pause'), 300);
       }
     };
     timerRef.current = setTimeout(showNext, 500);
   }, [shapes]);
 
+  useEffect(() => {
+    if (phase !== 'pause') return;
+    timerRef.current = setTimeout(() => setPhase('recall'), 1000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [phase]);
+
   useEffect(() => { if (round) startShowing(); }, [roundIdx, round]);
 
   const handleTapShape = useCallback((shapeIndex: number) => {
     if (phase !== 'recall') return;
-    const expectedOrder = tappedOrder.length; // 0-based: which position in sequence they should tap next
+    const expectedOrder = tappedOrder.length;
     const correctShapeIndex = shapes.findIndex((s: any) => s.order === expectedOrder + 1);
-
-    if (correctShapeIndex === -1) return; // invalid data — skip
+    if (correctShapeIndex === -1) return;
 
     if (shapeIndex === correctShapeIndex) {
-      // Correct!
       const newTapped = [...tappedOrder, shapeIndex];
       setTappedOrder(newTapped);
 
       if (newTapped.length === shapes.length) {
-        // All correct — perfect round!
         const score = shapes.length * 20 + 50;
         setRoundScores(prev => [...prev, score]);
         setPhase('round_done');
       }
     } else {
-      // Wrong — round over
       setWrongIdx(shapeIndex);
       setCorrectNextIdx(correctShapeIndex);
       setPhase('wrong');
@@ -106,58 +106,74 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   if (!round) return null;
 
   const lastScore = roundScores[roundScores.length - 1] ?? 0;
+  const nextExpected = tappedOrder.length + 1;
 
   return (
     <View style={s.container}>
-      {phase === 'showing' && <Text style={[s.phaseLabel, { color: modeColor }]}>Watch the order!</Text>}
-      {phase === 'recall' && <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order: 1st, 2nd, 3rd...</Text>}
+      {phase === 'showing' && <Text style={[s.phaseLabel, { color: modeColor }]}>Watch carefully...</Text>}
+      {phase === 'pause' && <Text style={[s.phaseLabel, { color: modeColor }]}>Now tap them in order!</Text>}
+      {phase === 'recall' && (
+        <>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order \u2014 Next: #{nextExpected}</Text>
+          <Text style={[s.progressText, { color: colors.textLight }]}>{tappedOrder.length}/{shapes.length} correct</Text>
+        </>
+      )}
       {phase === 'wrong' && <Text style={[s.phaseLabel, { color: colors.wrong }]}>Wrong! The sequence ended.</Text>}
-      {phase === 'recall' && <Text style={[s.progressText, { color: colors.textLight }]}>{tappedOrder.length}/{shapes.length} correct so far</Text>}
 
       {phase !== 'round_done' && (
         <View style={[s.canvas, { backgroundColor: colors.card }]}>
-          {shapes.map((sh: any, i: number) => {
-            const isShowing = phase === 'showing' && showingIdx === i;
+          {phase === 'showing' && showingIdx >= 0 && showingIdx < shapes.length && (() => {
+            const sh = shapes[showingIdx];
+            const sz = sh.size ?? 32;
+            return (
+              <View style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }], alignItems: 'center' }}>
+                <ShapeSvg type={sh.type} color={sh.color} size={sz} />
+                <View style={[s.orderBadge, { backgroundColor: modeColor }]}>
+                  <Text style={s.orderText}>{sh.order}</Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          {(phase === 'recall' || phase === 'wrong') && shapes.map((sh: any, i: number) => {
             const isTapped = tappedOrder.includes(i);
             const isWrong = wrongIdx === i;
             const isCorrectNext = correctNextIdx === i && phase === 'wrong';
-            const isGrey = phase === 'recall' && !isTapped;
-            const sz = sh.size ?? 30;
+            const sz = sh.size ?? 32;
+
+            if (phase === 'wrong' && !isTapped && !isWrong && !isCorrectNext) {
+              return (
+                <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }], opacity: 0.2 }}>
+                  <ShapeSvg type={sh.type} color="#D1D5DB" size={sz} />
+                </View>
+              );
+            }
+
+            const shapeColor = isTapped ? sh.color : isWrong ? colors.wrong : isCorrectNext ? '#D4A012' : '#D1D5DB';
 
             return (
               <Pressable
                 key={i}
-                style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }], opacity: phase === 'showing' && showingIdx !== i && showingIdx !== -1 ? 0 : 1 }}
+                style={[
+                  { position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }] },
+                  !isTapped && !isWrong && !isCorrectNext && { borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed' as const, borderRadius: sz / 2 },
+                ]}
                 onPress={() => phase === 'recall' && !isTapped && handleTapShape(i)}
                 disabled={phase !== 'recall' || isTapped}
               >
-                {isShowing && (
-                  <View style={{ alignItems: 'center' }}>
-                    <ShapeSvg type={sh.type} color={sh.color} size={sz} />
-                    <View style={[s.orderBadge, { backgroundColor: modeColor }]}>
-                      <Text style={s.orderText}>{sh.order}</Text>
+                <View style={{ alignItems: 'center' }}>
+                  <ShapeSvg type={sh.type} color={shapeColor} size={sz} />
+                  {isTapped && (
+                    <View style={[s.orderBadge, { backgroundColor: colors.correct }]}>
+                      <Text style={s.orderText}>{tappedOrder.indexOf(i) + 1}</Text>
                     </View>
-                  </View>
-                )}
-                {phase !== 'showing' && (
-                  <View style={{ alignItems: 'center' }}>
-                    <ShapeSvg
-                      type={sh.type}
-                      color={isTapped ? sh.color : isWrong ? colors.wrong : isCorrectNext ? colors.correct : '#D1D5DB'}
-                      size={sz}
-                    />
-                    {isTapped && (
-                      <View style={[s.orderBadge, { backgroundColor: colors.correct }]}>
-                        <Text style={s.orderText}>{tappedOrder.indexOf(i) + 1}</Text>
-                      </View>
-                    )}
-                    {isCorrectNext && (
-                      <View style={[s.orderBadge, { backgroundColor: colors.correct }]}>
-                        <Text style={s.orderText}>{tappedOrder.length + 1}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
+                  )}
+                  {isCorrectNext && (
+                    <View style={[s.orderBadge, { backgroundColor: '#D4A012' }]}>
+                      <Text style={s.orderText}>{tappedOrder.length + 1}</Text>
+                    </View>
+                  )}
+                </View>
               </Pressable>
             );
           })}
@@ -176,12 +192,23 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
           </Pressable>
         </View>
       )}
+
+      <View style={s.scoreRow}>
+        {roundScores.map((sc, i) => (
+          <View key={i} style={[s.scoreDot, { backgroundColor: sc > 0 ? colors.correct : colors.wrong }]}>
+            <Text style={s.scoreDotText}>{sc > 0 ? '\u2713' : '\u2715'}</Text>
+          </View>
+        ))}
+        {Array.from({ length: totalRounds - roundScores.length }).map((_, i) => (
+          <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
+        ))}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, gap: 8 },
+  container: { flex: 1, gap: 6 },
   phaseLabel: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
   progressText: { fontSize: 12, textAlign: 'center' },
   canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden' },
@@ -193,4 +220,7 @@ const s = StyleSheet.create({
   roundDetail: { fontSize: 14 },
   btn: { paddingVertical: 14, paddingHorizontal: 36, borderRadius: 14, marginTop: 12 },
   btnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  scoreRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 4 },
+  scoreDot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  scoreDotText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
 });
