@@ -79,18 +79,17 @@ function AuthScreen() {
         if (result.error) {
           setError(result.error);
         } else {
-          // Save username to profiles after signup
-          if (username.trim()) {
-            const { data: session } = await supabase.auth.getSession();
-            if (session?.session?.user?.id) {
-              await supabase.from('profiles').upsert({
-                id: session.session.user.id,
-                username: username.trim(),
-                display_name: username.trim(),
-              }, { onConflict: 'id' });
-            }
+          // With email confirmation OFF, user is already signed in.
+          // Save username to profiles.
+          const { data: session } = await supabase.auth.getSession();
+          if (session?.session?.user?.id && username.trim()) {
+            await supabase.from('profiles').upsert({
+              id: session.session.user.id,
+              username: username.trim(),
+              display_name: username.trim(),
+            }, { onConflict: 'id' });
           }
-          setSignUpSuccess(true);
+          // Auth state change listener will redirect automatically
         }
       }
     } catch (e: unknown) {
