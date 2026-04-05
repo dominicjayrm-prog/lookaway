@@ -1,5 +1,5 @@
-import React, { useReducer, useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, GestureResponderEvent, Platform } from 'react-native';
+import React, { useReducer, useCallback, useRef, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, GestureResponderEvent, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -8,6 +8,7 @@ import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
+import { useGameStore } from '@/src/store';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -41,6 +42,8 @@ export default function SpotGameScreen() {
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
   const mag = String.fromCodePoint(0x1F50D);
 
+  const loseLife = useGameStore((s) => s.loseLife);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [state, dispatch] = useReducer(reducer, { phase:'READY', roundIndex:0, results:[], tapCorrect:null, modifiedShownAt:0, cardW:300, cardH:300 });
   const round = challenge.rounds[state.roundIndex] ?? null;
 
@@ -109,7 +112,11 @@ export default function SpotGameScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <Pressable onPress={()=>{clearTimer();router.back();}}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
+        <Pressable onPress={()=>{
+          const activePhases: Phase[] = ['SHOW_ORIGINAL','BLANK','SHOW_MODIFIED','FEEDBACK'];
+          if(activePhases.includes(state.phase)){setShowQuitConfirm(true);}
+          else{clearTimer();router.back();}
+        }}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
         <Text style={s.roundLabel}>Round {state.roundIndex+1} of 5</Text>
         <View style={s.spacer}/>
       </View>
@@ -152,6 +159,24 @@ export default function SpotGameScreen() {
           <Text style={s.feedbackDesc}>{round.change.description}</Text>
         </Animated.View>
       )}
+
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={s.quitBackdrop}>
+            <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[s.quitCard, { backgroundColor: colors.bg }]}>
+              <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[s.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); loseLife(); router.back(); }}>
+                <Text style={s.quitBtnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={s.quitBtnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -179,4 +204,11 @@ const s = StyleSheet.create({
   scoreText:{fontSize:56,fontWeight:typography.weights.black,color:colors.text},
   resultsRow:{flexDirection:'row',gap:8},
   resultDot:{width:16,height:16,borderRadius:999},
+  quitBackdrop:{flex:1,backgroundColor:'rgba(0,0,0,0.4)',justifyContent:'center',alignItems:'center',padding:30},
+  quitBackdropTouch:{...StyleSheet.absoluteFillObject},
+  quitCard:{width:'100%',maxWidth:300,borderRadius:20,padding:24,alignItems:'center',gap:12},
+  quitTitle:{fontSize:20,fontWeight:'700'},
+  quitMessage:{fontSize:14,textAlign:'center',marginBottom:4},
+  quitLeaveBtn:{paddingVertical:14,paddingHorizontal:32,borderRadius:14,alignItems:'center',width:'100%'},
+  quitBtnText:{color:'#FFF',fontSize:16,fontWeight:'700'},
 });

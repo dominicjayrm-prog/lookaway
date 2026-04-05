@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Polygon, Ellipse } from 'react-native-svg';
@@ -59,6 +59,7 @@ export default function SideCampaignScreen() {
   const [scorePct, setScorePct] = useState(0);
   const [stars, setStarsState] = useState(0);
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   // Speed recall inline state
   const [roundIdx, setRoundIdx] = useState(0);
@@ -113,12 +114,14 @@ export default function SideCampaignScreen() {
   }, [viewingTime]);
 
   const handleCanvasTap = useCallback((e: any) => {
-    if (phase !== 'recall' || !currentShape) return;
-    const { locationX, locationY } = e.nativeEvent;
-    const tapX = (locationX / canvasSize.w) * 100;
-    const tapY = (locationY / canvasSize.h) * 100;
+    if (phase !== 'recall' || !currentShape || tapResult) return;
+    const nativeEvent = e.nativeEvent;
+    const locationX = nativeEvent.locationX ?? nativeEvent.offsetX ?? 0;
+    const locationY = nativeEvent.locationY ?? nativeEvent.offsetY ?? 0;
+    const tapX = canvasSize.w > 0 ? (locationX / canvasSize.w) * 100 : 50;
+    const tapY = canvasSize.h > 0 ? (locationY / canvasSize.h) * 100 : 50;
     const dist = Math.sqrt((tapX - currentShape.x) ** 2 + (tapY - currentShape.y) ** 2);
-    const score = Math.max(0, Math.round(100 - dist * 2));
+    const score = Math.max(0, Math.round(100 - dist * 2)) || 0;
 
     setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, score });
     setShapeScores(prev => [...prev, score]);
@@ -130,8 +133,13 @@ export default function SideCampaignScreen() {
         setShapeIdx(prev => prev + 1);
         setPhase('recall');
       } else {
-        const roundTotal = [...shapeScores, score].reduce((a, b) => a + b, 0);
-        setRoundScores(prev => [...prev, roundTotal]);
+        // Use functional updater to get latest shapeScores (avoids stale closure)
+        setShapeScores(prev => {
+          const allScores = [...prev, score];
+          const roundTotal = allScores.reduce((a, b) => a + b, 0);
+          setRoundScores(rs => [...rs, roundTotal]);
+          return allScores;
+        });
         setPhase('round_done');
       }
     }, 1200);
@@ -229,7 +237,11 @@ export default function SideCampaignScreen() {
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <Pressable onPress={() => {
+          const inGame = phase === 'show' || phase === 'recall' || phase === 'feedback' || phase === 'round_done';
+          if (inGame) setShowQuitConfirm(true);
+          else router.back();
+        }} style={s.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Text style={[s.closeX, { color: colors.textMid }]}>{'\u2715'}</Text>
         </Pressable>
         <View style={s.headerCenter}>
@@ -291,9 +303,16 @@ export default function SideCampaignScreen() {
           <Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
             {tapResult && (
               <>
-                <View style={{ position: 'absolute', left: `${tapResult.tapX}%`, top: `${tapResult.tapY}%`, width: 12, height: 12, borderRadius: 6, backgroundColor: currentShape.color, transform: [{ translateX: -6 }, { translateY: -6 }] }} />
-                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -12 }, { translateY: -12 }] }} />
-                <View style={{ position: 'absolute', left: `${(tapResult.tapX + tapResult.actualX) / 2}%`, top: `${Math.min(tapResult.tapY, tapResult.actualY) - 5}%`, transform: [{ translateX: -20 }] }}>
+                {/* Player's tap marker */}
+                <View style={{ position: 'absolute', left: `${tapResult.tapX}%`, top: `${tapResult.tapY}%`, width: 18, height: 18, borderRadius: 9, backgroundColor: currentShape.color, opacity: 0.6, transform: [{ translateX: -9 }, { translateY: -9 }] }} />
+                {/* Actual shape position — show the real shape */}
+                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, transform: [{ translateX: -(currentShape.size ?? 42) / 2 }, { translateY: -(currentShape.size ?? 42) / 2 }], opacity: 0.4 }}>
+                  <ShapeSvg type={currentShape.type} color={currentShape.color} size={currentShape.size ?? 42} />
+                </View>
+                {/* Dashed circle around actual position */}
+                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 48, height: 48, borderRadius: 24, borderWidth: 2.5, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -24 }, { translateY: -24 }] }} />
+                {/* Score label */}
+                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY - 8}%`, transform: [{ translateX: -24 }, { translateY: -32 }] }}>
                   <Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text>
                 </View>
               </>
@@ -306,7 +325,7 @@ export default function SideCampaignScreen() {
       {phase === 'round_done' && !isExternalMode && (
         <View style={s.centered}>
           <Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text>
-          <Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1]}/500</Text>
+          <Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1] ?? 0}/{(currentRound?.shapes?.length ?? 5) * 100}</Text>
           <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}>
             <Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text>
           </Pressable>
@@ -365,6 +384,25 @@ export default function SideCampaignScreen() {
           </View>
         </View>
       )}
+
+      {/* Quit confirmation modal */}
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={s.quitBackdrop}>
+            <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[s.quitCard, { backgroundColor: colors.card }]}>
+              <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[s.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); loseLife(); router.back(); }}>
+                <Text style={s.btnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={s.btnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -401,4 +439,9 @@ const s = StyleSheet.create({
   starRow: { flexDirection: 'row', gap: 8 },
   star: { fontSize: 36 },
   gemsText: { fontSize: 18, fontWeight: '700' },
+  quitBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
+  quitBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  quitCard: { width: '100%', maxWidth: 300, borderRadius: 20, padding: 24, alignItems: 'center', gap: 12 },
+  quitTitle: { fontSize: 20, fontWeight: '700' },
+  quitMessage: { fontSize: 14, textAlign: 'center', marginBottom: 4 },
 });
