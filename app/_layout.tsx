@@ -184,6 +184,7 @@ function ThemedStack() {
         <Stack.Screen name="game/speed" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/spot" options={{ gestureEnabled: false }} />
         <Stack.Screen name="world/[worldId]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="world/side-world" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="game/result" />
         <Stack.Screen name="game/challenge" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/challenge-result" />
