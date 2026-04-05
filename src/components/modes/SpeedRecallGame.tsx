@@ -82,13 +82,15 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
 
   const handleCanvasTap = useCallback((e: any) => {
     if (phase !== 'recall' || !currentShape || tapResult) return;
-    const { locationX, locationY } = e.nativeEvent;
-    const tapX = (locationX / canvasSize.w) * 100;
-    const tapY = (locationY / canvasSize.h) * 100;
+    const nativeEvent = e.nativeEvent;
+    const locationX = nativeEvent.locationX ?? nativeEvent.offsetX ?? 0;
+    const locationY = nativeEvent.locationY ?? nativeEvent.offsetY ?? 0;
+    const tapX = canvasSize.w > 0 ? (locationX / canvasSize.w) * 100 : 50;
+    const tapY = canvasSize.h > 0 ? (locationY / canvasSize.h) * 100 : 50;
     const dist = Math.sqrt((tapX - currentShape.x) ** 2 + (tapY - currentShape.y) ** 2);
-    const score = Math.max(0, Math.round(100 - dist * 2));
+    const score = Math.max(0, Math.round(100 - dist * 2)) || 0;
 
-    setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, dist: Math.round(dist), score });
+    setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, dist: Math.round(dist) || 0, score });
     setShapeScores(prev => [...prev, score]);
     setPhase('feedback');
 
@@ -98,8 +100,12 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
         setShapeIdx(prev => prev + 1);
         setPhase('recall');
       } else {
-        const roundTotal = [...shapeScores, score].reduce((a, b) => a + b, 0);
-        setRoundScores(prev => [...prev, roundTotal]);
+        setShapeScores(prev => {
+          const allScores = [...prev, score];
+          const roundTotal = allScores.reduce((a, b) => a + b, 0);
+          setRoundScores(rs => [...rs, roundTotal]);
+          return allScores;
+        });
         setPhase('round_done');
       }
     }, 1500);
@@ -199,7 +205,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
       ) : (
         /* Round score display */
         <View style={s.centered}>
-          <Text style={[s.roundScore, { color: colors.text }]}>{lastRoundScore}/500</Text>
+          <Text style={[s.roundScore, { color: colors.text }]}>{lastRoundScore ?? 0}/{shapes.length * 100}</Text>
           <Pressable style={[s.btn, { backgroundColor: modeColor }]} onPress={nextRound}>
             <Text style={s.btnText}>{roundIdx + 1 < totalRounds ? 'Next Round' : 'See Results'}</Text>
           </Pressable>

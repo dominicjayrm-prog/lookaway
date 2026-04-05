@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -30,6 +30,8 @@ export default function DailyGameScreen() {
   }, [dateStr]);
 
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, incrementStreak, score } = useGameStore();
+  const loseLife = useGameStore((s) => s.loseLife);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   useEffect(() => { resetGame(); }, []);
 
@@ -77,7 +79,11 @@ export default function DailyGameScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
+        <Pressable onPress={() => {
+          const activePhases = ['MEMORISE', 'TRANSITION', 'QUESTION', 'REVEAL', 'SCENE_SCORE'];
+          if (activePhases.includes(gameState)) { setShowQuitConfirm(true); }
+          else { clearTimeouts(); resetGame(); router.back(); }
+        }}>
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
         </Pressable>
         <Badge label="DAILY CHALLENGE" />
@@ -133,6 +139,24 @@ export default function DailyGameScreen() {
           <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />
         </Animated.View>
       )}
+
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={styles.quitBackdrop}>
+            <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
+              <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}>
+                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={styles.quitBtnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -153,4 +177,11 @@ const styles = StyleSheet.create({
   blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
   sceneScoreTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   sceneScoreBody: { fontSize: typography.sizes.lg, color: colors.textMid },
+  quitBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
+  quitBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  quitCard: { width: '100%', maxWidth: 300, borderRadius: 20, padding: 24, alignItems: 'center', gap: 12 },
+  quitTitle: { fontSize: 20, fontWeight: '700' },
+  quitMessage: { fontSize: 14, textAlign: 'center', marginBottom: 4 },
+  quitLeaveBtn: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14, alignItems: 'center', width: '100%' },
+  quitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

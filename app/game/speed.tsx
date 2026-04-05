@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -35,6 +35,8 @@ export default function SpeedGameScreen() {
   const [elapsed, setElapsed] = useState(0);
 
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, incrementStreak, score } = useGameStore();
+  const loseLife = useGameStore((s) => s.loseLife);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   useEffect(() => { resetGame(); }, []);
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function SpeedGameScreen() {
             <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
           </Pressable>
           <Badge label="SPEED ROUND" />
+
           <View style={styles.headerSpacer} />
         </View>
         <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.centered}>
@@ -121,7 +124,7 @@ export default function SpeedGameScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
+        <Pressable onPress={() => { setShowQuitConfirm(true); }}>
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
         </Pressable>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>

@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -40,6 +40,8 @@ export default function GameScreen() {
   const [showPeekScene, setShowPeekScene] = useState(false);
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [timerBonus, setTimerBonus] = useState(0);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const loseLife = useGameStore((s) => s.loseLife);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
   const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
 
@@ -151,7 +153,11 @@ export default function GameScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
+        <Pressable onPress={() => {
+          const inGame = gameState === 'MEMORISE' || gameState === 'TRANSITION' || gameState === 'QUESTION' || gameState === 'REVEAL' || gameState === 'SCENE_SCORE';
+          if (inGame) setShowQuitConfirm(true);
+          else { clearTimeouts(); resetGame(); router.back(); }
+        }}>
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
         </Pressable>
         <Badge label={`LEVEL ${level.levelNumber}`} />
@@ -209,6 +215,25 @@ export default function GameScreen() {
 
       {/* Buy power-up popup (pauses game timers) */}
       <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupPurchased} />
+
+      {/* Quit confirmation modal */}
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={styles.quitBackdrop}>
+            <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
+              <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}>
+                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={styles.quitBtnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -229,4 +254,11 @@ const styles = StyleSheet.create({
   sceneScoreTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   sceneScoreBody: { fontSize: typography.sizes.lg, color: colors.textMid },
   errorText: { fontSize: typography.sizes.lg, color: colors.textMid, textAlign: 'center', marginBottom: spacing.lg },
+  quitBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
+  quitBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  quitCard: { width: '100%', maxWidth: 300, borderRadius: 20, padding: 24, alignItems: 'center', gap: 12 },
+  quitTitle: { fontSize: 20, fontWeight: '700' as const },
+  quitMessage: { fontSize: 14, textAlign: 'center' as const, marginBottom: 4 },
+  quitLeaveBtn: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14, alignItems: 'center' as const, width: '100%' as any },
+  quitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' as const },
 });

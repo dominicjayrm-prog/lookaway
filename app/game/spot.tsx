@@ -1,5 +1,5 @@
-import React, { useReducer, useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, GestureResponderEvent, Platform } from 'react-native';
+import React, { useReducer, useCallback, useRef, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, GestureResponderEvent, Platform, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -8,6 +8,7 @@ import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
+import { useGameStore } from '@/src/store';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -41,6 +42,8 @@ export default function SpotGameScreen() {
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
   const mag = String.fromCodePoint(0x1F50D);
 
+  const loseLife = useGameStore((s) => s.loseLife);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [state, dispatch] = useReducer(reducer, { phase:'READY', roundIndex:0, results:[], tapCorrect:null, modifiedShownAt:0, cardW:300, cardH:300 });
   const round = challenge.rounds[state.roundIndex] ?? null;
 
@@ -109,7 +112,11 @@ export default function SpotGameScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <Pressable onPress={()=>{clearTimer();router.back();}}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
+        <Pressable onPress={()=>{
+          const activePhases: Phase[] = ['SHOW_ORIGINAL','BLANK','SHOW_MODIFIED','FEEDBACK'];
+          if(activePhases.includes(state.phase)){setShowQuitConfirm(true);}
+          else{clearTimer();router.back();}
+        }}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
         <Text style={s.roundLabel}>Round {state.roundIndex+1} of 5</Text>
         <View style={s.spacer}/>
       </View>
