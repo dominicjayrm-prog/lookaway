@@ -4,7 +4,7 @@
  * the same modeData format that the mode components expect.
  */
 
-const SHAPE_TYPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart'];
+const SHAPE_TYPES = ['circle', 'square', 'triangle', 'star', 'diamond', 'hexagon', 'heart', 'pentagon', 'oval', 'cross', 'arrow', 'semicircle', 'parallelogram', 'trapezoid', 'rhombus', 'kite'];
 const ALL_COLORS = [
   { hex: '#FF6B6B', name: 'red' },
   { hex: '#0984E3', name: 'blue' },
@@ -16,6 +16,12 @@ const ALL_COLORS = [
   { hex: '#00CEC9', name: 'teal' },
   { hex: '#636E72', name: 'grey' },
   { hex: '#F9A825', name: 'yellow' },
+  { hex: '#B8860B', name: 'dark gold' },
+  { hex: '#8E44AD', name: 'deep purple' },
+  { hex: '#2ECC71', name: 'lime' },
+  { hex: '#E84393', name: 'hot pink' },
+  { hex: '#1ABC9C', name: 'turquoise' },
+  { hex: '#F39C12', name: 'amber' },
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
