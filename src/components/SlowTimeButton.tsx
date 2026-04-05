@@ -13,7 +13,7 @@ interface SlowTimeButtonProps {
 
 export const SlowTimeButton = React.memo(function SlowTimeButton({ used, onUse, disabled }: SlowTimeButtonProps) {
   const { colors } = useTheme();
-  const count = useGameStore((s) => s.powerUps.slowTime);
+  const count = useGameStore((s) => s.powerUps?.slowTime ?? 0);
   const def = POWER_UPS.slowTime;
 
   if (disabled) return null;
