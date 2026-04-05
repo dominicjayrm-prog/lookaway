@@ -171,22 +171,28 @@ function PlayTab() {
     const timer = setTimeout(() => {
       const spots: ({ x: number; y: number; width: number; height: number } | null)[] = [null, null, null, null, null];
       let measured = 0;
-      const check = () => { if (++measured >= 3) setTutorialSpots(spots); };
+      const check = () => { measured++; if (measured >= 3) setTutorialSpots([...spots]); };
 
-      heroRef.current?.measureInWindow((x, y, w, h) => { spots[0] = { x, y, width: w, height: h }; check(); });
-      livesRef.current?.measureInWindow((x, y, w, h) => { spots[1] = { x, y, width: w, height: h }; check(); });
-      gemsRef.current?.measureInWindow((x, y, w, h) => { spots[2] = { x, y, width: w, height: h }; check(); });
+      // Use measureInWindow for absolute screen coordinates
+      [heroRef, livesRef, gemsRef].forEach((ref, idx) => {
+        if (ref.current) {
+          ref.current.measureInWindow((x: number, y: number, w: number, h: number) => {
+            if (w > 0 && h > 0) spots[idx] = { x, y, width: w, height: h };
+            check();
+          });
+        } else {
+          check();
+        }
+      });
 
-      // Tab bar icons — approximate positions (4 tabs evenly spaced)
+      // Tab bar icons — calculate positions from screen dimensions
       const sw = Dimensions.get('window').width;
       const sh = Dimensions.get('window').height;
       const tabW = sw / 4;
-      const tabH = 50;
-      const tabY = sh - tabH - 20; // approximate tab bar position
-      // Journey is 2nd tab (index 1), Shop is 4th tab (index 3)
-      spots[3] = { x: tabW * 1 + tabW * 0.15, y: tabY, width: tabW * 0.7, height: tabH };
-      spots[4] = { x: tabW * 3 + tabW * 0.15, y: tabY, width: tabW * 0.7, height: tabH };
-    }, 600);
+      const tabY = sh - 65; // tab bar is at the very bottom
+      spots[3] = { x: tabW * 1 + 10, y: tabY, width: tabW - 20, height: 50 }; // Journey (2nd tab)
+      spots[4] = { x: tabW * 3 + 10, y: tabY, width: tabW - 20, height: 50 }; // Shop (4th tab)
+    }, 800);
     return () => clearTimeout(timer);
   }, [showTutorial]);
 
@@ -201,13 +207,13 @@ function PlayTab() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <View ref={livesRef} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
+          <View ref={livesRef} collapsable={false} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
             ))}
           </View>
           <View style={styles.topBarRight}>
-            <View ref={gemsRef} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
+            <View ref={gemsRef} collapsable={false} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </View>
@@ -225,7 +231,7 @@ function PlayTab() {
         </View>
 
         {/* Hero card — purple gradient */}
-        <View ref={heroRef} style={styles.heroCard}>
+        <View ref={heroRef} collapsable={false} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
             <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
