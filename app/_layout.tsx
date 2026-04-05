@@ -199,7 +199,7 @@ function ThemedStack() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -215,3 +215,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default RootLayout;

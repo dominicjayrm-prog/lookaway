@@ -10,7 +10,7 @@ import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type Po
 
 const GEM = '\u{1F48E}';
 
-export default function ShopTab() {
+function ShopTab() {
   const { colors } = useTheme();
   const { gems, powerUps, buyPowerUp, refillLivesWithGems } = useGameStore();
   const [selectedMode, setSelectedMode] = useState('classic');
@@ -191,6 +191,7 @@ export default function ShopTab() {
   );
 }
 
+export default ShopTab;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },

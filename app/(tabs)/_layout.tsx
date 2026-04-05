@@ -19,7 +19,7 @@ const TAB_CONFIG: {
   { name: 'shop', title: 'Shop', icon: 'diamond-outline', iconFocused: 'diamond' },
 ];
 
-export default function TabLayout() {
+function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : 16;
@@ -64,6 +64,7 @@ export default function TabLayout() {
   );
 }
 
+export default TabLayout;
 const styles = StyleSheet.create({
   activeIconContainer: {
     borderRadius: 12,

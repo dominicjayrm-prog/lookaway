@@ -22,7 +22,7 @@ import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
 type Mode = 'login' | 'signup';
 
-export default function AuthScreen() {
+function AuthScreen() {
   const { colors } = useTheme();
   const { signIn, signUp } = useAuth();
   const params = useLocalSearchParams<{ mode?: string }>();
@@ -254,6 +254,8 @@ export default function AuthScreen() {
     </SafeAreaView>
   );
 }
+
+export default AuthScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

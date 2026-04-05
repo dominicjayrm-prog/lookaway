@@ -25,7 +25,7 @@ const NOTIFICATION_ITEMS: { key: NotificationPreferenceKey; icon: string; label:
   { key: 'achievements', icon: '\uD83C\uDFC5', label: 'Achievements' },
 ];
 
-export default function SettingsScreen() {
+function SettingsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -118,6 +118,8 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+export default SettingsScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },

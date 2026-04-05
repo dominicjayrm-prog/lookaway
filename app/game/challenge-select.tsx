@@ -19,7 +19,7 @@ function ModeIcon({ mode, size = 22, color = '#FFF' }: { mode: string; size?: nu
   }
 }
 
-export default function ChallengeSelectScreen() {
+function ChallengeSelectScreen() {
   const { friendId, friendUsername } = useLocalSearchParams<{ friendId: string; friendUsername: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -119,6 +119,8 @@ export default function ChallengeSelectScreen() {
     </SafeAreaView>
   );
 }
+
+export default ChallengeSelectScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

@@ -16,7 +16,7 @@ const isWeb = Platform.OS === 'web';
 function loadProfilePic(): string | null { try { return localStorage.getItem('blanked-profile-pic'); } catch { return null; } }
 function saveProfilePic(uri: string | null) { try { if (uri) localStorage.setItem('blanked-profile-pic', uri); else localStorage.removeItem('blanked-profile-pic'); } catch {} }
 
-export default function ProfileScreen() {
+function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
@@ -139,6 +139,7 @@ function SettingsRow({ icon, label, colors }: { icon: string; label: string; col
   return (<View style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}><Ionicons name={icon as any} size={18} color={colors.accent} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>{label}</Text></View><Switch value={true} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" /></View>);
 }
 
+export default ProfileScreen;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },

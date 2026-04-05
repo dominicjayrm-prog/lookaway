@@ -30,7 +30,7 @@ function Avatar({ initial, color, size = 56, winner = false }: { initial: string
   );
 }
 
-export default function ChallengeResultScreen() {
+function ChallengeResultScreen() {
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -139,6 +139,8 @@ export default function ChallengeResultScreen() {
     </SafeAreaView>
   );
 }
+
+export default ChallengeResultScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },

@@ -30,7 +30,7 @@ function ShapeSvg({ type, color, size }: { type: string; color: string; size: nu
   }
 }
 
-export default function ChallengeModeScreen() {
+function ChallengeModeScreen() {
   const { mode, friendId, action, challengeId } = useLocalSearchParams<{ mode: string; friendId?: string; action?: string; challengeId?: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -181,6 +181,8 @@ export default function ChallengeModeScreen() {
     </SafeAreaView>
   );
 }
+
+export default ChallengeModeScreen;
 
 const s = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16 },
