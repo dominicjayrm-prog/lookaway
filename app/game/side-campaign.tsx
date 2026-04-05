@@ -44,7 +44,7 @@ function getStarsForScore(pct: number): number {
   return 0;
 }
 
-export default function SideCampaignScreen() {
+function SideCampaignScreen() {
   const { levelId, mode, worldNumber, levelNumber, worldName } = useLocalSearchParams<{
     levelId: string; mode: string; worldNumber: string; levelNumber: string; worldName: string;
   }>();
@@ -415,6 +415,8 @@ export default function SideCampaignScreen() {
     </SafeAreaView>
   );
 }
+
+export default SideCampaignScreen;
 
 const s = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16 },
