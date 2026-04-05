@@ -1,19 +1,15 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Platform } from 'react-native';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Animated as RNAnimated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
+import Svg, { Path, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { generatePath, getGeneratedMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
-import type { PathNode } from '@/src/data/worldPaths';
 
-const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
-const NODE_SIZE = 42;
-const CHECKPOINT_SIZE = 48;
-const BOSS_SIZE = 56;
-const SIDE_PREFIX: Record<string, string> = { speed_recall: 'sr', snap_match: 'sm', sequence: 'seq', counting_blitz: 'cb', colour_chain: 'cc' };
+var MAP_W = Math.min(Dimensions.get('window').width, 430);
+var PREFIXES: Record<string, string> = { speed_recall: 'sr', snap_match: 'sm', sequence: 'seq', counting_blitz: 'cb', colour_chain: 'cc' };
 
 function StarSvg({ size = 11, filled = false, color = '#D4A012' }: { size?: number; filled?: boolean; color?: string }) {
   return <Svg width={size} height={size} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={filled ? color : 'none'} stroke={filled ? color : '#B2BEC3'} strokeWidth={filled ? 0 : 6} /></Svg>;
@@ -28,129 +24,126 @@ function CrownSvg({ size = 18, color = '#D4A012', filled = false }: { size?: num
   return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M3,18 L5,8 L9,13 L12,5 L15,13 L19,8 L21,18 Z" fill={filled ? color : 'none'} stroke={color} strokeWidth={1.5} strokeLinejoin="round" /></Svg>;
 }
 
-type NodeState = 'completed' | 'current' | 'near-locked' | 'far-locked' | 'boss-locked' | 'boss-completed';
-
-function getNodeState(levelNum: number, completedUpTo: number, totalLevels: number): NodeState {
-  const isBoss = levelNum === totalLevels;
-  if (levelNum <= completedUpTo) return isBoss ? 'boss-completed' : 'completed';
-  if (levelNum === completedUpTo + 1) return 'current';
-  if (isBoss) return 'boss-locked';
-  if (levelNum <= completedUpTo + 4) return 'near-locked';
+function getNodeState(num: number, done: number, total: number) {
+  var boss = num === total;
+  if (num <= done) return boss ? 'boss-completed' : 'completed';
+  if (num === done + 1) return 'current';
+  if (boss) return 'boss-locked';
+  if (num <= done + 4) return 'near-locked';
   return 'far-locked';
 }
 
-function renderNode(state: NodeState, levelNum: number, worldColor: string, nodeSize: number, isBoss: boolean) {
-  const br = isBoss ? 16 : nodeSize / 2;
+function renderNode(state: string, num: number, wc: string, sz: number, boss: boolean) {
+  var br = boss ? 16 : sz / 2;
   if (state === 'completed' || state === 'boss-completed') {
-    return (
-      <View style={[st.nodeCircle, { width: nodeSize, height: nodeSize, borderRadius: br, backgroundColor: worldColor, borderWidth: 2, borderColor: worldColor + '40' }]}>
-        {isBoss ? <CrownSvg size={18} color="#FFFFFF" filled /> : <Text style={st.completedNum}>{levelNum}</Text>}
-      </View>
-    );
+    return <View style={[st.nodeCircle, { width: sz, height: sz, borderRadius: br, backgroundColor: wc, borderWidth: 2, borderColor: wc + '40', shadowColor: wc, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 4 }]}>{boss ? <CrownSvg size={18} color="#FFFFFF" filled /> : <Text style={st.completedNum}>{num}</Text>}</View>;
   }
   if (state === 'current') {
-    return (
-      <View style={[st.nodeCircle, { width: nodeSize, height: nodeSize, borderRadius: br, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: worldColor }]}>
-        <PlayTriangle size={14} color={worldColor} />
-      </View>
-    );
+    return <View style={[st.nodeCircle, { width: sz, height: sz, borderRadius: br, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: wc, shadowColor: wc, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 4 }]}><PlayTriangle size={14} color={wc} /></View>;
   }
   if (state === 'near-locked') {
-    return (
-      <View style={[st.nodeCircle, { width: nodeSize, height: nodeSize, borderRadius: br, backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 2, borderColor: 'rgba(0,0,0,0.06)' }]}>
-        <Text style={st.lockedNum}>{levelNum}</Text>
-      </View>
-    );
+    return <View style={[st.nodeCircle, { width: sz, height: sz, borderRadius: br, backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 2, borderColor: 'rgba(0,0,0,0.06)' }]}><Text style={st.lockedNum}>{num}</Text></View>;
   }
-  return (
-    <View style={[st.nodeCircle, { width: nodeSize, height: nodeSize, borderRadius: br, backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.04)' }]}>
-      {isBoss ? <CrownSvg size={18} color="#B2BEC3" /> : <LockSvg size={13} />}
-    </View>
-  );
+  return <View style={[st.nodeCircle, { width: sz, height: sz, borderRadius: br, backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.04)' }]}>{boss ? <CrownSvg size={18} color="#B2BEC3" /> : <LockSvg size={13} />}</View>;
 }
 
-// Exported as default AFTER definition to avoid minifier TDZ conflicts
+/** Animation hook — keeps animated values in their own scope to avoid minifier name collisions */
+function useMapAnims(nodeCount: number) {
+  var header = useRef(new RNAnimated.Value(0)).current;
+  var bottom = useRef(new RNAnimated.Value(0)).current;
+  var pathLine = useRef(new RNAnimated.Value(0)).current;
+  var nodes = useRef(Array.from({ length: nodeCount }, () => new RNAnimated.Value(0))).current;
+
+  useEffect(() => {
+    RNAnimated.timing(header, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    RNAnimated.timing(pathLine, { toValue: 1, duration: 600, delay: 200, useNativeDriver: true }).start();
+    RNAnimated.parallel(nodes.map((n, i) => RNAnimated.timing(n, { toValue: 1, duration: 350, delay: 300 + (nodeCount - 1 - i) * 40, useNativeDriver: true }))).start();
+    RNAnimated.timing(bottom, { toValue: 1, duration: 400, delay: 250, useNativeDriver: true }).start();
+  }, []);
+
+  return { header, bottom, pathLine, nodes };
+}
+
 function SideWorldMap() {
-  const params = useLocalSearchParams<{ mode: string; worldNumber: string; worldName: string }>();
-  const router = useRouter();
-  const themeCtx = useTheme();
-  const safeArea = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  var params = useLocalSearchParams<{ mode: string; worldNumber: string; worldName: string }>();
+  var router = useRouter();
+  var themeColors = useTheme().colors;
+  var safeArea = useSafeAreaInsets();
+  var scrollRef = useRef<ScrollView>(null);
 
-  const colors = themeCtx.colors;
-  const modeId = params.mode ?? 'speed_recall';
-  const worldNum = parseInt(params.worldNumber ?? '1', 10);
-  const wName = params.worldName ?? 'World';
-  const campaign = CAMPAIGNS[modeId];
-  const worldColor = campaign?.color ?? '#6C5CE7';
-  const worldLightColor = worldColor + '15';
-  const totalLevels = campaign?.levelsPerWorld?.[worldNum - 1] ?? 15;
-  const prefix = SIDE_PREFIX[modeId] ?? modeId;
-  const totalWorlds = campaign?.worldCount ?? 3;
+  var modeId = params.mode ?? 'speed_recall';
+  var worldNum = parseInt(params.worldNumber ?? '1', 10);
+  var wName = params.worldName ?? 'World';
+  var campaign = CAMPAIGNS[modeId];
+  var worldColor = campaign?.color ?? '#6C5CE7';
+  var totalLevels = campaign?.levelsPerWorld?.[worldNum - 1] ?? 15;
+  var prefix = PREFIXES[modeId] ?? modeId;
+  var totalWorlds = campaign?.worldCount ?? 3;
 
-  const [mapWidth, setMapWidth] = useState(DEFAULT_MAP_W);
-  const [popup, setPopup] = useState<number | null>(null);
-  const [progress, setProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
+  var [mapWidth, setMapWidth] = useState(MAP_W);
+  var [popup, setPopup] = useState<number | null>(null);
+  var [progress, setProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
 
-  const path = useMemo(() => generatePath(totalLevels, worldNum + modeId.length), [totalLevels, worldNum, modeId]);
-  const mapHeight = useMemo(() => getGeneratedMapHeight(path), [path]);
+  var path = useMemo(() => generatePath(totalLevels, worldNum + modeId.length), [totalLevels, worldNum, modeId]);
+  var mapHeight = useMemo(() => getGeneratedMapHeight(path), [path]);
+  var anims = useMapAnims(path.length);
 
   useEffect(() => {
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) return;
-        const { data } = await supabase.from('side_campaign_progress').select('level_id, stars, best_score').eq('user_id', session.user.id).like('level_id', `${prefix}_w${worldNum}_%`);
-        if (data) {
-          const p: Record<string, { stars: number; best_score: number }> = {};
-          data.forEach(r => { p[r.level_id] = { stars: r.stars, best_score: r.best_score }; });
+        var sess = await supabase.auth.getSession();
+        var uid = sess.data?.session?.user?.id;
+        if (!uid) return;
+        var res = await supabase.from('side_campaign_progress').select('level_id, stars, best_score').eq('user_id', uid).like('level_id', `${prefix}_w${worldNum}_%`);
+        if (res.data) {
+          var p: Record<string, { stars: number; best_score: number }> = {};
+          res.data.forEach(r => { p[r.level_id] = { stars: r.stars, best_score: r.best_score }; });
           setProgress(p);
         }
       } catch {}
     })();
   }, [prefix, worldNum]);
 
-  function getLevelId(n: number) { return `${prefix}_w${worldNum}_l${n}`; }
-  function getLevelStars(n: number) { return progress[getLevelId(n)]?.stars ?? 0; }
+  function lid(n: number) { return `${prefix}_w${worldNum}_l${n}`; }
+  function starCount(n: number) { return progress[lid(n)]?.stars ?? 0; }
 
-  const completedUpTo = useMemo(() => {
-    let c = 0;
-    for (let i = 1; i <= totalLevels; i++) { if (progress[getLevelId(i)]) c = i; else break; }
+  var completedUpTo = useMemo(() => {
+    var c = 0;
+    for (var i = 1; i <= totalLevels; i++) { if (progress[lid(i)]) c = i; else break; }
     return c;
   }, [progress, totalLevels, prefix, worldNum]);
 
-  const currentLevel = completedUpTo + 1;
-  const earnedStars = useMemo(() => {
-    let s = 0;
-    for (let i = 1; i <= totalLevels; i++) s += getLevelStars(i);
+  var currentLevel = completedUpTo + 1;
+  var earnedStars = useMemo(() => {
+    var s = 0;
+    for (var i = 1; i <= totalLevels; i++) s += starCount(i);
     return s;
   }, [progress, totalLevels]);
 
   useEffect(() => {
     if (path.length === 0) return;
-    const idx = Math.min(currentLevel - 1, path.length - 1);
+    var idx = Math.min(currentLevel - 1, path.length - 1);
     setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, path[idx].y - 350), animated: false }), 100);
   }, [currentLevel, path]);
 
-  function navToLevel(levelNum: number) {
-    router.push({ pathname: '/game/side-campaign', params: { levelId: getLevelId(levelNum), mode: modeId, worldNumber: String(worldNum), levelNumber: String(levelNum), worldName: wName } });
+  function goToLevel(n: number) {
+    router.push({ pathname: '/game/side-campaign', params: { levelId: lid(n), mode: modeId, worldNumber: String(worldNum), levelNumber: String(n), worldName: wName } });
   }
-
-  function handleNodeTap(levelNum: number) {
-    const state = getNodeState(levelNum, completedUpTo, totalLevels);
-    if (state === 'completed' || state === 'boss-completed') { setPopup(levelNum); return; }
-    if (state === 'current') { navToLevel(levelNum); }
+  function onNodeTap(n: number) {
+    var s = getNodeState(n, completedUpTo, totalLevels);
+    if (s === 'completed' || s === 'boss-completed') { setPopup(n); return; }
+    if (s === 'current') goToLevel(n);
   }
 
   return (
-    <View style={[st.root, { backgroundColor: colors.bg }]}>
+    <View style={[st.root, { backgroundColor: themeColors.bg }]}>
       {/* Header */}
-      <View style={[st.header, { paddingTop: safeArea.top + 8, backgroundColor: colors.bg }]}>
+      <RNAnimated.View style={[st.header, { paddingTop: safeArea.top + 8, backgroundColor: themeColors.bg, opacity: anims.header, transform: [{ translateY: anims.header.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
         <Pressable onPress={() => router.back()} style={st.backButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
+          <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={themeColors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
         <View style={st.headerCenter}>
-          <Text style={[st.headerTitle, { color: colors.text }]}>{wName}</Text>
+          <Text style={[st.headerTitle, { color: themeColors.text }]}>{wName}</Text>
           <Text style={[st.headerSubtitle, { color: worldColor }]}>{campaign?.name} — World {worldNum} of {totalWorlds}</Text>
         </View>
         <View style={st.headerPills}>
@@ -158,42 +151,43 @@ function SideWorldMap() {
             <StarSvg size={12} filled color="#D4A012" />
             <Text style={st.pillText}>{earnedStars}/{totalLevels * 3}</Text>
           </View>
-          <View style={[st.pill, { backgroundColor: worldLightColor }]}>
+          <View style={[st.pill, { backgroundColor: worldColor + '15' }]}>
             <Text style={[st.pillText, { color: worldColor }]}>{completedUpTo}/{totalLevels}</Text>
           </View>
         </View>
-      </View>
+      </RNAnimated.View>
 
       {/* Map */}
       <ScrollView ref={scrollRef} style={st.scrollArea} contentContainerStyle={{ height: mapHeight + 100 }} showsVerticalScrollIndicator={false} onLayout={(e) => setMapWidth(Math.min(e.nativeEvent.layout.width, 430))}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.bg }]} />
 
-        {/* SVG paths */}
-        <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
-          {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={24} strokeOpacity={0.08} fill="none" strokeLinecap="round" />}
-          {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={4} fill="none" strokeLinecap="round" />}
-          {completedUpTo < path.length && <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, mapWidth)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />}
-        </Svg>
+        <RNAnimated.View style={{ ...StyleSheet.absoluteFillObject, opacity: anims.pathLine }}>
+          <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
+            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={24} strokeOpacity={0.08} fill="none" strokeLinecap="round" />}
+            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={4} fill="none" strokeLinecap="round" />}
+            {completedUpTo < path.length && <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, mapWidth)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />}
+          </Svg>
+        </RNAnimated.View>
 
-        {/* Level nodes */}
         {path.map((pos, idx) => {
-          const levelNum = idx + 1;
-          const state = getNodeState(levelNum, completedUpTo, totalLevels);
-          const stars = getLevelStars(levelNum);
-          const checkpoint = getCheckpoint(levelNum, totalLevels);
-          const isBoss = levelNum === totalLevels;
-          const nodeSize = isBoss ? BOSS_SIZE : checkpoint ? CHECKPOINT_SIZE : NODE_SIZE;
-          const px = (pos.x / 100) * mapWidth - nodeSize / 2;
+          var levelNum = idx + 1;
+          var state = getNodeState(levelNum, completedUpTo, totalLevels);
+          var stars = starCount(levelNum);
+          var checkpoint = getCheckpoint(levelNum, totalLevels);
+          var isBoss = levelNum === totalLevels;
+          var nodeSize = isBoss ? 56 : checkpoint ? 48 : 42;
+          var px = (pos.x / 100) * mapWidth - nodeSize / 2;
+          var anim = anims.nodes[idx];
           return (
-            <View key={levelNum} style={[st.nodeWrapper, { left: px, top: pos.y - nodeSize / 2, width: nodeSize, height: nodeSize + 30 }]}>
-              <Pressable onPress={() => handleNodeTap(levelNum)} style={{ alignItems: 'center' }}>
-                {checkpoint && <View style={[st.checkpointBadge, { backgroundColor: state === 'completed' || state === 'boss-completed' ? worldLightColor : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'completed' || state === 'boss-completed' ? worldColor : '#B2BEC3' }]}>{checkpoint}</Text></View>}
+            <RNAnimated.View key={levelNum} style={[st.nodeWrapper, { left: px, top: pos.y - nodeSize / 2, width: nodeSize, height: nodeSize + 30, opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }, { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] }]}>
+              <Pressable onPress={() => onNodeTap(levelNum)} style={{ alignItems: 'center' }}>
+                {checkpoint && <View style={[st.checkpointBadge, { backgroundColor: state === 'completed' || state === 'boss-completed' ? worldColor + '15' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'completed' || state === 'boss-completed' ? worldColor : '#B2BEC3' }]}>{checkpoint}</Text></View>}
                 {isBoss && <View style={[st.checkpointBadge, { backgroundColor: state === 'boss-completed' ? 'rgba(212,160,18,0.1)' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>FINALE</Text></View>}
                 {renderNode(state, levelNum, worldColor, nodeSize, isBoss)}
                 {(state === 'completed' || state === 'boss-completed') && <View style={st.starsRow}>{[1, 2, 3].map(s => <StarSvg key={s} size={11} filled={stars >= s} />)}</View>}
                 {state === 'current' && <Text style={[st.playLabel, { color: worldColor }]}>PLAY</Text>}
               </Pressable>
-            </View>
+            </RNAnimated.View>
           );
         })}
 
@@ -204,27 +198,27 @@ function SideWorldMap() {
       </ScrollView>
 
       {/* Bottom bar */}
-      <View style={[st.bottomBar, { paddingBottom: Math.max(safeArea.bottom, 16), backgroundColor: colors.bg }]}>
+      <RNAnimated.View style={[st.bottomBar, { paddingBottom: Math.max(safeArea.bottom, 16), backgroundColor: themeColors.bg, opacity: anims.bottom, transform: [{ translateY: anims.bottom.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }]}>
         <View style={st.bottomInfo}>
-          <Text style={[st.bottomTitle, { color: colors.text }]}>Level {currentLevel}</Text>
-          <Text style={[st.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
+          <Text style={[st.bottomTitle, { color: themeColors.text }]}>Level {currentLevel}</Text>
+          <Text style={[st.bottomSub, { color: themeColors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
         </View>
-        {currentLevel <= totalLevels && <Pressable style={[st.playButton, { backgroundColor: worldColor }]} onPress={() => navToLevel(currentLevel)}><Text style={st.playButtonText}>Play</Text></Pressable>}
-      </View>
+        {currentLevel <= totalLevels && <Pressable style={[st.playButton, { backgroundColor: worldColor }]} onPress={() => goToLevel(currentLevel)}><Text style={st.playButtonText}>Play</Text></Pressable>}
+      </RNAnimated.View>
 
       {/* Popup */}
       {popup !== null && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setPopup(null)}>
           <View style={st.popupBackdrop}>
             <Pressable style={st.popupBackdropTouch} onPress={() => setPopup(null)} />
-            <View style={[st.popupCard, { backgroundColor: colors.card }]}>
+            <View style={[st.popupCard, { backgroundColor: themeColors.card }]}>
               <View style={[st.popupCircle, { backgroundColor: worldColor }]}><Text style={st.popupCircleNum}>{popup}</Text></View>
-              <Text style={[st.popupTitle, { color: colors.text }]}>Level {popup}</Text>
-              <Text style={[st.popupSub, { color: colors.textMid }]}>{campaign?.name} — {wName}</Text>
-              <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={getLevelStars(popup) >= s} />)}</View>
+              <Text style={[st.popupTitle, { color: themeColors.text }]}>Level {popup}</Text>
+              <Text style={[st.popupSub, { color: themeColors.textMid }]}>{campaign?.name} — {wName}</Text>
+              <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={starCount(popup) >= s} />)}</View>
               <View style={st.popupButtons}>
-                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); navToLevel(popup); }}><Text style={st.popupPlayText}>Replay</Text></Pressable>
-                <Pressable style={[st.popupCloseBtn, { backgroundColor: colors.surface }]} onPress={() => setPopup(null)}><Text style={[st.popupCloseText, { color: colors.textMid }]}>Close</Text></Pressable>
+                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); goToLevel(popup); }}><Text style={st.popupPlayText}>Replay</Text></Pressable>
+                <Pressable style={[st.popupCloseBtn, { backgroundColor: themeColors.surface }]} onPress={() => setPopup(null)}><Text style={[st.popupCloseText, { color: themeColors.textMid }]}>Close</Text></Pressable>
               </View>
             </View>
           </View>
@@ -236,7 +230,7 @@ function SideWorldMap() {
 
 export default SideWorldMap;
 
-const st = StyleSheet.create({
+var st = StyleSheet.create({
   root: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10, zIndex: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
   backButton: { padding: 12, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
