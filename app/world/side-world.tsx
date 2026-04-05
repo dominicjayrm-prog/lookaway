@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Animated as RNAnimated } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -88,7 +88,8 @@ function SideWorldMap() {
   var mapHeight = useMemo(() => getGeneratedMapHeight(path), [path]);
   var anims = useMapAnims(path.length);
 
-  useEffect(() => {
+  // Re-fetch progress every time this screen comes into focus (including returning from a game)
+  useFocusEffect(useCallback(() => {
     (async () => {
       try {
         var sess = await supabase.auth.getSession();
@@ -102,7 +103,7 @@ function SideWorldMap() {
         }
       } catch {}
     })();
-  }, [prefix, worldNum]);
+  }, [prefix, worldNum]));
 
   function lid(n: number) { return `${prefix}_w${worldNum}_l${n}`; }
   function starCount(n: number) { return progress[lid(n)]?.stars ?? 0; }
