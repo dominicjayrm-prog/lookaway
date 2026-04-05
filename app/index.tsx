@@ -30,6 +30,13 @@ function Index() {
       return;
     }
 
+    // Check user_metadata first (set instantly during signUp, no race condition)
+    const metaName = session.user.user_metadata?.display_name;
+    if (metaName) {
+      setHasUsername(true);
+      return;
+    }
+
     let cancelled = false;
 
     async function checkUsername() {
