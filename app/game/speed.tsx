@@ -1,9 +1,10 @@
 import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+const isWeb = Platform.OS === 'web';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -61,14 +62,16 @@ export default function SpeedGameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isWeb) {
+        if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       revealTimeout.current = setTimeout(() => { nextQuestion(); }, 300);
     }, 200);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 300); }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 300); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   useEffect(() => {
@@ -76,7 +79,7 @@ export default function SpeedGameScreen() {
   }, [gameState]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE') { addGems(15); incrementStreak(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
+    if (gameState === 'COMPLETE') { addGems(15); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
     if (gameState === 'FAILED') { router.replace('/game/result'); }
   }, [gameState]);
 
@@ -93,7 +96,7 @@ export default function SpeedGameScreen() {
           <Badge label="SPEED ROUND" />
           <View style={styles.headerSpacer} />
         </View>
-        <Animated.View entering={FadeIn} style={styles.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.centered}>
           <Text style={styles.modeIcon}>{lightning}</Text>
           <Text style={styles.levelTitle}>Speed Round</Text>
           <Text style={styles.levelSubtitle}>10 scenes {String.fromCharCode(183)} 2 seconds each</Text>
@@ -134,14 +137,14 @@ export default function SpeedGameScreen() {
       </View>
 
       {gameState === 'MEMORISE' && currentScene && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime} running={true} onComplete={handleMemoriseComplete} style={styles.timer} />
           <SceneRenderer objects={currentScene.objects} visible={true} />
         </Animated.View>
       )}
-      {gameState === 'TRANSITION' && (<Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
+      {gameState === 'TRANSITION' && (<Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
       {gameState === 'QUESTION' && currentQuestion && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
           <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentSceneIndex + 1} totalQuestions={10} />
         </Animated.View>

@@ -1,9 +1,14 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+
+const isWeb = Platform.OS === 'web';
+const enterFade = isWeb ? undefined : FadeIn;
+const exitFade = isWeb ? undefined : FadeOut;
+const AnimatedOrView = isWeb ? View : Animated.View;
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -73,14 +78,16 @@ export default function GameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isWeb) {
+        if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800);
     }, 300);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   const handleNextScene = useCallback(() => { setHiddenOptions([]); nextScene(); }, [nextScene]);
@@ -92,7 +99,7 @@ export default function GameScreen() {
     usePowerUp('slowTime');
     setUsedPowerUps(p => ({ ...p, slowTime: true }));
     setTimerBonus(3);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp]);
 
   const handleQuestionPowerUp = useCallback((id: PowerUpId) => {
@@ -103,7 +110,7 @@ export default function GameScreen() {
       usePowerUp('peek');
       setUsedPowerUps(p => ({ ...p, peek: true }));
       setShowPeekScene(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setTimeout(() => setShowPeekScene(false), 1500);
     } else if (id === 'fiftyFifty' && currentQuestion) {
       usePowerUp('fiftyFifty');
@@ -111,7 +118,7 @@ export default function GameScreen() {
       const wrong = currentQuestion.options.map((_, i) => i).filter(i => i !== currentQuestion.correctIndex);
       const shuffled = [...wrong].sort(() => Math.random() - 0.5);
       setHiddenOptions(shuffled.slice(0, 2));
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (id === 'skip' && currentQuestion) {
       usePowerUp('skip');
       setUsedPowerUps(p => ({ ...p, skip: true }));
@@ -128,7 +135,7 @@ export default function GameScreen() {
 
   useEffect(() => {
     if (gameState === 'COMPLETE' || gameState === 'FAILED') {
-      Haptics.notificationAsync(gameState === 'COMPLETE' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
+      if (!isWeb) Haptics.notificationAsync(gameState === 'COMPLETE' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
       router.replace('/game/result');
     }
   }, [gameState]);
@@ -152,30 +159,30 @@ export default function GameScreen() {
       </View>
 
       {gameState === 'READY' && (
-        <Animated.View entering={FadeIn} style={styles.centered}>
+        <AnimatedOrView entering={enterFade} style={styles.centered}>
           <Text style={styles.levelTitle}>{level.title}</Text>
           <Text style={styles.levelSubtitle}>{level.scenes.length} scene{level.scenes.length > 1 ? 's' : ''}</Text>
           <Button title="Start" onPress={handleStart} style={styles.startButton} />
-        </Animated.View>
+        </AnimatedOrView>
       )}
 
       {gameState === 'MEMORISE' && currentScene && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <AnimatedOrView entering={enterFade} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime + timerBonus} running={!buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={styles.memoriseText}>Memorise this scene!</Text>
           <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
           <SlowTimeButton used={usedPowerUps.slowTime} onUse={handleSlowTime} />
-        </Animated.View>
+        </AnimatedOrView>
       )}
 
       {gameState === 'TRANSITION' && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}>
+        <AnimatedOrView entering={enterFade} exiting={exitFade} style={styles.centered}>
           <Text style={styles.blankText}>Go blank!</Text>
-        </Animated.View>
+        </AnimatedOrView>
       )}
 
       {gameState === 'QUESTION' && currentQuestion && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <AnimatedOrView entering={enterFade} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={!showPeekScene && !buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
           {showPeekScene && currentScene ? (
             <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
@@ -183,7 +190,7 @@ export default function GameScreen() {
             <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentQuestionIndex + 1} totalQuestions={totalQuestions} hiddenOptions={hiddenOptions} />
           )}
           <PowerUpBar usedThisLevel={usedPowerUps} onUsePowerUp={handleQuestionPowerUp} />
-        </Animated.View>
+        </AnimatedOrView>
       )}
 
       {gameState === 'REVEAL' && currentQuestion && (
@@ -193,11 +200,11 @@ export default function GameScreen() {
       )}
 
       {gameState === 'SCENE_SCORE' && (
-        <Animated.View entering={FadeIn} style={styles.centered}>
+        <AnimatedOrView entering={enterFade} style={styles.centered}>
           <Text style={styles.sceneScoreTitle}>Scene complete!</Text>
           <Text style={styles.sceneScoreBody}>{answers.filter((a) => a.isCorrect).length} / {answers.length} correct</Text>
           <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />
-        </Animated.View>
+        </AnimatedOrView>
       )}
 
       {/* Buy power-up popup (pauses game timers) */}

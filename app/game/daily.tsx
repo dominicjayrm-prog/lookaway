@@ -1,9 +1,10 @@
 import React, { useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+const isWeb = Platform.OS === 'web';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -51,20 +52,22 @@ export default function DailyGameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isWeb) {
+        if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800);
     }, 300);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   const handleNextScene = useCallback(() => { nextScene(); }, [nextScene]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE') { const stars = getStarsForScore(score, dailyLevel); addGems(GEM_REWARDS[stars]); addStars(stars); incrementStreak(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
+    if (gameState === 'COMPLETE') { const stars = getStarsForScore(score, dailyLevel); addGems(GEM_REWARDS[stars]); addStars(stars); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
     if (gameState === 'FAILED') { router.replace('/game/result'); }
   }, [gameState]);
 
@@ -81,7 +84,7 @@ export default function DailyGameScreen() {
       </View>
 
       {gameState === 'READY' && (
-        <Animated.View entering={FadeIn} style={styles.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.centered}>
           <Text style={styles.levelTitle}>Daily Challenge</Text>
           <Text style={styles.levelSubtitle}>{formattedDate}</Text>
           <Text style={styles.sceneInfo}>5 scenes {String.fromCharCode(183)} 25 questions</Text>
@@ -96,7 +99,7 @@ export default function DailyGameScreen() {
       )}
 
       {gameState === 'MEMORISE' && currentScene && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime} running={true} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={styles.memoriseText}>Memorise this scene!</Text>
           <SceneRenderer objects={currentScene.objects} visible={true} />
@@ -104,13 +107,13 @@ export default function DailyGameScreen() {
       )}
 
       {gameState === 'TRANSITION' && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}>
           <Text style={styles.blankText}>Go blank!</Text>
         </Animated.View>
       )}
 
       {gameState === 'QUESTION' && currentQuestion && (
-        <Animated.View entering={FadeIn} style={styles.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
           <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentQuestionIndex + 1} totalQuestions={totalQuestions} />
         </Animated.View>
@@ -123,7 +126,7 @@ export default function DailyGameScreen() {
       )}
 
       {gameState === 'SCENE_SCORE' && (
-        <Animated.View entering={FadeIn} style={styles.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.centered}>
           <Text style={styles.sceneScoreTitle}>Scene complete!</Text>
           <Text style={styles.sceneScoreBody}>{answers.filter((a) => a.isCorrect).length} / {answers.length} correct</Text>
           <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />

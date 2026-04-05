@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Image, Alert, Pl
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+const isWeb = Platform.OS === 'web';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -38,14 +39,14 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
+      <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)} style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
           <Pressable onPress={handlePickPhoto} style={styles.avatarContainer}>
             {profilePic ? (<Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />) : (<View style={[styles.avatar, { backgroundColor: colors.accent }]}><Text style={styles.avatarText}>{initials}</Text></View>)}
             <View style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.bg }]}><Ionicons name="camera" size={14} color={colors.accent} /></View>
@@ -54,7 +55,7 @@ export default function ProfileScreen() {
           <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(200)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(200)}>
           <View style={[styles.statsRow, { backgroundColor: colors.card }]}>
             <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.accent }]}>{completedCount > 0 ? `${memoryScore}%` : '--'}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>Memory</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
         </Animated.View>
 
         {/* Achievements card */}
-        <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(250)}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable style={styles.settingsRow} onPress={() => router.push('/achievements')}>
               <View style={styles.settingsRowLeft}>
@@ -89,7 +90,7 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(300)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>APPEARANCE</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <View style={styles.settingsRow}>
@@ -100,7 +101,7 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(400)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SETTINGS</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <SettingsRow icon="volume-high" label="Sound effects" colors={colors} />
@@ -111,7 +112,7 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(500)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(500)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SOCIAL</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Text style={[styles.comingSoon, { color: colors.textLight }]}>Coming soon</Text><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
@@ -120,7 +121,7 @@ export default function ProfileScreen() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(600)}>
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(600)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>ACCOUNT</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable style={styles.settingsRow} onPress={handleSignOut}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>

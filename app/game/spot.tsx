@@ -1,9 +1,10 @@
 import React, { useReducer, useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, GestureResponderEvent } from 'react-native';
+import { View, Text, StyleSheet, Pressable, GestureResponderEvent, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+const isWeb = Platform.OS === 'web';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { Button } from '@/src/components/Button';
@@ -57,8 +58,10 @@ export default function SpotGameScreen() {
     const dist = Math.hypot(tapX-x,tapY-y);
     const correct = dist < radius*2;
     const timeMs = Date.now()-state.modifiedShownAt;
-    if(correct) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (!isWeb) {
+      if(correct) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
     dispatch({type:'TAP',correct,timeMs});
     clearTimer();
     timerRef.current=setTimeout(()=>dispatch({type:'NEXT_ROUND'}),1500);
@@ -75,7 +78,7 @@ export default function SpotGameScreen() {
           <Badge label="SPOT THE CHANGE" />
           <View style={s.spacer}/>
         </View>
-        <Animated.View entering={FadeIn} style={s.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
           <Text style={s.modeIcon}>{mag}</Text>
           <Text style={s.title}>Spot The Change</Text>
           <Text style={s.sub}>5 rounds {String.fromCharCode(183)} find what changed</Text>
@@ -88,7 +91,7 @@ export default function SpotGameScreen() {
   if(state.phase==='COMPLETE') {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
-        <Animated.View entering={FadeIn} style={s.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
           <Text style={s.modeIcon}>{mag}</Text>
           <Text style={s.title}>Challenge Complete!</Text>
           <Text style={s.scoreText}>{correctCount}/5</Text>
@@ -120,7 +123,7 @@ export default function SpotGameScreen() {
       </View>
 
       {state.phase==='SHOW_ORIGINAL' && round && (
-        <Animated.View entering={FadeIn} style={s.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={s.gameArea}>
           <CountdownTimer duration={round.viewTime} running={true} onComplete={handleOriginalComplete} style={s.timer}/>
           <Text style={s.phaseLabel}>Memorise this scene</Text>
           <SceneRenderer objects={round.originalScene.objects} visible={true}/>
@@ -128,13 +131,13 @@ export default function SpotGameScreen() {
       )}
 
       {state.phase==='BLANK' && (
-        <Animated.View entering={FadeIn} exiting={FadeOut} style={s.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={s.centered}>
           <Text style={s.blankText}>Look away...</Text>
         </Animated.View>
       )}
 
       {state.phase==='SHOW_MODIFIED' && round && (
-        <Animated.View entering={FadeIn} style={s.gameArea}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={s.gameArea}>
           <Text style={s.tapLabel}>TAP THE CHANGE</Text>
           <Pressable onPress={handleTap} onLayout={(e)=>{const{width,height}=e.nativeEvent.layout;dispatch({type:'LAYOUT',w:width,h:height});}}>
             <SceneRenderer objects={round.modifiedScene.objects} visible={true}/>
@@ -143,7 +146,7 @@ export default function SpotGameScreen() {
       )}
 
       {state.phase==='FEEDBACK' && round && (
-        <Animated.View entering={FadeIn} style={s.centered}>
+        <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
           <Text style={[s.feedbackText,{color:state.tapCorrect?colors.correct:colors.wrong}]}>{state.tapCorrect?'Correct!':'Wrong!'}</Text>
           <Text style={s.feedbackDesc}>{round.change.description}</Text>
         </Animated.View>
