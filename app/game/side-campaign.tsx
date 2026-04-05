@@ -144,21 +144,7 @@ function SideCampaignScreen() {
     }, 1200);
   }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize]);
 
-  const nextRound = useCallback(() => {
-    if (roundIdx + 1 < (modeData?.rounds?.length ?? 0)) {
-      setRoundIdx(prev => prev + 1);
-      startRound();
-    } else {
-      // Use functional updater to get latest roundScores (avoids stale closure)
-      setRoundScores(prev => {
-        const total = prev.reduce((a, b) => a + b, 0);
-        finishLevel(total);
-        return prev;
-      });
-    }
-  }, [roundIdx, modeData, startRound, finishLevel]);
-
-  // ─── COMPLETION HANDLER ───
+  // ─── COMPLETION HANDLER (must be before nextRound which references it) ───
   const finishLevel = useCallback(async (rawScore: number) => {
     // For campaign speed recall, max = rounds × shapeCount × 100
     const totalRounds = modeData?.rounds?.length ?? 1;
@@ -203,7 +189,20 @@ function SideCampaignScreen() {
       loseLife();
       setPhase('failed');
     }
-  }, [mode, levelId, addGems, addStars, loseLife]);
+  }, [mode, levelId, addGems, addStars, loseLife, modeData, isExternalMode]);
+
+  const nextRound = useCallback(() => {
+    if (roundIdx + 1 < (modeData?.rounds?.length ?? 0)) {
+      setRoundIdx(prev => prev + 1);
+      startRound();
+    } else {
+      setRoundScores(prev => {
+        const total = prev.reduce((a, b) => a + b, 0);
+        finishLevel(total);
+        return prev;
+      });
+    }
+  }, [roundIdx, modeData, startRound, finishLevel]);
 
   const handleModeComplete = useCallback((rawScore: number) => {
     finishLevel(rawScore);
