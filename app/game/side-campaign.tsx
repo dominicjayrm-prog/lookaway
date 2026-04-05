@@ -160,7 +160,13 @@ export default function SideCampaignScreen() {
 
   // ─── COMPLETION HANDLER ───
   const finishLevel = useCallback(async (rawScore: number) => {
-    const pct = getScorePercentage(mode ?? 'speed_recall', rawScore);
+    // For campaign speed recall, max = rounds × shapeCount × 100
+    const totalRounds = modeData?.rounds?.length ?? 1;
+    const shapesPerRound = modeData?.rounds?.[0]?.shapes?.length ?? 5;
+    const actualMax = totalRounds * shapesPerRound * 100;
+    const pct = mode === 'speed_recall' || !isExternalMode
+      ? Math.min(100, Math.round((rawScore / actualMax) * 100))
+      : getScorePercentage(mode ?? 'speed_recall', rawScore);
     const earnedStars = getStarsForScore(pct);
     setTotalScore(rawScore);
     setScorePct(pct);
