@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { Wordmark } from '@/src/components/Wordmark';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -24,8 +24,14 @@ type Mode = 'login' | 'signup';
 
 function AuthScreen() {
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, session } = useAuth();
+  const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
+
+  // Redirect to home when session is established (after sign in/up)
+  useEffect(() => {
+    if (session) router.replace('/');
+  }, [session]);
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
