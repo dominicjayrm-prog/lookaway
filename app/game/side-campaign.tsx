@@ -158,30 +158,44 @@ function SideCampaignScreen() {
     setScorePct(pct);
     setStarsState(earnedStars);
 
-    // Gem rewards based on stars
-    const gemRewards: Record<number, number> = { 0: 0, 1: 5, 2: 10, 3: 20 };
-    const gems = gemRewards[earnedStars] ?? 0;
-    setGemsEarned(gems);
-
-    if (gems > 0) addGems(gems);
-    if (earnedStars > 0) addStars(earnedStars);
-
-    // Save progress to Supabase
+    // Gem rewards — same as Classic: 1/2/3 gems for 1/2/3 stars
+    // On replay, only earn the difference if improved
+    let gems = 0;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
       if (userId && levelId) {
+        // Check existing progress for replay detection
+        const { data: existing } = await supabase
+          .from('side_campaign_progress')
+          .select('stars, best_score')
+          .eq('user_id', userId)
+          .eq('level_id', levelId)
+          .single();
+
+        const previousStars = existing?.stars ?? 0;
+        if (earnedStars > previousStars) {
+          gems = earnedStars - previousStars; // Only earn the difference
+        } else if (previousStars === 0 && earnedStars > 0) {
+          gems = earnedStars; // First completion
+        }
+
+        // Save progress (never downgrade stars or best score)
         await supabase.from('side_campaign_progress').upsert({
           user_id: userId,
           level_id: levelId,
-          stars: earnedStars,
-          best_score: pct,
-          completed_at: new Date().toISOString(),
+          stars: Math.max(earnedStars, previousStars),
+          best_score: Math.max(pct, existing?.best_score ?? 0),
+          completed_at: earnedStars > 0 ? new Date().toISOString() : existing?.completed_at ?? null,
         }, { onConflict: 'user_id,level_id' });
       }
     } catch (e) {
       console.warn('Failed to save side campaign progress:', e);
     }
+
+    setGemsEarned(gems);
+    if (gems > 0) addGems(gems);
+    if (earnedStars > 0) addStars(earnedStars);
 
     if (pct >= 50) {
       setPhase('complete');

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabTransition } from '@/src/components/TabTransition';
+import TutorialOverlay from '@/src/components/TutorialOverlay';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -151,19 +153,61 @@ function PlayTab() {
   let profilePic: string | null = null;
   try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
 
+  // Tutorial overlay
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialSpots, setTutorialSpots] = useState<({ x: number; y: number; width: number; height: number } | null)[]>([]);
+  const heroRef = useRef<View>(null);
+  const livesRef = useRef<View>(null);
+  const gemsRef = useRef<View>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
+      if (!seen) setTimeout(() => setShowTutorial(true), 800);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!showTutorial) return;
+    const timer = setTimeout(() => {
+      const spots: ({ x: number; y: number; width: number; height: number } | null)[] = [null, null, null, null, null];
+      let measured = 0;
+      const check = () => { if (++measured >= 3) setTutorialSpots(spots); };
+
+      heroRef.current?.measureInWindow((x, y, w, h) => { spots[0] = { x, y, width: w, height: h }; check(); });
+      livesRef.current?.measureInWindow((x, y, w, h) => { spots[1] = { x, y, width: w, height: h }; check(); });
+      gemsRef.current?.measureInWindow((x, y, w, h) => { spots[2] = { x, y, width: w, height: h }; check(); });
+
+      // Tab bar icons — approximate positions (4 tabs evenly spaced)
+      const sw = Dimensions.get('window').width;
+      const sh = Dimensions.get('window').height;
+      const tabW = sw / 4;
+      const tabH = 50;
+      const tabY = sh - tabH - 20; // approximate tab bar position
+      // Journey is 2nd tab (index 1), Shop is 4th tab (index 3)
+      spots[3] = { x: tabW * 1 + tabW * 0.15, y: tabY, width: tabW * 0.7, height: tabH };
+      spots[4] = { x: tabW * 3 + tabW * 0.15, y: tabY, width: tabW * 0.7, height: tabH };
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [showTutorial]);
+
+  const completeTutorial = useCallback(async () => {
+    setShowTutorial(false);
+    await AsyncStorage.setItem('blanked_tutorial_seen', 'true');
+  }, []);
+
   return (
     <TabTransition>
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <View style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
+          <View ref={livesRef} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
             ))}
           </View>
           <View style={styles.topBarRight}>
-            <View style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
+            <View ref={gemsRef} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </View>
@@ -181,7 +225,7 @@ function PlayTab() {
         </View>
 
         {/* Hero card — purple gradient */}
-        <View style={styles.heroCard}>
+        <View ref={heroRef} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
             <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
@@ -270,6 +314,9 @@ function PlayTab() {
         <RecentActivityCard colors={colors} router={router} />
 
       </ScrollView>
+
+      {/* Tutorial overlay for first-time users */}
+      <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
     </SafeAreaView>
     </TabTransition>
   );

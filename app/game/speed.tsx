@@ -10,6 +10,7 @@ import { QuestionCard } from '@/src/components/QuestionCard';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
+import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
 import { getTodayDateString } from '@/src/utils/dailyChallenge';
 import { colors } from '@/src/theme/colors';
@@ -34,7 +35,7 @@ function SpeedGameScreen() {
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
 
-  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, incrementStreak, score } = useGameStore();
+  const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, incrementStreak, score } = useGameStore();
   const loseLife = useGameStore((s) => s.loseLife);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
@@ -82,7 +83,7 @@ function SpeedGameScreen() {
   }, [gameState]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE') { addGems(15); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
+    if (gameState === 'COMPLETE') { const stars = getStarsForScore(score, speedLevel); addGems(GEM_REWARDS[stars]); addStars(stars); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
     if (gameState === 'FAILED') { router.replace('/game/result'); }
   }, [gameState]);
 
