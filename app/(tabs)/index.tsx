@@ -185,13 +185,20 @@ function PlayTab() {
         }
       });
 
-      // Tab bar icons — calculate positions from screen dimensions
+      // Tab bar icons — calculate based on container width (max 430px on web)
       const sw = Dimensions.get('window').width;
+      const containerW = Math.min(sw, 430); // MobileContainer caps at 430px
+      const containerX = (sw - containerW) / 2; // centered offset on web
       const sh = Dimensions.get('window').height;
-      const tabW = sw / 4;
-      const tabY = sh - 65; // tab bar is at the very bottom
-      spots[3] = { x: tabW * 1 + 10, y: tabY, width: tabW - 20, height: 50 }; // Journey (2nd tab)
-      spots[4] = { x: tabW * 3 + 10, y: tabY, width: tabW - 20, height: 50 }; // Shop (4th tab)
+      const tabW = containerW / 4;
+      const iconSize = 44; // approximate icon tap target size
+      const tabY = sh - 58;
+      // Journey is 2nd tab (index 1), center the icon within its tab slot
+      const journeyCenter = containerX + tabW * 1 + tabW / 2;
+      spots[3] = { x: journeyCenter - iconSize / 2, y: tabY, width: iconSize, height: iconSize };
+      // Shop is 4th tab (index 3)
+      const shopCenter = containerX + tabW * 3 + tabW / 2;
+      spots[4] = { x: shopCenter - iconSize / 2, y: tabY, width: iconSize, height: iconSize };
     }, 800);
     return () => clearTimeout(timer);
   }, [showTutorial]);
