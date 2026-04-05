@@ -13,7 +13,7 @@ const AVATAR_COLORS = ['#6C5CE7', '#0984E3', '#00B894', '#FF6B6B', '#F9A825', '#
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
-export default function UsernameScreen() {
+function UsernameScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -132,6 +132,8 @@ export default function UsernameScreen() {
     </SafeAreaView>
   );
 }
+
+export default UsernameScreen;
 
 const styles = (colors: ReturnType<typeof useTheme>['colors']) =>
   StyleSheet.create({

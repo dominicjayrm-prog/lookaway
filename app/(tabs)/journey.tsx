@@ -20,7 +20,7 @@ function LockIcon({ size = 16, color = '#B2BEC3' }: { size?: number; color?: str
   return <Svg width={size} height={size} viewBox="0 0 24 24"><Rect x={5} y={11} width={14} height={11} rx={2} fill={color} /><Path d="M8,11 V8 A4,4 0 0,1 16,8 V11" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
 }
 
-export default function JourneyTab() {
+function JourneyTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { totalStars, levelProgress } = useGameStore();
@@ -267,6 +267,7 @@ export default function JourneyTab() {
   );
 }
 
+export default JourneyTab;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: 20, paddingBottom: 12 },

@@ -46,7 +46,7 @@ function getLevelStars(worldId: number, levelNum: number, levelProgress: Record<
   return levelProgress[id]?.stars ?? 0;
 }
 
-export default function WorldMapScreen() {
+function WorldMapScreen() {
   const { worldId: wIdParam } = useLocalSearchParams<{ worldId: string }>();
   const worldId = parseInt(wIdParam ?? '1', 10);
   const router = useRouter();
@@ -409,6 +409,8 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
     </Modal>
   );
 }
+
+export default WorldMapScreen;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

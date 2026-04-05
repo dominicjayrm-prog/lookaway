@@ -35,7 +35,7 @@ function reducer(s: State, a: Action): State {
   }
 }
 
-export default function SpotGameScreen() {
+function SpotGameScreen() {
   const router = useRouter();
   const dateStr = getTodayDateString();
   const challenge = useMemo(() => generateSpotTheChangeChallenge(dateStr), [dateStr]);
@@ -180,6 +180,8 @@ export default function SpotGameScreen() {
     </SafeAreaView>
   );
 }
+
+export default SpotGameScreen;
 
 const s = StyleSheet.create({
   container:{flex:1,backgroundColor:colors.bg,paddingHorizontal:spacing.lg},

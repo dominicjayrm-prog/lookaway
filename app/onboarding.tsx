@@ -361,7 +361,7 @@ function Page4({ colors, onFinish }: { colors: any; onFinish: () => void }) {
 }
 
 // ─── MAIN ONBOARDING ────────────────────────────────────
-export default function OnboardingScreen() {
+function OnboardingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [page, setPage] = useState(0);
@@ -435,6 +435,8 @@ export default function OnboardingScreen() {
     </SafeAreaView>
   );
 }
+
+export default OnboardingScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

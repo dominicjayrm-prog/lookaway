@@ -26,7 +26,7 @@ function SectionLabel({ label, colors }: { label: string; colors: Record<string,
   return <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{label}</Text>;
 }
 
-export default function FriendsTab() {
+function FriendsTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -140,6 +140,7 @@ export default function FriendsTab() {
   );
 }
 
+export default FriendsTab;
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flex: 1 },

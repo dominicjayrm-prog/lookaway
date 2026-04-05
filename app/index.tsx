@@ -16,7 +16,7 @@ function hasSeenOnboarding(): boolean {
   }
 }
 
-export default function Index() {
+function Index() {
   const { session, loading } = useAuth();
   const { colors } = useTheme();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
@@ -83,6 +83,7 @@ export default function Index() {
   return <Redirect href="/(auth)/login" />;
 }
 
+export default Index;
 const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

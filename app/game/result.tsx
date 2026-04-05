@@ -51,7 +51,7 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
   );
 }
 
-export default function ResultScreen() {
+function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, incrementStreak, addGems, levelProgress, streakCount, streakMilestonesClaimed } = useGameStore();
@@ -219,6 +219,8 @@ export default function ResultScreen() {
     </SafeAreaView>
   );
 }
+
+export default ResultScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },

@@ -26,7 +26,7 @@ const enterFade = isWeb ? undefined : FadeIn;
 const exitFade = isWeb ? undefined : FadeOut;
 const AnimatedOrView = isWeb ? View : Animated.View;
 
-export default function GameScreen() {
+function GameScreen() {
   const { levelId } = useLocalSearchParams<{ levelId: string }>();
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -237,6 +237,8 @@ export default function GameScreen() {
     </SafeAreaView>
   );
 }
+
+export default GameScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.lg },

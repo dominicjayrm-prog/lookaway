@@ -18,7 +18,7 @@ type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'rev
 
 interface Answer { correct: boolean; }
 
-export default function ChallengeGameScreen() {
+function ChallengeGameScreen() {
   const { challengeId, friendId, mode: modeParam } = useLocalSearchParams<{ challengeId?: string; friendId?: string; mode?: string }>();
   const isChallenger = modeParam === 'create';
   const router = useRouter();
@@ -280,6 +280,8 @@ export default function ChallengeGameScreen() {
     </SafeAreaView>
   );
 }
+
+export default ChallengeGameScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },

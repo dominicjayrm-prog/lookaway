@@ -19,7 +19,7 @@ import type { Level } from '@/src/types/game';
 
 const isWeb = Platform.OS === 'web';
 
-export default function DailyGameScreen() {
+function DailyGameScreen() {
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,6 +160,8 @@ export default function DailyGameScreen() {
     </SafeAreaView>
   );
 }
+
+export default DailyGameScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.lg },

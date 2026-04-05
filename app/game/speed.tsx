@@ -25,7 +25,7 @@ function buildSpeedLevel(dateStr: string): Level {
   return { id: `speed-${dateStr}`, worldId: 0, levelNumber: 0, title: 'Speed Round', scenes, requiredScore: 60, parScore: 100 };
 }
 
-export default function SpeedGameScreen() {
+function SpeedGameScreen() {
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -179,6 +179,8 @@ export default function SpeedGameScreen() {
     </SafeAreaView>
   );
 }
+
+export default SpeedGameScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.lg },

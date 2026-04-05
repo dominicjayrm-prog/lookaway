@@ -10,7 +10,7 @@ import { AchievementDetail } from '@/src/components/AchievementDetail';
 import { loadAllAchievements, loadPlayerProgress, TIER_COLORS, getHighestUnlockedTier, countUnlockedTiers, type Achievement, type PlayerAchievement, type AchievementTier } from '@/src/utils/achievements';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
-export default function AchievementsScreen() {
+function AchievementsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -123,6 +123,8 @@ export default function AchievementsScreen() {
     </SafeAreaView>
   );
 }
+
+export default AchievementsScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

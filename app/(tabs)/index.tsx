@@ -114,7 +114,7 @@ const actStyles = StyleSheet.create({
   subText: { fontSize: 11, marginTop: 1 },
 });
 
-export default function PlayTab() {
+function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
@@ -275,6 +275,7 @@ export default function PlayTab() {
   );
 }
 
+export default PlayTab;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20 },
