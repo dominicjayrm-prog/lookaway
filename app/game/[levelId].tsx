@@ -4,11 +4,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-
-const isWeb = Platform.OS === 'web';
-const enterFade = isWeb ? undefined : FadeIn;
-const exitFade = isWeb ? undefined : FadeOut;
-const AnimatedOrView = isWeb ? View : Animated.View;
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -25,6 +20,11 @@ import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import type { Level } from '@/src/types/game';
+
+const isWeb = Platform.OS === 'web';
+const enterFade = isWeb ? undefined : FadeIn;
+const exitFade = isWeb ? undefined : FadeOut;
+const AnimatedOrView = isWeb ? View : Animated.View;
 
 export default function GameScreen() {
   const { levelId } = useLocalSearchParams<{ levelId: string }>();

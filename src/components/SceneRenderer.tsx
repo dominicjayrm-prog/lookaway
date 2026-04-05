@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, FadeIn, Easing } from 'react-native-reanimated';
-
-const isWeb = Platform.OS === 'web';
 import Svg, { Path, Circle as SvgCircle, Rect as SvgRect, Line, Polygon, Ellipse } from 'react-native-svg';
 import { Card } from './Card';
 import { borderRadius } from '@/src/theme/spacing';
 import type { SceneObject, ShapeType } from '@/src/types/game';
 import { getGameObjectById } from '@/src/data/objectLibrary';
+
+const isWeb = Platform.OS === 'web';
 
 interface SceneRendererProps { objects: SceneObject[]; visible: boolean; viewTime?: number; }
 

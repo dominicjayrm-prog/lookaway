@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-const isWeb = Platform.OS === 'web';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { Button } from '@/src/components/Button';
@@ -14,6 +13,8 @@ import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { generateSpotTheChangeChallenge } from '@/src/utils/spotTheChangeChallenge';
 import { getTodayDateString } from '@/src/utils/dailyChallenge';
+
+const isWeb = Platform.OS === 'web';
 
 type Phase = 'READY'|'SHOW_ORIGINAL'|'BLANK'|'SHOW_MODIFIED'|'FEEDBACK'|'COMPLETE';
 interface RoundResult { correct: boolean; timeMs: number; }
