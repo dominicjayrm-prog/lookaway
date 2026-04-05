@@ -41,7 +41,7 @@ export default function GameScreen() {
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [timerBonus, setTimerBonus] = useState(0);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
-  const powerUps = useGameStore((s) => s.powerUps);
+  const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
 
   // Fetch level from Supabase (async), fall back to hardcoded
   useEffect(() => {
