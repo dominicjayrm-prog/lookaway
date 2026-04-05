@@ -60,6 +60,12 @@ export function getPowerupById(id: string): PowerUpDef | undefined {
 /** All power-up IDs */
 export const ALL_POWERUP_IDS = ALL_POWERUPS.map(p => p.id);
 
+/** Power-ups indexed by ID for quick lookup */
+export const POWER_UPS: Record<string, PowerUpDef> = Object.fromEntries(ALL_POWERUPS.map(p => [p.id, p]));
+
+/** Classic question-phase power-up IDs */
+export const QUESTION_POWER_UPS: string[] = ['peek', 'fiftyFifty', 'skip'];
+
 /** Mode filter options for the shop */
 export const MODE_FILTERS = [
   { id: 'classic', name: 'Classic', color: '#6C5CE7' },
