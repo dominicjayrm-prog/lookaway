@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, FadeIn, Easing } from 'react-native-reanimated';
+
+const isWeb = Platform.OS === 'web';
 import Svg, { Path, Circle as SvgCircle, Rect as SvgRect, Line, Polygon, Ellipse } from 'react-native-svg';
 import { Card } from './Card';
 import { borderRadius } from '@/src/theme/spacing';
@@ -131,7 +133,7 @@ function ShapeRenderer({ type, color, size, label, objectType }: { type: ShapeTy
 export const SceneRenderer = React.memo(function SceneRenderer({ objects, visible, viewTime }: SceneRendererProps) {
   if (!visible) return null;
   return (
-    <Animated.View entering={FadeIn.duration(300)}>
+    <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)}>
       <Card style={styles.sceneCard} padded={false}>
         <View style={styles.canvas}>{objects.map((obj, i) => <ShapeComponent key={obj.id} object={obj} index={i} viewTime={viewTime} />)}</View>
       </Card>
