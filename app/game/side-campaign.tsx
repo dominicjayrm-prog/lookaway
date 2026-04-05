@@ -391,7 +391,7 @@ const s = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   loadingText: { fontSize: 15, textAlign: 'center', marginTop: 20 },
   phaseLabel: { fontSize: 16, fontWeight: '600', textAlign: 'center' },
-  canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   promptRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
   promptText: { fontSize: 15, fontWeight: '600' },
   shapeProgress: { fontSize: 12, textAlign: 'center' },

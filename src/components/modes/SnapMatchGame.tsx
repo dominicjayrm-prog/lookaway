@@ -233,7 +233,7 @@ const s = StyleSheet.create({
   timerFill: { height: '100%', borderRadius: 3 },
   responseTime: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
   hint: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
-  canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   blankOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   blankText: { fontSize: 28 },
   description: { fontSize: 13, textAlign: 'center', fontWeight: '600' },

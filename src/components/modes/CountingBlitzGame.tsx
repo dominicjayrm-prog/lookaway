@@ -209,7 +209,7 @@ const s = StyleSheet.create({
   timerTrack: { flex: 1, height: 5, borderRadius: 3, overflow: 'hidden' },
   timerFill: { height: '100%', borderRadius: 3 },
   timerText: { fontSize: 13, fontWeight: '700', width: 40 },
-  canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden' },
+  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden' },
   questionArea: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingHorizontal: 16 },
   askColorBox: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   askColorText: { color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 1 },

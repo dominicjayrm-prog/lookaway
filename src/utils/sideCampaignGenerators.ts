@@ -46,7 +46,7 @@ function placeShapes(count: number, shapePool: string[], colorPool: { hex: strin
       colorName: c.name,
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
-      size: 28 + Math.floor(Math.random() * 10),
+      size: 42 + Math.floor(Math.random() * 8),
     });
   }
   return shapes;
