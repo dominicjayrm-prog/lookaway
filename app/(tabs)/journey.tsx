@@ -222,13 +222,9 @@ export default function JourneyTab() {
                 style={[styles.worldCard, { backgroundColor: colors.card, borderWidth: isCurrent ? 2 : 0, borderColor: isCurrent ? accent : 'transparent' }]}
                 onPress={() => {
                   if (!unlocked) return;
-                  // Navigate to first unplayed level in this world
-                  const nextLevel = completed + 1;
-                  const levelNum = Math.min(nextLevel, worldLevels);
-                  const levelId = getSideLevelId(activeCampaign, worldNum, levelNum);
                   router.push({
-                    pathname: '/game/side-campaign',
-                    params: { levelId, mode: activeCampaign, worldNumber: String(worldNum), levelNumber: String(levelNum), worldName: name },
+                    pathname: '/world/side-world',
+                    params: { mode: activeCampaign, worldNumber: String(worldNum), worldName: name },
                   });
                 }}
                 disabled={!unlocked}
@@ -251,12 +247,9 @@ export default function JourneyTab() {
                   <Pressable
                     style={[styles.continueButton, { backgroundColor: accent }]}
                     onPress={() => {
-                      const nextLevel = completed + 1;
-                      const levelNum = Math.min(nextLevel, worldLevels);
-                      const levelId = getSideLevelId(activeCampaign, worldNum, levelNum);
                       router.push({
-                        pathname: '/game/side-campaign',
-                        params: { levelId, mode: activeCampaign, worldNumber: String(worldNum), levelNumber: String(levelNum), worldName: name },
+                        pathname: '/world/side-world',
+                        params: { mode: activeCampaign, worldNumber: String(worldNum), worldName: name },
                       });
                     }}
                   >

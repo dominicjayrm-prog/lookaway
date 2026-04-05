@@ -137,3 +137,20 @@ export function getCheckpoint(levelNum: number, totalLevels: number): string | n
   if (levelNum === threeQ) return 'FINAL STRETCH';
   return null;
 }
+
+/** Generate a winding path for any level count (used by side campaigns) */
+export function generatePath(levelCount: number, seed: number = 0): PathNode[] {
+  return Array.from({ length: levelCount }, (_, i) => {
+    const t = levelCount > 1 ? i / (levelCount - 1) : 0;
+    const waveX = 50 + 28 * Math.sin(t * Math.PI * (2.5 + seed * 0.3) + seed * 0.7);
+    const totalHeight = levelCount * 95 + 200;
+    const y = totalHeight - i * 95;
+    return { x: Math.round(waveX), y };
+  });
+}
+
+/** Get map height for a generated path */
+export function getGeneratedMapHeight(path: PathNode[]): number {
+  if (path.length === 0) return 2200;
+  return path[0].y + 200;
+}

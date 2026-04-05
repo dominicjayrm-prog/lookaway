@@ -258,7 +258,7 @@ const s = StyleSheet.create({
   promptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap' },
   promptText: { fontSize: 14 },
   shapeCounter: { fontSize: 11, textAlign: 'center' },
-  canvas: { flex: 1, borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
   scoreText: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
   shapeProgress: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   shapeDot: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
