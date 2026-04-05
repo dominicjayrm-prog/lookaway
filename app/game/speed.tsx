@@ -158,6 +158,24 @@ export default function SpeedGameScreen() {
           <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={revealedCorrect} onSelect={() => {}} questionNumber={currentSceneIndex + 1} totalQuestions={10} />
         </View>
       )}
+
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={styles.quitBackdrop}>
+            <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
+              <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}>
+                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={styles.quitBtnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -183,4 +201,11 @@ const styles = StyleSheet.create({
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
   blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  quitBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
+  quitBackdropTouch: { ...StyleSheet.absoluteFillObject },
+  quitCard: { width: '100%', maxWidth: 300, borderRadius: 20, padding: 24, alignItems: 'center', gap: 12 },
+  quitTitle: { fontSize: 20, fontWeight: '700' },
+  quitMessage: { fontSize: 14, textAlign: 'center', marginBottom: 4 },
+  quitLeaveBtn: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 14, alignItems: 'center', width: '100%' },
+  quitBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

@@ -159,6 +159,24 @@ export default function SpotGameScreen() {
           <Text style={s.feedbackDesc}>{round.change.description}</Text>
         </Animated.View>
       )}
+
+      {showQuitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
+          <View style={s.quitBackdrop}>
+            <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <View style={[s.quitCard, { backgroundColor: colors.bg }]}>
+              <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[s.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); loseLife(); router.back(); }}>
+                <Text style={s.quitBtnText}>Leave (-1 life)</Text>
+              </Pressable>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+                <Text style={s.quitBtnText}>Keep playing</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -186,4 +204,11 @@ const s = StyleSheet.create({
   scoreText:{fontSize:56,fontWeight:typography.weights.black,color:colors.text},
   resultsRow:{flexDirection:'row',gap:8},
   resultDot:{width:16,height:16,borderRadius:999},
+  quitBackdrop:{flex:1,backgroundColor:'rgba(0,0,0,0.4)',justifyContent:'center',alignItems:'center',padding:30},
+  quitBackdropTouch:{...StyleSheet.absoluteFillObject},
+  quitCard:{width:'100%',maxWidth:300,borderRadius:20,padding:24,alignItems:'center',gap:12},
+  quitTitle:{fontSize:20,fontWeight:'700'},
+  quitMessage:{fontSize:14,textAlign:'center',marginBottom:4},
+  quitLeaveBtn:{paddingVertical:14,paddingHorizontal:32,borderRadius:14,alignItems:'center',width:'100%'},
+  quitBtnText:{color:'#FFF',fontSize:16,fontWeight:'700'},
 });
