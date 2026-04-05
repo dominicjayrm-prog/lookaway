@@ -133,12 +133,11 @@ export default function SideCampaignScreen() {
         setShapeIdx(prev => prev + 1);
         setPhase('recall');
       } else {
-        // Use functional updater to get latest shapeScores (avoids stale closure)
+        // Score already added to shapeScores on line 127 — just calculate total from latest state
         setShapeScores(prev => {
-          const allScores = [...prev, score];
-          const roundTotal = allScores.reduce((a, b) => a + b, 0);
+          const roundTotal = prev.reduce((a, b) => a + b, 0);
           setRoundScores(rs => [...rs, roundTotal]);
-          return allScores;
+          return prev;
         });
         setPhase('round_done');
       }
@@ -150,14 +149,24 @@ export default function SideCampaignScreen() {
       setRoundIdx(prev => prev + 1);
       startRound();
     } else {
-      const total = roundScores.reduce((a, b) => a + b, 0);
-      finishLevel(total);
+      // Use functional updater to get latest roundScores (avoids stale closure)
+      setRoundScores(prev => {
+        const total = prev.reduce((a, b) => a + b, 0);
+        finishLevel(total);
+        return prev;
+      });
     }
-  }, [roundIdx, modeData, roundScores]);
+  }, [roundIdx, modeData, startRound, finishLevel]);
 
   // ─── COMPLETION HANDLER ───
   const finishLevel = useCallback(async (rawScore: number) => {
-    const pct = getScorePercentage(mode ?? 'speed_recall', rawScore);
+    // For campaign speed recall, max = rounds × shapeCount × 100
+    const totalRounds = modeData?.rounds?.length ?? 1;
+    const shapesPerRound = modeData?.rounds?.[0]?.shapes?.length ?? 5;
+    const actualMax = totalRounds * shapesPerRound * 100;
+    const pct = mode === 'speed_recall' || !isExternalMode
+      ? Math.min(100, Math.round((rawScore / actualMax) * 100))
+      : getScorePercentage(mode ?? 'speed_recall', rawScore);
     const earnedStars = getStarsForScore(pct);
     setTotalScore(rawScore);
     setScorePct(pct);

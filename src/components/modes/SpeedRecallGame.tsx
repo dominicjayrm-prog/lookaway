@@ -101,10 +101,9 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
         setPhase('recall');
       } else {
         setShapeScores(prev => {
-          const allScores = [...prev, score];
-          const roundTotal = allScores.reduce((a, b) => a + b, 0);
+          const roundTotal = prev.reduce((a, b) => a + b, 0);
           setRoundScores(rs => [...rs, roundTotal]);
-          return allScores;
+          return prev;
         });
         setPhase('round_done');
       }

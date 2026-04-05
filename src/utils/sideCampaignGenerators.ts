@@ -57,10 +57,10 @@ function resolveColorPool(hexes: string[]): { hex: string; name: string }[] {
 }
 
 // ─── SPEED RECALL ───
-export function generateSpeedRecallLevel(levelData: any) {
+export function generateSpeedRecallLevel(levelData: any, roundCount = 1) {
   const { shapeCount = 5, viewingTime = 3, shapePool = ['circle', 'square', 'triangle'], colorPool = ['#FF6B6B', '#0984E3', '#00B894'], minDistance = 20 } = levelData;
   const colors = resolveColorPool(colorPool);
-  const rounds = Array.from({ length: 5 }, () => ({
+  const rounds = Array.from({ length: roundCount }, () => ({
     shapes: placeShapes(shapeCount, shapePool, colors, minDistance),
     viewingTime,
   }));
@@ -229,7 +229,7 @@ export function generateColourChainLevel(levelData: any) {
 /** Master dispatcher — generate modeData from level_data for any mode */
 export function generateSideCampaignData(mode: string, levelData: any) {
   switch (mode) {
-    case 'speed_recall': return generateSpeedRecallLevel(levelData);
+    case 'speed_recall': return generateSpeedRecallLevel(levelData, 1);
     case 'snap_match': return generateSnapMatchLevel(levelData);
     case 'sequence': return generateSequenceLevel(levelData);
     case 'counting_blitz': return generateCountingBlitzLevel(levelData);
