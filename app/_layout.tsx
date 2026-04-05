@@ -17,6 +17,14 @@ function StoreHydrator() {
   return null;
 }
 
+function LevelCacheLoader() {
+  useEffect(() => {
+    // Cache all level definitions from Supabase on startup (if online)
+    require('@/src/utils/levelCache').LevelCache.syncLevelCache();
+  }, []);
+  return null;
+}
+
 function DeepLinkHandler() {
   const { user } = useAuth();
 
@@ -205,6 +213,7 @@ function RootLayout() {
       <AuthProvider>
         <MobileContainer>
           <StoreHydrator />
+          <LevelCacheLoader />
           <DeepLinkHandler />
           <LifeRegenChecker />
           <CloudSyncLoader />
