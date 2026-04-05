@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import OfflineBanner from '@/src/components/OfflineBanner';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -24,6 +25,8 @@ function TabLayout() {
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : 16;
   return (
+    <>
+    <OfflineBanner />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -61,6 +64,7 @@ function TabLayout() {
         />
       ))}
     </Tabs>
+    </>
   );
 }
 

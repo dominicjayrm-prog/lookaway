@@ -32,8 +32,16 @@ function dbRowToLevel(row: CampaignLevelRow): Level {
   };
 }
 
-/** Fetch a single level from Supabase, fall back to hardcoded */
+/** Fetch a single level — tries local cache first, then Supabase, then hardcoded */
 export async function fetchLevelById(id: string): Promise<Level | undefined> {
+  // Try local cache first (works offline)
+  try {
+    const { LevelCache } = require('@/src/utils/levelCache');
+    const cached = await LevelCache.getClassicLevel(id);
+    if (cached) return dbRowToLevel(cached);
+  } catch { /* fall through */ }
+
+  // Try Supabase
   try {
     const { data, error } = await supabase
       .from('campaign_levels')
@@ -43,11 +51,21 @@ export async function fetchLevelById(id: string): Promise<Level | undefined> {
       .single();
     if (data && !error) return dbRowToLevel(data);
   } catch { /* fall through */ }
+
+  // Hardcoded fallback
   return getLevelById(id);
 }
 
-/** Fetch all levels for a world from Supabase, fall back to hardcoded */
+/** Fetch all levels for a world — tries local cache first */
 export async function fetchWorldLevels(worldId: number): Promise<Level[]> {
+  // Try local cache first
+  try {
+    const { LevelCache } = require('@/src/utils/levelCache');
+    const cached = await LevelCache.getClassicWorldLevels(worldId);
+    if (cached.length > 0) return cached.map(dbRowToLevel);
+  } catch { /* fall through */ }
+
+  // Try Supabase
   try {
     const { data, error } = await supabase
       .from('campaign_levels')

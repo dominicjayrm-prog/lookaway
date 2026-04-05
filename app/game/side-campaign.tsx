@@ -6,6 +6,7 @@ import Svg, { Path, Circle, Rect, Polygon, Ellipse } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
+import { LevelCache } from '@/src/utils/levelCache';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { CHALLENGE_MODES, getScorePercentage, getMaxScore } from '@/src/data/challengeModes';
 import { generateSideCampaignData } from '@/src/utils/sideCampaignGenerators';
@@ -74,21 +75,18 @@ function SideCampaignScreen() {
   const campaignConfig = CAMPAIGNS[mode ?? ''];
   const mColor = modeConfig?.color ?? campaignConfig?.color ?? '#6C5CE7';
 
-  // Load level from Supabase
+  // Load level from cache first, then Supabase fallback
   useEffect(() => {
     if (!levelId) return;
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('side_campaign_levels')
-          .select('*')
-          .eq('id', levelId)
-          .single();
+        // Try local cache first (works offline)
+        const data = await LevelCache.getSideLevel(levelId);
         if (cancelled) return;
-        if (error || !data) { setPhase('error'); return; }
+        if (!data) { setPhase('error'); return; }
         setLevelData(data.level_data);
-        const generated = generateSideCampaignData(data.mode, data.level_data);
+        const generated = generateSideCampaignData(data.mode ?? mode ?? 'speed_recall', data.level_data);
         setModeData(generated);
         setPhase('ready');
       } catch { if (!cancelled) setPhase('error'); }
