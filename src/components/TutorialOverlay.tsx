@@ -85,8 +85,11 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
           borderColor: 'rgba(162,155,254,0.6)',
         }} />
 
-        {/* Tooltip card */}
-        <View style={[st.tooltip, isAbove
+        {/* Tooltip card — constrained to mobile width */}
+        <View style={[st.tooltip, {
+          width: Math.min(sw - 40, 340),
+          left: Math.max(20, (sw - Math.min(sw - 40, 340)) / 2),
+        }, isAbove
           ? { bottom: sh - spot.y + 20 }
           : { top: spot.y + spot.height + 20 }
         ]}>
@@ -156,7 +159,7 @@ var st = StyleSheet.create({
   fullScreen: { flex: 1 },
   dark: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.65)' },
   tooltip: {
-    position: 'absolute', left: 24, right: 24,
+    position: 'absolute',
     backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2, shadowRadius: 30, elevation: 15, zIndex: 200,
