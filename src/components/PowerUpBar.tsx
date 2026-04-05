@@ -20,9 +20,9 @@ function BoltIcon({ size = 18, color = '#6C5CE7' }: { size?: number; color?: str
 
 export const PowerUpBar = React.memo(function PowerUpBar({ usedThisLevel, onUsePowerUp, disabled }: PowerUpBarProps) {
   const { colors } = useTheme();
-  const powerUps = useGameStore((s) => s.powerUps);
+  const powerUps = useGameStore((s) => s.powerUps) ?? {};
 
-  const hasAny = QUESTION_POWER_UPS.some(id => powerUps[id] > 0 || usedThisLevel[id]);
+  const hasAny = QUESTION_POWER_UPS.some(id => (powerUps as Record<string, number>)[id] > 0 || usedThisLevel[id]);
 
   if (disabled) return null;
 
