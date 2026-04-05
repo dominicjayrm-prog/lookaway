@@ -123,9 +123,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   }, [phase, round, responseStartTime, roundIdx, totalRounds, roundScores, onComplete]);
 
   const handleCanvasPress = useCallback((e: any) => {
-    const { locationX, locationY } = e.nativeEvent;
-    const tapX = (locationX / canvasSize.w) * 100;
-    const tapY = (locationY / canvasSize.h) * 100;
+    const nativeEvent = e.nativeEvent;
+    const lx = nativeEvent.locationX ?? nativeEvent.offsetX ?? 0;
+    const ly = nativeEvent.locationY ?? nativeEvent.offsetY ?? 0;
+    const tapX = canvasSize.w > 0 ? (lx / canvasSize.w) * 100 : 50;
+    const tapY = canvasSize.h > 0 ? (ly / canvasSize.h) * 100 : 50;
     handleTapSceneB(tapX, tapY);
   }, [handleTapSceneB, canvasSize]);
 
