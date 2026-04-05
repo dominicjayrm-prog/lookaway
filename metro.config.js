@@ -2,9 +2,11 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Fix: Metro's minifier can rename a function and a local const to the
-// same short name, causing "Cannot access X before initialization" on web.
-// keep_fnames prevents function names from being shortened, avoiding collisions.
+// Fix TDZ crash on web: Metro's minifier renames variables to short
+// names that can shadow outer-scope const/let declarations, causing
+// "Cannot access X before initialization". Disabling mangle prevents
+// ALL variable renaming, eliminating the issue completely.
+// Trade-off: bundle is ~15% larger but guaranteed to work.
 config.transformer = {
   ...config.transformer,
   minifierConfig: {
@@ -12,9 +14,7 @@ config.transformer = {
       reduce_vars: false,
       collapse_vars: false,
     },
-    mangle: {
-      keep_fnames: true,
-    },
+    mangle: false,
   },
 };
 
