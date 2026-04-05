@@ -133,12 +133,11 @@ export default function SideCampaignScreen() {
         setShapeIdx(prev => prev + 1);
         setPhase('recall');
       } else {
-        // Use functional updater to get latest shapeScores (avoids stale closure)
+        // Score already added to shapeScores on line 127 — just calculate total from latest state
         setShapeScores(prev => {
-          const allScores = [...prev, score];
-          const roundTotal = allScores.reduce((a, b) => a + b, 0);
+          const roundTotal = prev.reduce((a, b) => a + b, 0);
           setRoundScores(rs => [...rs, roundTotal]);
-          return allScores;
+          return prev;
         });
         setPhase('round_done');
       }
@@ -150,10 +149,14 @@ export default function SideCampaignScreen() {
       setRoundIdx(prev => prev + 1);
       startRound();
     } else {
-      const total = roundScores.reduce((a, b) => a + b, 0);
-      finishLevel(total);
+      // Use functional updater to get latest roundScores (avoids stale closure)
+      setRoundScores(prev => {
+        const total = prev.reduce((a, b) => a + b, 0);
+        finishLevel(total);
+        return prev;
+      });
     }
-  }, [roundIdx, modeData, roundScores]);
+  }, [roundIdx, modeData, startRound, finishLevel]);
 
   // ─── COMPLETION HANDLER ───
   const finishLevel = useCallback(async (rawScore: number) => {
