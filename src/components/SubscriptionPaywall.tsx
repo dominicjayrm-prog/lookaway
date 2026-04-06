@@ -1,11 +1,11 @@
 /**
- * Blanked+ Subscription Paywall — Full-screen, mobile-first, high-converting.
- * Inspired by top-grossing app paywalls (Plantum, Waterllama, Merlin).
+ * Blanked+ Subscription Paywall — Full-screen modal.
+ * Free trial toggle, stacked plan cards, shimmer CTA, staggered animations.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, Modal,
-  Dimensions, Animated as RNAnimated, Platform, ScrollView,
+  View, Text, StyleSheet, Pressable, Modal, ScrollView,
+  Dimensions, Animated as RNAnimated, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,43 +13,161 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 
 const { width: SW, height: SH } = Dimensions.get('window');
+const ACCENT = '#6C5CE7';
 
 interface Props {
   visible: boolean;
   onDismiss: () => void;
-  onSubscribe: (plan: 'monthly' | 'yearly') => void;
+  onSubscribe: (plan: 'monthly' | 'yearly', trial: boolean) => void;
 }
 
-// ── Benefit data ──────────────────────────────────────────────────────
-const BENEFITS = [
-  { icon: 'heart' as const, text: 'Unlimited lives', bold: 'Unlimited', color: '#FF6B6B' },
-  { icon: 'diamond' as const, text: '100 gems every month', bold: '100 gems', color: '#6C5CE7' },
-  { icon: 'flash' as const, text: '1 free power-up daily', bold: 'free power-up', color: '#F9A825' },
-  { icon: 'eye-off' as const, text: 'No ads, ever', bold: 'No ads', color: '#0984E3' },
-  { icon: 'analytics' as const, text: 'Detailed memory analytics', bold: 'memory analytics', color: '#00B894' },
-];
-
-// ── Custom Eye Logo ───────────────────────────────────────────────────
-function EyeLogo({ size = 56 }: { size?: number }) {
+// ── SVG Icons ─────────────────────────────────────────────────────────
+function EyeLogoSvg() {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 }}>
-      <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24">
-        <Path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#6C5CE7" strokeWidth={2} fill="none" />
-        <Circle cx={12} cy={12} r={3.5} fill="#6C5CE7" />
-        <Circle cx={12} cy={12} r={1.5} fill="#FFFFFF" />
-      </Svg>
-    </View>
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+      <Path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="#FFF" strokeWidth={1.8} />
+      <Circle cx={12} cy={12} r={3} fill="#FFF" />
+      <Circle cx={12} cy={12} r={1.2} fill={ACCENT} />
+    </Svg>
+  );
+}
+function HeartSvg() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#FF6B6B" />
+    </Svg>
+  );
+}
+function GemSvg() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 3h12l4 7-10 12L2 10l4-7z" fill={ACCENT} opacity={0.15} />
+      <Path d="M6 3h12l4 7-10 12L2 10l4-7z" stroke={ACCENT} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+function StarSvg() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#D4A012" />
+    </Svg>
+  );
+}
+function NoAdsSvg() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={5} width={18} height={14} rx={2} stroke="#0984E3" strokeWidth={1.8} />
+      <Path d="M3 3l18 18" stroke="#0984E3" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
   );
 }
 
+// ── Benefits data ─────────────────────────────────────────────────────
+const BENEFITS = [
+  { Icon: HeartSvg, color: '#FF6B6B', title: 'Unlimited lives', desc: 'Never wait to play again' },
+  { Icon: GemSvg, color: ACCENT, title: '100 gems every month', desc: 'Deposited on renewal day' },
+  { Icon: StarSvg, color: '#D4A012', title: 'Free daily power-up', desc: 'Random boost every 24 hours' },
+  { Icon: NoAdsSvg, color: '#0984E3', title: 'No ads', desc: 'Clean, uninterrupted play' },
+];
+
+// ── Shimmer Button ────────────────────────────────────────────────────
+function ShimmerButton({ text, onPress }: { text: string; onPress: () => void }) {
+  const shimmer = useRef(new RNAnimated.Value(-0.3)).current;
+  useEffect(() => {
+    const loop = RNAnimated.loop(
+      RNAnimated.timing(shimmer, { toValue: 1.3, duration: 2500, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const translateX = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, SW + 80] });
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [st.shimmerBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}>
+      <RNAnimated.View style={[st.shimmerStripe, { transform: [{ translateX }, { skewX: '-20deg' }] }]} />
+      <Text style={st.shimmerText}>{text}</Text>
+    </Pressable>
+  );
+}
+
+// ── Animated Benefit Row ──────────────────────────────────────────────
+function BenefitRow({ item, index }: { item: typeof BENEFITS[number]; index: number }) {
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
+  const slideAnim = useRef(new RNAnimated.Value(16)).current;
+  const checkScale = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const delay = index * 70;
+    RNAnimated.parallel([
+      RNAnimated.timing(fadeAnim, { toValue: 1, duration: 350, delay, useNativeDriver: true }),
+      RNAnimated.timing(slideAnim, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
+    ]).start();
+    RNAnimated.spring(checkScale, { toValue: 1, friction: 4, tension: 180, delay: delay + 300, useNativeDriver: true }).start();
+  }, []);
+
+  return (
+    <RNAnimated.View style={[st.benefitRow, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <View style={[st.benefitIcon, { backgroundColor: item.color + '12' }]}>
+        <item.Icon />
+      </View>
+      <View style={st.benefitText}>
+        <Text style={st.benefitTitle}>{item.title}</Text>
+        <Text style={st.benefitDesc}>{item.desc}</Text>
+      </View>
+      <RNAnimated.View style={{ transform: [{ scale: checkScale }] }}>
+        <Ionicons name="checkmark-circle" size={18} color="#00B894" />
+      </RNAnimated.View>
+    </RNAnimated.View>
+  );
+}
+
+// ── Free Trial Toggle ─────────────────────────────────────────────────
+function TrialToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  const thumbPos = useRef(new RNAnimated.Value(enabled ? 1 : 0)).current;
+  useEffect(() => {
+    RNAnimated.spring(thumbPos, { toValue: enabled ? 1 : 0, friction: 7, tension: 200, useNativeDriver: false }).start();
+  }, [enabled]);
+  const thumbTranslate = thumbPos.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
+  const trackColor = thumbPos.interpolate({ inputRange: [0, 1], outputRange: ['#D0CEC8', '#00B894'] });
+
+  return (
+    <Pressable onPress={onToggle} style={[st.trialRow, { backgroundColor: enabled ? '#00B89410' : '#F7F6F3' }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={[st.trialTitle, { color: '#1A1A18' }]}>Free trial</Text>
+        <Text style={[st.trialSub, { color: enabled ? '#00B894' : '#636E72' }]}>
+          {enabled ? 'Try 3 days free \u2014 cancel before, pay nothing' : 'Toggle to enable 3-day free trial'}
+        </Text>
+      </View>
+      <View style={st.toggleOuter}>
+        <RNAnimated.View style={[st.toggleTrack, { backgroundColor: trackColor }]} />
+        <RNAnimated.View style={[st.toggleThumb, { transform: [{ translateX: thumbTranslate }] }]} />
+      </View>
+    </Pressable>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────
 function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
-  const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
-  const slideAnim = useRef(new RNAnimated.Value(SH)).current;
   const insets = useSafeAreaInsets();
+  const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [trial, setTrial] = useState(true);
+  const slideAnim = useRef(new RNAnimated.Value(SH)).current;
+
+  // Pulsing glow for selected plan
+  const glowAnim = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    const pulse = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(glowAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+        RNAnimated.timing(glowAnim, { toValue: 0, duration: 1200, useNativeDriver: false }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
 
   useEffect(() => {
     if (visible) {
-      RNAnimated.spring(slideAnim, { toValue: 0, friction: 9, tension: 65, useNativeDriver: true }).start();
+      RNAnimated.spring(slideAnim, { toValue: 0, friction: 10, tension: 55, useNativeDriver: true }).start();
     } else {
       slideAnim.setValue(SH);
     }
@@ -61,133 +179,98 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
   if (!visible) return null;
 
-  const yearlyPerWeek = '\u00A30.48';
-  const monthlyPrice = '\u00A32.99';
-  const yearlyPrice = '\u00A324.99';
-  const yearlyMonthly = '\u00A32.08';
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
+  const ctaText = trial ? 'Start Free Trial' : plan === 'yearly' ? 'Subscribe \u2014 \u00A319.99/year' : 'Subscribe \u2014 \u00A32.99/month';
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
       <View style={st.webCenter}>
       <RNAnimated.View style={[st.fullScreen, { transform: [{ translateY: slideAnim }] }]}>
-        {/* ── Top: Purple gradient area ── */}
+        {/* Purple gradient header */}
         <LinearGradient
-          colors={['#7C6CF0', '#6C5CE7', '#5B4CC8']}
-          start={{ x: 0.2, y: 0 }}
-          end={{ x: 0.8, y: 1 }}
-          style={[st.topSection, { paddingTop: Math.max(insets.top + 8, 20) }]}
+          colors={['#6C5CE7', '#A29BFE', '#4A3BBF']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={[st.header, { paddingTop: Math.max(insets.top + 8, 24) }]}
         >
-          {/* Close */}
+          <Pressable style={st.restoreBtn} onPress={handleDismiss} hitSlop={12}>
+            <Text style={st.restoreText}>Restore</Text>
+          </Pressable>
           <Pressable style={st.closeBtn} onPress={handleDismiss} hitSlop={12}>
-            <Ionicons name="close" size={20} color="rgba(255,255,255,0.5)" />
+            <Ionicons name="close" size={18} color="rgba(255,255,255,0.4)" />
           </Pressable>
 
-          {/* Restore */}
-          <Pressable style={st.restoreTopBtn} onPress={handleDismiss} hitSlop={12}>
-            <Text style={st.restoreTopText}>Restore</Text>
-          </Pressable>
-
-          {/* Logo + Title */}
-          <View style={st.heroArea}>
-            <EyeLogo size={60} />
-            <Text style={st.heroTitle}>
-              Train your brain{'\n'}with <Text style={{ fontWeight: '900' }}>Blanked+</Text>
-            </Text>
+          {/* Logo */}
+          <View style={st.logoCircle}>
+            <EyeLogoSvg />
           </View>
-
-          {/* Benefits */}
-          <View style={st.benefitsList}>
-            {BENEFITS.map((b, i) => (
-              <View key={i} style={st.benefitRow}>
-                <View style={[st.benefitDot, { backgroundColor: b.color + '30' }]}>
-                  <Ionicons name={b.icon} size={14} color={b.color} />
-                </View>
-                <Text style={st.benefitText}>
-                  {b.text.split(b.bold).map((part, j) => (
-                    <React.Fragment key={j}>
-                      {j > 0 && <Text style={st.benefitBold}>{b.bold}</Text>}
-                      {part}
-                    </React.Fragment>
-                  ))}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Decorative circles */}
-          <View style={[st.deco, { top: 20, left: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.04)' }]} />
-          <View style={[st.deco, { top: 60, right: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.03)' }]} />
-          <View style={[st.deco, { bottom: -10, left: 40, width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.05)' }]} />
+          <Text style={st.headerTitle}>Blanked<Text style={{ fontWeight: '400', opacity: 0.75 }}>+</Text></Text>
+          <Text style={st.headerSub}>Train your memory without limits</Text>
         </LinearGradient>
 
-        {/* ── Bottom: White card area ── */}
-        <View style={[st.bottomSection, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
-          {/* Plan cards side by side */}
-          <View style={st.planRow}>
-            {/* Free trial / Yearly */}
-            <Pressable
-              style={[st.planCard, plan === 'yearly' && st.planCardActive]}
-              onPress={() => setPlan('yearly')}
-            >
-              {plan === 'yearly' && <View style={st.bestOfferBadge}><Text style={st.bestOfferText}>BEST OFFER</Text></View>}
+        {/* Content */}
+        <ScrollView style={st.content} contentContainerStyle={[st.contentInner, { paddingBottom: Math.max(insets.bottom + 12, 28) }]} showsVerticalScrollIndicator={false} bounces={false}>
+          {/* Benefits */}
+          {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} />)}
+
+          {/* Trial toggle */}
+          <TrialToggle enabled={trial} onToggle={() => setTrial(!trial)} />
+
+          {/* Plan cards — stacked */}
+          <View style={st.planSection}>
+            {/* Yearly */}
+            <Pressable onPress={() => setPlan('yearly')} style={[st.planCard, plan === 'yearly' && st.planCardActive]}>
+              {plan === 'yearly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
               <View style={[st.planRadio, plan === 'yearly' && st.planRadioActive]}>
                 {plan === 'yearly' && <View style={st.planRadioDot} />}
               </View>
-              <Text style={[st.planLabel, plan === 'yearly' && st.planLabelActive]}>Free trial</Text>
-              <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>7 days</Text>
-              <View style={st.planDivider} />
-              <Text style={[st.planPriceMain, plan === 'yearly' && st.planPriceActive]}>{yearlyMonthly}<Text style={st.planPricePer}>/mo</Text></Text>
-              <Text style={[st.planPriceAlt, plan === 'yearly' && st.planPriceAltActive]}>{yearlyPrice}/year</Text>
+              <View style={st.planLeft}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly</Text>
+                  <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
+                </View>
+                <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>{'\u00A3'}1.66/month</Text>
+              </View>
+              <Text style={[st.planPrice, plan === 'yearly' && st.planPriceActive]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
             </Pressable>
 
             {/* Monthly */}
-            <Pressable
-              style={[st.planCard, plan === 'monthly' && st.planCardActive]}
-              onPress={() => setPlan('monthly')}
-            >
+            <Pressable onPress={() => setPlan('monthly')} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
+              {plan === 'monthly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
               <View style={[st.planRadio, plan === 'monthly' && st.planRadioActive]}>
                 {plan === 'monthly' && <View style={st.planRadioDot} />}
               </View>
-              <Text style={[st.planLabel, plan === 'monthly' && st.planLabelActive]}>Monthly</Text>
-              <Text style={[st.planSub, plan === 'monthly' && st.planSubActive]}>No commitment</Text>
-              <View style={st.planDivider} />
-              <Text style={[st.planPriceMain, plan === 'monthly' && st.planPriceActive]}>{monthlyPrice}<Text style={st.planPricePer}>/mo</Text></Text>
-              <Text style={[st.planPriceAlt, plan === 'monthly' && st.planPriceAltActive]}>Cancel anytime</Text>
+              <View style={st.planLeft}>
+                <Text style={[st.planName, plan === 'monthly' && st.planNameActive]}>Monthly</Text>
+              </View>
+              <Text style={[st.planPrice, plan === 'monthly' && st.planPriceActive]}>{'\u00A3'}2.99<Text style={st.planPricePer}>/month</Text></Text>
             </Pressable>
           </View>
 
-          {/* CTA */}
-          <Pressable
-            style={({ pressed }) => [st.ctaBtn, pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
-            onPress={() => onSubscribe(plan)}
-          >
-            <LinearGradient
-              colors={['#6C5CE7', '#5B4CC8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={st.ctaGradient}
-            >
-              <Text style={st.ctaText}>{plan === 'yearly' ? 'Try for free' : 'Continue'}</Text>
-            </LinearGradient>
-          </Pressable>
+          {/* Shimmer CTA */}
+          <ShimmerButton text={ctaText} onPress={() => onSubscribe(plan, trial)} />
 
           {/* Reassurance */}
-          <View style={st.reassuranceRow}>
-            <Ionicons name="checkmark-circle" size={14} color="#00B894" />
-            <Text style={st.reassuranceText}>
-              {plan === 'yearly' ? 'No payment now \u00B7 Cancel anytime' : `${monthlyPrice} billed monthly \u00B7 Cancel anytime`}
-            </Text>
+          <View style={st.reassurance}>
+            {trial ? (
+              <View style={st.reassuranceRow}>
+                <Ionicons name="checkmark-circle" size={14} color="#00B894" />
+                <Text style={st.reassuranceGreen}>No charge for 3 days \u2014 cancel anytime</Text>
+              </View>
+            ) : (
+              <Text style={st.reassuranceGrey}>Cancel anytime in Settings</Text>
+            )}
           </View>
 
-          {/* Legal links */}
+          {/* Legal */}
           <View style={st.legalRow}>
-            <Pressable><Text style={st.legalLink}>Terms of Use</Text></Pressable>
-            <Text style={st.legalDivider}>|</Text>
-            <Pressable><Text style={st.legalLink}>Privacy Policy</Text></Pressable>
-            <Text style={st.legalDivider}>|</Text>
+            <Pressable><Text style={st.legalLink}>Terms</Text></Pressable>
+            <Text style={st.legalDot}>{'\u00B7'}</Text>
+            <Pressable><Text style={st.legalLink}>Privacy</Text></Pressable>
+            <Text style={st.legalDot}>{'\u00B7'}</Text>
             <Pressable onPress={handleDismiss}><Text style={st.legalLink}>Restore</Text></Pressable>
           </View>
-        </View>
+        </ScrollView>
       </RNAnimated.View>
       </View>
     </Modal>
@@ -196,143 +279,100 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
 export default SubscriptionPaywall;
 
-const ACCENT = '#6C5CE7';
 const st = StyleSheet.create({
-  webCenter: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.4)' : 'transparent',
-  },
+  webCenter: { flex: 1, alignItems: 'center', backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.4)' : 'transparent' },
   fullScreen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    width: '100%',
+    flex: 1, backgroundColor: '#FFFFFF', width: '100%',
     maxWidth: Platform.OS === 'web' ? 430 : undefined,
     ...(Platform.OS === 'web' ? { shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 30 } : {}),
   },
 
-  // ── Top ──
-  topSection: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    overflow: 'hidden',
-    position: 'relative',
+  // Header
+  header: { paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center', position: 'relative' },
+  restoreBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 16, left: 16, zIndex: 10 },
+  restoreText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  closeBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 14, right: 16, zIndex: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  logoCircle: {
+    width: 54, height: 54, borderRadius: 27, marginTop: 40,
+    backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
-  closeBtn: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 54 : 16,
-    left: 16,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+  headerTitle: { fontSize: 26, fontWeight: '800', color: '#FFF', marginBottom: 4 },
+  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+
+  // Content
+  content: { flex: 1, backgroundColor: '#FFFFFF' },
+  contentInner: { paddingHorizontal: 20, paddingTop: 16 },
+
+  // Benefits
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
+  benefitIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  benefitText: { flex: 1 },
+  benefitTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A18' },
+  benefitDesc: { fontSize: 11, color: '#636E72', marginTop: 1 },
+
+  // Trial toggle
+  trialRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14, paddingHorizontal: 14, borderRadius: 14,
+    marginTop: 14, marginBottom: 14,
   },
-  restoreTopBtn: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 58 : 20,
-    right: 16,
-    zIndex: 10,
-  },
-  restoreTopText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
-
-  heroArea: { alignItems: 'center', marginTop: 48, marginBottom: 24 },
-  heroTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    lineHeight: 34,
-    marginTop: 16,
-    letterSpacing: -0.3,
-  },
-
-  benefitsList: { gap: 10 },
-  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  benefitDot: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  benefitText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
-  benefitBold: { fontWeight: '800', color: '#FFFFFF' },
-
-  deco: { position: 'absolute' },
-
-  // ── Bottom ──
-  bottomSection: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -24,
-    paddingTop: 20,
-    paddingHorizontal: 20,
+  trialTitle: { fontSize: 14, fontWeight: '700' },
+  trialSub: { fontSize: 11, marginTop: 2 },
+  toggleOuter: { width: 48, height: 28, position: 'relative' },
+  toggleTrack: { position: 'absolute', width: 48, height: 28, borderRadius: 14 },
+  toggleThumb: {
+    position: 'absolute', top: 2, width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15, shadowRadius: 3, elevation: 2,
   },
 
-  planRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  // Plans
+  planSection: { gap: 8, marginBottom: 16 },
   planCard: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#E8E6E3',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    position: 'relative',
-    backgroundColor: '#FAFAF8',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: '#E8E6E3', borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 14,
+    backgroundColor: '#FAFAF8', position: 'relative', overflow: 'hidden',
   },
-  planCardActive: {
-    borderColor: ACCENT,
-    borderWidth: 2,
-    backgroundColor: ACCENT + '08',
+  planCardActive: { borderColor: ACCENT, borderWidth: 2, backgroundColor: ACCENT + '06' },
+  planGlow: {
+    ...StyleSheet.absoluteFillObject, borderRadius: 14,
+    backgroundColor: ACCENT, // opacity is animated
   },
-  bestOfferBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 10,
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  bestOfferText: { fontSize: 8, fontWeight: '800', color: '#FFF', letterSpacing: 0.8 },
-
-  planRadio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: '#D0CEC8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
+  planRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#D0CEC8', alignItems: 'center', justifyContent: 'center' },
   planRadioActive: { borderColor: ACCENT },
   planRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: ACCENT },
-
-  planLabel: { fontSize: 15, fontWeight: '800', color: '#636E72', marginBottom: 2 },
-  planLabelActive: { color: '#1A1A18' },
-  planSub: { fontSize: 11, color: '#B2BEC3', fontWeight: '500', marginBottom: 8 },
+  planLeft: { flex: 1 },
+  planName: { fontSize: 15, fontWeight: '700', color: '#636E72' },
+  planNameActive: { color: '#1A1A18' },
+  planSub: { fontSize: 11, color: '#B2BEC3', marginTop: 1 },
   planSubActive: { color: '#636E72' },
-  planDivider: { width: '70%', height: 1, backgroundColor: '#E8E6E3', marginBottom: 8 },
-  planPriceMain: { fontSize: 18, fontWeight: '900', color: '#B2BEC3' },
+  planPrice: { fontSize: 16, fontWeight: '800', color: '#B2BEC3' },
   planPriceActive: { color: '#1A1A18' },
-  planPricePer: { fontSize: 12, fontWeight: '500' },
-  planPriceAlt: { fontSize: 10, color: '#B2BEC3', fontWeight: '500', marginTop: 2 },
-  planPriceAltActive: { color: '#636E72' },
+  planPricePer: { fontSize: 11, fontWeight: '500' },
+  bestValueBadge: { backgroundColor: '#FF6B6B', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 6 },
+  bestValueText: { fontSize: 8, fontWeight: '800', color: '#FFF', letterSpacing: 0.8 },
 
   // CTA
-  ctaBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
-  ctaGradient: {
-    paddingVertical: 17,
-    alignItems: 'center',
-    borderRadius: 16,
+  shimmerBtn: {
+    width: '100%', backgroundColor: ACCENT, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center', overflow: 'hidden',
+    shadowColor: ACCENT, shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 }, shadowRadius: 18, elevation: 6,
+    marginBottom: 10,
   },
-  ctaText: { fontSize: 17, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.3 },
+  shimmerStripe: { position: 'absolute', top: 0, bottom: 0, width: 50, backgroundColor: 'rgba(255,255,255,0.18)' },
+  shimmerText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
 
-  reassuranceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 12 },
-  reassuranceText: { fontSize: 12, color: '#636E72', fontWeight: '500' },
+  // Reassurance
+  reassurance: { alignItems: 'center', marginBottom: 14 },
+  reassuranceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  reassuranceGreen: { fontSize: 12, fontWeight: '600', color: '#00B894' },
+  reassuranceGrey: { fontSize: 12, color: '#636E72' },
 
-  legalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  legalLink: { fontSize: 11, color: '#B2BEC3', fontWeight: '500' },
-  legalDivider: { fontSize: 11, color: '#D0CEC8' },
+  // Legal
+  legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 4 },
+  legalLink: { fontSize: 10, color: '#B2BEC3' },
+  legalDot: { fontSize: 10, color: '#D0CEC8' },
 });

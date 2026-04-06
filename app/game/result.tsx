@@ -200,6 +200,16 @@ function ResultScreen() {
         const state = useGameStore.getState();
         scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
       }
+
+      // Show starter pack after first failure (if not already shown/purchased)
+      AsyncStorage.getItem('starter_pack_shown').then(shown => {
+        AsyncStorage.getItem('starter_pack_purchased').then(purchased => {
+          if (!shown && !purchased) {
+            setTimeout(() => setShowStarterPack(true), 1200);
+            AsyncStorage.setItem('starter_pack_shown', 'true');
+          }
+        });
+      });
     }
 
     if (passed) cancelStreakReminder();
@@ -290,18 +300,7 @@ function ResultScreen() {
         totalStars={worldTotalLevels * 3}
         isPerfect={Object.entries(levelProgress).filter(([k]) => k.startsWith(`w${worldId}-`)).every(([, v]) => v?.stars >= 3)}
         nextWorldName={nextWorldName ?? undefined}
-        onDismiss={() => {
-          setShowWorldComplete(false);
-          // Show starter pack after completing first world (world 1 or 2 depending on migration)
-          if (worldId <= 2) {
-            AsyncStorage.getItem('blanked_starter_pack_shown').then(shown => {
-              if (!shown) {
-                setTimeout(() => setShowStarterPack(true), 600);
-                AsyncStorage.setItem('blanked_starter_pack_shown', 'true');
-              }
-            });
-          }
-        }}
+        onDismiss={() => setShowWorldComplete(false)}
       />
       <CampaignCompleteCelebration
         visible={showCampaignComplete}
