@@ -191,7 +191,10 @@ function GameScreen() {
 
       {gameState === 'TRANSITION' && (
         <AnimatedOrView entering={enterFade} exiting={exitFade} style={styles.centered}>
-          <Text style={styles.blankText}>Go blank!</Text>
+          <View style={styles.blankContainer}>
+            <Text style={styles.blankText}>Go blank!</Text>
+            <Text style={styles.blankSubtext}>What do you remember?</Text>
+          </View>
         </AnimatedOrView>
       )}
 
@@ -264,7 +267,9 @@ const styles = StyleSheet.create({
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
   memoriseText: { fontSize: typography.sizes.lg, fontWeight: typography.weights.medium, color: colors.textMid, textAlign: 'center' },
+  blankContainer: { alignItems: 'center', gap: 8 },
   blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  blankSubtext: { fontSize: typography.sizes.md, fontWeight: typography.weights.medium, color: colors.textLight },
   sceneScoreTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   sceneScoreBody: { fontSize: typography.sizes.lg, color: colors.textMid },
   errorText: { fontSize: typography.sizes.lg, color: colors.textMid, textAlign: 'center', marginBottom: spacing.lg },

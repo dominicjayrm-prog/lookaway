@@ -56,6 +56,25 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
   );
 }
 
+/** Animated counter that counts up from 0 to `value` with easing */
+function AnimatedScore({ value, style }: { value: number; style: any }) {
+  var [display, setDisplay] = useState(0);
+  useEffect(() => {
+    var start = Date.now();
+    var duration = 900;
+    var frame = () => {
+      var elapsed = Date.now() - start;
+      var progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      var eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(value * eased));
+      if (progress < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, [value]);
+  return <Text style={style}>{display}%</Text>;
+}
+
 function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -213,7 +232,7 @@ function ResultScreen() {
               <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate />
               <ThreeStarBurst trigger={passed} stars={stars} />
             </View>
-            <Text style={[styles.scoreText, { color: colors.text }]}>{score}%</Text>
+            <AnimatedScore value={score} style={[styles.scoreText, { color: colors.text }]} />
             <Text style={[styles.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
             {passed && gemsEarned === 0 && wasReplay && !improved && (<Text style={[styles.noGemsText, { color: colors.textLight }]}>Already completed \u2014 improve your stars to earn more gems!</Text>)}
