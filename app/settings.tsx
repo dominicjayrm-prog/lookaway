@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Card } from '@/src/components/Card';
 import { Button } from '@/src/components/Button';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { typography } from '@/src/theme/typography';
@@ -31,6 +34,7 @@ function SettingsScreen() {
   const { user } = useAuth();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({ ...DEFAULT_NOTIFICATION_PREFERENCES });
   const [masterToggle, setMasterToggle] = useState(true);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -63,6 +67,30 @@ function SettingsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Blanked+ upsell */}
+        <Pressable
+          style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+          onPress={() => setShowPaywall(true)}
+        >
+          <LinearGradient
+            colors={['#6C5CE7', '#5B4CC8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.plusCard}
+          >
+            <View style={styles.plusLeft}>
+              <View style={styles.plusIcon}>
+                <Ionicons name="eye" size={16} color="#6C5CE7" />
+              </View>
+              <View>
+                <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
+                <Text style={styles.plusSub}>Unlimited lives, no ads, and more</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+          </LinearGradient>
+        </Pressable>
+
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: colors.text }]}>Sound effects</Text>
@@ -108,6 +136,14 @@ function SettingsScreen() {
           ))}
         </Card>
 
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>PURCHASES</Text>
+        <Card style={styles.card}>
+          <Pressable style={styles.row} onPress={() => Alert.alert('Restore', 'Purchase restoration will be available when RevenueCat is configured.')}>
+            <Text style={[styles.rowLabel, { color: colors.text }]}>Restore purchases</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+          </Pressable>
+        </Card>
+
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: colors.text }]}>Version</Text>
@@ -115,6 +151,15 @@ function SettingsScreen() {
           </View>
         </Card>
       </ScrollView>
+
+      <SubscriptionPaywall
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        onSubscribe={(plan) => {
+          Alert.alert('Blanked+', `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. IAP available when RevenueCat is configured.`);
+          setShowPaywall(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -134,4 +179,15 @@ const styles = StyleSheet.create({
   divider: { height: 1, marginVertical: spacing.xs },
   notifRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   notifIcon: { fontSize: 16, width: 24, textAlign: 'center' },
+
+  // Blanked+ card
+  plusCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 16, padding: 14, marginBottom: spacing.lg,
+    shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 16,
+  },
+  plusLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  plusIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  plusTitle: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+  plusSub: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
 });

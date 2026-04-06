@@ -144,7 +144,7 @@ export const SceneRenderer = React.memo(function SceneRenderer({ objects, visibl
 const styles = StyleSheet.create({
   sceneCard: { aspectRatio: 1, width: '100%', overflow: 'hidden' },
   canvas: { flex: 1, position: 'relative' },
-  objectWrapper: { position: 'absolute', alignItems: 'center', justifyContent: 'center', marginLeft: -20, marginTop: -20, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  objectWrapper: { position: 'absolute', alignItems: 'center', justifyContent: 'center', marginLeft: -20, marginTop: -20 },
   shape: { alignItems: 'center', justifyContent: 'center' },
   labelShape: { alignItems: 'center', justifyContent: 'center' },
   labelText: { color: '#FFFFFF', fontWeight: '700' },

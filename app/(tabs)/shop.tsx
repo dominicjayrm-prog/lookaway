@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
+import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 
@@ -12,10 +15,29 @@ const GEM = '\u{1F48E}';
 
 function ShopTab() {
   const { colors } = useTheme();
-  const { gems, powerUps, buyPowerUp, refillLivesWithGems } = useGameStore();
+  const { gems, powerUps, buyPowerUp, refillLivesWithGems, addGems } = useGameStore();
   const [selectedMode, setSelectedMode] = useState('classic');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showStarterPack, setShowStarterPack] = useState(false);
 
   const visiblePowerups = getPowerupsForMode(selectedMode);
+
+  const handleSubscribe = (plan: 'monthly' | 'yearly') => {
+    // RevenueCat integration point — for now show confirmation
+    Alert.alert(
+      'Blanked+',
+      `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. In-app purchases will be available when RevenueCat is configured.`,
+      [{ text: 'OK', onPress: () => setShowPaywall(false) }]
+    );
+  };
+
+  const handleStarterPackPurchase = () => {
+    // RevenueCat integration point — for now simulate
+    Alert.alert(
+      'Starter Pack',
+      'In-app purchases will be available when RevenueCat is configured.',
+    );
+  };
 
   const handleBuyPowerUp = (p: PowerUpDef, qty: number) => {
     const cost = qty >= 3 ? p.bundleCost : p.cost * qty;
@@ -43,6 +65,52 @@ function ShopTab() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* ── Blanked+ Banner ── */}
+        <Pressable
+          style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+          onPress={() => setShowPaywall(true)}
+        >
+          <LinearGradient
+            colors={['#6C5CE7', '#5B4CC8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.plusBanner}
+          >
+            <View style={styles.plusBannerLeft}>
+              <View style={styles.plusLogoBg}>
+                <Ionicons name="eye" size={16} color="#6C5CE7" />
+              </View>
+              <View>
+                <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
+                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 100 gems/mo</Text>
+              </View>
+            </View>
+            <View style={styles.plusArrow}>
+              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+            </View>
+          </LinearGradient>
+        </Pressable>
+
+        {/* ── Starter Pack ── */}
+        <Pressable
+          style={({ pressed }) => [styles.starterBanner, { backgroundColor: colors.card }, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+          onPress={() => setShowStarterPack(true)}
+        >
+          <View style={[styles.starterIconBg, { backgroundColor: colors.goldSoft }]}>
+            <Text style={{ fontSize: 18 }}>{'\u{1F381}'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.starterTitle, { color: colors.text }]}>Starter Pack</Text>
+              <View style={[styles.starterSaveBadge, { backgroundColor: colors.wrong }]}>
+                <Text style={styles.starterSaveText}>75% OFF</Text>
+              </View>
+            </View>
+            <Text style={[styles.starterSubtitle, { color: colors.textMid }]}>200 gems + 3 power-ups + 1hr lives</Text>
+          </View>
+          <Text style={[styles.starterPrice, { color: colors.accent }]}>{'\u00A3'}0.99</Text>
+        </Pressable>
+
         {/* ── Power-ups ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
 
@@ -186,6 +254,20 @@ function ShopTab() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Blanked+ paywall */}
+      <SubscriptionPaywall
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        onSubscribe={handleSubscribe}
+      />
+
+      {/* Starter pack popup */}
+      <StarterPackPopup
+        visible={showStarterPack}
+        onDismiss={() => setShowStarterPack(false)}
+        onPurchase={handleStarterPackPurchase}
+      />
     </SafeAreaView>
     </TabTransition>
   );
@@ -248,4 +330,29 @@ const styles = StyleSheet.create({
   removeAdsIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   removeAdsTitle: { fontSize: 16, fontWeight: '700' },
   removeAdsBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+
+  // Blanked+ banner
+  plusBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 20, padding: 16, marginTop: 8, marginBottom: 8,
+    shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 6,
+  },
+  plusBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  plusLogoBg: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  plusTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  plusSubtitle: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
+  plusArrow: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+
+  // Starter pack
+  starterBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 16, padding: 14, marginBottom: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2,
+  },
+  starterIconBg: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  starterTitle: { fontSize: 14, fontWeight: '700' },
+  starterSubtitle: { fontSize: 11, marginTop: 2 },
+  starterSaveBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  starterSaveText: { fontSize: 8, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+  starterPrice: { fontSize: 16, fontWeight: '800' },
 });

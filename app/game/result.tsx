@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StarRating } from '@/src/components/StarRating';
@@ -19,6 +19,8 @@ import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleLivesFullNotification } from '@/src/utils/notifications';
 import { incrementWeeklyProgress, setWeeklyProgressMax } from '@/src/utils/weeklyChallenges';
+import StarterPackPopup from '@/src/components/StarterPackPopup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { AchievementToast } from '@/src/components/AchievementToast';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
@@ -99,6 +101,7 @@ function ResultScreen() {
   const [showFirstLevel, setShowFirstLevel] = useState(false);
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
   const [showMilestone, setShowMilestone] = useState(false);
+  const [showStarterPack, setShowStarterPack] = useState(false);
   const { user } = useAuth();
 
   const parsed = level ? parseLevelId(level.id) : null;
@@ -287,7 +290,18 @@ function ResultScreen() {
         totalStars={worldTotalLevels * 3}
         isPerfect={Object.entries(levelProgress).filter(([k]) => k.startsWith(`w${worldId}-`)).every(([, v]) => v?.stars >= 3)}
         nextWorldName={nextWorldName ?? undefined}
-        onDismiss={() => setShowWorldComplete(false)}
+        onDismiss={() => {
+          setShowWorldComplete(false);
+          // Show starter pack after completing first world (world 1 or 2 depending on migration)
+          if (worldId <= 2) {
+            AsyncStorage.getItem('blanked_starter_pack_shown').then(shown => {
+              if (!shown) {
+                setTimeout(() => setShowStarterPack(true), 600);
+                AsyncStorage.setItem('blanked_starter_pack_shown', 'true');
+              }
+            });
+          }
+        }}
       />
       <CampaignCompleteCelebration
         visible={showCampaignComplete}
@@ -301,6 +315,16 @@ function ResultScreen() {
           onDone={() => setShowMilestone(false)}
         />
       )}
+
+      {/* Starter pack popup (after World 1 complete) */}
+      <StarterPackPopup
+        visible={showStarterPack}
+        onDismiss={() => setShowStarterPack(false)}
+        onPurchase={() => {
+          setShowStarterPack(false);
+          Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.');
+        }}
+      />
     </SafeAreaView>
   );
 }

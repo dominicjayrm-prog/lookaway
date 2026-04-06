@@ -10,6 +10,7 @@ import { spacing } from '@/src/theme/spacing';
 import Svg, { Rect, Path, Polygon, Circle } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/src/lib/supabase';
+import { InfinityIcon } from '@/src/components/AppIcons';
 
 const WORLD_COLORS: Record<number, string> = { 1: '#00B894', 2: '#0984E3', 3: '#6C5CE7', 4: '#F9A825', 5: '#FF6B6B', 6: '#1A1A18' };
 
@@ -170,7 +171,7 @@ function JourneyTab() {
           onPress={() => router.push('/game/endless')}
         >
           <View style={[styles.endlessIconBg, { backgroundColor: colors.accentSoft }]}>
-            <Text style={{ fontSize: 20, fontWeight: '200', color: colors.accent }}>{'\u221E'}</Text>
+            <InfinityIcon size={22} color={colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.endlessTitle, { color: colors.text }]}>Endless Mode</Text>

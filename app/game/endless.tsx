@@ -18,6 +18,7 @@ import { generateEndlessScene, getDifficultyLabel, getDifficultyColor } from '@/
 import { incrementWeeklyProgress } from '@/src/utils/weeklyChallenges';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Scene, Question } from '@/src/types/game';
+import { MuscleIcon, SadFaceIcon, GemIcon, InfinityIcon } from '@/src/components/AppIcons';
 
 const isWeb = Platform.OS === 'web';
 const STORAGE_KEY = 'blanked_endless_best';
@@ -195,7 +196,7 @@ export default function EndlessGame() {
       {/* READY state */}
       {state === 'READY' && (
         <View style={st.centered}>
-          <Text style={st.infinityIcon}>{'\u221E'}</Text>
+          <View style={st.infinityIconWrap}><InfinityIcon size={48} color="#6C5CE7" /></View>
           <Text style={[st.readyTitle, { color: colors.text }]}>Endless Mode</Text>
           <Text style={[st.readyDesc, { color: colors.textMid }]}>
             Levels get harder as you go.{'\n'}One wrong answer ends the run.
@@ -262,7 +263,9 @@ export default function EndlessGame() {
       {/* GAME OVER */}
       {state === 'GAME_OVER' && (
         <View style={st.centered}>
-          <Text style={st.gameOverIcon}>{levelsCleared > 0 ? '\u{1F4AA}' : '\u{1F614}'}</Text>
+          <View style={st.gameOverIconWrap}>
+            {levelsCleared > 0 ? <MuscleIcon size={44} color="#E17055" /> : <SadFaceIcon size={44} color="#FF6B6B" />}
+          </View>
           <Text style={[st.gameOverTitle, { color: colors.text }]}>Game Over</Text>
 
           {isNewBest && (
@@ -289,7 +292,10 @@ export default function EndlessGame() {
             <View style={[st.resultDivider, { backgroundColor: colors.border }]} />
             <View style={st.resultRow}>
               <Text style={[st.resultLabel, { color: colors.textMid }]}>Gems earned</Text>
-              <Text style={[st.resultValue, { color: colors.gold }]}>{gemsEarned} {'\u{1F48E}'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[st.resultValue, { color: colors.gold }]}>{gemsEarned}</Text>
+                <GemIcon size={14} color={colors.gold} />
+              </View>
             </View>
           </View>
 
@@ -350,7 +356,7 @@ const st = StyleSheet.create({
   gameArea: { flex: 1, paddingHorizontal: 16 },
   timer: { marginBottom: 8 },
 
-  infinityIcon: { fontSize: 52, color: '#6C5CE7', marginBottom: 8, fontWeight: '200' },
+  infinityIconWrap: { marginBottom: 8 },
   readyTitle: { fontSize: 26, fontWeight: '900', marginBottom: 8 },
   readyDesc: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   bestBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, marginBottom: 20 },
@@ -362,7 +368,7 @@ const st = StyleSheet.create({
   blankText: { fontSize: 32, fontWeight: '900', marginBottom: 4 },
   blankSubtext: { fontSize: 14 },
 
-  gameOverIcon: { fontSize: 48, marginBottom: 8 },
+  gameOverIconWrap: { marginBottom: 8 },
   gameOverTitle: { fontSize: 28, fontWeight: '900', marginBottom: 12 },
   newBestBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999, marginBottom: 16 },
   newBestText: { fontSize: 14, fontWeight: '800' },
