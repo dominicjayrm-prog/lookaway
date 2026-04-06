@@ -22,7 +22,7 @@ function ShopTab() {
 
   const visiblePowerups = getPowerupsForMode(selectedMode);
 
-  const handleSubscribe = (plan: 'monthly' | 'yearly') => {
+  const handleSubscribe = (plan: 'monthly' | 'yearly', trial: boolean = false) => {
     // RevenueCat integration point — for now show confirmation
     Alert.alert(
       'Blanked+',

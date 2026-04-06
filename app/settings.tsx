@@ -155,7 +155,7 @@ function SettingsScreen() {
       <SubscriptionPaywall
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
-        onSubscribe={(plan) => {
+        onSubscribe={(plan, trial) => {
           Alert.alert('Blanked+', `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. IAP available when RevenueCat is configured.`);
           setShowPaywall(false);
         }}
