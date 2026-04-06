@@ -1,15 +1,15 @@
 /**
- * StarterPackPopup — One-time £0.99 starter pack offer.
- * Contains: 200 gems + 3 of each Classic power-up + 1hr unlimited lives.
- * Shown after World 1 completion or from Shop.
+ * StarterPackPopup — Full-screen starter pack offer.
+ * £0.99 one-time (75% OFF). Clean, premium, mobile-first.
  */
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/src/providers/ThemeProvider';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GemIcon, TimerIcon, EyeIcon, ScissorsIcon, HeartIcon, GiftIcon } from '@/src/components/AppIcons';
 
-const { width: SW } = Dimensions.get('window');
+const { height: SH } = Dimensions.get('window');
 
 interface Props {
   visible: boolean;
@@ -18,111 +18,116 @@ interface Props {
 }
 
 interface PackItem {
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
   label: string;
   value: string;
   color: string;
 }
 
 const PACK_ITEMS: PackItem[] = [
-  { icon: GemIcon, label: 'Gems', value: '200', color: '#6C5CE7' },
-  { icon: TimerIcon, label: 'Slow Time', value: '\u00D73', color: '#0984E3' },
-  { icon: EyeIcon, label: 'Peek', value: '\u00D73', color: '#00B894' },
-  { icon: ScissorsIcon, label: '50/50', value: '\u00D73', color: '#F9CA24' },
-  { icon: HeartIcon, label: 'Unlimited lives', value: '1 hour', color: '#FF6B6B' },
+  { Icon: GemIcon, label: 'Gems', value: '200', color: '#6C5CE7' },
+  { Icon: TimerIcon, label: 'Slow Time', value: '\u00D73', color: '#0984E3' },
+  { Icon: EyeIcon, label: 'Peek', value: '\u00D73', color: '#00B894' },
+  { Icon: ScissorsIcon, label: '50/50', value: '\u00D73', color: '#F9CA24' },
+  { Icon: HeartIcon, label: 'Unlimited lives', value: '1 hour', color: '#FF6B6B' },
 ];
 
 function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
-  const { colors } = useTheme();
-  const backdrop = useRef(new RNAnimated.Value(0)).current;
-  const cardScale = useRef(new RNAnimated.Value(0.85)).current;
-  const cardOpacity = useRef(new RNAnimated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new RNAnimated.Value(SH)).current;
 
   useEffect(() => {
     if (visible) {
-      RNAnimated.parallel([
-        RNAnimated.timing(backdrop, { toValue: 1, duration: 300, useNativeDriver: false }),
-        RNAnimated.spring(cardScale, { toValue: 1, friction: 6, tension: 120, useNativeDriver: false }),
-        RNAnimated.timing(cardOpacity, { toValue: 1, duration: 250, useNativeDriver: false }),
-      ]).start();
+      RNAnimated.spring(slideAnim, { toValue: 0, friction: 9, tension: 65, useNativeDriver: true }).start();
     } else {
-      backdrop.setValue(0);
-      cardScale.setValue(0.85);
-      cardOpacity.setValue(0);
+      slideAnim.setValue(SH);
     }
   }, [visible]);
 
   function handleDismiss() {
-    RNAnimated.parallel([
-      RNAnimated.timing(cardOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
-      RNAnimated.timing(backdrop, { toValue: 0, duration: 250, useNativeDriver: false }),
-    ]).start(() => onDismiss());
+    RNAnimated.timing(slideAnim, { toValue: SH, duration: 250, useNativeDriver: true }).start(() => onDismiss());
   }
 
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="none">
-      <View style={st.container}>
-        <RNAnimated.View style={[StyleSheet.absoluteFill, {
-          backgroundColor: backdrop.interpolate({ inputRange: [0, 1], outputRange: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)'] }),
-        }]} />
-
-        <RNAnimated.View style={[st.card, {
-          backgroundColor: colors.card,
-          opacity: cardOpacity,
-          transform: [{ scale: cardScale }],
-          maxWidth: Math.min(SW - 40, 360),
-        }]}>
+    <Modal visible transparent animationType="none" statusBarTranslucent>
+      <RNAnimated.View style={[st.fullScreen, { transform: [{ translateY: slideAnim }] }]}>
+        {/* Purple gradient top area */}
+        <LinearGradient
+          colors={['#7C6CF0', '#6C5CE7', '#5B4CC8']}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={[st.topSection, { paddingTop: Math.max(insets.top + 12, 24) }]}
+        >
           {/* Close */}
-          <Pressable style={st.closeBtn} onPress={handleDismiss}>
-            <Ionicons name="close" size={20} color={colors.textLight} />
+          <Pressable style={st.closeBtn} onPress={handleDismiss} hitSlop={12}>
+            <Ionicons name="close" size={20} color="rgba(255,255,255,0.5)" />
           </Pressable>
 
-          {/* Header */}
-          <View style={st.headerArea}>
-            <View style={st.giftIconWrap}><GiftIcon size={36} color="#FF6B6B" /></View>
-            <Text style={[st.title, { color: colors.text }]}>Starter Pack</Text>
-            <View style={st.priceRow}>
-              <Text style={[st.oldPrice, { color: colors.textLight }]}>{'\u00A3'}3.99</Text>
-              <Text style={[st.newPrice, { color: colors.accent }]}>{'\u00A3'}0.99</Text>
+          {/* Hero */}
+          <View style={st.heroArea}>
+            <View style={st.giftCircle}>
+              <GiftIcon size={32} color="#FF6B6B" />
             </View>
-            <View style={[st.savePill, { backgroundColor: colors.wrong }]}>
-              <Text style={st.saveText}>75% OFF — LIMITED TIME</Text>
-            </View>
+            <Text style={st.heroTitle}>Starter Pack</Text>
+            <Text style={st.heroSubtitle}>Everything you need to get ahead</Text>
           </View>
 
-          {/* Items */}
-          <View style={st.itemsList}>
-            {PACK_ITEMS.map((item, i) => (
-              <View key={i} style={[st.itemRow, i < PACK_ITEMS.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-                <View style={st.itemIconWrap}><item.icon size={18} color={item.color} /></View>
-                <Text style={[st.itemLabel, { color: colors.text }]}>{item.label}</Text>
-                <Text style={[st.itemValue, { color: item.color }]}>{item.value}</Text>
+          {/* Price */}
+          <View style={st.priceArea}>
+            <Text style={st.oldPrice}>{'\u00A3'}3.99</Text>
+            <Text style={st.newPrice}>{'\u00A3'}0.99</Text>
+          </View>
+          <View style={st.savePill}>
+            <Text style={st.saveText}>75% OFF</Text>
+          </View>
+
+          {/* Decorative circles */}
+          <View style={[st.deco, { top: -20, right: -30, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.04)' }]} />
+          <View style={[st.deco, { bottom: 10, left: -20, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.05)' }]} />
+        </LinearGradient>
+
+        {/* White bottom card */}
+        <View style={[st.bottomSection, { paddingBottom: Math.max(insets.bottom + 8, 24) }]}>
+          {/* Items list */}
+          {PACK_ITEMS.map((item, i) => (
+            <View key={i} style={[st.itemRow, i < PACK_ITEMS.length - 1 && st.itemBorder]}>
+              <View style={[st.itemIconBg, { backgroundColor: item.color + '10' }]}>
+                <item.Icon size={18} color={item.color} />
               </View>
-            ))}
-          </View>
+              <Text style={st.itemLabel}>{item.label}</Text>
+              <Text style={[st.itemValue, { color: item.color }]}>{item.value}</Text>
+            </View>
+          ))}
 
-          {/* Value breakdown */}
-          <View style={[st.valuePill, { backgroundColor: colors.correctSoft }]}>
-            <Ionicons name="checkmark-circle" size={14} color={colors.correct} />
-            <Text style={[st.valueText, { color: colors.correct }]}>Total value: {'\u00A3'}3.99 — you pay {'\u00A3'}0.99</Text>
+          {/* Value note */}
+          <View style={st.valueRow}>
+            <Ionicons name="checkmark-circle" size={15} color="#00B894" />
+            <Text style={st.valueText}>Total value: {'\u00A3'}3.99 \u2014 you pay {'\u00A3'}0.99</Text>
           </View>
 
           {/* CTA */}
           <Pressable
-            style={({ pressed }) => [st.ctaBtn, { backgroundColor: colors.accent }, pressed && { opacity: 0.9, transform: [{ scale: 0.96 }] }]}
+            style={({ pressed }) => [st.ctaBtn, pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
             onPress={onPurchase}
           >
-            <Text style={st.ctaText}>Get Starter Pack — {'\u00A3'}0.99</Text>
+            <LinearGradient
+              colors={['#6C5CE7', '#5B4CC8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={st.ctaGradient}
+            >
+              <Text style={st.ctaText}>Get Starter Pack \u2014 {'\u00A3'}0.99</Text>
+            </LinearGradient>
           </Pressable>
 
           {/* Skip */}
-          <Pressable onPress={handleDismiss} style={st.skipBtn}>
-            <Text style={[st.skipText, { color: colors.textLight }]}>No thanks</Text>
+          <Pressable onPress={handleDismiss} style={st.skipBtn} hitSlop={8}>
+            <Text style={st.skipText}>No thanks</Text>
           </Pressable>
-        </RNAnimated.View>
-      </View>
+        </View>
+      </RNAnimated.View>
     </Modal>
   );
 }
@@ -130,46 +135,91 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 export default StarterPackPopup;
 
 const st = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  card: {
-    width: '100%',
-    borderRadius: 24,
+  fullScreen: { flex: 1, backgroundColor: '#FFFFFF' },
+
+  topSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.2,
-    shadowRadius: 40,
-    elevation: 12,
+    position: 'relative',
   },
   closeBtn: {
-    position: 'absolute', top: 14, right: 14, zIndex: 10,
-    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 16,
+    left: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 
-  headerArea: { alignItems: 'center', paddingTop: 28, paddingBottom: 16, paddingHorizontal: 20 },
-  giftIconWrap: { marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '900', marginBottom: 8 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  oldPrice: { fontSize: 16, fontWeight: '600', textDecorationLine: 'line-through' },
-  newPrice: { fontSize: 24, fontWeight: '900' },
-  savePill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
-  saveText: { fontSize: 10, fontWeight: '800', color: '#FFF', letterSpacing: 1 },
-
-  itemsList: { paddingHorizontal: 20 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },
-  itemIconWrap: { width: 28, alignItems: 'center' },
-  itemLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
-  itemValue: { fontSize: 14, fontWeight: '800' },
-
-  valuePill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginTop: 14, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
-  valueText: { fontSize: 12, fontWeight: '700' },
-
-  ctaBtn: {
-    marginHorizontal: 20, marginTop: 16, paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12,
+  heroArea: { alignItems: 'center', marginTop: 36 },
+  giftCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
-  ctaText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+  heroTitle: { fontSize: 28, fontWeight: '900', color: '#FFFFFF', marginBottom: 4 },
+  heroSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
 
-  skipBtn: { alignItems: 'center', paddingVertical: 14 },
-  skipText: { fontSize: 13, fontWeight: '600' },
+  priceArea: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
+  oldPrice: { fontSize: 18, fontWeight: '600', color: 'rgba(255,255,255,0.4)', textDecorationLine: 'line-through' },
+  newPrice: { fontSize: 36, fontWeight: '900', color: '#FFFFFF' },
+  savePill: { marginTop: 8, backgroundColor: '#FF6B6B', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 999 },
+  saveText: { fontSize: 11, fontWeight: '800', color: '#FFF', letterSpacing: 1 },
+
+  deco: { position: 'absolute' },
+
+  bottomSection: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -24,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+  },
+
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    gap: 12,
+  },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  itemIconBg: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  itemLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1A1A18' },
+  itemValue: { fontSize: 15, fontWeight: '800' },
+
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,184,148,0.08)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  valueText: { fontSize: 13, fontWeight: '700', color: '#00B894' },
+
+  ctaBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
+  ctaGradient: { paddingVertical: 17, alignItems: 'center', borderRadius: 16 },
+  ctaText: { fontSize: 16, fontWeight: '900', color: '#FFFFFF' },
+
+  skipBtn: { alignItems: 'center', paddingVertical: 10 },
+  skipText: { fontSize: 13, fontWeight: '600', color: '#B2BEC3' },
 });
