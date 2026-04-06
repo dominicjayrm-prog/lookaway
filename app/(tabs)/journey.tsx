@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -8,6 +8,7 @@ import { useGameStore } from '@/src/store';
 import { CAMPAIGNS, CAMPAIGN_ORDER, TOTAL_MAX_STARS } from '@/src/data/campaigns';
 import { spacing } from '@/src/theme/spacing';
 import Svg, { Rect, Path, Polygon, Circle } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/src/lib/supabase';
 
 const WORLD_COLORS: Record<number, string> = { 1: '#00B894', 2: '#0984E3', 3: '#6C5CE7', 4: '#F9A825', 5: '#FF6B6B', 6: '#1A1A18' };
@@ -26,6 +27,15 @@ function JourneyTab() {
   const { totalStars, levelProgress } = useGameStore();
   const [activeCampaign, setActiveCampaign] = useState('classic');
   const [sideCampaignProgress, setSideCampaignProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
+  const [endlessBest, setEndlessBest] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem('blanked_endless_best').then(val => {
+        if (val) setEndlessBest(parseInt(val, 10) || 0);
+      });
+    }, [])
+  );
 
   const campaign = CAMPAIGNS[activeCampaign];
 
@@ -153,6 +163,25 @@ function JourneyTab() {
             );
           })}
         </View>
+
+        {/* Endless Mode card */}
+        <Pressable
+          style={[styles.endlessCard, { backgroundColor: colors.card, borderColor: colors.accent + '20' }]}
+          onPress={() => router.push('/game/endless')}
+        >
+          <View style={[styles.endlessIconBg, { backgroundColor: colors.accentSoft }]}>
+            <Text style={{ fontSize: 20, fontWeight: '200', color: colors.accent }}>{'\u221E'}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.endlessTitle, { color: colors.text }]}>Endless Mode</Text>
+            <Text style={[styles.endlessDesc, { color: colors.textMid }]}>
+              {endlessBest > 0 ? `Best: Level ${endlessBest}` : 'How far can you go?'}
+            </Text>
+          </View>
+          <View style={[styles.endlessPlayBtn, { backgroundColor: colors.accent }]}>
+            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Play</Text>
+          </View>
+        </Pressable>
 
         {/* Active campaign description */}
         <View style={[styles.descCard, { backgroundColor: campaign.color + '08', borderColor: campaign.color + '15' }]}>
@@ -306,4 +335,11 @@ const styles = StyleSheet.create({
   lockedMessage: { fontSize: 12, textAlign: 'center', marginTop: 4 },
   comingSoonBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10, alignSelf: 'flex-start', marginTop: 8 },
   comingSoonText: { fontSize: 11, fontWeight: '600' },
+
+  // Endless mode
+  endlessCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
+  endlessIconBg: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  endlessTitle: { fontSize: 14, fontWeight: '700' },
+  endlessDesc: { fontSize: 11, marginTop: 2 },
+  endlessPlayBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
 });
