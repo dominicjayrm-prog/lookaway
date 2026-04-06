@@ -88,10 +88,10 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
             <Text style={st.headerTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
             <Text style={st.headerSubtitle}>Unlock the full experience</Text>
 
-            {/* Sparkle dots */}
-            <View style={[st.sparkle, { top: 24, left: 30 }]}><Text style={{ fontSize: 8 }}>{'\u2728'}</Text></View>
-            <View style={[st.sparkle, { top: 45, right: 40 }]}><Text style={{ fontSize: 10 }}>{'\u2728'}</Text></View>
-            <View style={[st.sparkle, { bottom: 30, left: 50 }]}><Text style={{ fontSize: 6 }}>{'\u2728'}</Text></View>
+            {/* Decorative dots */}
+            <View style={[st.sparkle, { top: 24, left: 30, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' }]} />
+            <View style={[st.sparkle, { top: 45, right: 40, width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+            <View style={[st.sparkle, { bottom: 30, left: 50, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.25)' }]} />
           </LinearGradient>
 
           {/* Benefits list */}

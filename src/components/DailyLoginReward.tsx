@@ -121,7 +121,6 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
                     {isPast ? '\u2713' : `D${i + 1}`}
                   </Text>
                   <Text style={[st.dayIcon, { opacity: isFuture ? 0.4 : 1 }]}>{r.icon}</Text>
-                  <Text style={[st.dayLabel, { color: isToday ? '#6C5CE7' : colors.textMid }]} numberOfLines={1}>{r.label}</Text>
                 </View>
               );
             })}
@@ -158,17 +157,16 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
 export default DailyLoginReward;
 
 var st = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  card: { width: '100%', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.2, shadowRadius: 40, elevation: 12 },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { width: '100%', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.25, shadowRadius: 40, elevation: 16 },
   header: { paddingVertical: 20, paddingHorizontal: 24, alignItems: 'center' },
   headerLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 },
   headerTitle: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
   headerStreak: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 8, justifyContent: 'center' },
-  dayCell: { width: '13%', minWidth: 42, aspectRatio: 0.85, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 4 },
+  dayCell: { width: '13%', minWidth: 42, aspectRatio: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 3, padding: 4 },
   dayNumber: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  dayIcon: { fontSize: 16 },
-  dayLabel: { fontSize: 7, fontWeight: '600', textAlign: 'center' },
+  dayIcon: { fontSize: 18 },
   todayBox: { marginHorizontal: 16, marginBottom: 16, padding: 14, borderRadius: 14, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   todayIcon: { fontSize: 28 },
   todayTitle: { fontSize: 15, fontWeight: '700' },

@@ -68,7 +68,7 @@ function ReferralCard() {
         <View style={{ flex: 1 }}>
           <Text style={[st.title, { color: colors.text }]}>Invite friends, earn gems</Text>
           <Text style={[st.subtitle, { color: colors.textMid }]}>
-            You both get {REFERRAL_REWARD} gems {'\u{1F48E}'}
+            You both get {REFERRAL_REWARD} gems
           </Text>
         </View>
       </View>

@@ -14,6 +14,10 @@ import {
   type WeeklyChallengeState,
   type WeeklyGoal,
 } from '@/src/utils/weeklyChallenges';
+import {
+  TargetIcon, StarIcon, CrownIcon, BrainIcon, FireIcon,
+  CalendarIcon, BoltIcon, SwordsIcon, FlexIcon, GlobeIcon, GemIcon,
+} from '@/src/components/AppIcons';
 
 function WeeklyChallengesCard() {
   const { colors } = useTheme();
@@ -106,6 +110,22 @@ interface GoalRowProps {
   isLast: boolean;
 }
 
+/** Map goal tracking keys to SVG icons */
+function GoalSvgIcon({ trackingKey, size = 18 }: { trackingKey: string; size?: number }) {
+  switch (trackingKey) {
+    case 'levels_completed': return <TargetIcon size={size} color="#0984E3" />;
+    case 'stars_earned': return <StarIcon size={size} color="#D4A012" />;
+    case 'perfect_levels': return <CrownIcon size={size} color="#D4A012" />;
+    case 'correct_streak': return <FireIcon size={size} color="#FF6B6B" />;
+    case 'daily_played': return <CalendarIcon size={size} color="#0984E3" />;
+    case 'powerups_used': return <BoltIcon size={size} color="#F9CA24" />;
+    case 'friends_challenged': return <SwordsIcon size={size} color="#E17055" />;
+    case 'high_score_levels': return <FlexIcon size={size} color="#E17055" />;
+    case 'modes_played': return <GlobeIcon size={size} color="#0984E3" />;
+    default: return <TargetIcon size={size} color="#6C5CE7" />;
+  }
+}
+
 function GoalRow({ goal, progress, claimed, colors, onClaim, isLast }: GoalRowProps) {
   const clamped = Math.min(progress, goal.target);
   const pct = goal.target > 0 ? (clamped / goal.target) * 100 : 0;
@@ -113,7 +133,9 @@ function GoalRow({ goal, progress, claimed, colors, onClaim, isLast }: GoalRowPr
 
   return (
     <View style={[st.goalRow, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-      <Text style={st.goalIcon}>{goal.icon}</Text>
+      <View style={st.goalIconWrap}>
+        <GoalSvgIcon trackingKey={goal.trackingKey} size={20} />
+      </View>
       <View style={st.goalContent}>
         <View style={st.goalTitleRow}>
           <Text style={[st.goalTitle, { color: colors.text }]} numberOfLines={1}>{goal.description}</Text>
@@ -189,7 +211,7 @@ const st = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  goalIcon: { fontSize: 20, marginTop: 2 },
+  goalIconWrap: { width: 28, alignItems: 'center', marginTop: 2 },
   goalContent: { flex: 1 },
   goalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   goalTitle: { fontSize: 13, fontWeight: '600', flex: 1 },

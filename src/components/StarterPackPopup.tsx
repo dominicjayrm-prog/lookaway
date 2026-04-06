@@ -7,6 +7,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { GemIcon, TimerIcon, EyeIcon, ScissorsIcon, HeartIcon, GiftIcon } from '@/src/components/AppIcons';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -17,18 +18,18 @@ interface Props {
 }
 
 interface PackItem {
-  icon: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
   label: string;
   value: string;
   color: string;
 }
 
 const PACK_ITEMS: PackItem[] = [
-  { icon: '\u{1F48E}', label: 'Gems', value: '200', color: '#6C5CE7' },
-  { icon: '\u23F1\uFE0F', label: 'Slow Time', value: '\u00D73', color: '#0984E3' },
-  { icon: '\u{1F441}', label: 'Peek', value: '\u00D73', color: '#00B894' },
-  { icon: '\u2702\uFE0F', label: '50/50', value: '\u00D73', color: '#F9CA24' },
-  { icon: '\u{2764}\uFE0F', label: 'Unlimited lives', value: '1 hour', color: '#FF6B6B' },
+  { icon: GemIcon, label: 'Gems', value: '200', color: '#6C5CE7' },
+  { icon: TimerIcon, label: 'Slow Time', value: '\u00D73', color: '#0984E3' },
+  { icon: EyeIcon, label: 'Peek', value: '\u00D73', color: '#00B894' },
+  { icon: ScissorsIcon, label: '50/50', value: '\u00D73', color: '#F9CA24' },
+  { icon: HeartIcon, label: 'Unlimited lives', value: '1 hour', color: '#FF6B6B' },
 ];
 
 function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
@@ -80,7 +81,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 
           {/* Header */}
           <View style={st.headerArea}>
-            <Text style={st.giftEmoji}>{'\u{1F381}'}</Text>
+            <View style={st.giftIconWrap}><GiftIcon size={36} color="#FF6B6B" /></View>
             <Text style={[st.title, { color: colors.text }]}>Starter Pack</Text>
             <View style={st.priceRow}>
               <Text style={[st.oldPrice, { color: colors.textLight }]}>{'\u00A3'}3.99</Text>
@@ -95,7 +96,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           <View style={st.itemsList}>
             {PACK_ITEMS.map((item, i) => (
               <View key={i} style={[st.itemRow, i < PACK_ITEMS.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-                <Text style={st.itemIcon}>{item.icon}</Text>
+                <View style={st.itemIconWrap}><item.icon size={18} color={item.color} /></View>
                 <Text style={[st.itemLabel, { color: colors.text }]}>{item.label}</Text>
                 <Text style={[st.itemValue, { color: item.color }]}>{item.value}</Text>
               </View>
@@ -146,7 +147,7 @@ const st = StyleSheet.create({
   },
 
   headerArea: { alignItems: 'center', paddingTop: 28, paddingBottom: 16, paddingHorizontal: 20 },
-  giftEmoji: { fontSize: 40, marginBottom: 8 },
+  giftIconWrap: { marginBottom: 8 },
   title: { fontSize: 22, fontWeight: '900', marginBottom: 8 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   oldPrice: { fontSize: 16, fontWeight: '600', textDecorationLine: 'line-through' },
@@ -156,7 +157,7 @@ const st = StyleSheet.create({
 
   itemsList: { paddingHorizontal: 20 },
   itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },
-  itemIcon: { fontSize: 18, width: 28, textAlign: 'center' },
+  itemIconWrap: { width: 28, alignItems: 'center' },
   itemLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   itemValue: { fontSize: 14, fontWeight: '800' },
 
