@@ -18,6 +18,7 @@ import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleLivesFullNotification } from '@/src/utils/notifications';
+import { incrementWeeklyProgress, setWeeklyProgressMax } from '@/src/utils/weeklyChallenges';
 import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { AchievementToast } from '@/src/components/AchievementToast';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
@@ -123,6 +124,12 @@ function ResultScreen() {
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
       incrementStreak();
+
+      // Track weekly challenge progress
+      incrementWeeklyProgress('levels_completed');
+      if (stars > 0) incrementWeeklyProgress('stars_earned', stars);
+      if (stars === 3) incrementWeeklyProgress('perfect_levels');
+      if (score >= 90) incrementWeeklyProgress('high_score_levels');
 
       if (didImprove) {
         logActivity('star_improved', { levelId: level.id, worldId, levelNumber: levelNum, oldStars: existing.stars, newStars: stars });

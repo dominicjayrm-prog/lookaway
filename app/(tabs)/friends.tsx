@@ -13,6 +13,7 @@ import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
 import { StatusDot } from '@/src/components/StatusDot';
 import { getOnlineStatus, getLastActiveText } from '@/src/utils/onlineStatus';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import LeaderboardSection from '@/src/components/LeaderboardSection';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
   return (
@@ -124,6 +125,10 @@ function FriendsTab() {
             </Pressable>
           ))
         )}
+
+        {/* Leaderboard */}
+        <SectionLabel label="LEADERBOARD" colors={colors} />
+        <LeaderboardSection />
 
         {results.length > 0 && (<><SectionLabel label="LAST 3 RESULTS" colors={colors} />{results.map((r) => { const won = (r.my_score ?? 0) > (r.their_score ?? 0); const tied = r.my_score === r.their_score; return (<Pressable key={r.id} style={[styles.resultCard, { backgroundColor: colors.card }]} onPress={() => router.push({ pathname: '/game/challenge-result', params: { challengeId: r.id } })}><View style={[styles.resultBadge, { backgroundColor: tied ? colors.goldSoft : won ? colors.correctSoft : colors.wrongSoft }]}><Text style={{ fontSize: 11, fontWeight: '800', color: tied ? colors.gold : won ? colors.correct : colors.wrong }}>{tied ? 'T' : won ? 'W' : 'L'}</Text></View><View style={{ flex: 1, marginLeft: 10 }}><Text style={[{ fontSize: 13, fontWeight: '600', color: colors.text }]}>vs @{r.opponent.username}</Text><Text style={{ fontSize: 11, color: colors.textMid }}>{r.my_score}% \u2014 {r.their_score}%</Text></View></Pressable>); })}</>)}
 

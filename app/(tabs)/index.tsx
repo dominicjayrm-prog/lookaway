@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabTransition } from '@/src/components/TabTransition';
 import TutorialOverlay from '@/src/components/TutorialOverlay';
 import DailyLoginReward from '@/src/components/DailyLoginReward';
+import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -340,6 +341,9 @@ function PlayTab() {
             })}
           </View>
         </View>
+
+        {/* Weekly Challenges */}
+        <WeeklyChallengesCard />
 
         {/* Recent Activity */}
         <RecentActivityCard colors={colors} router={router} />

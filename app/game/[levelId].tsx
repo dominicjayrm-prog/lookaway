@@ -17,6 +17,7 @@ import { fetchLevelById } from '@/src/data/levels';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
 import StreakGlow from '@/src/components/StreakGlow';
+import { setWeeklyProgressMax } from '@/src/utils/weeklyChallenges';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -84,7 +85,11 @@ function GameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      setCorrectStreak(prev => isCorrect ? prev + 1 : 0);
+      setCorrectStreak(prev => {
+        const next = isCorrect ? prev + 1 : 0;
+        if (next > 0) setWeeklyProgressMax('correct_streak', next);
+        return next;
+      });
       if (!isWeb) {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
