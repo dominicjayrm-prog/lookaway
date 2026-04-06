@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions, Animated as RNAnimated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabTransition } from '@/src/components/TabTransition';
@@ -238,7 +239,8 @@ function PlayTab() {
         </View>
 
         {/* Hero card — purple gradient */}
-        <View ref={heroRef} collapsable={false} style={styles.heroCard}>
+        <View ref={heroRef} collapsable={false} style={styles.heroCardOuter}>
+          <LinearGradient colors={['#6C5CE7', '#5B4CC8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
             <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
@@ -261,10 +263,14 @@ function PlayTab() {
             <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/{currentWorldLevels}</Text>
           </View>
 
-          {/* Play button */}
-          <Pressable style={styles.heroPlayButton} onPress={() => router.push(`/game/${nextLevelId}`)}>
+          {/* Play button with press animation */}
+          <Pressable
+            style={({ pressed }) => [styles.heroPlayButton, pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }]}
+            onPress={() => router.push(`/game/${nextLevelId}`)}
+          >
             <Text style={styles.heroPlayText}>Play</Text>
           </Pressable>
+        </LinearGradient>
         </View>
 
         {/* Stats row */}
@@ -348,8 +354,8 @@ const styles = StyleSheet.create({
   profileInitials: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
 
   // Hero card
-  heroCard: { marginHorizontal: 16, marginTop: 8, borderRadius: 24, paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24, backgroundColor: '#6C5CE7', shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 32, elevation: 6,
-    // Gradient workaround: use solid purple (RN doesn't support CSS gradients natively)
+  heroCardOuter: { marginHorizontal: 16, marginTop: 8, borderRadius: 24, shadowColor: '#6C5CE7', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.25, shadowRadius: 32, elevation: 8 },
+  heroCard: { borderRadius: 24, paddingHorizontal: 24, paddingTop: 28, paddingBottom: 24, overflow: 'hidden',
   },
   heroLogoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   heroLogoBg: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },

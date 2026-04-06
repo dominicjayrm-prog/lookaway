@@ -116,9 +116,9 @@ function ProfileScreen() {
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(500)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SOCIAL</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Text style={[styles.comingSoon, { color: colors.textLight }]}>Coming soon</Text><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
+            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}><Ionicons name="trophy" size={18} color={colors.gold} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Leaderboard</Text></View><View style={styles.settingsRowRight}><Text style={[styles.comingSoon, { color: colors.textLight }]}>Coming soon</Text><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
+            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}><Ionicons name="trophy" size={18} color={colors.gold} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Leaderboard</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
           </View>
         </Animated.View>
 

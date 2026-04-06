@@ -16,6 +16,8 @@ import { useGameStore } from '@/src/store';
 import { fetchLevelById } from '@/src/data/levels';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
+import StreakGlow from '@/src/components/StreakGlow';
+import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -41,6 +43,8 @@ function GameScreen() {
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [timerBonus, setTimerBonus] = useState(0);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [correctStreak, setCorrectStreak] = useState(0);
+  const [activePowerUp, setActivePowerUp] = useState<'slowTime' | 'peek' | 'fiftyFifty' | 'skip' | null>(null);
   const loseLife = useGameStore((s) => s.loseLife);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
   const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
@@ -80,6 +84,7 @@ function GameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
+      setCorrectStreak(prev => isCorrect ? prev + 1 : 0);
       if (!isWeb) {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -101,6 +106,7 @@ function GameScreen() {
     usePowerUp('slowTime');
     setUsedPowerUps(p => ({ ...p, slowTime: true }));
     setTimerBonus(3);
+    setActivePowerUp('slowTime');
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp]);
 
@@ -112,11 +118,13 @@ function GameScreen() {
       usePowerUp('peek');
       setUsedPowerUps(p => ({ ...p, peek: true }));
       setShowPeekScene(true);
+      setActivePowerUp('peek');
       if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setTimeout(() => setShowPeekScene(false), 1500);
     } else if (id === 'fiftyFifty' && currentQuestion) {
       usePowerUp('fiftyFifty');
       setUsedPowerUps(p => ({ ...p, fiftyFifty: true }));
+      setActivePowerUp('fiftyFifty');
       const wrong = currentQuestion.options.map((_, i) => i).filter(i => i !== currentQuestion.correctIndex);
       const shuffled = [...wrong].sort(() => Math.random() - 0.5);
       setHiddenOptions(shuffled.slice(0, 2));
@@ -183,7 +191,10 @@ function GameScreen() {
 
       {gameState === 'TRANSITION' && (
         <AnimatedOrView entering={enterFade} exiting={exitFade} style={styles.centered}>
-          <Text style={styles.blankText}>Go blank!</Text>
+          <View style={styles.blankContainer}>
+            <Text style={styles.blankText}>Go blank!</Text>
+            <Text style={styles.blankSubtext}>What do you remember?</Text>
+          </View>
         </AnimatedOrView>
       )}
 
@@ -215,6 +226,10 @@ function GameScreen() {
 
       {/* Buy power-up popup (pauses game timers) */}
       <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupPurchased} />
+
+      {/* Premium animation overlays */}
+      <StreakGlow streak={correctStreak} />
+      <PowerUpFlash type={activePowerUp} onDone={() => setActivePowerUp(null)} />
 
       {/* Quit confirmation modal */}
       {showQuitConfirm && (
@@ -252,7 +267,9 @@ const styles = StyleSheet.create({
   levelSubtitle: { fontSize: typography.sizes.md, color: colors.textMid },
   startButton: { minWidth: 160, marginTop: spacing.lg },
   memoriseText: { fontSize: typography.sizes.lg, fontWeight: typography.weights.medium, color: colors.textMid, textAlign: 'center' },
+  blankContainer: { alignItems: 'center', gap: 8 },
   blankText: { fontSize: typography.sizes.display, fontWeight: typography.weights.black, color: colors.accent },
+  blankSubtext: { fontSize: typography.sizes.md, fontWeight: typography.weights.medium, color: colors.textLight },
   sceneScoreTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold, color: colors.text },
   sceneScoreBody: { fontSize: typography.sizes.lg, color: colors.textMid },
   errorText: { fontSize: typography.sizes.lg, color: colors.textMid, textAlign: 'center', marginBottom: spacing.lg },

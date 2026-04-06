@@ -23,7 +23,7 @@ export const CountdownTimer = React.memo(function CountdownTimer({
   duration,
   running,
   onComplete,
-  height = 6,
+  height = 8,
   style,
 }: CountdownTimerProps) {
   const { colors } = useTheme();

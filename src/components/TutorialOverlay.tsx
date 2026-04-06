@@ -62,6 +62,39 @@ function CelebrationScreen({ onDismiss }: { onDismiss: () => void }) {
   var btnY = useRef(new RNAnimated.Value(30)).current;
   var btnOpacity = useRef(new RNAnimated.Value(0)).current;
 
+  var [dismissing, setDismissing] = useState(false);
+
+  function handleDismiss() {
+    if (dismissing) return;
+    setDismissing(true);
+    // Stagger elements OUT in reverse order
+    RNAnimated.parallel([
+      // Button slides down
+      RNAnimated.timing(btnOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+      RNAnimated.timing(btnY, { toValue: 20, duration: 200, useNativeDriver: false }),
+      // Subtitle fades
+      RNAnimated.timing(subtitleOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+      // Card shrinks
+      RNAnimated.sequence([
+        RNAnimated.delay(100),
+        RNAnimated.parallel([
+          RNAnimated.timing(cardOpacity, { toValue: 0, duration: 250, useNativeDriver: false }),
+          RNAnimated.timing(cardScale, { toValue: 0.8, duration: 250, useNativeDriver: false }),
+        ]),
+      ]),
+      // Icon shrinks
+      RNAnimated.sequence([
+        RNAnimated.delay(150),
+        RNAnimated.timing(iconScale, { toValue: 0, duration: 300, useNativeDriver: false }),
+      ]),
+      // Backdrop fades
+      RNAnimated.sequence([
+        RNAnimated.delay(250),
+        RNAnimated.timing(backdropAnim, { toValue: 0, duration: 350, useNativeDriver: false }),
+      ]),
+    ]).start(() => onDismiss());
+  }
+
   useEffect(() => {
     // Backdrop
     RNAnimated.timing(backdropAnim, { toValue: 1, duration: 400, useNativeDriver: false }).start();
@@ -202,7 +235,7 @@ function CelebrationScreen({ onDismiss }: { onDismiss: () => void }) {
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: btnOpacity, transform: [{ translateY: btnY }], width: '100%', maxWidth: 280, marginTop: 28 }}>
-          <Pressable style={st.celebBtn} onPress={onDismiss}>
+          <Pressable style={st.celebBtn} onPress={handleDismiss}>
             <Text style={st.celebBtnText}>Let's play</Text>
           </Pressable>
         </RNAnimated.View>

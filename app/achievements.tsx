@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   categoryPillText: { fontSize: 13, fontWeight: '600' },
 
   gridContainer: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
-  achievementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  achievementGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   achievementCard: {
     width: '47%',
     borderRadius: 16,
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   achIconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  achName: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
+  achName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
   achDesc: { fontSize: 10, marginBottom: 8 },
   tierDots: { flexDirection: 'row', gap: 4, marginBottom: 6 },
   tierDotSmall: { width: 8, height: 8, borderRadius: 4 },
