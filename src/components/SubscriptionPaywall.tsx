@@ -5,7 +5,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Modal,
-  Dimensions, Animated as RNAnimated, Platform,
+  Dimensions, Animated as RNAnimated, Platform, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,6 +68,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
+      <View style={st.webCenter}>
       <RNAnimated.View style={[st.fullScreen, { transform: [{ translateY: slideAnim }] }]}>
         {/* ── Top: Purple gradient area ── */}
         <LinearGradient
@@ -188,6 +189,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           </View>
         </View>
       </RNAnimated.View>
+      </View>
     </Modal>
   );
 }
@@ -196,9 +198,17 @@ export default SubscriptionPaywall;
 
 const ACCENT = '#6C5CE7';
 const st = StyleSheet.create({
+  webCenter: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.4)' : 'transparent',
+  },
   fullScreen: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 430 : undefined,
+    ...(Platform.OS === 'web' ? { shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 30 } : {}),
   },
 
   // ── Top ──

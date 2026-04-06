@@ -52,6 +52,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
+      <View style={st.webCenter}>
       <RNAnimated.View style={[st.fullScreen, { transform: [{ translateY: slideAnim }] }]}>
         {/* Purple gradient top area */}
         <LinearGradient
@@ -128,6 +129,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           </Pressable>
         </View>
       </RNAnimated.View>
+      </View>
     </Modal>
   );
 }
@@ -135,7 +137,18 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 export default StarterPackPopup;
 
 const st = StyleSheet.create({
-  fullScreen: { flex: 1, backgroundColor: '#FFFFFF' },
+  webCenter: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.4)' : 'transparent',
+  },
+  fullScreen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 430 : undefined,
+    ...(Platform.OS === 'web' ? { shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 30 } : {}),
+  },
 
   topSection: {
     paddingHorizontal: 24,

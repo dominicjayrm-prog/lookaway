@@ -3,7 +3,7 @@
  * Beautiful on-brand design with animations.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { REWARDS, checkDailyReward, claimDailyReward } from '@/src/utils/dailyLoginRewards';
@@ -157,7 +157,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
 export default DailyLoginReward;
 
 var st = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, ...(Platform.OS === 'web' ? { maxWidth: 430, alignSelf: 'center', width: '100%' } : {}) },
   card: { width: '100%', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.25, shadowRadius: 40, elevation: 16 },
   header: { paddingVertical: 20, paddingHorizontal: 24, alignItems: 'center' },
   headerLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 },
