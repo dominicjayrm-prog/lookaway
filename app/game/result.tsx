@@ -3,11 +3,16 @@ import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Platform } f
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StarRating } from '@/src/components/StarRating';
+import ThreeStarBurst from '@/src/components/ThreeStarBurst';
+import WorldCompleteCelebration from '@/src/components/WorldCompleteCelebration';
+import FirstLevelCelebration from '@/src/components/FirstLevelCelebration';
+import CampaignCompleteCelebration from '@/src/components/CampaignCompleteCelebration';
+import LevelMilestone from '@/src/components/LevelMilestone';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore } from '@/src/utils/scoring';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { WORLD_LEVEL_COUNTS, WORLD_NAMES } from '@/src/data/worldPaths';
+import { WORLD_LEVEL_COUNTS, WORLD_NAMES, WORLD_COLORS } from '@/src/data/worldPaths';
 import { checkStreakMilestone } from '@/src/data/streakMilestones';
 import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
@@ -70,6 +75,10 @@ function ResultScreen() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [achievementUnlocks, setAchievementUnlocks] = useState<AchievementUnlock[]>([]);
   const [extraLifeSaved, setExtraLifeSaved] = useState(false);
+  const [showWorldComplete, setShowWorldComplete] = useState(false);
+  const [showFirstLevel, setShowFirstLevel] = useState(false);
+  const [showCampaignComplete, setShowCampaignComplete] = useState(false);
+  const [showMilestone, setShowMilestone] = useState(false);
   const { user } = useAuth();
 
   const parsed = level ? parseLevelId(level.id) : null;
@@ -108,6 +117,27 @@ function ResultScreen() {
         const claimed = useGameStore.getState().streakMilestonesClaimed;
         const milestone = checkStreakMilestone(newStreak, claimed);
         if (milestone) setCelebration(milestone);
+
+        // Celebration triggers (checked after delay to let main UI render first)
+        const totalCompleted2 = Object.keys(useGameStore.getState().levelProgress).length;
+
+        // First level ever completed
+        if (totalCompleted2 === 1 && !isReplay) {
+          setTimeout(() => setShowFirstLevel(true), 1200);
+        }
+        // World complete
+        else if (isLastLevelOfWorld && !isReplay) {
+          const allWorldsDone = totalCompleted2 >= 200;
+          if (allWorldsDone) {
+            setTimeout(() => setShowCampaignComplete(true), 1200);
+          } else {
+            setTimeout(() => setShowWorldComplete(true), 1200);
+          }
+        }
+        // Level milestones (10, 25, 50, 100, 150, 200)
+        else if ([10, 25, 50, 100, 150, 200].includes(totalCompleted2) && !isReplay) {
+          setTimeout(() => setShowMilestone(true), 1000);
+        }
       }, 100);
 
       if (user?.id) {
@@ -179,7 +209,10 @@ function ResultScreen() {
           <>
             <Text style={[styles.completeTitle, { color: colors.correct }]}>Level complete!</Text>
             {isPerfect && (<View style={styles.perfectBadge}><Text style={styles.perfectText}>PERFECT!</Text></View>)}
-            <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate />
+            <View style={{ position: 'relative' }}>
+              <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate />
+              <ThreeStarBurst trigger={passed} stars={stars} />
+            </View>
             <Text style={[styles.scoreText, { color: colors.text }]}>{score}%</Text>
             <Text style={[styles.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
@@ -216,6 +249,32 @@ function ResultScreen() {
       />
 
       {celebration && (<StreakCelebration visible days={celebration.days} gems={celebration.gems} title={celebration.title} color={celebration.color} onDismiss={() => { addGems(celebration.gems); logActivity('streak_milestone', { days: celebration.days, gems: celebration.gems, title: celebration.title }); useGameStore.setState((s) => ({ streakMilestonesClaimed: [...s.streakMilestonesClaimed, celebration.days] })); setCelebration(null); }} />)}
+
+      {/* Premium celebration overlays */}
+      <FirstLevelCelebration visible={showFirstLevel} onDismiss={() => setShowFirstLevel(false)} />
+      <WorldCompleteCelebration
+        visible={showWorldComplete}
+        worldNumber={worldId}
+        worldName={WORLD_NAMES[worldId] ?? `World ${worldId}`}
+        worldColor={WORLD_COLORS[worldId] ?? '#00B894'}
+        starsEarned={Object.entries(levelProgress).filter(([k]) => k.startsWith(`w${worldId}-`)).reduce((s, [, v]) => s + (v?.stars ?? 0), 0)}
+        totalStars={worldTotalLevels * 3}
+        isPerfect={Object.entries(levelProgress).filter(([k]) => k.startsWith(`w${worldId}-`)).every(([, v]) => v?.stars >= 3)}
+        nextWorldName={nextWorldName ?? undefined}
+        onDismiss={() => setShowWorldComplete(false)}
+      />
+      <CampaignCompleteCelebration
+        visible={showCampaignComplete}
+        totalStars={Object.values(levelProgress).reduce((s, v) => s + (v?.stars ?? 0), 0)}
+        maxStars={600}
+        onDismiss={() => setShowCampaignComplete(false)}
+      />
+      {showMilestone && (
+        <LevelMilestone
+          levelCount={Object.keys(levelProgress).length}
+          onDone={() => setShowMilestone(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
