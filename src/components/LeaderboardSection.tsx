@@ -44,7 +44,9 @@ function LeaderboardSection() {
         setEntries(data);
         setMyRank(rank);
       }
-    } catch {} finally {
+    } catch (e) {
+      console.warn('Leaderboard load failed:', e);
+    } finally {
       setLoading(false);
     }
   }, [userId, tab]);

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -29,11 +29,13 @@ function JourneyTab() {
   const [sideCampaignProgress, setSideCampaignProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
   const [endlessBest, setEndlessBest] = useState(0);
 
-  useEffect(() => {
-    AsyncStorage.getItem('blanked_endless_best').then(val => {
-      if (val) setEndlessBest(parseInt(val, 10) || 0);
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem('blanked_endless_best').then(val => {
+        if (val) setEndlessBest(parseInt(val, 10) || 0);
+      });
+    }, [])
+  );
 
   const campaign = CAMPAIGNS[activeCampaign];
 

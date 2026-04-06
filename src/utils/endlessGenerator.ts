@@ -126,6 +126,13 @@ function getPositionLabel(x: number, y: number): string {
 function makeOptions(correct: string, pool: string[]): { options: [string, string, string, string]; correctIndex: 0 | 1 | 2 | 3 } {
   const wrongs = pool.filter(p => p !== correct);
   const selected = shuffle(wrongs).slice(0, 3);
+  // Pad to exactly 3 wrong options if pool was too small
+  const fillers = ['None', 'Not sure', 'Something else', 'All of them', 'Zero'];
+  while (selected.length < 3) {
+    const filler = fillers.find(f => f !== correct && !selected.includes(f));
+    if (filler) selected.push(filler);
+    else selected.push(`Option ${selected.length + 2}`);
+  }
   const all = shuffle([correct, ...selected]) as [string, string, string, string];
   const correctIndex = all.indexOf(correct) as 0 | 1 | 2 | 3;
   return { options: all, correctIndex };
@@ -136,10 +143,12 @@ type QuestionGenerator = (objects: SceneObject[]) => Question | null;
 function countQuestion(objects: SceneObject[], id: string): Question | null {
   // "How many shapes were there?"
   const total = objects.length;
-  const { options, correctIndex } = makeOptions(
-    String(total),
-    [String(total - 1), String(total + 1), String(total + 2), String(total - 2), String(Math.max(1, total - 3))].filter(v => v !== String(total) && parseInt(v) > 0)
-  );
+  const pool = new Set<string>();
+  for (let d = -3; d <= 3; d++) {
+    const v = total + d;
+    if (v > 0 && v !== total) pool.add(String(v));
+  }
+  const { options, correctIndex } = makeOptions(String(total), Array.from(pool));
   return { id, text: 'How many shapes were there in total?', options, correctIndex, category: 'count', timeLimit: 8 };
 }
 
@@ -158,8 +167,14 @@ function colorCountQuestion(objects: SceneObject[], id: string): Question | null
 }
 
 function colorQuestion(objects: SceneObject[], id: string): Question | null {
-  // "What colour was the [shape]?"
-  const obj = pick(objects);
+  // "What colour was the [shape]?" — pick a shape type that appears only once to avoid ambiguity
+  const typeCounts: Record<string, SceneObject[]> = {};
+  objects.forEach(o => { (typeCounts[o.type] ??= []).push(o); });
+  // Prefer unique shapes (only one of that type) so the question isn't ambiguous
+  const uniqueTypes = Object.entries(typeCounts).filter(([, arr]) => arr.length === 1);
+  const candidates = uniqueTypes.length > 0 ? uniqueTypes : Object.entries(typeCounts);
+  const [, objs] = pick(candidates);
+  const obj = objs[0];
   const shapeName = SHAPE_NAMES[obj.type]?.toLowerCase() ?? 'shape';
   const correctColor = getColorName(obj.color);
   const allColors = COLORS.map(c => c.name);
