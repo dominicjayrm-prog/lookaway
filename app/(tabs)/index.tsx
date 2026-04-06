@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabTransition } from '@/src/components/TabTransition';
 import TutorialOverlay from '@/src/components/TutorialOverlay';
+import DailyLoginReward from '@/src/components/DailyLoginReward';
+import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -161,9 +163,19 @@ function PlayTab() {
   const livesRef = useRef<View>(null);
   const gemsRef = useRef<View>(null);
 
+  // Daily login reward
+  const [showDailyReward, setShowDailyReward] = useState(false);
+
   useEffect(() => {
     AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
-      if (!seen) setTimeout(() => setShowTutorial(true), 800);
+      if (!seen) {
+        setTimeout(() => setShowTutorial(true), 800);
+      } else {
+        // Only show daily reward if tutorial is done
+        checkDailyReward().then(check => {
+          if (check?.available) setTimeout(() => setShowDailyReward(true), 500);
+        });
+      }
     });
   }, []);
 
@@ -333,6 +345,10 @@ function PlayTab() {
         <RecentActivityCard colors={colors} router={router} />
 
       </ScrollView>
+
+      {/* Tutorial overlay for first-time users */}
+      {/* Daily login reward popup */}
+      <DailyLoginReward visible={showDailyReward} onDismiss={() => setShowDailyReward(false)} />
 
       {/* Tutorial overlay for first-time users */}
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
