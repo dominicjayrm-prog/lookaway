@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo } from 'react';
-import { Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import { Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -15,8 +17,11 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type OptionState = 'default' | 'selected' | 'correct' | 'wrong' | 'dimmed';
 
+var LETTERS = ['A', 'B', 'C', 'D'];
+
 interface OptionButtonProps {
   label: string;
+  index?: number;
   state: OptionState;
   onPress: () => void;
   disabled?: boolean;
@@ -25,6 +30,7 @@ interface OptionButtonProps {
 
 export const OptionButton = React.memo(function OptionButton({
   label,
+  index = 0,
   state,
   onPress,
   disabled = false,
@@ -103,7 +109,14 @@ export const OptionButton = React.memo(function OptionButton({
       disabled={disabled}
       style={[animatedStyle, ...containerStyles]}
     >
-      <Text style={textStyles}>{label}</Text>
+      <View style={styles.inner}>
+        <View style={[styles.letterBadge, { backgroundColor: state === 'correct' ? colors.correct + '20' : state === 'wrong' ? colors.wrong + '20' : state === 'selected' ? colors.accent + '20' : colors.surface }]}>
+          <Text style={[styles.letterText, stateTextStyles[state]]}>
+            {state === 'correct' ? '\u2713' : state === 'wrong' ? '\u2717' : LETTERS[index] ?? 'A'}
+          </Text>
+        </View>
+        <Text style={[styles.text, stateTextStyles[state], { flex: 1 }]}>{label}</Text>
+      </View>
     </AnimatedPressable>
   );
 });
@@ -116,11 +129,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     minHeight: 52,
     justifyContent: 'center',
+  },
+  inner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  letterBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  letterText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   text: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.medium,
-    textAlign: 'center',
   },
 });

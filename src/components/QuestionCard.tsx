@@ -53,6 +53,7 @@ export const QuestionCard = React.memo(function QuestionCard({
             <OptionButton
               key={index}
               label={option}
+              index={index}
               state={isHidden ? 'dimmed' : getOptionState(index)}
               onPress={() => onSelect(index)}
               disabled={selectedIndex !== null || isHidden}

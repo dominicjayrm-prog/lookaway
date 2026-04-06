@@ -35,13 +35,15 @@ function TabLayout() {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
-          borderTopWidth: 1,
-          borderTopColor: colors.tabBarBorder,
+          borderTopWidth: 0,
           height: 54 + bottomPadding,
           paddingBottom: bottomPadding,
           paddingTop: 8,
-          elevation: 0,
-          shadowOpacity: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
         },
       }}
     >
