@@ -39,6 +39,7 @@ function AuthScreen() {
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -192,11 +193,13 @@ function AuthScreen() {
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: focusedField === 'email' ? colors.accent : 'transparent' }]}
                 placeholder="your@email.com"
                 placeholderTextColor={colors.textLight}
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -208,11 +211,13 @@ function AuthScreen() {
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: focusedField === 'password' ? colors.accent : 'transparent' }]}
                 placeholder="At least 6 characters"
                 placeholderTextColor={colors.textLight}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
   formSubtitle: { fontSize: typography.sizes.md, marginBottom: spacing.xxl },
   inputContainer: { marginBottom: spacing.lg },
   inputLabel: { fontSize: typography.sizes.sm, fontWeight: '600', marginBottom: spacing.sm },
-  input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, borderWidth: 1, borderColor: 'transparent' },
+  input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, borderWidth: 1.5, borderColor: 'transparent' },
   usernameRow: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14 },
   atPrefix: { fontSize: typography.sizes.lg, fontWeight: '600', marginRight: 2 },
   usernameInput: { flex: 1, fontSize: typography.sizes.lg, paddingVertical: 0 },
