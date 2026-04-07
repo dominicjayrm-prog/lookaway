@@ -103,7 +103,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
           return newStates;
         });
         // After showing correct tiles, advance to next round
-        timerRef.current = setTimeout(() => {
+        const inner = setTimeout(() => {
           setLastCorrect(null);
           if (recallIdx + 1 < totalRounds) {
             setRecallIdx(prev => prev + 1);
@@ -112,6 +112,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
             onComplete([...scores, 0].reduce((a, b) => a + b, 0));
           }
         }, 1100);
+        timerRef.current = inner;
       }, 400);
     }
   }, [phase, currentRound, recallIdx, totalRounds, scores, tileStates, onComplete]);
