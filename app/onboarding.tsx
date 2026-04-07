@@ -1,460 +1,848 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Animated as RNAnimated,
+  Dimensions,
+  FlatList,
+  Platform,
+  ViewStyle,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { spacing } from '@/src/theme/spacing';
-import Svg, { Defs, LinearGradient, Stop, Rect, Circle, Path, Line, G, ClipPath, Polygon } from 'react-native-svg';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// ─── ANIMATED WRAPPER — fades/slides each child with stagger ────
-function AnimatedItem({ delay = 0, children, style }: { delay?: number; children: React.ReactNode; style?: any }) {
+// Colours matching the mockup
+const C = {
+  bg: '#FAFAF7',
+  accent: '#6C5CE7',
+  accentL: '#A29BFE',
+  accentD: '#4A3BBF',
+  green: '#00B894',
+  coral: '#FF6B6B',
+  gold: '#D4A012',
+  blue: '#0984E3',
+  teal: '#00CEC9',
+  pink: '#FD79A8',
+  text: '#1A1A18',
+  textM: '#636E72',
+  textD: '#B2BEC3',
+};
+
+// ─── ANIMATED COUNTER ──────────────────────────────────────
+function Counter({ target, duration = 1500, suffix = '', prefix = '' }: { target: number; duration?: number; suffix?: string; prefix?: string }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    let raf: number;
+    const tick = () => {
+      const pct = Math.min(1, (Date.now() - start) / duration);
+      const eased = 1 - Math.pow(1 - pct, 3);
+      setVal(Math.round(target * eased));
+      if (pct < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return <Text>{prefix}{val}{suffix}</Text>;
+}
+
+// ─── FADE-IN WRAPPER ───────────────────────────────────────
+function FadeIn({ delay = 0, children, style }: { delay?: number; children: React.ReactNode; style?: ViewStyle }) {
   const opacity = useRef(new RNAnimated.Value(0)).current;
-  const translateY = useRef(new RNAnimated.Value(18)).current;
+  const translateY = useRef(new RNAnimated.Value(12)).current;
   useEffect(() => {
     opacity.setValue(0);
-    translateY.setValue(18);
-    const timer = setTimeout(() => {
+    translateY.setValue(12);
+    const t = setTimeout(() => {
       RNAnimated.parallel([
-        RNAnimated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        RNAnimated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
         RNAnimated.spring(translateY, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
       ]).start();
     }, delay);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [delay, opacity, translateY]);
   return <RNAnimated.View style={[{ opacity, transform: [{ translateY }] }, style]}>{children}</RNAnimated.View>;
 }
 
-// ─── BLINKING EYE ───────────────────────────────────────
-function BlinkingEye({ active, colors }: { active: boolean; colors: any }) {
-  const [blinkPhase, setBlinkPhase] = useState(0);
+// ═══ SCREEN 1: EMOTIONAL HOOK ═══════════════════════════════
+function Screen1() {
+  const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   useEffect(() => {
-    if (!active) return;
-    let frame: number;
-    let timeout: ReturnType<typeof setTimeout>;
-    const doBlink = () => {
-      let start: number | null = null;
-      const closePhase = (ts: number) => {
-        if (!start) start = ts;
-        const p = Math.min((ts - start) / 180, 1);
-        setBlinkPhase(p);
-        if (p < 1) frame = requestAnimationFrame(closePhase);
-        else setTimeout(() => { start = null; const openPhase = (ts2: number) => { if (!start) start = ts2; const p2 = Math.min((ts2 - start) / 200, 1); setBlinkPhase(1 - p2); if (p2 < 1) frame = requestAnimationFrame(openPhase); else timeout = setTimeout(doBlink, 2500 + Math.random() * 1500); }; frame = requestAnimationFrame(openPhase); }, 80);
-      };
-      frame = requestAnimationFrame(closePhase);
+    const loop = () => {
+      RNAnimated.sequence([
+        RNAnimated.timing(pulseAnim, { toValue: 1.06, duration: 600, useNativeDriver: true }),
+        RNAnimated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]).start(loop);
     };
-    timeout = setTimeout(doBlink, 1200);
-    return () => { cancelAnimationFrame(frame); clearTimeout(timeout); };
-  }, [active]);
-  const lidY = blinkPhase * 35, ps = 1 - blinkPhase * 0.3;
-  return (
-    <Svg width={160} height={100} viewBox="0 0 160 100">
-      <Defs><LinearGradient id="eyeG" x1="0" y1="0" x2="1" y2="1"><Stop offset="0%" stopColor={colors.accent} /><Stop offset="100%" stopColor={colors.accentLight} /></LinearGradient><ClipPath id="eyeClip"><Path d={`M10,50 Q80,${10+lidY} 150,50 Q80,${90-lidY} 10,50 Z`} /></ClipPath></Defs>
-      <Path d="M10,50 Q80,10 150,50 Q80,90 10,50 Z" fill={colors.card} stroke="url(#eyeG)" strokeWidth={2.5} />
-      <G clipPath="url(#eyeClip)"><Path d="M10,50 Q80,10 150,50 Q80,90 10,50 Z" fill={colors.card} /><Circle cx={80} cy={50} r={22*ps} fill="url(#eyeG)" /><Circle cx={80} cy={50} r={10*ps} fill={colors.bg} /><Circle cx={88} cy={42} r={5*ps} fill="white" opacity={0.8} /><Circle cx={74} cy={55} r={2.5*ps} fill="white" opacity={0.5} /></G>
-      <Path d={`M10,50 Q80,${10+lidY} 150,50`} fill="none" stroke="url(#eyeG)" strokeWidth={3} strokeLinecap="round" />
-      <Path d={`M25,${55-lidY*0.1} Q80,${85-lidY} 135,${55-lidY*0.1}`} fill="none" stroke="url(#eyeG)" strokeWidth={1.5} opacity={0.4} strokeLinecap="round" />
-    </Svg>
-  );
-}
+    loop();
+  }, [pulseAnim]);
 
-function MiniLogo({ size = 52 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 64 64">
-      <Defs><LinearGradient id="obG" x1="0" y1="0" x2="1" y2="1"><Stop offset="0%" stopColor="#6C5CE7" /><Stop offset="100%" stopColor="#A29BFE" /></LinearGradient></Defs>
-      <Rect width={64} height={64} rx={16} fill="url(#obG)" />
-      <G transform="translate(14,20)"><Path d="M2 12Q18 0 34 12Q18 24 2 12Z" fill="rgba(255,255,255,0.2)" stroke="white" strokeWidth={1.5} /><Circle cx={18} cy={12} r={6} fill="white" /><Circle cx={18} cy={12} r={3} fill="#6C5CE7" /><Line x1={18} y1={1} x2={18} y2={-2} stroke="white" strokeWidth={1.5} strokeLinecap="round" /><Line x1={8} y1={4} x2={5} y2={1} stroke="white" strokeWidth={1.5} strokeLinecap="round" /><Line x1={28} y1={4} x2={31} y2={1} stroke="white" strokeWidth={1.5} strokeLinecap="round" /></G>
-    </Svg>
-  );
-}
+    <View style={s.screenCenter}>
+      <FadeIn delay={200}>
+        <RNAnimated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <LinearGradient
+            colors={[`${C.accent}15`, `${C.accentL}10`]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 120, height: 120, borderRadius: 36, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <LinearGradient
+              colors={[`${C.accent}20`, `${C.accentL}15`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Svg width={44} height={44} viewBox="0 0 48 48">
+                <Path
+                  d="M24,6 C18,6 14,10 14,14 C10,14 8,18 8,22 C8,26 10,28 12,29 C12,34 16,38 20,40 L20,42 L28,42 L28,40 C32,38 36,34 36,29 C38,28 40,26 40,22 C40,18 38,14 34,14 C34,10 30,6 24,6Z"
+                  fill="none" stroke={C.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+                />
+                <Path d="M24,14 L24,42" fill="none" stroke={C.accent} strokeWidth={1.5} strokeDasharray="2,3" opacity={0.4} />
+                <Path d="M18,20 C20,18 22,20 24,18" fill="none" stroke={C.accent} strokeWidth={1.5} strokeLinecap="round" opacity={0.6} />
+                <Path d="M24,24 C26,22 28,24 30,22" fill="none" stroke={C.accent} strokeWidth={1.5} strokeLinecap="round" opacity={0.6} />
+              </Svg>
+            </LinearGradient>
+          </LinearGradient>
+        </RNAnimated.View>
+      </FadeIn>
 
-// ─── MINI SCENE (with its own animated entrance) ────────
-function MiniScene({ colors }: { colors: any }) {
-  const scale = useRef(new RNAnimated.Value(0.85)).current;
-  const opacity = useRef(new RNAnimated.Value(0)).current;
-  const [faded, setFaded] = useState(false);
-  useEffect(() => {
-    RNAnimated.parallel([
-      RNAnimated.spring(scale, { toValue: 1, tension: 40, friction: 7, useNativeDriver: true }),
-      RNAnimated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-    ]).start();
-    const t = setTimeout(() => setFaded(true), 3500);
-    return () => clearTimeout(t);
-  }, [scale, opacity]);
-  return (
-    <RNAnimated.View style={{ opacity, transform: [{ scale }] }}>
-      <View style={{ width: 240, height: 200, borderRadius: 20, backgroundColor: colors.card, position: 'relative', overflow: 'hidden' }}>
-        {faded && <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlayBg, zIndex: 2, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}><View style={{ backgroundColor: colors.card, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 12 }}><Text style={{ fontSize: 14, fontWeight: '600', color: colors.accent }}>Gone! What did you see?</Text></View></View>}
-        <View style={{ position: 'absolute', left: '18%', top: '15%', width: 36, height: 36, borderRadius: 18, backgroundColor: colors.wrong }} />
-        <View style={{ position: 'absolute', right: '18%', top: '22%', width: 30, height: 30, borderRadius: 5, backgroundColor: '#0984E3' }} />
-        <View style={{ position: 'absolute', left: '42%', bottom: '18%' }}><Svg width={32} height={32} viewBox="0 0 100 100"><Polygon points="50,8 92,88 8,88" fill={colors.correct} /></Svg></View>
-        <View style={{ position: 'absolute', right: '14%', bottom: '28%', width: 26, height: 26, borderRadius: 13, backgroundColor: colors.gold }} />
-        <View style={{ position: 'absolute', left: '12%', bottom: '38%' }}><Svg width={22} height={22} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={colors.accent} /></Svg></View>
-      </View>
-    </RNAnimated.View>
-  );
-}
+      <FadeIn delay={500}>
+        <Text style={s.heroTitle}>
+          Your memory is{'\n'}more powerful{'\n'}than you think
+        </Text>
+      </FadeIn>
 
-function TimerBar({ colors }: { colors: any }) {
-  const width = useRef(new RNAnimated.Value(100)).current;
-  useEffect(() => { RNAnimated.timing(width, { toValue: 0, duration: 3000, useNativeDriver: false }).start(); }, [width]);
-  return (
-    <View style={{ width: 240, height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' }}>
-      <RNAnimated.View style={{ width: width.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }), height: '100%', borderRadius: 3, backgroundColor: colors.accent }} />
+      <FadeIn delay={800}>
+        <Text style={s.heroSub}>You just need to train it.</Text>
+      </FadeIn>
     </View>
   );
 }
 
-function QuestionCard({ colors }: { colors: any }) {
-  const [answered, setAnswered] = useState(false);
-  const slideY = useRef(new RNAnimated.Value(30)).current;
-  const opacity = useRef(new RNAnimated.Value(0)).current;
-  useEffect(() => {
-    RNAnimated.parallel([
-      RNAnimated.spring(slideY, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
-      RNAnimated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
-    const t = setTimeout(() => setAnswered(true), 1800);
-    return () => clearTimeout(t);
-  }, [slideY, opacity]);
-  const opts = ['1', '2', '3', '4'];
-  return (
-    <RNAnimated.View style={{ opacity, transform: [{ translateY: slideY }] }}>
-      <View style={{ width: 280, borderRadius: 18, backgroundColor: colors.card, padding: 18 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 14 }}>How many red shapes were there?</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {opts.map((opt, i) => {
-            const sel = answered && i === 0;
-            return <View key={i} style={{ width: '47%', paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: sel ? colors.correctSoft : colors.surface, borderWidth: 2, borderColor: sel ? colors.correct : 'transparent' }}><Text style={{ fontSize: 15, fontWeight: '600', color: sel ? colors.correct : colors.textMid }}>{opt}{sel ? ' \u2713' : ''}</Text></View>;
-          })}
-        </View>
-      </View>
-      {answered && (
-        <AnimatedItem delay={200} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, alignSelf: 'center' }}>
-          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.correctSoft, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.correct, fontSize: 16, fontWeight: '700' }}>{'\u2713'}</Text></View>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.correct }}>Correct!</Text>
-        </AnimatedItem>
-      )}
-    </RNAnimated.View>
-  );
-}
+// ═══ SCREEN 2: SCIENCE-BACKED BENEFITS ══════════════════════
+function Screen2() {
+  const benefits = [
+    { stat: 23, label: 'faster recall', desc: 'Memory training improves how quickly you retrieve information', color: C.blue },
+    { stat: 31, label: 'better focus', desc: 'Visual memory exercises strengthen attention and concentration', color: C.green },
+    { stat: 40, label: 'sharper with age', desc: 'Consistent brain training helps maintain cognitive function long-term', color: C.accent },
+  ];
 
-function ScoreCard({ colors }: { colors: any }) {
-  const [phase, setPhase] = useState(0);
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 400);
-    const t2 = setTimeout(() => setPhase(2), 800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-  const rows = [[1,1,1,1,1], [1,1,0,1,1], [1,1,1,1,1]];
   return (
-    <AnimatedItem delay={100}>
-      <View style={{ width: 260, borderRadius: 20, backgroundColor: colors.card, padding: 20, alignItems: 'center' }}>
-        <Text style={{ fontSize: 42, fontWeight: '800', color: colors.accent, lineHeight: 46 }}>92%</Text>
-        <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 4, marginBottom: 14 }}>Memory score</Text>
-        {rows.map((row, ri) => (
-          <View key={ri} style={{ flexDirection: 'row', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
-            {row.map((v, ci) => <View key={ci} style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: v ? colors.correct : colors.wrong }} />)}
+    <View style={s.screenLeft}>
+      <FadeIn delay={200}>
+        <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
+        <Text style={s.sectionTitle}>Memory training{'\n'}actually works</Text>
+      </FadeIn>
+
+      {benefits.map((b, i) => (
+        <FadeIn key={i} delay={400 + i * 200}>
+          <View style={[s.benefitRow, i < 2 && s.benefitBorder]}>
+            <View style={[s.benefitIcon, { backgroundColor: `${b.color}08` }]}>
+              {i === 0 && (
+                <Svg width={22} height={22} viewBox="0 0 40 40">
+                  <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
+                  <Path d="M20,12 L20,20 L27,24" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" />
+                </Svg>
+              )}
+              {i === 1 && (
+                <Svg width={22} height={22} viewBox="0 0 40 40">
+                  <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
+                  <Path d="M14,20 C14,20 18,28 26,14" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              )}
+              {i === 2 && (
+                <Svg width={22} height={22} viewBox="0 0 40 40">
+                  <Path d="M8,28 L16,16 L24,22 L32,10" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  <Circle cx={32} cy={10} r={3} fill={b.color} />
+                </Svg>
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: b.color }}>
+                  <Counter target={b.stat} suffix="%" duration={1200 + i * 300} />
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>{b.label}</Text>
+              </View>
+              <Text style={{ fontSize: 11, color: C.textM, lineHeight: 15 }}>{b.desc}</Text>
+            </View>
           </View>
-        ))}
-        {phase >= 1 && (
-          <AnimatedItem delay={0} style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-            {[0,1,2].map(i => <Svg key={i} width={26} height={26} viewBox="0 0 100 100"><Polygon points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35" fill={colors.gold} /></Svg>)}
-          </AnimatedItem>
-        )}
-      </View>
-    </AnimatedItem>
-  );
-}
-
-// ─── PAGE DOTS ──────────────────────────────────────────
-function PageDots({ current, total, colors }: { current: number; total: number; colors: any }) {
-  return (
-    <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
-      {Array.from({ length: total }, (_, i) => (
-        <View key={i} style={{ width: i === current ? 28 : 8, height: 8, borderRadius: 4, backgroundColor: i === current ? colors.accent : colors.border }} />
+        </FadeIn>
       ))}
     </View>
   );
 }
 
-// ─── INDIVIDUAL PAGE COMPONENTS ─────────────────────────
-function Page1({ colors }: { colors: any }) {
-  return (
-    <View style={styles.pageCenter}>
-      <AnimatedItem delay={0}><MiniLogo size={52} /></AnimatedItem>
-      <AnimatedItem delay={100} style={{ marginTop: 12 }}><Text style={[styles.wordmark, { color: colors.text }]}>Blank<Text style={{ color: colors.accent }}>ed</Text></Text></AnimatedItem>
-      <AnimatedItem delay={250} style={{ marginVertical: 12 }}><BlinkingEye active={true} colors={colors} /></AnimatedItem>
-      <AnimatedItem delay={400}><Text style={[styles.heading, { color: colors.text }]}>{'How much can\nyou remember?'}</Text></AnimatedItem>
-      <AnimatedItem delay={550}><Text style={[styles.subtext, { color: colors.textMid }]}>A scene flashes before your eyes. Shapes, colours, positions. Then it vanishes. Can you recall what you saw?</Text></AnimatedItem>
-    </View>
-  );
-}
-
-function Page2({ colors }: { colors: any }) {
-  return (
-    <View style={styles.pageCenter}>
-      <AnimatedItem delay={0}><View style={[styles.stepBadge, { backgroundColor: colors.accentSoft, borderColor: colors.accentMid }]}><Text style={[styles.stepBadgeText, { color: colors.accent }]}>STEP 1</Text></View></AnimatedItem>
-      <AnimatedItem delay={100}><Text style={[styles.heading, { color: colors.text }]}>Memorise the scene</Text></AnimatedItem>
-      <AnimatedItem delay={200}><Text style={[styles.subtext, { color: colors.textMid }]}>You have a few seconds. Study every shape, colour and position carefully.</Text></AnimatedItem>
-      <AnimatedItem delay={400} style={{ marginVertical: 16 }}><MiniScene colors={colors} /></AnimatedItem>
-      <AnimatedItem delay={500}><TimerBar colors={colors} /></AnimatedItem>
-      <AnimatedItem delay={600}><Text style={{ fontSize: 13, color: colors.textLight, fontWeight: '500', marginTop: 12 }}>Study every detail...</Text></AnimatedItem>
-    </View>
-  );
-}
-
-function Page3({ colors }: { colors: any }) {
-  return (
-    <View style={styles.pageCenter}>
-      <AnimatedItem delay={0}><View style={[styles.stepBadge, { backgroundColor: colors.correctSoft, borderColor: colors.correct + '30' }]}><Text style={[styles.stepBadgeText, { color: colors.correct }]}>STEP 2</Text></View></AnimatedItem>
-      <AnimatedItem delay={100}><Text style={[styles.heading, { color: colors.text }]}>Answer from memory</Text></AnimatedItem>
-      <AnimatedItem delay={200}><Text style={[styles.subtext, { color: colors.textMid }]}>Five questions test what you saw. Colours, counts, positions. Trust your memory.</Text></AnimatedItem>
-      <AnimatedItem delay={350}>
-        <View style={{ flexDirection: 'row', gap: 8, marginVertical: 12 }}>
-          {[1,2,3,4,5].map(i => <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i === 1 ? colors.accent : colors.border }} />)}
-        </View>
-      </AnimatedItem>
-      <AnimatedItem delay={500}><QuestionCard colors={colors} /></AnimatedItem>
-    </View>
-  );
-}
-
-const CHALLENGE_MODES_ONBOARDING = [
-  { name: 'Classic', color: '#6C5CE7', desc: '5 campaign scenes head-to-head' },
-  { name: 'Speed Recall', color: '#FF6B6B', desc: 'Tap where shapes were on the canvas' },
-  { name: 'Snap Match', color: '#0984E3', desc: 'Spot the difference between two scenes' },
-  { name: 'Sequence', color: '#D4A012', desc: 'Remember the order shapes appeared' },
-  { name: 'Counting Blitz', color: '#00B894', desc: 'Count colours in a blitz of shapes' },
-  { name: 'Colour Chain', color: '#FD79A8', desc: 'Memorise a colour grid and recall it' },
-];
-
-function PageChallenge({ colors }: { colors: any }) {
-  const [showScore1, setShowScore1] = useState(false);
-  const [showScore2, setShowScore2] = useState(false);
-  const [showWin, setShowWin] = useState(false);
-  const [modeIdx, setModeIdx] = useState(0);
-
-  const avatarFloat1 = useRef(new RNAnimated.Value(0)).current;
-  const avatarFloat2 = useRef(new RNAnimated.Value(0)).current;
-
+// ═══ SCREEN 3: THE COMMITMENT ═══════════════════════════════
+function Screen3() {
+  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const [filledDays, setFilledDays] = useState(0);
   useEffect(() => {
-    const t1 = setTimeout(() => setShowScore1(true), 800);
-    const t2 = setTimeout(() => setShowScore2(true), 1400);
-    const t3 = setTimeout(() => setShowWin(true), 2000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t = setInterval(() => setFilledDays(d => (d < 7 ? d + 1 : d)), 300);
+    return () => clearInterval(t);
   }, []);
 
+  const dayAnims = useRef(days.map(() => new RNAnimated.Value(0.9))).current;
   useEffect(() => {
-    const interval = setInterval(() => setModeIdx(prev => (prev + 1) % 6), 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Avatar floating
-  useEffect(() => {
-    const loop1 = () => RNAnimated.sequence([
-      RNAnimated.timing(avatarFloat1, { toValue: -6, duration: 2000, useNativeDriver: true }),
-      RNAnimated.timing(avatarFloat1, { toValue: 0, duration: 2000, useNativeDriver: true }),
-    ]).start(loop1);
-    const loop2 = () => RNAnimated.sequence([
-      RNAnimated.timing(avatarFloat2, { toValue: -8, duration: 2250, useNativeDriver: true }),
-      RNAnimated.timing(avatarFloat2, { toValue: 0, duration: 2250, useNativeDriver: true }),
-    ]).start(loop2);
-    loop1(); loop2();
-  }, [avatarFloat1, avatarFloat2]);
-
-  const activeMode = CHALLENGE_MODES_ONBOARDING[modeIdx];
+    if (filledDays > 0 && filledDays <= 7) {
+      RNAnimated.spring(dayAnims[filledDays - 1], {
+        toValue: 1,
+        tension: 200,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [filledDays, dayAnims]);
 
   return (
-    <View style={styles.pageCenter}>
-      <AnimatedItem delay={0}>
-        <Text style={[styles.heading, { color: colors.text }]}>Challenge your{'\n'}<Text style={{ color: colors.accent }}>friends</Text></Text>
-      </AnimatedItem>
-      <AnimatedItem delay={100}>
-        <Text style={[styles.subtext, { color: colors.textMid }]}>Same scenes. Same questions.{'\n'}Who has the better memory?</Text>
-      </AnimatedItem>
+    <View style={s.screenCenter}>
+      <FadeIn delay={200}>
+        <Text style={[s.sectionTitle, { textAlign: 'center' }]}>Just 2 minutes a day</Text>
+        <Text style={[s.heroSub, { marginBottom: 28 }]}>That's all it takes to build a sharper memory</Text>
+      </FadeIn>
 
-      {/* VS Card */}
-      <AnimatedItem delay={300} style={{ marginVertical: 14 }}>
-        <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 20, width: 280, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 3 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-            {/* You */}
-            <RNAnimated.View style={{ alignItems: 'center', transform: [{ translateY: avatarFloat1 }] }}>
-              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#6C5CE7', alignItems: 'center', justifyContent: 'center', borderWidth: showWin ? 2.5 : 0, borderColor: '#D4A012' }}>
-                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '800' }}>Y</Text>
-              </View>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text, marginTop: 6 }}>You</Text>
-              {showScore1 && (
-                <AnimatedItem delay={0}><Text style={{ fontSize: 22, fontWeight: '800', color: '#00B894', marginTop: 2 }}>92%</Text></AnimatedItem>
-              )}
-            </RNAnimated.View>
-
-            {/* VS / WIN */}
-            <View style={{ width: showWin ? 46 : 42, height: showWin ? 46 : 42, borderRadius: showWin ? 23 : 21, backgroundColor: showWin ? 'rgba(0,184,148,0.12)' : 'rgba(108,92,231,0.08)', borderWidth: showWin ? 2 : 0, borderColor: showWin ? 'rgba(0,184,148,0.3)' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: showWin ? '#00B894' : colors.accent }}>{showWin ? 'WIN' : 'VS'}</Text>
-            </View>
-
-            {/* Opponent */}
-            <RNAnimated.View style={{ alignItems: 'center', transform: [{ translateY: avatarFloat2 }] }}>
-              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#0984E3', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#FFF', fontSize: 20, fontWeight: '800' }}>S</Text>
-              </View>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text, marginTop: 6 }}>@sarah.k</Text>
-              {showScore2 && (
-                <AnimatedItem delay={0}><Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 2 }}>76%</Text></AnimatedItem>
-              )}
-            </RNAnimated.View>
+      <FadeIn delay={500}>
+        <View style={s.weekCard}>
+          <Text style={s.weekLabel}>YOUR FIRST WEEK</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            {days.map((d, i) => {
+              const filled = i < filledDays;
+              return (
+                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
+                  <RNAnimated.View style={[
+                    s.dayCircle,
+                    {
+                      backgroundColor: filled ? `${C.coral}12` : '#F5F4F0',
+                      borderColor: filled ? C.coral : 'transparent',
+                      transform: [{ scale: dayAnims[i] }],
+                    },
+                  ]}>
+                    {filled ? (
+                      <Svg width={16} height={16} viewBox="0 0 100 100">
+                        <Path
+                          d="M50,88 C20,65 5,50 5,32 C5,18 16,8 30,8 C38,8 45,12 50,20 C55,12 62,8 70,8 C84,8 95,18 95,32 C95,50 80,65 50,88Z"
+                          fill={C.coral}
+                        />
+                      </Svg>
+                    ) : (
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E0DCDA' }} />
+                    )}
+                  </RNAnimated.View>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: filled ? C.text : C.textD }}>{d}</Text>
+                </View>
+              );
+            })}
           </View>
+          {filledDays >= 7 && (
+            <View style={s.streakBanner}>
+              <Text style={s.streakText}>{'🔥 7-day streak \u2014 you did it!'}</Text>
+            </View>
+          )}
         </View>
-      </AnimatedItem>
+      </FadeIn>
 
-      {/* Mode pills */}
-      <AnimatedItem delay={600}>
-        <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.5, color: colors.textLight, textAlign: 'center', marginBottom: 8 }}>6 CHALLENGE MODES</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 300 }}>
-          {CHALLENGE_MODES_ONBOARDING.map((m, i) => (
-            <View key={m.name} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: i === modeIdx ? m.color : m.color + '14' }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: i === modeIdx ? '#FFF' : m.color + 'E6' }}>{m.name}</Text>
+      <FadeIn delay={900}>
+        <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+          {[
+            { value: '2 min', label: 'per session', color: C.accent },
+            { value: '14 min', label: 'per week', color: C.blue },
+            { value: '12 hrs', label: 'per year', color: C.green },
+          ].map((stat, i) => (
+            <View key={i} style={s.microStat}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: stat.color }}>{stat.value}</Text>
+              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2 }}>{stat.label}</Text>
             </View>
           ))}
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, height: 32 }}>
-          <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: activeMode.color + '1F', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 11, fontWeight: '800', color: activeMode.color }}>
-              {['●▲■', '◎', 'A≠B', '1·2·3', '●●●', '▦'][modeIdx]}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.textMid, flex: 1 }}>{activeMode.desc}</Text>
-        </View>
-      </AnimatedItem>
+      </FadeIn>
     </View>
   );
 }
 
-function Page4({ colors, onFinish }: { colors: any; onFinish: () => void }) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setReady(true), 1000); return () => clearTimeout(t); }, []);
-  return (
-    <View style={styles.pageCenter}>
-      <AnimatedItem delay={0}><View style={[styles.stepBadge, { backgroundColor: colors.goldSoft, borderColor: colors.gold + '40' }]}><Text style={[styles.stepBadgeText, { color: colors.gold }]}>STEP 3</Text></View></AnimatedItem>
-      <AnimatedItem delay={100}><Text style={[styles.heading, { color: colors.text }]}>Share your score</Text></AnimatedItem>
-      <AnimatedItem delay={200}><Text style={[styles.subtext, { color: colors.textMid }]}>Everyone gets the same daily challenge. Compare with friends. Who remembers more?</Text></AnimatedItem>
-      <AnimatedItem delay={400} style={{ marginVertical: 12 }}><ScoreCard colors={colors} /></AnimatedItem>
-      <AnimatedItem delay={700}>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          {[{ t: '200+ levels', c: colors.accent }, { t: 'Daily challenge', c: colors.correct }, { t: 'Brain training', c: colors.gold }].map((f, i) => (
-            <View key={i} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: f.c + '12', borderWidth: 1, borderColor: f.c + '30' }}><Text style={{ fontSize: 12, fontWeight: '600', color: f.c }}>{f.t}</Text></View>
-          ))}
-        </View>
-      </AnimatedItem>
-      {ready && (
-        <AnimatedItem delay={0}>
-          <Pressable onPress={onFinish} style={[styles.ctaButton, { backgroundColor: colors.accent }]}>
-            <Text style={styles.ctaButtonText}>Start playing</Text>
-          </Pressable>
-          <Text style={{ fontSize: 12, color: colors.textLight, marginTop: 8, textAlign: 'center' }}>Free to play. No account needed.</Text>
-        </AnimatedItem>
-      )}
-    </View>
-  );
-}
+// ═══ SCREEN 4: HOW IT WORKS ═════════════════════════════════
+function Screen4() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStep(prev => (prev + 1) % 3), 2000);
+    return () => clearInterval(t);
+  }, []);
 
-// ─── MAIN ONBOARDING ────────────────────────────────────
-function OnboardingScreen() {
-  const router = useRouter();
-  const { colors } = useTheme();
-  const [page, setPage] = useState(0);
-  const [transitioning, setTransitioning] = useState(false);
+  const stepFadeAnim = useRef(new RNAnimated.Value(1)).current;
+  const stepScaleAnim = useRef(new RNAnimated.Value(1)).current;
+  const prevStep = useRef(step);
 
-  // Page transition animation
-  const contentOpacity = useRef(new RNAnimated.Value(1)).current;
-  const contentSlide = useRef(new RNAnimated.Value(0)).current;
-
-  const goToPage = useCallback((target: number) => {
-    if (transitioning || target === page) return;
-    setTransitioning(true);
-    // Fade out current
-    RNAnimated.parallel([
-      RNAnimated.timing(contentOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      RNAnimated.timing(contentSlide, { toValue: target > page ? -30 : 30, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      setPage(target);
-      // Set starting position for new page
-      contentSlide.setValue(target > page ? 30 : -30);
-      // Fade in new
+  useEffect(() => {
+    if (prevStep.current !== step) {
+      prevStep.current = step;
+      stepFadeAnim.setValue(0);
+      stepScaleAnim.setValue(0.97);
       RNAnimated.parallel([
-        RNAnimated.timing(contentOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-        RNAnimated.spring(contentSlide, { toValue: 0, tension: 50, friction: 10, useNativeDriver: true }),
-      ]).start(() => setTransitioning(false));
-    });
-  }, [page, transitioning, contentOpacity, contentSlide]);
+        RNAnimated.timing(stepFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        RNAnimated.spring(stepScaleAnim, { toValue: 1, tension: 80, friction: 10, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [step, stepFadeAnim, stepScaleAnim]);
 
-  const finish = useCallback(() => {
+  const steps = [
+    { num: '1', title: 'Memorise', desc: 'Study the shapes, colours, and positions' },
+    { num: '2', title: 'Go blank', desc: 'The scene disappears completely' },
+    { num: '3', title: 'Answer', desc: 'Test your memory with questions' },
+  ];
+
+  return (
+    <View style={s.screenLeft}>
+      <FadeIn delay={200}>
+        <Text style={s.sectionLabel}>HOW IT WORKS</Text>
+        <Text style={s.sectionTitle}>Simple, fun,{'\n'}surprisingly addictive</Text>
+      </FadeIn>
+
+      <FadeIn delay={400}>
+        <RNAnimated.View style={{ opacity: stepFadeAnim, transform: [{ scale: stepScaleAnim }], marginBottom: 20 }}>
+          {step === 0 && (
+            <View style={s.stepVisual}>
+              <View style={{ position: 'absolute', left: '15%', top: '18%' }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.coral }} />
+              </View>
+              <View style={{ position: 'absolute', right: '18%', top: '20%' }}>
+                <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.blue }} />
+              </View>
+              <View style={{ position: 'absolute', left: '45%', top: '40%' }}>
+                <Svg width={24} height={24} viewBox="0 0 100 100">
+                  <Polygon points="50,5 62,35 95,35 68,55 78,90 50,70 22,90 32,55 5,35 38,35" fill={C.accent} />
+                </Svg>
+              </View>
+              <View style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
+                <Svg width={22} height={22} viewBox="0 0 100 100">
+                  <Polygon points="50,8 95,88 5,88" fill={C.green} />
+                </Svg>
+              </View>
+              <View style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
+                <Svg width={20} height={20} viewBox="0 0 100 100">
+                  <Polygon points="50,5 95,50 50,95 5,50" fill={C.gold} />
+                </Svg>
+              </View>
+            </View>
+          )}
+          {step === 1 && (
+            <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 2 }}>{'🫣'}</Text>
+              <Text style={{ fontSize: 11, color: C.textD }}>Gone!</Text>
+            </View>
+          )}
+          {step === 2 && (
+            <View style={[s.stepVisual, { padding: 10 }]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: C.text, marginBottom: 8 }}>How many shapes?</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+                {['4', '5', '6', '3'].map((v, i) => (
+                  <View key={i} style={[
+                    s.answerOption,
+                    i === 1 && { backgroundColor: `${C.green}12`, borderColor: C.green, borderWidth: 1.5 },
+                  ]}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: i === 1 ? C.green : C.textD }}>{v}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </RNAnimated.View>
+      </FadeIn>
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {steps.map((st, i) => (
+          <FadeIn key={i} delay={500 + i * 100}>
+            <Pressable
+              onPress={() => setStep(i)}
+              style={[
+                s.stepCard,
+                {
+                  backgroundColor: i === step ? `${C.accent}06` : 'white',
+                  borderColor: i === step ? `${C.accent}20` : 'rgba(0,0,0,0.04)',
+                },
+              ]}
+            >
+              <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : '#F0EFEB' }]}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : C.textD }}>{st.num}</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: i === step ? C.accent : C.text }}>{st.title}</Text>
+              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2, lineHeight: 12 }}>{st.desc}</Text>
+            </Pressable>
+          </FadeIn>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ═══ SCREEN 5: SOCIAL PROOF ═════════════════════════════════
+function Screen5() {
+  const testimonials = [
+    { name: 'Sarah M.', streak: '42 day streak', text: "I play every morning with my coffee. It's become my favourite way to wake up my brain.", avatar: 'S', color: C.coral },
+    { name: 'James K.', streak: '28 day streak', text: "Started to improve my focus at work. Now I'm addicted to getting 3 stars on every level.", avatar: 'J', color: C.blue },
+    { name: 'Maria L.', streak: '67 day streak', text: 'My memory has genuinely improved. I remember shopping lists without writing them down now!', avatar: 'M', color: C.green },
+  ];
+
+  return (
+    <View style={s.screenLeft}>
+      <FadeIn delay={200}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 2, marginBottom: 8 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Svg key={i} width={18} height={18} viewBox="0 0 24 24">
+                <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill={C.gold} />
+              </Svg>
+            ))}
+            <Svg width={18} height={18} viewBox="0 0 24 24">
+              <Defs>
+                <SvgLinearGradient id="partialStar" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0.8" stopColor={C.gold} />
+                  <Stop offset="0.8" stopColor={`${C.gold}25`} />
+                </SvgLinearGradient>
+              </Defs>
+              <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill="url(#partialStar)" />
+            </Svg>
+          </View>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
+        </View>
+      </FadeIn>
+
+      {testimonials.map((t, i) => (
+        <FadeIn key={i} delay={400 + i * 200}>
+          <View style={s.testimonialCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <View style={[s.avatar, { backgroundColor: `${t.color}15` }]}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: t.color }}>{t.avatar}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{t.name}</Text>
+                <Text style={{ fontSize: 9, color: t.color, fontWeight: '600' }}>{'🔥 '}{t.streak}</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: C.textM, lineHeight: 18 }}>{`\u201c${t.text}\u201d`}</Text>
+          </View>
+        </FadeIn>
+      ))}
+    </View>
+  );
+}
+
+// ═══ SCREEN 6: GET STARTED ══════════════════════════════════
+function Screen6({ onPlay }: { onPlay: () => void }) {
+  const shimmerAnim = useRef(new RNAnimated.Value(-30)).current;
+  useEffect(() => {
+    const loop = () => {
+      shimmerAnim.setValue(-30);
+      RNAnimated.timing(shimmerAnim, {
+        toValue: 120,
+        duration: 2000,
+        useNativeDriver: false,
+      }).start(loop);
+    };
+    loop();
+  }, [shimmerAnim]);
+
+  return (
+    <View style={s.screenCenter}>
+      <FadeIn delay={200}>
+        <LinearGradient
+          colors={[C.accent, C.accentL]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.logoBox}
+        >
+          <Svg width={42} height={26} viewBox="0 0 36 24">
+            <Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth={1.2} />
+            <Circle cx={18} cy={12} r={5} fill="white" />
+          </Svg>
+        </LinearGradient>
+      </FadeIn>
+
+      <FadeIn delay={400}>
+        <Text style={[s.sectionTitle, { textAlign: 'center' }]}>Ready to train{'\n'}your memory?</Text>
+        <Text style={[s.heroSub, { marginBottom: 28 }]}>
+          Free to play. 2 minutes a day.{'\n'}Your brain will thank you.
+        </Text>
+      </FadeIn>
+
+      <FadeIn delay={600}>
+        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 28 }}>
+          {[
+            { icon: '🎮', label: '380+ levels' },
+            { icon: '🧠', label: '6 game modes' },
+            { icon: '👥', label: 'Challenge friends' },
+          ].map((f, i) => (
+            <View key={i} style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: C.textM }}>{f.label}</Text>
+            </View>
+          ))}
+        </View>
+      </FadeIn>
+
+      <FadeIn delay={800}>
+        <View style={{ width: '100%' }}>
+          <Pressable onPress={onPlay} style={{ borderRadius: 16, overflow: 'hidden' }}>
+            <LinearGradient
+              colors={[C.accent, C.accentD]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.ctaButton}
+            >
+              <RNAnimated.View
+                style={[
+                  s.shimmer,
+                  {
+                    left: shimmerAnim.interpolate({
+                      inputRange: [-30, 120],
+                      outputRange: ['-30%', '120%'],
+                    }),
+                  },
+                ]}
+              />
+              <Text style={s.ctaText}>Play Now</Text>
+            </LinearGradient>
+          </Pressable>
+          <Text style={{ marginTop: 10, fontSize: 11, color: C.textD, textAlign: 'center' }}>
+            No account needed to try
+          </Text>
+        </View>
+      </FadeIn>
+    </View>
+  );
+}
+
+// ═══ DOT INDICATORS ═════════════════════════════════════════
+function Dots({ total, current }: { total: number; current: number }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={{
+            width: i === current ? 18 : 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: i === current ? C.accent : i < current ? C.accentL : '#E0DCDA',
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ═══ MAIN ONBOARDING ════════════════════════════════════════
+const TOTAL_SCREENS = 6;
+
+export default function OnboardingFlow() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const flatListRef = useRef<FlatList>(null);
+  const [current, setCurrent] = useState(0);
+  const isLast = current === TOTAL_SCREENS - 1;
+
+  const pageWidth = Platform.OS === 'web' ? Math.min(SCREEN_W, 430) : SCREEN_W;
+
+  const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
-    router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
+    router.replace('/(auth)/login');
   }, [router]);
 
-  const next = () => goToPage(Math.min(page + 1, 4));
-  const prev = () => goToPage(Math.max(page - 1, 0));
+  const goTo = useCallback((index: number) => {
+    flatListRef.current?.scrollToIndex({ index, animated: true });
+    setCurrent(index);
+  }, []);
+
+  const onMomentumScrollEnd = useCallback((e: any) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
+    setCurrent(idx);
+  }, [pageWidth]);
+
+  const renderItem = useCallback(({ index }: { index: number }) => {
+    return (
+      <View style={{ width: pageWidth, flex: 1, paddingTop: insets.top + 60 }}>
+        {index === 0 && <Screen1 />}
+        {index === 1 && <Screen2 />}
+        {index === 2 && <Screen3 />}
+        {index === 3 && <Screen4 />}
+        {index === 4 && <Screen5 />}
+        {index === 5 && <Screen6 onPlay={onPlay} />}
+      </View>
+    );
+  }, [pageWidth, insets.top, onPlay]);
+
+  const keyExtractor = useCallback((_: number, index: number) => String(index), []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* Skip */}
-      {page < 4 && (
-        <Pressable onPress={() => goToPage(4)} style={styles.skipButton}>
-          <Text style={[styles.skipText, { color: colors.textLight }]}>Skip</Text>
+    <View style={[s.container, { backgroundColor: C.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: Platform.OS === 'web' ? 'center' : undefined, width: '100%' }]}>
+      {/* Skip button */}
+      {!isLast && (
+        <Pressable onPress={() => goTo(TOTAL_SCREENS - 1)} style={[s.skipBtn, { top: insets.top + 12 }]}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: C.textD }}>Skip</Text>
         </Pressable>
       )}
 
-      {/* Content — animated wrapper */}
-      <RNAnimated.View style={[styles.contentArea, { opacity: contentOpacity, transform: [{ translateX: contentSlide }] }]}>
-        {page === 0 && <Page1 colors={colors} />}
-        {page === 1 && <Page2 colors={colors} />}
-        {page === 2 && <Page3 colors={colors} />}
-        {page === 3 && <PageChallenge colors={colors} />}
-        {page === 4 && <Page4 colors={colors} onFinish={finish} />}
-      </RNAnimated.View>
+      <FlatList
+        ref={flatListRef}
+        data={Array.from({ length: TOTAL_SCREENS }, (_, i) => i)}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
+        scrollEventThrottle={16}
+        bounces={false}
+      />
 
-      {/* Bottom nav */}
-      <View style={styles.bottomNav}>
-        <PageDots current={page} total={5} colors={colors} />
-        {page < 4 && (
-          <View style={styles.navButtons}>
-            {page > 0 && (
-              <Pressable onPress={prev} disabled={transitioning} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.backButtonText, { color: colors.textMid }]}>Back</Text>
-              </Pressable>
-            )}
-            <Pressable onPress={next} disabled={transitioning} style={[styles.nextButton, { backgroundColor: colors.accent, flex: page > 0 ? 2 : 1 }]}>
-              <Text style={styles.nextButtonText}>Next</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
+      {/* Bottom: dots + continue */}
+      {!isLast && (
+        <View style={[s.bottomBar, { paddingBottom: insets.bottom + 36 }]}>
+          <Dots total={TOTAL_SCREENS} current={current} />
+          <Pressable
+            onPress={() => goTo(current + 1)}
+            style={s.continueBtn}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: 'white' }}>
+              {current === 0 ? 'Tell me more' : 'Continue'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }
 
-export default OnboardingScreen;
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  skipButton: { position: 'absolute', top: 52, right: 20, zIndex: 10, padding: 8 },
-  skipText: { fontSize: 14, fontWeight: '500' },
-  contentArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
-  pageCenter: { alignItems: 'center', gap: 8, maxWidth: 300, width: '100%' },
-  wordmark: { fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
-  heading: { fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 30, letterSpacing: -0.3, marginTop: 4 },
-  subtext: { fontSize: 15, textAlign: 'center', lineHeight: 24, marginTop: 4, maxWidth: 270 },
-  stepBadge: { paddingHorizontal: 16, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  stepBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  bottomNav: { paddingHorizontal: 30, paddingBottom: 40, gap: 18, alignItems: 'center' },
-  navButtons: { flexDirection: 'row', gap: 10, width: '100%', maxWidth: 280 },
-  backButton: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1 },
-  backButtonText: { fontSize: 15, fontWeight: '600' },
-  nextButton: { paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  nextButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  ctaButton: { width: '100%', maxWidth: 280, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 4 },
-  ctaButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+// ═══ STYLES ═════════════════════════════════════════════════
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  skipBtn: {
+    position: 'absolute',
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  screenCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  screenLeft: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: C.text,
+    lineHeight: 34,
+    textAlign: 'center',
+    marginTop: 32,
+    marginBottom: 12,
+  },
+  heroSub: {
+    fontSize: 15,
+    color: C.textM,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: C.accent,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: C.text,
+    lineHeight: 29,
+    marginBottom: 24,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    gap: 14,
+    paddingVertical: 14,
+  },
+  benefitBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.04)',
+  },
+  benefitIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekCard: {
+    backgroundColor: 'white',
+    borderRadius: 18,
+    padding: 18,
+    width: '100%',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  weekLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: C.textD,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  dayCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakBanner: {
+    marginTop: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: `${C.coral}08`,
+    alignItems: 'center',
+  },
+  streakText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.coral,
+  },
+  microStat: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  stepVisual: {
+    width: '100%',
+    height: 120,
+    backgroundColor: 'white',
+    borderRadius: 14,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  answerOption: {
+    width: '48%',
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F5F4F0',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  stepCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  stepNum: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    marginBottom: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  testimonialCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: C.accent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 4,
+  },
+  ctaButton: {
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: C.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 50,
+    backgroundColor: 'transparent',
+    // Shimmer effect via a semi-transparent white band
+    borderLeftWidth: 0,
+    // Using a View with opacity for the shimmer
+    opacity: 0.18,
+  },
+  ctaText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: 'white',
+    zIndex: 1,
+  },
+  bottomBar: {
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  continueBtn: {
+    backgroundColor: C.accent,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
 });
