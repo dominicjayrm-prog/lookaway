@@ -134,7 +134,7 @@ function TrialToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => 
       <View style={{ flex: 1 }}>
         <Text style={[st.trialTitle, { color: '#1A1A18' }]}>Free trial</Text>
         <Text style={[st.trialSub, { color: enabled ? '#00B894' : '#636E72' }]}>
-          {enabled ? 'Try 3 days free \u2014 cancel before, pay nothing' : 'Toggle to enable 3-day free trial'}
+          {enabled ? `Try 3 days free \u2014 cancel before, pay nothing` : 'Toggle to enable 3-day free trial'}
         </Text>
       </View>
       <View style={st.toggleOuter}>
@@ -180,7 +180,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = trial ? 'Start Free Trial' : plan === 'yearly' ? 'Subscribe \u2014 \u00A319.99/year' : 'Subscribe \u2014 \u00A32.99/month';
+  const ctaText = trial && plan === 'yearly' ? 'Start Free Trial' : plan === 'yearly' ? `Subscribe \u2014 \u00A319.99/year` : `Subscribe \u2014 \u00A32.99/month`;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -213,13 +213,15 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           {/* Benefits */}
           {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} />)}
 
-          {/* Trial toggle */}
-          <TrialToggle enabled={trial} onToggle={() => setTrial(!trial)} />
+          {/* Trial toggle — only for yearly */}
+          {plan === 'yearly' && (
+            <TrialToggle enabled={trial} onToggle={() => setTrial(!trial)} />
+          )}
 
           {/* Plan cards — stacked */}
           <View style={st.planSection}>
             {/* Yearly */}
-            <Pressable onPress={() => setPlan('yearly')} style={[st.planCard, plan === 'yearly' && st.planCardActive]}>
+            <Pressable onPress={() => { setPlan('yearly'); }} style={[st.planCard, plan === 'yearly' && st.planCardActive]}>
               {plan === 'yearly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
               <View style={[st.planRadio, plan === 'yearly' && st.planRadioActive]}>
                 {plan === 'yearly' && <View style={st.planRadioDot} />}
@@ -235,7 +237,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
             </Pressable>
 
             {/* Monthly */}
-            <Pressable onPress={() => setPlan('monthly')} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
+            <Pressable onPress={() => { setPlan('monthly'); setTrial(false); }} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
               {plan === 'monthly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
               <View style={[st.planRadio, plan === 'monthly' && st.planRadioActive]}>
                 {plan === 'monthly' && <View style={st.planRadioDot} />}
@@ -252,10 +254,10 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
           {/* Reassurance */}
           <View style={st.reassurance}>
-            {trial ? (
+            {trial && plan === 'yearly' ? (
               <View style={st.reassuranceRow}>
                 <Ionicons name="checkmark-circle" size={14} color="#00B894" />
-                <Text style={st.reassuranceGreen}>No charge for 3 days \u2014 cancel anytime</Text>
+                <Text style={st.reassuranceGreen}>{`No charge for 3 days \u2014 cancel anytime`}</Text>
               </View>
             ) : (
               <Text style={st.reassuranceGrey}>Cancel anytime in Settings</Text>

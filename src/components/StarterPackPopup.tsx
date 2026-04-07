@@ -206,7 +206,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           </View>
 
           {/* Shimmer CTA */}
-          <ShimmerButton text="Get Starter Pack \u2014 \u00A30.99" onPress={onPurchase} />
+          <ShimmerButton text={`Get Starter Pack \u2014 \u00A30.99`} onPress={onPurchase} />
 
           {/* No thanks */}
           <Pressable onPress={handleDismiss} style={st.noThanksBtn} hitSlop={8}>
