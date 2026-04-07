@@ -607,7 +607,7 @@ export default function OnboardingFlow() {
 
   const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
-    router.replace('/(auth)/login');
+    router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
   const goTo = useCallback((index: number) => {
