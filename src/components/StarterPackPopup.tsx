@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Line, Polygon } from 'react-native-svg';
-import { Blink } from '@/src/components/Blink';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -165,7 +165,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 
           {/* Bouncing gift + Blink */}
           <RNAnimated.View style={[st.giftWrap, { transform: [{ translateY: floatAnim }], flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-            <Blink expression="surprised" size={44} />
+            <AnimatedBlink expression="surprised" size={44} />
             <GiftSvg size={28} />
           </RNAnimated.View>
 

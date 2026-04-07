@@ -19,8 +19,8 @@ import { fetchLevelById } from '@/src/data/levels';
 import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
 import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
-import { Blink } from '@/src/components/Blink';
-import type { BlinkExpression } from '@/src/components/Blink';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -267,7 +267,7 @@ function PlayTab() {
           <LinearGradient colors={['#6C5CE7', '#5B4CC8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
-            <Blink expression={getHomeBlink(streakCount, lives)} size={36} />
+            <AnimatedBlink expression={getHomeBlink(streakCount, lives)} size={36} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
               <Text style={styles.heroLogoSub}>{getHomeGreeting(streakCount)}</Text>
