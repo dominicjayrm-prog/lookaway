@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Switch, Pressable, ScrollView, Image, Alert, Platform, Modal, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -13,7 +13,8 @@ import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achie
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { AvatarFrame } from '@/src/components/AvatarFrame';
 import { ProfileBanner } from '@/src/components/ProfileBanner';
-import { getFrameById, getBannerById, getNameColorById, RARITY_COLORS } from '@/src/data/cosmetics';
+import { getFrameById, getBannerById, getNameColorById, FRAMES, RARITY_COLORS } from '@/src/data/cosmetics';
+import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 
 const isWeb = Platform.OS === 'web';
@@ -54,7 +55,27 @@ function ProfileScreen() {
   const unlockedCount = countUnlockedTiers(playerProgress);
   const totalTiers = achievements.length * 3;
 
-  const handlePickPhoto = useCallback(() => { if (Platform.OS === 'web') { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e: any) => { const file = e.target?.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { const uri = reader.result as string; setProfilePic(uri); saveProfilePic(uri); }; reader.readAsDataURL(file); }; input.click(); } else { Alert.alert('Coming soon', 'Photo picker will be available on mobile devices.'); } }, []);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const { ownedCosmetics, equippedFrame: eqFrame, purchaseCosmetic, equipCosmetic } = useGameStore();
+
+  const handlePickPhoto = useCallback(() => {
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { const uri = reader.result as string; setProfilePic(uri); saveProfilePic(uri); };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    } else {
+      Alert.alert('Coming soon', 'Photo picker will be available on mobile devices.');
+    }
+    setShowAvatarPicker(false);
+  }, []);
   const handleSignOut = useCallback(async () => { try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
 
   return (
@@ -72,7 +93,7 @@ function ProfileScreen() {
             {/* Blink avatar sits on the banner */}
           </ProfileBanner>
           <View style={[styles.avatarSection, { marginTop: -50 }]}>
-            <Pressable onPress={handlePickPhoto} style={styles.avatarContainer}>
+            <Pressable onPress={() => setShowAvatarPicker(true)} style={styles.avatarContainer}>
               <AvatarFrame frame={frame ?? null} size={80}>
                 {profilePic ? (
                   <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
@@ -169,6 +190,74 @@ function ProfileScreen() {
 
         <Text style={[styles.version, { color: colors.textLight }]}>BLANKED v1.0.0</Text>
       </ScrollView>
+
+      {/* Avatar Picker Modal */}
+      <Modal visible={showAvatarPicker} transparent animationType="slide" onRequestClose={() => setShowAvatarPicker(false)}>
+        <View style={styles.pickerBackdrop}>
+          <Pressable style={styles.pickerBackdropTouch} onPress={() => setShowAvatarPicker(false)} />
+          <View style={[styles.pickerSheet, { backgroundColor: colors.bg }]}>
+            <View style={styles.pickerHandle} />
+            <Text style={[styles.pickerTitle, { color: colors.text }]}>Choose Avatar</Text>
+
+            {/* Upload photo option */}
+            <Pressable onPress={handlePickPhoto} style={[styles.pickerUploadBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="camera" size={20} color={colors.accent} />
+              <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
+            </Pressable>
+
+            {/* Clear photo if one is set */}
+            {profilePic && (
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+                <Ionicons name="close-circle" size={20} color={colors.wrong} />
+                <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo (show Blink)</Text>
+              </Pressable>
+            )}
+
+            {/* Blink frames grid */}
+            <Text style={[styles.pickerSectionLabel, { color: colors.textMid }]}>AVATAR FRAMES</Text>
+            <FlatList
+              data={FRAMES.filter(f => f.id !== 'frame_none')}
+              numColumns={3}
+              keyExtractor={f => f.id}
+              contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
+              columnWrapperStyle={{ gap: 10 }}
+              renderItem={({ item: f }) => {
+                const owned = f.unlock === 'free' || ownedCosmetics.includes(f.id);
+                const equipped = eqFrame === f.id;
+                return (
+                  <Pressable
+                    onPress={() => {
+                      if (owned) {
+                        equipCosmetic('frame', f.id);
+                        setShowAvatarPicker(false);
+                      } else if (f.gemCost) {
+                        const ok = purchaseCosmetic(f.id, f.gemCost);
+                        if (ok) { equipCosmetic('frame', f.id); setShowAvatarPicker(false); }
+                        else Alert.alert('Not enough gems', `You need ${f.gemCost} gems.`);
+                      } else if (f.subscriberOnly) {
+                        Alert.alert('Blanked+ Required', 'Subscribe to Blanked+ to unlock this frame.');
+                      } else if (f.achievementId) {
+                        Alert.alert('Achievement Required', f.description);
+                      }
+                    }}
+                    style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: equipped ? f.borderColor : colors.border, opacity: owned ? 1 : 0.5 }]}
+                  >
+                    <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                      <Blink expression="normal" size={34} />
+                    </View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
+                    <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
+                    {equipped && <Text style={{ fontSize: 8, color: colors.correct, fontWeight: '800', marginTop: 2 }}>EQUIPPED</Text>}
+                    {!owned && f.gemCost && <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 2 }}>{f.gemCost} gems</Text>}
+                    {!owned && f.subscriberOnly && <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 2 }}>BLANKED+</Text>}
+                    {!owned && f.achievementId && !f.subscriberOnly && !f.gemCost && <Ionicons name="lock-closed" size={12} color={colors.textLight} style={{ marginTop: 2 }} />}
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -211,4 +300,13 @@ const styles = StyleSheet.create({
   achCountText: { fontSize: 13, fontWeight: '700' },
   divisionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, marginBottom: spacing.xs },
   divisionText: { fontSize: 11, fontWeight: '700' },
+  pickerBackdrop: { flex: 1, justifyContent: 'flex-end' },
+  pickerBackdropTouch: { flex: 1 },
+  pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40, maxHeight: '80%' },
+  pickerHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.12)', alignSelf: 'center', marginBottom: 16 },
+  pickerTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 16 },
+  pickerUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
+  pickerUploadText: { fontSize: 14, fontWeight: '600' },
+  pickerSectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 12, marginBottom: 10 },
+  pickerCard: { flex: 1, alignItems: 'center', padding: 10, borderRadius: 14, borderWidth: 1.5 },
 });

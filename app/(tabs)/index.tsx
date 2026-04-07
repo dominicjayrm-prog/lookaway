@@ -20,6 +20,7 @@ import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
 import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
@@ -250,13 +251,13 @@ function PlayTab() {
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </View>
             <Pressable
-              style={[styles.profileButton, { backgroundColor: profilePic ? 'transparent' : colors.accent }]}
-                           onPress={() => router.push('/profile')}
+              style={styles.profileButton}
+              onPress={() => router.push('/profile')}
             >
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
               ) : (
-                <Text style={styles.profileInitials}>{initials}</Text>
+                <Blink expression="normal" size={32} />
               )}
             </Pressable>
           </View>
@@ -267,11 +268,7 @@ function PlayTab() {
           <LinearGradient colors={['#6C5CE7', '#5B4CC8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
-            <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{ position: 'absolute', width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.12)' }} />
-              <AnimatedBlink expression={getHomeBlink(streakCount, lives)} size={36} />
-            </View>
-            <View style={{ marginLeft: 10 }}>
+            <View style={{ marginLeft: 2 }}>
               <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
               <Text style={styles.heroLogoSub}>{getHomeGreeting(streakCount)}</Text>
             </View>

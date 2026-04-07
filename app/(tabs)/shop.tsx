@@ -277,7 +277,11 @@ function ShopTab() {
                     useGameStore.getState().equipCosmetic('frame', f.id);
                   } else {
                     const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost!);
-                    if (!ok) Alert.alert('Not enough gems', `You need ${f.gemCost} gems for this frame.`);
+                    if (ok) {
+                      useGameStore.getState().equipCosmetic('frame', f.id);
+                    } else {
+                      Alert.alert('Not enough gems', `You need ${f.gemCost} gems for this frame.`);
+                    }
                   }
                 }}
                 style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border }]}
