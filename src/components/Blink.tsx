@@ -30,6 +30,8 @@ export type BlinkExpression =
 interface BlinkProps {
   expression?: BlinkExpression;
   size?: number;
+  /** Shift pupils: {x: -1 to 1, y: -1 to 1}. 0,0 = center, 0,1 = looking down */
+  lookOffset?: { x: number; y: number };
 }
 
 // ─── COLORS ────────────────────────────────────────────────
@@ -66,7 +68,7 @@ function heartPath(hx: number, hy: number, hs: number): string {
 // ─── BLINK COMPONENT ───────────────────────────────────────
 let _blinkId = 0;
 
-function BlinkComponent({ expression = 'normal', size = 120 }: BlinkProps) {
+function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: BlinkProps) {
   const id = React.useRef(`blink-${++_blinkId}`).current;
   const s = size;
   const cx = s / 2;
@@ -262,7 +264,7 @@ function BlinkComponent({ expression = 'normal', size = 120 }: BlinkProps) {
 
   // ═══ 12 EXPRESSIONS ═══
   const faces: Record<BlinkExpression, React.ReactNode> = {
-    normal: <>{eyes({})}{smile(0.04, 0.04)}</>,
+    normal: <>{eyes({ lx: (lookOffset?.x ?? 0) * s * 0.03, ly: (lookOffset?.y ?? 0) * s * 0.04 })}{smile(0.04, 0.04)}</>,
 
     memorise: (
       <>

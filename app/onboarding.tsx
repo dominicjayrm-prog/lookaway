@@ -95,6 +95,28 @@ function ScaleIn({ delay = 0, children, active = true }: { delay?: number; child
 function Screen1({ isVisible }: { isVisible: boolean }) {
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   const floatAnim = useRef(new RNAnimated.Value(0)).current;
+  // Eye look-down: Blink glances down at the text after a pause
+  const [lookY, setLookY] = useState(0);
+  const lookRan = useRef(false);
+  useEffect(() => {
+    if (!isVisible || lookRan.current) return;
+    lookRan.current = true;
+    // Wait for text to fade in, then slowly look down
+    const delay = setTimeout(() => {
+      const start = Date.now();
+      const duration = 1200; // slow, natural eye movement
+      const tick = () => {
+        const t = Math.min(1, (Date.now() - start) / duration);
+        // Ease-in-out cubic for natural eye movement
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        setLookY(eased * 0.8); // 0.8 = not fully down, just a glance
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, 1500); // start after title fades in
+    return () => clearTimeout(delay);
+  }, [isVisible]);
+
   useEffect(() => {
     const loop = () => {
       RNAnimated.sequence([
@@ -103,7 +125,6 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
       ]).start(loop);
     };
     loop();
-    // Gentle floating
     const floatLoop = () => {
       RNAnimated.sequence([
         RNAnimated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
@@ -117,7 +138,7 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
-          <AnimatedBlink expression="normal" size={100} />
+          <AnimatedBlink expression="normal" size={100} lookOffset={{ x: 0, y: lookY }} />
         </RNAnimated.View>
       </FadeIn>
 
