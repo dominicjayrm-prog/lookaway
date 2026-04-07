@@ -297,8 +297,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const elapsed = Date.now() - livesLastLostAt;
       const regen = Math.floor(elapsed / LIFE_REGEN_MS);
       if (regen > 0) {
-        const actualRegen = Math.min(regen, maxLives - lives); // Cap to max lives deficit
-        const nl = Math.min(maxLives, lives + regen);
+        const actualRegen = Math.min(regen, maxLives - lives);
+        const nl = Math.min(maxLives, lives + actualRegen);
         set({ lives: nl, livesLastLostAt: nl >= maxLives ? null : Date.now() - (elapsed % LIFE_REGEN_MS) });
         setTimeout(() => saveState(get()), 0);
         if (actualRegen > 0) logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_REGEN, actualRegen);
