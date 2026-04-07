@@ -3,8 +3,11 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Anima
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Polygon } from 'react-native-svg';
+import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
+import { useGameStore } from '@/src/store';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { generatePath, getGeneratedMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
 
@@ -82,6 +85,8 @@ function SideWorldMap() {
 
   var [mapWidth, setMapWidth] = useState(MAP_W);
   var [popup, setPopup] = useState<number | null>(null);
+  var [showOutOfLives, setShowOutOfLives] = useState(false);
+  var [showPaywall, setShowPaywall] = useState(false);
   var [progress, setProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
 
   var path = useMemo(() => generatePath(totalLevels, worldNum + modeId.length), [totalLevels, worldNum, modeId]);
@@ -128,6 +133,8 @@ function SideWorldMap() {
   }, [currentLevel, path]);
 
   function goToLevel(n: number) {
+    useGameStore.getState().checkLifeRegen();
+    if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
     router.push({ pathname: '/game/side-campaign', params: { levelId: lid(n), mode: modeId, worldNumber: String(worldNum), levelNumber: String(n), worldName: wName } });
   }
   function onNodeTap(n: number) {
@@ -225,6 +232,13 @@ function SideWorldMap() {
           </View>
         </Modal>
       )}
+      <OutOfLivesModal
+        visible={showOutOfLives}
+        onClose={() => setShowOutOfLives(false)}
+        onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
+        onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
+      />
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => setShowPaywall(false)} />
     </View>
   );
 }

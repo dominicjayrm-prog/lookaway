@@ -11,10 +11,8 @@ interface Props {
   modeColor: string;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PADDING = 24;
+const GRID_PADDING = 20;
 const GAP = 8;
-const TILE_SIZE = Math.floor((SCREEN_WIDTH - GRID_PADDING * 2 - GAP * 2) / 3);
 
 export default function ColourChainGame({ modeData, onComplete, modeColor }: Props) {
   const { colors } = useTheme();
@@ -29,6 +27,10 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
 
   const grid = modeData?.grid ?? [];
   const rounds = modeData?.rounds ?? [];
+  const gridCols = modeData?.gridCols ?? 3;
+  const gridRows = modeData?.gridRows ?? 4;
+  const containerWidth = Math.min(Dimensions.get('window').width, 430);
+  const tileSize = Math.floor((containerWidth - GRID_PADDING * 2 - GAP * (gridCols - 1)) / gridCols);
   const totalRounds = rounds.length;
   const currentRound = rounds[recallIdx];
 
@@ -139,13 +141,13 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
         </>
       )}
 
-      <View style={s.grid}>
-        {[0, 1, 2, 3].map(row => (
+      <View style={[s.grid, { paddingHorizontal: GRID_PADDING }]}>
+        {Array.from({ length: gridRows }, (_, row) => (
           <View key={row} style={s.gridRow}>
-            {[0, 1, 2].map(col => {
-              const idx = row * 3 + col;
+            {Array.from({ length: gridCols }, (_, col) => {
+              const idx = row * gridCols + col;
               const tile = grid[idx];
-              if (!tile) return <View key={col} style={[s.tile, { width: TILE_SIZE, height: TILE_SIZE * 0.75 }]} />;
+              if (!tile) return <View key={col} style={[s.tile, { width: tileSize, height: tileSize * 0.75 }]} />;
 
               const state = tileStates[idx] ?? 'hidden';
               const isMemorising = phase === 'memorise';
@@ -174,7 +176,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
               return (
                 <Pressable
                   key={col}
-                  style={[s.tile, { width: TILE_SIZE, height: TILE_SIZE * 0.75, backgroundColor: bgColor, borderWidth, borderColor }]}
+                  style={[s.tile, { width: tileSize, height: tileSize * 0.75, backgroundColor: bgColor, borderWidth, borderColor }]}
                   onPress={() => tappable && handleTapTile(idx)}
                   disabled={!tappable}
                 />

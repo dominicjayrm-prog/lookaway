@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
+import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL_COUNTS, getMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
 import { fetchWorldLevels } from '@/src/data/levels';
 import type { Level } from '@/src/types/game';
@@ -83,6 +85,10 @@ function WorldMapScreen() {
 
   const [popup, setPopup] = useState<number | null>(null);
   const [levelTitles, setLevelTitles] = useState<Record<number, string>>({});
+  const [showOutOfLives, setShowOutOfLives] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const lives = useGameStore((s) => s.lives);
+  const checkLifeRegen = useGameStore((s) => s.checkLifeRegen);
 
   // Preload level titles from Supabase
   useEffect(() => {
@@ -140,6 +146,8 @@ function WorldMapScreen() {
       return;
     }
     if (state === 'current') {
+      checkLifeRegen();
+      if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
       router.push(`/game/w${worldId}-l${levelNum}`);
       return;
     }
@@ -147,8 +155,10 @@ function WorldMapScreen() {
   }, [completedUpTo, totalLevels, worldId, router]);
 
   const handlePlay = useCallback(() => {
+    checkLifeRegen();
+    if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
     router.push(`/game/w${worldId}-l${currentLevel}`);
-  }, [worldId, currentLevel, router]);
+  }, [worldId, currentLevel, router, checkLifeRegen]);
 
   // Get level title for bottom bar
   const currentLevelTitle = levelTitles[currentLevel] ?? `Level ${currentLevel}`;
@@ -275,6 +285,19 @@ function WorldMapScreen() {
       </RNAnimated.View>
 
       {/* ── POPUP ── */}
+      {/* Out of lives */}
+      <OutOfLivesModal
+        visible={showOutOfLives}
+        onClose={() => setShowOutOfLives(false)}
+        onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
+        onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
+      />
+      <SubscriptionPaywall
+        visible={showPaywall}
+        onDismiss={() => setShowPaywall(false)}
+        onSubscribe={() => { setShowPaywall(false); }}
+      />
+
       {popup !== null && (
         <LevelPopup
           worldId={worldId}
@@ -285,7 +308,11 @@ function WorldMapScreen() {
           colors={colors}
           title={levelTitles[popup] ?? `Level ${popup}`}
           onClose={() => setPopup(null)}
-          onPlay={() => { setPopup(null); router.push(`/game/w${worldId}-l${popup}`); }}
+          onPlay={() => {
+            checkLifeRegen();
+            if (useGameStore.getState().lives <= 0) { setPopup(null); setShowOutOfLives(true); return; }
+            setPopup(null); router.push(`/game/w${worldId}-l${popup}`);
+          }}
         />
       )}
     </View>

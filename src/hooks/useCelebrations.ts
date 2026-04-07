@@ -45,6 +45,7 @@ export function useCelebrations() {
     isLastLevelOfWorld: boolean,
     addGems: (n: number) => void,
     safeTimeout: SafeTimeout,
+    worldId?: number,
   ) => {
     safeTimeout(() => {
       const newStreak = useGameStore.getState().streakCount;
@@ -66,6 +67,29 @@ export function useCelebrations() {
         safeTimeout(() => setShowMilestone(true), 1000);
       }
     }, 100);
+
+    // Starter pack — show after completing World 1 of Classic (24hr window)
+    if (isLastLevelOfWorld && !isReplay && worldId && worldId <= 2) {
+      (async () => {
+        try {
+          const [purchased, offeredAt] = await Promise.all([
+            AsyncStorage.getItem('starter_pack_purchased'),
+            AsyncStorage.getItem('starter_pack_offered_at'),
+          ]);
+          if (purchased) return; // Already bought
+          if (offeredAt) {
+            // Check 24hr expiry
+            const elapsed = Date.now() - parseInt(offeredAt, 10);
+            if (elapsed > 24 * 60 * 60 * 1000) return; // Expired
+          }
+          // Show after world complete celebration dismisses (3s delay)
+          safeTimeout(() => {
+            setShowStarterPack(true);
+            if (!offeredAt) AsyncStorage.setItem('starter_pack_offered_at', String(Date.now()));
+          }, 3000);
+        } catch {}
+      })();
+    }
 
     // Achievement check
     if (user?.id) {
@@ -101,19 +125,6 @@ export function useCelebrations() {
       scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
     }
 
-    // Starter pack after first failure
-    (async () => {
-      try {
-        const [shown, purchased] = await Promise.all([
-          AsyncStorage.getItem('starter_pack_shown'),
-          AsyncStorage.getItem('starter_pack_purchased'),
-        ]);
-        if (!shown && !purchased) {
-          safeTimeout(() => setShowStarterPack(true), 1200);
-          await AsyncStorage.setItem('starter_pack_shown', 'true');
-        }
-      } catch {}
-    })();
   }, []);
 
   /** Notification prompt (native only, after level 1 or 5) */
