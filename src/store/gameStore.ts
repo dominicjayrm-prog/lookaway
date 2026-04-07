@@ -132,6 +132,7 @@ interface SavedState {
   equippedFrame?: string;
   equippedBanner?: string;
   equippedNameColor?: string;
+  equippedExpression?: string;
 }
 
 function loadState(): SavedState {
@@ -153,7 +154,7 @@ function saveState(state: GameStore) {
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
       ownedCosmetics: state.ownedCosmetics, equippedFrame: state.equippedFrame,
-      equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor,
+      equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor, equippedExpression: state.equippedExpression,
     }));
   } catch (e) {
     console.warn('Save state failed:', e);
@@ -200,9 +201,10 @@ export interface GameStore {
   equippedFrame: string;      // equipped frame ID
   equippedBanner: string;     // equipped banner ID
   equippedNameColor: string;  // equipped name color ID
+  equippedExpression: string; // equipped expression ID
   purchaseCosmetic: (id: string, gemCost: number) => boolean;
   unlockCosmetic: (id: string) => void;
-  equipCosmetic: (type: 'frame' | 'banner' | 'name_color', id: string) => void;
+  equipCosmetic: (type: 'frame' | 'banner' | 'name_color' | 'expression', id: string) => void;
 
   // Economy
   addGems: (a: number) => void;
@@ -280,6 +282,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     equippedFrame: saved.equippedFrame ?? 'frame_blink_normal',
     equippedBanner: saved.equippedBanner ?? 'banner_none',
     equippedNameColor: saved.equippedNameColor ?? 'name_default',
+    equippedExpression: saved.equippedExpression ?? 'expr_normal',
     purchaseCosmetic: (id, gemCost) => {
       const { gems, ownedCosmetics } = get();
       if (ownedCosmetics.includes(id) || gems < gemCost) return false;
@@ -297,6 +300,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (type === 'frame') set({ equippedFrame: id });
       else if (type === 'banner') set({ equippedBanner: id });
       else if (type === 'name_color') set({ equippedNameColor: id });
+      else if (type === 'expression') set({ equippedExpression: id });
       setTimeout(() => saveState(get()), 0);
     },
 
@@ -440,6 +444,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           equippedFrame: saved.equippedFrame ?? 'frame_blink_normal',
           equippedBanner: saved.equippedBanner ?? 'banner_none',
           equippedNameColor: saved.equippedNameColor ?? 'name_default',
+          equippedExpression: saved.equippedExpression ?? 'expr_normal',
           _hydrated: true,
         });
       } else {

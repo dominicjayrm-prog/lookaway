@@ -195,7 +195,7 @@ function ProfileScreen() {
       <Modal visible={showAvatarPicker} transparent animationType="slide" onRequestClose={() => setShowAvatarPicker(false)}>
         <View style={styles.pickerBackdrop}>
           <Pressable style={styles.pickerBackdropTouch} onPress={() => setShowAvatarPicker(false)} />
-          <View style={[styles.pickerSheet, { backgroundColor: colors.bg }]}>
+          <View style={[styles.pickerSheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: 'center', width: '100%' }]}>
             <View style={styles.pickerHandle} />
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Choose Avatar</Text>
 
@@ -221,9 +221,12 @@ function ProfileScreen() {
               keyExtractor={f => f.id}
               contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
               columnWrapperStyle={{ gap: 10 }}
-              renderItem={({ item: f }) => {
+              renderItem={({ item: f, index: fIdx }) => {
                 const owned = f.unlock === 'free' || ownedCosmetics.includes(f.id);
                 const equipped = eqFrame === f.id;
+                // Each frame shows a different Blink expression for variety
+                const previewExpressions: BlinkExpression[] = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'];
+                const previewExpr = previewExpressions[fIdx % previewExpressions.length];
                 return (
                   <Pressable
                     onPress={() => {
@@ -243,7 +246,7 @@ function ProfileScreen() {
                     style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: equipped ? f.borderColor : colors.border, opacity: owned ? 1 : 0.5 }]}
                   >
                     <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                      <Blink expression="normal" size={34} />
+                      <Blink expression={previewExpr} size={34} />
                     </View>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
