@@ -128,6 +128,10 @@ interface SavedState {
   powerUps?: Partial<PowerUpInventory>;
   levelProgress?: Record<string, { stars: number; bestScore: number; attempts: number }>;
   completedScores?: number[];
+  ownedCosmetics?: string[];
+  equippedFrame?: string;
+  equippedBanner?: string;
+  equippedNameColor?: string;
 }
 
 function loadState(): SavedState {
@@ -148,6 +152,8 @@ function saveState(state: GameStore) {
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
+      ownedCosmetics: state.ownedCosmetics, equippedFrame: state.equippedFrame,
+      equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor,
     }));
   } catch (e) {
     console.warn('Save state failed:', e);
@@ -430,6 +436,10 @@ export const useGameStore = create<GameStore>((set, get) => {
           powerUps: { ...DEFAULT_POWERUPS, ...(saved.powerUps ?? {}) },
           levelProgress: saved.levelProgress ?? {},
           completedScores: saved.completedScores ?? [],
+          ownedCosmetics: saved.ownedCosmetics ?? [],
+          equippedFrame: saved.equippedFrame ?? 'frame_blink_normal',
+          equippedBanner: saved.equippedBanner ?? 'banner_none',
+          equippedNameColor: saved.equippedNameColor ?? 'name_default',
           _hydrated: true,
         });
       } else {
