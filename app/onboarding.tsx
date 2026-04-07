@@ -544,8 +544,8 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
         </View>
       </FadeIn>
 
-      <FadeIn delay={800}>
-        <View style={{ width: '100%' }}>
+      <FadeIn delay={800} style={{ width: '100%' }}>
+        <View>
           <Pressable onPress={onPlay} onPressIn={onPressIn} onPressOut={onPressOut}>
             <RNAnimated.View style={{ transform: [{ scale: btnScale }], borderRadius: 16, overflow: 'hidden' }}>
               <LinearGradient
