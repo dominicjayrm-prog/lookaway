@@ -20,6 +20,9 @@ function ShopTab() {
   const { colors } = useTheme();
   const { gems, powerUps, buyPowerUp, refillLivesWithGems, addGems } = useGameStore();
   const [selectedMode, setSelectedMode] = useState('classic');
+  const [cosmeticTab, setCosmeticTab] = useState<'featured' | 'frames' | 'banners' | 'expressions'>('featured');
+  const today = new Date().toISOString().slice(0, 10);
+  const dailyFeatured = getDailyFeatured(today);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showStarterPack, setShowStarterPack] = useState(false);
   const [starterPackAvailable, setStarterPackAvailable] = useState(false);
@@ -266,43 +269,121 @@ function ShopTab() {
 
         {/* ── Cosmetics ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Cosmetics</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
-          {FRAMES.filter(f => f.unlock === 'gems' && f.gemCost).map(f => {
-            const owned = useGameStore.getState().ownedCosmetics.includes(f.id);
-            return (
-              <Pressable
-                key={f.id}
-                onPress={() => {
-                  if (owned) {
-                    useGameStore.getState().equipCosmetic('frame', f.id);
-                  } else {
-                    const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost!);
-                    if (ok) {
-                      useGameStore.getState().equipCosmetic('frame', f.id);
-                    } else {
-                      Alert.alert('Not enough gems', `You need ${f.gemCost} gems for this frame.`);
-                    }
-                  }
-                }}
-                style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border }]}
-              >
-                <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
-                  <Blink expression="normal" size={30} />
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{f.name}</Text>
-                <Text style={{ fontSize: 9, color: RARITY_COLORS[f.rarity], fontWeight: '600', marginTop: 1 }}>{f.rarity.toUpperCase()}</Text>
-                {owned ? (
-                  <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 4 }}>OWNED</Text>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent }}>{f.gemCost}</Text>
-                    <Text style={{ fontSize: 8, color: colors.textMid }}>gems</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
+
+        {/* Tab bar */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 14 }}>
+          {(['featured', 'frames', 'banners', 'expressions'] as const).map(tab => (
+            <Pressable key={tab} onPress={() => setCosmeticTab(tab)} style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: cosmeticTab === tab ? '#FFF' : colors.textMid }}>
+                {tab === 'featured' ? '✨ Today' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
         </ScrollView>
+
+        {/* Featured tab */}
+        {cosmeticTab === 'featured' && (
+          <View>
+            <Text style={{ fontSize: 11, color: colors.textLight, fontWeight: '600', marginBottom: 10 }}>Refreshes daily · 20% off</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {dailyFeatured.map(({ cosmetic: c, originalPrice, discountedPrice }) => {
+                const owned = useGameStore.getState().ownedCosmetics.includes(c.id);
+                const isFrame = c.type === 'frame';
+                const isExpr = c.type === 'expression';
+                return (
+                  <Pressable key={c.id} onPress={() => {
+                    if (owned) return;
+                    const ok = useGameStore.getState().purchaseCosmetic(c.id, discountedPrice);
+                    if (ok) useGameStore.getState().equipCosmetic(c.type as any, c.id);
+                    else Alert.alert('Not enough gems', `You need ${discountedPrice} gems.`);
+                  }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
+                    {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: (c as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
+                    {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={(c as any).blinkExpression ?? 'normal'} size={40} /></View>}
+                    {c.type === 'banner' && <LinearGradient colors={(c as any).gradientColors ?? [colors.accent, colors.accentLight]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{c.name}</Text>
+                    <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
+                    {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text> : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                        <Text style={{ fontSize: 9, color: colors.textLight, textDecorationLine: 'line-through' }}>{originalPrice}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: colors.accent }}>{discountedPrice}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Frames tab */}
+        {cosmeticTab === 'frames' && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {FRAMES.filter(f => f.id !== 'frame_none').map((f, fi) => {
+              const owned = f.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(f.id);
+              const exprs = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'] as const;
+              return (
+                <Pressable key={f.id} onPress={() => {
+                  if (owned) { useGameStore.getState().equipCosmetic('frame', f.id); }
+                  else if (f.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost); if (ok) useGameStore.getState().equipCosmetic('frame', f.id); else Alert.alert('Not enough gems', `You need ${f.gemCost} gems.`); }
+                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                    <Blink expression={exprs[fi % exprs.length]} size={30} />
+                  </View>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
+                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
+                    : f.gemCost ? <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{f.gemCost} gems</Text>
+                    : f.subscriberOnly ? <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 3 }}>BLANKED+</Text>
+                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Banners tab */}
+        {cosmeticTab === 'banners' && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {BANNERS.filter(b => b.id !== 'banner_none').map(b => {
+              const owned = b.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(b.id);
+              return (
+                <Pressable key={b.id} onPress={() => {
+                  if (owned) { useGameStore.getState().equipCosmetic('banner', b.id); }
+                  else if (b.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(b.id, b.gemCost); if (ok) useGameStore.getState().equipCosmetic('banner', b.id); else Alert.alert('Not enough gems', `You need ${b.gemCost} gems.`); }
+                }} style={[styles.cosmeticCardWide, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  <LinearGradient colors={b.gradientColors} style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{b.name}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[b.rarity], fontWeight: '600' }}>{b.rarity.toUpperCase()}</Text>
+                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
+                    : b.gemCost ? <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{b.gemCost} gems</Text>
+                    : b.subscriberOnly ? <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 3 }}>BLANKED+</Text>
+                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Expressions tab */}
+        {cosmeticTab === 'expressions' && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {EXPRESSIONS.map(e => {
+              const owned = e.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(e.id);
+              return (
+                <Pressable key={e.id} onPress={() => {
+                  if (owned) { useGameStore.getState().equipCosmetic('expression', e.id); }
+                  else if (e.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(e.id, e.gemCost); if (ok) useGameStore.getState().equipCosmetic('expression', e.id); else Alert.alert('Not enough gems', `You need ${e.gemCost} gems.`); }
+                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
+                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
+                    : <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{e.gemCost} gems</Text>}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── Remove ads ── */}
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMid, marginTop: 8, marginBottom: 12 }}>Other</Text>
@@ -407,7 +488,9 @@ const styles = StyleSheet.create({
   outlineBtn: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 14 },
 
   // Remove ads
-  cosmeticCard: { width: 100, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
+  cosmeticTabPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, borderWidth: 1 },
+  cosmeticCard: { width: '30%' as any, flexGrow: 1, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
+  cosmeticCardWide: { width: '47%' as any, flexGrow: 1, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
   removeAdsCard: { borderRadius: 20, padding: 20, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 2 },
   removeAdsContent: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   removeAdsIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
