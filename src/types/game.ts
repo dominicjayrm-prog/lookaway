@@ -5,6 +5,8 @@ export type ShapeType =
   | 'star'
   | 'diamond'
   | 'hexagon'
+  | 'pentagon'
+  | 'oval'
   | 'heart'
   | 'number'
   | 'letter';
