@@ -267,7 +267,10 @@ function PlayTab() {
           <LinearGradient colors={['#6C5CE7', '#5B4CC8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
-            <AnimatedBlink expression={getHomeBlink(streakCount, lives)} size={36} />
+            <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+              <AnimatedBlink expression={getHomeBlink(streakCount, lives)} size={36} />
+            </View>
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
               <Text style={styles.heroLogoSub}>{getHomeGreeting(streakCount)}</Text>
