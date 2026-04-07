@@ -14,19 +14,39 @@ interface CampaignLevelRow {
 }
 
 function dbRowToLevel(row: CampaignLevelRow): Level {
-  const sceneData = row.scene_data ?? { objects: [], questions: [] };
-  const scene: Scene = {
-    id: `${row.id}-s1`,
-    viewTime: row.view_time ?? 4,
-    objects: sceneData.objects ?? [],
-    questions: sceneData.questions ?? [],
-  };
+  const raw = row.scene_data;
+  // Handle both single-scene object and multi-scene array from DB
+  let scenes: Scene[];
+  if (Array.isArray(raw)) {
+    scenes = raw.map((s: any, i: number) => ({
+      id: `${row.id}-s${i + 1}`,
+      viewTime: s.viewTime ?? row.view_time ?? 4,
+      objects: Array.isArray(s.objects) ? s.objects : [],
+      questions: Array.isArray(s.questions) ? s.questions : [],
+    }));
+  } else {
+    const sceneData = raw ?? { objects: [], questions: [] };
+    scenes = [{
+      id: `${row.id}-s1`,
+      viewTime: row.view_time ?? 4,
+      objects: Array.isArray(sceneData.objects) ? sceneData.objects : [],
+      questions: Array.isArray(sceneData.questions) ? sceneData.questions : [],
+    }];
+  }
+  // Filter out empty scenes (no objects or no questions)
+  if (scenes.length > 1) {
+    scenes = scenes.filter(s => s.objects.length > 0 && s.questions.length > 0);
+  }
+  // Ensure at least one scene exists
+  if (scenes.length === 0) {
+    scenes = [{ id: `${row.id}-s1`, viewTime: row.view_time ?? 4, objects: [], questions: [] }];
+  }
   return {
     id: row.id,
     worldId: row.world_id,
     levelNumber: row.level_number,
-    title: row.title,
-    scenes: [scene],
+    title: row.title ?? `Level ${row.level_number}`,
+    scenes,
     requiredScore: row.required_score ?? 60,
     parScore: row.par_score ?? 100,
   };
