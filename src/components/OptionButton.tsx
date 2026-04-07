@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
   withTiming,
+  interpolateColor,
 } from 'react-native-reanimated';
 import { Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -17,7 +17,16 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type OptionState = 'default' | 'selected' | 'correct' | 'wrong' | 'dimmed';
 
-var LETTERS = ['A', 'B', 'C', 'D'];
+const LETTERS = ['A', 'B', 'C', 'D'];
+
+// Map states to numeric indices for interpolation
+const STATE_INDEX: Record<OptionState, number> = {
+  default: 0,
+  selected: 1,
+  correct: 2,
+  wrong: 3,
+  dimmed: 4,
+};
 
 interface OptionButtonProps {
   label: string;
@@ -38,10 +47,43 @@ export const OptionButton = React.memo(function OptionButton({
 }: OptionButtonProps) {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
+  const stateProgress = useSharedValue(STATE_INDEX[state]);
+  const dimmedOpacity = useSharedValue(state === 'dimmed' ? 0.2 : 1);
+  const dimmedScale = useSharedValue(state === 'dimmed' ? 0.95 : 1);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  // Animate state transitions
+  useEffect(() => {
+    stateProgress.value = withTiming(STATE_INDEX[state], { duration: 200 });
+    dimmedOpacity.value = withTiming(state === 'dimmed' ? 0.2 : 1, { duration: 250 });
+    dimmedScale.value = withTiming(state === 'dimmed' ? 0.95 : 1, { duration: 250 });
+  }, [state, stateProgress, dimmedOpacity, dimmedScale]);
+
+  // Background colors for each state
+  const bgColors = useMemo(() => [
+    colors.card,       // default
+    colors.accentSoft, // selected
+    colors.correctSoft,// correct
+    colors.wrongSoft,  // wrong
+    colors.surface,    // dimmed
+  ], [colors]);
+
+  const borderColors = useMemo(() => [
+    colors.border,  // default
+    colors.accent,  // selected
+    colors.correct, // correct
+    colors.wrong,   // wrong
+    colors.border,  // dimmed
+  ], [colors]);
+
+  const colorAnimStyle = useAnimatedStyle(() => {
+    const p = stateProgress.value;
+    return {
+      backgroundColor: interpolateColor(p, [0, 1, 2, 3, 4], bgColors),
+      borderColor: interpolateColor(p, [0, 1, 2, 3, 4], borderColors),
+      opacity: dimmedOpacity.value,
+      transform: [{ scale: scale.value * dimmedScale.value }],
+    };
+  });
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
@@ -58,30 +100,6 @@ export const OptionButton = React.memo(function OptionButton({
     onPress();
   }, [state, onPress]);
 
-  const stateStyles = useMemo<Record<OptionState, ViewStyle>>(() => ({
-    default: {
-      backgroundColor: colors.card,
-      borderColor: colors.border,
-    },
-    selected: {
-      backgroundColor: colors.accentSoft,
-      borderColor: colors.accent,
-    },
-    correct: {
-      backgroundColor: colors.correctSoft,
-      borderColor: colors.correct,
-    },
-    wrong: {
-      backgroundColor: colors.wrongSoft,
-      borderColor: colors.wrong,
-    },
-    dimmed: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      opacity: 0.5,
-    },
-  }), [colors]);
-
   const stateTextStyles = useMemo<Record<OptionState, { color: string }>>(() => ({
     default: { color: colors.text },
     selected: { color: colors.accent },
@@ -89,12 +107,6 @@ export const OptionButton = React.memo(function OptionButton({
     wrong: { color: colors.wrong },
     dimmed: { color: colors.textMid },
   }), [colors]);
-
-  const containerStyles = [
-    styles.container,
-    stateStyles[state],
-    style,
-  ];
 
   const textStyles = [
     styles.text,
@@ -107,7 +119,7 @@ export const OptionButton = React.memo(function OptionButton({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      style={[animatedStyle, ...containerStyles]}
+      style={[styles.container, colorAnimStyle, style]}
     >
       <View style={styles.inner}>
         <View style={[styles.letterBadge, { backgroundColor: state === 'correct' ? colors.correct + '20' : state === 'wrong' ? colors.wrong + '20' : state === 'selected' ? colors.accent + '20' : colors.surface }]}>

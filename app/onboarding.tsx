@@ -36,9 +36,12 @@ const C = {
 };
 
 // ─── ANIMATED COUNTER ──────────────────────────────────────
-function Counter({ target, duration = 1500, suffix = '', prefix = '' }: { target: number; duration?: number; suffix?: string; prefix?: string }) {
+function Counter({ target, duration = 1500, suffix = '', prefix = '', style, active = true }: { target: number; duration?: number; suffix?: string; prefix?: string; style?: any; active?: boolean }) {
   const [val, setVal] = useState(0);
+  const hasRun = useRef(false);
   useEffect(() => {
+    if (!active || hasRun.current) return;
+    hasRun.current = true;
     const start = Date.now();
     let raf: number;
     const tick = () => {
@@ -49,8 +52,8 @@ function Counter({ target, duration = 1500, suffix = '', prefix = '' }: { target
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return <Text>{prefix}{val}{suffix}</Text>;
+  }, [target, duration, active]);
+  return <Text style={style}>{prefix}{val}{suffix}</Text>;
 }
 
 // ─── FADE-IN WRAPPER ───────────────────────────────────────
@@ -71,9 +74,25 @@ function FadeIn({ delay = 0, children, style }: { delay?: number; children: Reac
   return <RNAnimated.View style={[{ opacity, transform: [{ translateY }] }, style]}>{children}</RNAnimated.View>;
 }
 
+// ─── SCALE-IN WRAPPER (for icons/stars) ────────────────────
+function ScaleIn({ delay = 0, children, active = true }: { delay?: number; children: React.ReactNode; active?: boolean }) {
+  const scale = useRef(new RNAnimated.Value(0)).current;
+  const hasRun = useRef(false);
+  useEffect(() => {
+    if (!active || hasRun.current) return;
+    hasRun.current = true;
+    const t = setTimeout(() => {
+      RNAnimated.spring(scale, { toValue: 1, tension: 180, friction: 8, useNativeDriver: true }).start();
+    }, delay);
+    return () => clearTimeout(t);
+  }, [delay, scale, active]);
+  return <RNAnimated.View style={{ transform: [{ scale }] }}>{children}</RNAnimated.View>;
+}
+
 // ═══ SCREEN 1: EMOTIONAL HOOK ═══════════════════════════════
-function Screen1() {
+function Screen1({ isVisible }: { isVisible: boolean }) {
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
+  const floatAnim = useRef(new RNAnimated.Value(0)).current;
   useEffect(() => {
     const loop = () => {
       RNAnimated.sequence([
@@ -82,12 +101,20 @@ function Screen1() {
       ]).start(loop);
     };
     loop();
-  }, [pulseAnim]);
+    // Gentle floating
+    const floatLoop = () => {
+      RNAnimated.sequence([
+        RNAnimated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
+        RNAnimated.timing(floatAnim, { toValue: 5, duration: 1500, useNativeDriver: true }),
+      ]).start(floatLoop);
+    };
+    floatLoop();
+  }, [pulseAnim, floatAnim]);
 
   return (
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
-        <RNAnimated.View style={{ transform: [{ scale: pulseAnim }] }}>
+        <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
           <LinearGradient
             colors={[`${C.accent}15`, `${C.accentL}10`]}
             start={{ x: 0, y: 0 }}
@@ -128,7 +155,7 @@ function Screen1() {
 }
 
 // ═══ SCREEN 2: SCIENCE-BACKED BENEFITS ══════════════════════
-function Screen2() {
+function Screen2({ isVisible }: { isVisible: boolean }) {
   const benefits = [
     { stat: 23, label: 'faster recall', desc: 'Memory training improves how quickly you retrieve information', color: C.blue },
     { stat: 31, label: 'better focus', desc: 'Visual memory exercises strengthen attention and concentration', color: C.green },
@@ -145,31 +172,31 @@ function Screen2() {
       {benefits.map((b, i) => (
         <FadeIn key={i} delay={400 + i * 200}>
           <View style={[s.benefitRow, i < 2 && s.benefitBorder]}>
-            <View style={[s.benefitIcon, { backgroundColor: `${b.color}08` }]}>
-              {i === 0 && (
-                <Svg width={22} height={22} viewBox="0 0 40 40">
-                  <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
-                  <Path d="M20,12 L20,20 L27,24" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" />
-                </Svg>
-              )}
-              {i === 1 && (
-                <Svg width={22} height={22} viewBox="0 0 40 40">
-                  <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
-                  <Path d="M14,20 C14,20 18,28 26,14" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-              )}
-              {i === 2 && (
-                <Svg width={22} height={22} viewBox="0 0 40 40">
-                  <Path d="M8,28 L16,16 L24,22 L32,10" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                  <Circle cx={32} cy={10} r={3} fill={b.color} />
-                </Svg>
-              )}
-            </View>
+            <ScaleIn delay={500 + i * 200} active={isVisible}>
+              <View style={[s.benefitIcon, { backgroundColor: `${b.color}08` }]}>
+                {i === 0 && (
+                  <Svg width={22} height={22} viewBox="0 0 40 40">
+                    <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
+                    <Path d="M20,12 L20,20 L27,24" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" />
+                  </Svg>
+                )}
+                {i === 1 && (
+                  <Svg width={22} height={22} viewBox="0 0 40 40">
+                    <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
+                    <Path d="M14,20 C14,20 18,28 26,14" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                )}
+                {i === 2 && (
+                  <Svg width={22} height={22} viewBox="0 0 40 40">
+                    <Path d="M8,28 L16,16 L24,22 L32,10" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                    <Circle cx={32} cy={10} r={3} fill={b.color} />
+                  </Svg>
+                )}
+              </View>
+            </ScaleIn>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
-                <Text style={{ fontSize: 22, fontWeight: '800', color: b.color }}>
-                  <Counter target={b.stat} suffix="%" duration={1200 + i * 300} />
-                </Text>
+                <Counter target={b.stat} suffix="%" duration={1200 + i * 300} active={isVisible} style={{ fontSize: 22, fontWeight: '800', color: b.color }} />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>{b.label}</Text>
               </View>
               <Text style={{ fontSize: 11, color: C.textM, lineHeight: 15 }}>{b.desc}</Text>
@@ -182,13 +209,16 @@ function Screen2() {
 }
 
 // ═══ SCREEN 3: THE COMMITMENT ═══════════════════════════════
-function Screen3() {
+function Screen3({ isVisible }: { isVisible: boolean }) {
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const [filledDays, setFilledDays] = useState(0);
+  const hasRunDays = useRef(false);
   useEffect(() => {
+    if (!isVisible || hasRunDays.current) return;
+    hasRunDays.current = true;
     const t = setInterval(() => setFilledDays(d => (d < 7 ? d + 1 : d)), 300);
     return () => clearInterval(t);
-  }, []);
+  }, [isVisible]);
 
   const dayAnims = useRef(days.map(() => new RNAnimated.Value(0.9))).current;
   useEffect(() => {
@@ -242,9 +272,11 @@ function Screen3() {
             })}
           </View>
           {filledDays >= 7 && (
-            <View style={s.streakBanner}>
-              <Text style={s.streakText}>{'🔥 7-day streak \u2014 you did it!'}</Text>
-            </View>
+            <ScaleIn delay={0} active={true}>
+              <View style={s.streakBanner}>
+                <Text style={s.streakText}>{'🔥 7-day streak \u2014 you did it!'}</Text>
+              </View>
+            </ScaleIn>
           )}
         </View>
       </FadeIn>
@@ -268,28 +300,27 @@ function Screen3() {
 }
 
 // ═══ SCREEN 4: HOW IT WORKS ═════════════════════════════════
-function Screen4() {
+function Screen4({ isVisible }: { isVisible: boolean }) {
   const [step, setStep] = useState(0);
+  const hasRunSteps = useRef(false);
   useEffect(() => {
+    if (!isVisible || hasRunSteps.current) return;
+    hasRunSteps.current = true;
     const t = setInterval(() => setStep(prev => (prev + 1) % 3), 2000);
     return () => clearInterval(t);
-  }, []);
+  }, [isVisible]);
 
-  const stepFadeAnim = useRef(new RNAnimated.Value(1)).current;
-  const stepScaleAnim = useRef(new RNAnimated.Value(1)).current;
-  const prevStep = useRef(step);
+  // Individual opacity for each step visual (crossfade)
+  const step0Opacity = useRef(new RNAnimated.Value(1)).current;
+  const step1Opacity = useRef(new RNAnimated.Value(0)).current;
+  const step2Opacity = useRef(new RNAnimated.Value(0)).current;
+  const stepOpacities = [step0Opacity, step1Opacity, step2Opacity];
 
   useEffect(() => {
-    if (prevStep.current !== step) {
-      prevStep.current = step;
-      stepFadeAnim.setValue(0);
-      stepScaleAnim.setValue(0.97);
-      RNAnimated.parallel([
-        RNAnimated.timing(stepFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-        RNAnimated.spring(stepScaleAnim, { toValue: 1, tension: 80, friction: 10, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [step, stepFadeAnim, stepScaleAnim]);
+    stepOpacities.forEach((anim, i) => {
+      RNAnimated.timing(anim, { toValue: i === step ? 1 : 0, duration: 300, useNativeDriver: true }).start();
+    });
+  }, [step]);
 
   const steps = [
     { num: '1', title: 'Memorise', desc: 'Study the shapes, colours, and positions' },
@@ -305,39 +336,42 @@ function Screen4() {
       </FadeIn>
 
       <FadeIn delay={400}>
-        <RNAnimated.View style={{ opacity: stepFadeAnim, transform: [{ scale: stepScaleAnim }], marginBottom: 20 }}>
-          {step === 0 && (
+        <View style={{ marginBottom: 20, height: 120 }}>
+          {/* Step 0: Memorise shapes */}
+          <RNAnimated.View style={{ opacity: step0Opacity, position: 'absolute', width: '100%' }}>
             <View style={s.stepVisual}>
-              <FadeIn delay={0} style={{ position: 'absolute', left: '15%', top: '18%' }}>
+              <View style={{ position: 'absolute', left: '15%', top: '18%' }}>
                 <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.coral }} />
-              </FadeIn>
-              <FadeIn delay={80} style={{ position: 'absolute', right: '18%', top: '20%' }}>
+              </View>
+              <View style={{ position: 'absolute', right: '18%', top: '20%' }}>
                 <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.blue }} />
-              </FadeIn>
-              <FadeIn delay={160} style={{ position: 'absolute', left: '45%', top: '40%' }}>
+              </View>
+              <View style={{ position: 'absolute', left: '45%', top: '40%' }}>
                 <Svg width={24} height={24} viewBox="0 0 100 100">
                   <Polygon points="50,5 62,35 95,35 68,55 78,90 50,70 22,90 32,55 5,35 38,35" fill={C.accent} />
                 </Svg>
-              </FadeIn>
-              <FadeIn delay={240} style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
+              </View>
+              <View style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
                 <Svg width={22} height={22} viewBox="0 0 100 100">
                   <Polygon points="50,8 95,88 5,88" fill={C.green} />
                 </Svg>
-              </FadeIn>
-              <FadeIn delay={320} style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
+              </View>
+              <View style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
                 <Svg width={20} height={20} viewBox="0 0 100 100">
                   <Polygon points="50,5 95,50 50,95 5,50" fill={C.gold} />
                 </Svg>
-              </FadeIn>
+              </View>
             </View>
-          )}
-          {step === 1 && (
+          </RNAnimated.View>
+          {/* Step 1: Gone! */}
+          <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
             <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center' }]}>
               <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 2 }}>{'🫣'}</Text>
               <Text style={{ fontSize: 11, color: C.textD }}>Gone!</Text>
             </View>
-          )}
-          {step === 2 && (
+          </RNAnimated.View>
+          {/* Step 2: Answer */}
+          <RNAnimated.View style={{ opacity: step2Opacity, position: 'absolute', width: '100%' }}>
             <View style={[s.stepVisual, { padding: 10 }]}>
               <Text style={{ fontSize: 10, fontWeight: '700', color: C.text, marginBottom: 8 }}>How many shapes?</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
@@ -351,8 +385,8 @@ function Screen4() {
                 ))}
               </View>
             </View>
-          )}
-        </RNAnimated.View>
+          </RNAnimated.View>
+        </View>
       </FadeIn>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -382,7 +416,7 @@ function Screen4() {
 }
 
 // ═══ SCREEN 5: SOCIAL PROOF ═════════════════════════════════
-function Screen5() {
+function Screen5({ isVisible }: { isVisible: boolean }) {
   const testimonials = [
     { name: 'Sarah M.', streak: '42 day streak', text: "I play every morning with my coffee. It's become my favourite way to wake up my brain.", avatar: 'S', color: C.coral },
     { name: 'James K.', streak: '28 day streak', text: "Started to improve my focus at work. Now I'm addicted to getting 3 stars on every level.", avatar: 'J', color: C.blue },
@@ -395,19 +429,23 @@ function Screen5() {
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', gap: 2, marginBottom: 8 }}>
             {[1, 2, 3, 4].map(i => (
-              <Svg key={i} width={18} height={18} viewBox="0 0 24 24">
-                <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill={C.gold} />
-              </Svg>
+              <ScaleIn key={i} delay={200 + i * 80} active={isVisible}>
+                <Svg width={18} height={18} viewBox="0 0 24 24">
+                  <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill={C.gold} />
+                </Svg>
+              </ScaleIn>
             ))}
-            <Svg width={18} height={18} viewBox="0 0 24 24">
-              <Defs>
-                <SvgLinearGradient id="partialStar" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset="0.8" stopColor={C.gold} />
-                  <Stop offset="0.8" stopColor={`${C.gold}25`} />
-                </SvgLinearGradient>
-              </Defs>
-              <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill="url(#partialStar)" />
-            </Svg>
+            <ScaleIn delay={200 + 5 * 80} active={isVisible}>
+              <Svg width={18} height={18} viewBox="0 0 24 24">
+                <Defs>
+                  <SvgLinearGradient id="partialStar" x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0.8" stopColor={C.gold} />
+                    <Stop offset="0.8" stopColor={`${C.gold}25`} />
+                  </SvgLinearGradient>
+                </Defs>
+                <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill="url(#partialStar)" />
+              </Svg>
+            </ScaleIn>
           </View>
           <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
         </View>
@@ -417,9 +455,11 @@ function Screen5() {
         <FadeIn key={i} delay={400 + i * 200}>
           <View style={s.testimonialCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <View style={[s.avatar, { backgroundColor: `${t.color}15` }]}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: t.color }}>{t.avatar}</Text>
-              </View>
+              <ScaleIn delay={500 + i * 200} active={isVisible}>
+                <View style={[s.avatar, { backgroundColor: `${t.color}15` }]}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: t.color }}>{t.avatar}</Text>
+                </View>
+              </ScaleIn>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{t.name}</Text>
                 <Text style={{ fontSize: 9, color: t.color, fontWeight: '600' }}>{'🔥 '}{t.streak}</Text>
@@ -434,34 +474,50 @@ function Screen5() {
 }
 
 // ═══ SCREEN 6: GET STARTED ══════════════════════════════════
-function Screen6({ onPlay }: { onPlay: () => void }) {
+function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean }) {
+  // Shimmer sweep
   const shimmerAnim = useRef(new RNAnimated.Value(-30)).current;
   useEffect(() => {
     const loop = () => {
       shimmerAnim.setValue(-30);
-      RNAnimated.timing(shimmerAnim, {
-        toValue: 120,
-        duration: 2000,
-        useNativeDriver: false,
-      }).start(loop);
+      RNAnimated.timing(shimmerAnim, { toValue: 120, duration: 2000, useNativeDriver: false }).start(loop);
     };
     loop();
   }, [shimmerAnim]);
 
+  // Logo floating
+  const logoFloat = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    const loop = () => {
+      RNAnimated.sequence([
+        RNAnimated.timing(logoFloat, { toValue: -4, duration: 1200, useNativeDriver: true }),
+        RNAnimated.timing(logoFloat, { toValue: 4, duration: 1200, useNativeDriver: true }),
+      ]).start(loop);
+    };
+    loop();
+  }, [logoFloat]);
+
+  // Button press scale
+  const btnScale = useRef(new RNAnimated.Value(1)).current;
+  const onPressIn = () => RNAnimated.spring(btnScale, { toValue: 0.96, useNativeDriver: true, tension: 200, friction: 10 }).start();
+  const onPressOut = () => RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
+
   return (
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
-        <LinearGradient
-          colors={[C.accent, C.accentL]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.logoBox}
-        >
-          <Svg width={42} height={26} viewBox="0 0 36 24">
-            <Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth={1.2} />
-            <Circle cx={18} cy={12} r={5} fill="white" />
-          </Svg>
-        </LinearGradient>
+        <RNAnimated.View style={{ transform: [{ translateY: logoFloat }] }}>
+          <LinearGradient
+            colors={[C.accent, C.accentL]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.logoBox}
+          >
+            <Svg width={42} height={26} viewBox="0 0 36 24">
+              <Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth={1.2} />
+              <Circle cx={18} cy={12} r={5} fill="white" />
+            </Svg>
+          </LinearGradient>
+        </RNAnimated.View>
       </FadeIn>
 
       <FadeIn delay={400}>
@@ -478,36 +534,47 @@ function Screen6({ onPlay }: { onPlay: () => void }) {
             { icon: '🧠', label: '6 game modes' },
             { icon: '👥', label: 'Challenge friends' },
           ].map((f, i) => (
-            <View key={i} style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</Text>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: C.textM }}>{f.label}</Text>
-            </View>
+            <ScaleIn key={i} delay={700 + i * 100} active={isVisible}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: C.textM }}>{f.label}</Text>
+              </View>
+            </ScaleIn>
           ))}
         </View>
       </FadeIn>
 
       <FadeIn delay={800}>
         <View style={{ width: '100%' }}>
-          <Pressable onPress={onPlay} style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <LinearGradient
-              colors={[C.accent, C.accentD]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.ctaButton}
-            >
-              <RNAnimated.View
-                style={[
-                  s.shimmer,
-                  {
-                    left: shimmerAnim.interpolate({
-                      inputRange: [-30, 120],
-                      outputRange: ['-30%', '120%'],
-                    }),
-                  },
-                ]}
-              />
-              <Text style={s.ctaText}>Play Now</Text>
-            </LinearGradient>
+          <Pressable onPress={onPlay} onPressIn={onPressIn} onPressOut={onPressOut}>
+            <RNAnimated.View style={{ transform: [{ scale: btnScale }], borderRadius: 16, overflow: 'hidden' }}>
+              <LinearGradient
+                colors={[C.accent, C.accentD]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.ctaButton}
+              >
+                <RNAnimated.View
+                  style={[
+                    s.shimmer,
+                    {
+                      left: shimmerAnim.interpolate({
+                        inputRange: [-30, 120],
+                        outputRange: ['-30%', '120%'],
+                      }),
+                    },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.25)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1 }}
+                  />
+                </RNAnimated.View>
+                <Text style={s.ctaText}>Play Now</Text>
+              </LinearGradient>
+            </RNAnimated.View>
           </Pressable>
           <Text style={{ marginTop: 10, fontSize: 11, color: C.textD, textAlign: 'center' }}>
             No account needed to try
@@ -546,9 +613,18 @@ export default function OnboardingFlow() {
   const { colors } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [current, setCurrent] = useState(0);
+  const [visibleIndex, setVisibleIndex] = useState(0);
   const isLast = current === TOTAL_SCREENS - 1;
 
   const pageWidth = Platform.OS === 'web' ? Math.min(SCREEN_W, 430) : SCREEN_W;
+
+  // Visibility tracking for lazy animations
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0 && viewableItems[0].index != null) {
+      setVisibleIndex(viewableItems[0].index);
+    }
+  }).current;
 
   const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
@@ -568,17 +644,18 @@ export default function OnboardingFlow() {
   const listHeight = Dimensions.get('window').height;
 
   const renderItem = useCallback(({ index }: { index: number }) => {
+    const vis = visibleIndex === index;
     return (
       <View style={{ width: pageWidth, height: listHeight }}>
-        {index === 0 && <Screen1 />}
-        {index === 1 && <Screen2 />}
-        {index === 2 && <Screen3 />}
-        {index === 3 && <Screen4 />}
-        {index === 4 && <Screen5 />}
-        {index === 5 && <Screen6 onPlay={onPlay} />}
+        {index === 0 && <Screen1 isVisible={vis} />}
+        {index === 1 && <Screen2 isVisible={vis} />}
+        {index === 2 && <Screen3 isVisible={vis} />}
+        {index === 3 && <Screen4 isVisible={vis} />}
+        {index === 4 && <Screen5 isVisible={vis} />}
+        {index === 5 && <Screen6 onPlay={onPlay} isVisible={vis} />}
       </View>
     );
-  }, [pageWidth, listHeight, onPlay]);
+  }, [pageWidth, listHeight, onPlay, visibleIndex]);
 
   const keyExtractor = useCallback((_: number, index: number) => String(index), []);
 
@@ -603,6 +680,8 @@ export default function OnboardingFlow() {
         getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
         scrollEventThrottle={16}
         bounces={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
       />
 
       {/* Bottom: dots + continue */}
@@ -824,12 +903,8 @@ const s = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 50,
-    backgroundColor: 'transparent',
-    // Shimmer effect via a semi-transparent white band
-    borderLeftWidth: 0,
-    // Using a View with opacity for the shimmer
-    opacity: 0.18,
+    width: 60,
+    transform: [{ skewX: '-20deg' }],
   },
   ctaText: {
     fontSize: 17,

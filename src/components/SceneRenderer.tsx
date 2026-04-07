@@ -28,14 +28,14 @@ function resolveLabel(type: string, label?: string): string | undefined {
   return libItem?.label;
 }
 
-const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewTime }: { object: SceneObject; index: number; viewTime?: number }) {
+const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewTime, canvasWidth }: { object: SceneObject; index: number; viewTime?: number; canvasWidth: number }) {
   const opacity = useSharedValue(0);
   const hasMovement = object.endX != null && object.endY != null;
   const posX = useSharedValue(object.x);
   const posY = useSharedValue(object.y);
 
   useEffect(() => {
-    opacity.value = withDelay(index * 50, withTiming(1, { duration: 200 }));
+    opacity.value = withDelay(index * 50, withTiming(1, { duration: 350 }));
     // Animate movement if endX/endY are set (World 4+)
     if (hasMovement && viewTime) {
       posX.value = object.x;
@@ -46,9 +46,10 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewT
     }
   }, [index, opacity, hasMovement, viewTime, object.x, object.y, object.endX, object.endY, posX, posY]);
 
+  const cw = canvasWidth || 300; // fallback
   const animatedStyle = useAnimatedStyle(() => {
     if (hasMovement) {
-      return { opacity: opacity.value, left: `${posX.value}%`, top: `${posY.value}%` };
+      return { opacity: opacity.value, left: (posX.value / 100) * cw, top: (posY.value / 100) * cw };
     }
     return { opacity: opacity.value };
   });
@@ -58,9 +59,10 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewT
   const shapeType = resolveShapeType(object.type);
   const label = resolveLabel(object.type, object.label);
   const content = object.content;
+  const halfSize = sizePx / 2;
   const staticPos = hasMovement ? {} : { left: `${object.x}%`, top: `${object.y}%` };
   return (
-    <Animated.View style={[styles.objectWrapper, staticPos, { zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
+    <Animated.View style={[styles.objectWrapper, staticPos, { marginLeft: -halfSize, marginTop: -halfSize, zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
       <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} objectType={object.type} />
       {content && (
         <View style={[styles.contentOverlay, { width: sizePx, height: sizePx }]}>
@@ -131,11 +133,12 @@ function ShapeRenderer({ type, color, size, label, objectType }: { type: ShapeTy
 }
 
 export const SceneRenderer = React.memo(function SceneRenderer({ objects, visible, viewTime }: SceneRendererProps) {
+  const [canvasWidth, setCanvasWidth] = React.useState(300);
   if (!visible) return null;
   return (
     <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)}>
       <Card style={styles.sceneCard} padded={false}>
-        <View style={styles.canvas}>{objects.map((obj, i) => <ShapeComponent key={obj.id} object={obj} index={i} viewTime={viewTime} />)}</View>
+        <View style={styles.canvas} onLayout={(e) => setCanvasWidth(e.nativeEvent.layout.width)}>{objects.map((obj, i) => <ShapeComponent key={obj.id} object={obj} index={i} viewTime={viewTime} canvasWidth={canvasWidth} />)}</View>
       </Card>
     </Animated.View>
   );
@@ -144,7 +147,7 @@ export const SceneRenderer = React.memo(function SceneRenderer({ objects, visibl
 const styles = StyleSheet.create({
   sceneCard: { aspectRatio: 1, width: '100%', overflow: 'hidden' },
   canvas: { flex: 1, position: 'relative' },
-  objectWrapper: { position: 'absolute', alignItems: 'center', justifyContent: 'center', marginLeft: -20, marginTop: -20 },
+  objectWrapper: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   shape: { alignItems: 'center', justifyContent: 'center' },
   labelShape: { alignItems: 'center', justifyContent: 'center' },
   labelText: { color: '#FFFFFF', fontWeight: '700' },

@@ -2,12 +2,21 @@
  * Visual flash effects when a power-up is activated.
  * Shows a brief full-screen tint + icon animation.
  */
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated as RNAnimated } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withSequence,
+  withDelay,
+  runOnJS,
+} from 'react-native-reanimated';
 
 type PowerUpType = 'slowTime' | 'peek' | 'fiftyFifty' | 'skip';
 
-var CONFIGS: Record<PowerUpType, { color: string; icon: string; label: string }> = {
+const CONFIGS: Record<PowerUpType, { color: string; icon: string; label: string }> = {
   slowTime: { color: '#0984E3', icon: '\u23F1\uFE0F', label: '+3s' },
   peek: { color: '#6C5CE7', icon: '\uD83D\uDC41', label: 'Peek!' },
   fiftyFifty: { color: '#00B894', icon: '\u2702\uFE0F', label: '50/50' },
@@ -20,73 +29,78 @@ interface Props {
 }
 
 function PowerUpFlash({ type, onDone }: Props) {
-  var tintOpacity = useRef(new RNAnimated.Value(0)).current;
-  var iconScale = useRef(new RNAnimated.Value(0)).current;
-  var iconOpacity = useRef(new RNAnimated.Value(0)).current;
-  var labelOpacity = useRef(new RNAnimated.Value(0)).current;
+  const tintOpacity = useSharedValue(0);
+  const iconScale = useSharedValue(0);
+  const iconOpacity = useSharedValue(0);
+  const labelOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!type) return;
-
-    var config = CONFIGS[type];
+    const config = CONFIGS[type];
     if (!config) { onDone(); return; }
 
     // Screen tint flash
-    RNAnimated.sequence([
-      RNAnimated.timing(tintOpacity, { toValue: 0.2, duration: 150, useNativeDriver: false }),
-      RNAnimated.timing(tintOpacity, { toValue: 0, duration: 400, useNativeDriver: false }),
-    ]).start();
+    tintOpacity.value = withSequence(
+      withTiming(0.2, { duration: 150 }),
+      withTiming(0, { duration: 400 }),
+    );
 
-    // Icon pops in
-    RNAnimated.sequence([
-      RNAnimated.parallel([
-        RNAnimated.spring(iconScale, { toValue: 1, friction: 3, tension: 250, useNativeDriver: false }),
-        RNAnimated.timing(iconOpacity, { toValue: 1, duration: 150, useNativeDriver: false }),
-      ]),
-      RNAnimated.delay(400),
-      RNAnimated.parallel([
-        RNAnimated.timing(iconScale, { toValue: 1.5, duration: 300, useNativeDriver: false }),
-        RNAnimated.timing(iconOpacity, { toValue: 0, duration: 300, useNativeDriver: false }),
-      ]),
-    ]).start(() => {
-      // Reset for next use
-      iconScale.setValue(0);
-      iconOpacity.setValue(0);
-      labelOpacity.setValue(0);
+    // Icon pops in then fades out
+    iconOpacity.value = withSequence(
+      withTiming(1, { duration: 150 }),
+      withDelay(400, withTiming(0, { duration: 300 })),
+    );
+    iconScale.value = withSequence(
+      withSpring(1, { damping: 4, stiffness: 250 }),
+      withDelay(400, withTiming(1.5, { duration: 300 })),
+    );
+
+    // Label fades in then out
+    labelOpacity.value = withSequence(
+      withDelay(100, withTiming(1, { duration: 200 })),
+      withDelay(300, withTiming(0, { duration: 200 })),
+    );
+
+    // Fire onDone after total animation (~1s)
+    const timeout = setTimeout(() => {
+      iconScale.value = 0;
+      iconOpacity.value = 0;
+      labelOpacity.value = 0;
       onDone();
-    });
+    }, 1050);
 
-    // Label fades in
-    RNAnimated.sequence([
-      RNAnimated.delay(100),
-      RNAnimated.timing(labelOpacity, { toValue: 1, duration: 200, useNativeDriver: false }),
-      RNAnimated.delay(300),
-      RNAnimated.timing(labelOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
-    ]).start();
+    return () => clearTimeout(timeout);
   }, [type]);
 
+  const tintStyle = useAnimatedStyle(() => ({
+    opacity: tintOpacity.value,
+  }));
+
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: iconOpacity.value,
+    transform: [{ scale: iconScale.value }],
+  }));
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: labelOpacity.value,
+  }));
+
   if (!type) return null;
-  var config = CONFIGS[type];
+  const config = CONFIGS[type];
   if (!config) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {/* Screen edge tint */}
-      <RNAnimated.View style={[StyleSheet.absoluteFill, {
-        backgroundColor: config.color,
-        opacity: tintOpacity,
-      }]} />
-
-      {/* Center icon + label */}
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: config.color }, tintStyle]} />
       <View style={st.center}>
-        <RNAnimated.View style={{ opacity: iconOpacity, transform: [{ scale: iconScale }] }}>
+        <Animated.View style={iconStyle}>
           <Text style={st.icon}>{config.icon}</Text>
-        </RNAnimated.View>
-        <RNAnimated.View style={{ opacity: labelOpacity, marginTop: 8 }}>
+        </Animated.View>
+        <Animated.View style={[{ marginTop: 8 }, labelStyle]}>
           <View style={[st.labelPill, { backgroundColor: config.color }]}>
             <Text style={st.labelText}>{config.label}</Text>
           </View>
-        </RNAnimated.View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -94,7 +108,7 @@ function PowerUpFlash({ type, onDone }: Props) {
 
 export default PowerUpFlash;
 
-var st = StyleSheet.create({
+const st = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   icon: { fontSize: 48 },
   labelPill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12 },
