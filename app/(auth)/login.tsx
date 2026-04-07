@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { Wordmark } from '@/src/components/Wordmark';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -156,7 +156,7 @@ function AuthScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.logoSection}>
-            <BlankedLogo size={64} />
+            <AnimatedBlink expression="normal" size={80} entrance="spring" entranceDelay={200} />
             <View style={styles.wordmarkWrap}>
               <Wordmark size={28} />
             </View>

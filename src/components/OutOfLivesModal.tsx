@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Blink } from '@/src/components/Blink';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -53,7 +53,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
       <View style={st.backdrop}>
         <View style={[st.card, { backgroundColor: colors.card }]}>
           <View style={{ alignItems: 'center', marginBottom: 8 }}>
-            <Blink expression="sad" size={60} />
+            <AnimatedBlink expression="sad" size={60} entrance="bounce" />
           </View>
           {/* Empty hearts */}
           <View style={st.heartsRow}>

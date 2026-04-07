@@ -8,6 +8,7 @@ import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
+import { Blink } from '@/src/components/Blink';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
@@ -101,7 +102,7 @@ function ShopTab() {
           >
             <View style={styles.plusBannerLeft}>
               <View style={styles.plusLogoBg}>
-                <Ionicons name="eye" size={16} color="#6C5CE7" />
+                <Blink expression="celebrate" size={28} />
               </View>
               <View>
                 <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>

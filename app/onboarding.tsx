@@ -15,8 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { Blink } from '@/src/components/Blink';
-import type { BlinkExpression } from '@/src/components/Blink';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -117,7 +117,7 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
-          <Blink expression="normal" size={100} />
+          <AnimatedBlink expression="normal" size={100} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -146,7 +146,7 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenLeft}>
       <FadeIn delay={200}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <Blink expression="memorise" size={36} />
+          <AnimatedBlink expression="memorise" size={36} entrance="fade" />
           <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
         </View>
         <Text style={s.sectionTitle}>Memory training{'\n'}actually works</Text>
@@ -226,7 +226,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
         <View style={s.weekCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={[s.weekLabel, { marginBottom: 0 }]}>YOUR FIRST WEEK</Text>
-            <Blink expression="streak" size={32} />
+            <AnimatedBlink expression="streak" size={32} entrance="fade" />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             {days.map((d, i) => {
@@ -318,7 +318,7 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenLeft}>
       <FadeIn delay={200}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <Blink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
+          <AnimatedBlink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
           <Text style={s.sectionLabel}>HOW IT WORKS</Text>
         </View>
         <Text style={s.sectionTitle}>Simple, fun,{'\n'}surprisingly addictive</Text>
@@ -355,8 +355,8 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
           {/* Step 1: Gone! */}
           <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
             <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 2 }}>{'🫣'}</Text>
-              <Text style={{ fontSize: 11, color: C.textD }}>Gone!</Text>
+              <AnimatedBlink expression="blank" size={56} />
+              <Text style={{ fontSize: 11, color: C.textD, marginTop: 4 }}>Gone!</Text>
             </View>
           </RNAnimated.View>
           {/* Step 2: Answer */}
@@ -437,7 +437,7 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
             </ScaleIn>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <Blink expression="love" size={32} />
+            <AnimatedBlink expression="love" size={32} entrance="fade" />
             <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
           </View>
         </View>
@@ -498,7 +498,7 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ translateY: logoFloat }] }}>
-          <Blink expression="celebrate" size={80} />
+          <AnimatedBlink expression="celebrate" size={80} entrance="spring" entranceDelay={300} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -607,7 +607,7 @@ export default function OnboardingFlow() {
 
   const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
-    router.replace('/(auth)/login');
+    router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
   const goTo = useCallback((index: number) => {
