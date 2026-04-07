@@ -9,7 +9,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { Blink } from '@/src/components/Blink';
-import { FRAMES, BANNERS, RARITY_COLORS, type FrameCosmetic, type BannerCosmetic } from '@/src/data/cosmetics';
+import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, type FrameCosmetic, type BannerCosmetic, type ExpressionCosmetic } from '@/src/data/cosmetics';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
