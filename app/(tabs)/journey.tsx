@@ -2,8 +2,8 @@
  * Journey Tab — Redesigned.
  * Horizontal pill selector, compact continue card, vertical worlds list with connectors.
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated as RNAnimated } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,6 +63,34 @@ interface WorldData {
   isCurrent: boolean;
   stars: number;
   maxStars: number;
+}
+
+// ── Scroll Hint Arrow — flashes once then disappears ──────────────────
+function ScrollHintArrow() {
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+  const translateX = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    // Fade in + pulse right, then fade out after 2s
+    const anim = RNAnimated.sequence([
+      RNAnimated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(translateX, { toValue: 4, duration: 400, useNativeDriver: true }),
+          RNAnimated.timing(translateX, { toValue: 0, duration: 400, useNativeDriver: true }),
+        ]),
+        { iterations: 3 },
+      ),
+      RNAnimated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]);
+    anim.start();
+  }, []);
+
+  return (
+    <RNAnimated.View style={[st.scrollHint, { opacity, transform: [{ translateX }] }]}>
+      <Ionicons name="chevron-forward" size={16} color="#6C5CE7" />
+    </RNAnimated.View>
+  );
 }
 
 function JourneyTab() {
@@ -209,7 +237,14 @@ function JourneyTab() {
 
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ── Mode Selector Pills ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.pillScroll} contentContainerStyle={st.pillRow}>
+        <View style={st.pillContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            style={st.pillScroll}
+            contentContainerStyle={st.pillRow}
+          >
           {modes.map((m, i) => {
             const isActive = i === selectedIdx;
             const c = m.campaign;
@@ -234,7 +269,9 @@ function JourneyTab() {
               </Pressable>
             );
           })}
-        </ScrollView>
+          </ScrollView>
+          <ScrollHintArrow />
+        </View>
 
         {/* ── Continue / Start Hero Card ── */}
         {!selected.locked && (
@@ -395,8 +432,10 @@ const st = StyleSheet.create({
   sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 20, marginBottom: 10 },
 
   // Pills
-  pillScroll: { marginHorizontal: -spacing.lg, marginBottom: 14 },
+  pillContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  pillScroll: { flex: 1, marginHorizontal: -spacing.lg },
   pillRow: { paddingHorizontal: spacing.lg, gap: 8, paddingVertical: 4 },
+  scrollHint: { marginRight: 4 },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8,

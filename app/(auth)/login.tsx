@@ -80,7 +80,12 @@ function AuthScreen() {
     try {
       if (mode === 'login') {
         const result = await signIn(email.trim(), password);
-        if (result.error) setError(result.error);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          // Explicitly redirect — don't rely solely on session useEffect
+          router.replace('/');
+        }
       } else {
         const result = await signUp(email.trim(), password, username.trim() || undefined);
         if (result.error) {
@@ -96,7 +101,8 @@ function AuthScreen() {
               display_name: username.trim(),
             }, { onConflict: 'id' });
           }
-          // Auth state change listener will redirect automatically
+          // Explicitly redirect after signup
+          router.replace('/');
         }
       }
     } catch (e: unknown) {
@@ -141,7 +147,7 @@ function AuthScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView
