@@ -1,9 +1,10 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  cancelAnimation,
   Easing,
   runOnJS,
   useAnimatedReaction,
@@ -28,16 +29,28 @@ export const CountdownTimer = React.memo(function CountdownTimer({
 }: CountdownTimerProps) {
   const { colors } = useTheme();
   const progress = useSharedValue(1);
+  const prevDuration = useRef(duration);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (running) {
+    // Reset to full on new duration (new question/scene)
+    if (duration !== prevDuration.current || !initialized.current) {
+      prevDuration.current = duration;
+      initialized.current = true;
+      cancelAnimation(progress);
       progress.value = 1;
+    }
+
+    if (running) {
+      // Resume from current progress value
+      const remaining = progress.value * duration * 1000;
       progress.value = withTiming(0, {
-        duration: duration * 1000,
+        duration: remaining,
         easing: Easing.linear,
       });
     } else {
-      progress.value = 1;
+      // Freeze at current position
+      cancelAnimation(progress);
     }
   }, [running, duration, progress]);
 

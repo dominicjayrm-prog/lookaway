@@ -10,7 +10,7 @@ const WordmarkComponent: React.FC<WordmarkProps> = ({ size = 24 }) => {
   const { colors } = useTheme();
   return (
     <View style={styles.container}>
-      <Text style={[styles.look, { fontSize: size, color: colors.text }]}>Blank</Text>
+      <Text style={[styles.look, { fontSize: size, color: colors.accent }]}>Blank</Text>
       <Text style={[styles.away, { fontSize: size, color: colors.accent }]}>ed</Text>
     </View>
   );

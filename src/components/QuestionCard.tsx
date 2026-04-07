@@ -57,7 +57,7 @@ export const QuestionCard = React.memo(function QuestionCard({
               state={isHidden ? 'dimmed' : getOptionState(index)}
               onPress={() => onSelect(index)}
               disabled={selectedIndex !== null || isHidden}
-              style={isHidden ? { opacity: 0.2, transform: [{ scale: 0.95 }] } : undefined}
+              style={undefined}
             />
           );
         })}

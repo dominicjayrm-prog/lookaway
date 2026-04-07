@@ -78,7 +78,7 @@ function GameScreen() {
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
   const handleStart = useCallback(() => { if (level) startLevel(level); }, [level, startLevel]);
-  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 800); }, [setGameState, clearTimeouts]);
+  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 1200); }, [setGameState, clearTimeouts]);
 
   const handleSelectOption = useCallback((index: number) => {
     if (selectedOption !== null) return;
@@ -197,7 +197,7 @@ function GameScreen() {
       )}
 
       {gameState === 'TRANSITION' && (
-        <AnimatedOrView entering={enterFade} exiting={exitFade} style={styles.centered}>
+        <AnimatedOrView entering={enterFade} style={styles.centered}>
           <View style={styles.blankContainer}>
             <Text style={styles.blankText}>Go blank!</Text>
             <Text style={styles.blankSubtext}>What do you remember?</Text>
