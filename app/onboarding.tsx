@@ -308,27 +308,27 @@ function Screen4() {
         <RNAnimated.View style={{ opacity: stepFadeAnim, transform: [{ scale: stepScaleAnim }], marginBottom: 20 }}>
           {step === 0 && (
             <View style={s.stepVisual}>
-              <View style={{ position: 'absolute', left: '15%', top: '18%' }}>
+              <FadeIn delay={0} style={{ position: 'absolute', left: '15%', top: '18%' }}>
                 <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.coral }} />
-              </View>
-              <View style={{ position: 'absolute', right: '18%', top: '20%' }}>
+              </FadeIn>
+              <FadeIn delay={80} style={{ position: 'absolute', right: '18%', top: '20%' }}>
                 <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.blue }} />
-              </View>
-              <View style={{ position: 'absolute', left: '45%', top: '40%' }}>
+              </FadeIn>
+              <FadeIn delay={160} style={{ position: 'absolute', left: '45%', top: '40%' }}>
                 <Svg width={24} height={24} viewBox="0 0 100 100">
                   <Polygon points="50,5 62,35 95,35 68,55 78,90 50,70 22,90 32,55 5,35 38,35" fill={C.accent} />
                 </Svg>
-              </View>
-              <View style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
+              </FadeIn>
+              <FadeIn delay={240} style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
                 <Svg width={22} height={22} viewBox="0 0 100 100">
                   <Polygon points="50,8 95,88 5,88" fill={C.green} />
                 </Svg>
-              </View>
-              <View style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
+              </FadeIn>
+              <FadeIn delay={320} style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
                 <Svg width={20} height={20} viewBox="0 0 100 100">
                   <Polygon points="50,5 95,50 50,95 5,50" fill={C.gold} />
                 </Svg>
-              </View>
+              </FadeIn>
             </View>
           )}
           {step === 1 && (
@@ -565,9 +565,11 @@ export default function OnboardingFlow() {
     setCurrent(idx);
   }, [pageWidth]);
 
+  const listHeight = Dimensions.get('window').height;
+
   const renderItem = useCallback(({ index }: { index: number }) => {
     return (
-      <View style={{ width: pageWidth, flex: 1, paddingTop: insets.top + 60 }}>
+      <View style={{ width: pageWidth, height: listHeight }}>
         {index === 0 && <Screen1 />}
         {index === 1 && <Screen2 />}
         {index === 2 && <Screen3 />}
@@ -576,7 +578,7 @@ export default function OnboardingFlow() {
         {index === 5 && <Screen6 onPlay={onPlay} />}
       </View>
     );
-  }, [pageWidth, insets.top, onPlay]);
+  }, [pageWidth, listHeight, onPlay]);
 
   const keyExtractor = useCallback((_: number, index: number) => String(index), []);
 
