@@ -3,6 +3,23 @@
  */
 
 const mockStore: Record<string, string> = {};
+
+// Mock react-native Platform
+jest.mock('react-native', () => ({
+  Platform: { OS: 'web' },
+}));
+
+// Mock localStorage for web path
+Object.defineProperty(global, 'localStorage', {
+  value: {
+    getItem: (key: string) => mockStore[key] ?? null,
+    setItem: (key: string, val: string) => { mockStore[key] = val; },
+    removeItem: (key: string) => { delete mockStore[key]; },
+  },
+  writable: true,
+});
+
+// Mock AsyncStorage (not used on web, but required for import)
 jest.mock('@react-native-async-storage/async-storage', () => {
   const mock = {
     getItem: jest.fn(async (key: string) => mockStore[key] ?? null),

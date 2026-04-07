@@ -1,9 +1,10 @@
 /**
  * Daily Login Rewards — 7-day cycle
  * Each day gives increasing rewards. Missing a day resets to Day 1.
- * Rewards rotate weekly with gems and power-ups.
+ * Uses localStorage on web (same as game store) for persistence reliability.
+ * Falls back to AsyncStorage on native.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 var REWARDS = [
   { day: 1, type: 'gems' as const, amount: 5, label: '5 gems', icon: '\uD83D\uDC8E' },
@@ -27,21 +28,38 @@ function getTodayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+// ── Storage abstraction (localStorage on web, AsyncStorage on native) ──
+async function storageGet(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  return AsyncStorage.getItem(key);
+}
+
+async function storageSet(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    try { localStorage.setItem(key, value); } catch {}
+    return;
+  }
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  await AsyncStorage.setItem(key, value);
+}
+
 async function getState(): Promise<LoginRewardState> {
   try {
-    var raw = await AsyncStorage.getItem(STORAGE_KEY);
+    var raw = await storageGet(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
   return { currentDay: 1, lastClaimDate: '', streak: 0 };
 }
 
 async function saveState(state: LoginRewardState): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  await storageSet(STORAGE_KEY, JSON.stringify(state));
 }
 
 /**
  * Check if there's a reward available to claim today.
- * Returns the reward info or null if already claimed today.
  */
 async function checkDailyReward(): Promise<{
   available: boolean;
