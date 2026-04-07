@@ -9,6 +9,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { Blink } from '@/src/components/Blink';
+import { FRAMES, BANNERS, RARITY_COLORS, type FrameCosmetic, type BannerCosmetic } from '@/src/data/cosmetics';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
@@ -263,6 +264,42 @@ function ShopTab() {
           </Pressable>
         </View>
 
+        {/* ── Cosmetics ── */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Cosmetics</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
+          {FRAMES.filter(f => f.unlock === 'gems' && f.gemCost).map(f => {
+            const owned = useGameStore.getState().ownedCosmetics.includes(f.id);
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => {
+                  if (owned) {
+                    useGameStore.getState().equipCosmetic('frame', f.id);
+                  } else {
+                    const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost!);
+                    if (!ok) Alert.alert('Not enough gems', `You need ${f.gemCost} gems for this frame.`);
+                  }
+                }}
+                style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border }]}
+              >
+                <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+                  <Blink expression="normal" size={30} />
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{f.name}</Text>
+                <Text style={{ fontSize: 9, color: RARITY_COLORS[f.rarity], fontWeight: '600', marginTop: 1 }}>{f.rarity.toUpperCase()}</Text>
+                {owned ? (
+                  <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 4 }}>OWNED</Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent }}>{f.gemCost}</Text>
+                    <Text style={{ fontSize: 8, color: colors.textMid }}>gems</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         {/* ── Remove ads ── */}
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMid, marginTop: 8, marginBottom: 12 }}>Other</Text>
         <View style={[styles.removeAdsCard, { backgroundColor: colors.card }]}>
@@ -366,6 +403,7 @@ const styles = StyleSheet.create({
   outlineBtn: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 14 },
 
   // Remove ads
+  cosmeticCard: { width: 100, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
   removeAdsCard: { borderRadius: 20, padding: 20, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 2 },
   removeAdsContent: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   removeAdsIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

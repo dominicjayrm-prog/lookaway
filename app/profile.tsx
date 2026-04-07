@@ -10,6 +10,11 @@ import { useGameStore } from '@/src/store';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achievement, type PlayerAchievement } from '@/src/utils/achievements';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { AvatarFrame } from '@/src/components/AvatarFrame';
+import { ProfileBanner } from '@/src/components/ProfileBanner';
+import { getFrameById, getBannerById, getNameColorById, RARITY_COLORS } from '@/src/data/cosmetics';
+import type { BlinkExpression } from '@/src/components/Blink';
 
 const isWeb = Platform.OS === 'web';
 
@@ -20,13 +25,27 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor } = useGameStore();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const email = user?.email || 'Guest';
   const initials = displayName.slice(0, 2).toUpperCase();
   const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
+  const frame = getFrameById(equippedFrame);
+  const banner = getBannerById(equippedBanner);
+  const nameColor = getNameColorById(equippedNameColor);
+  const nameStyle = nameColor && nameColor.color !== 'theme' ? { color: nameColor.color } : { color: colors.text };
+  const profileBlink: BlinkExpression = streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
+
+  // Division badge
+  const division = totalStars >= 800 ? { name: 'Master', emoji: '👑', color: '#D4A012' }
+    : totalStars >= 500 ? { name: 'Diamond', emoji: '⭐', color: '#74B9FF' }
+    : totalStars >= 300 ? { name: 'Platinum', emoji: '💎', color: '#A29BFE' }
+    : totalStars >= 150 ? { name: 'Gold', emoji: '🥇', color: '#D4A012' }
+    : totalStars >= 50 ? { name: 'Silver', emoji: '🥈', color: '#B2BEC3' }
+    : { name: 'Bronze', emoji: '🥉', color: '#CD7F32' };
+
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerAchievement>>({});
 
@@ -47,13 +66,32 @@ function ProfileScreen() {
       </Animated.View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(100)} style={styles.avatarSection}>
-          <Pressable onPress={handlePickPhoto} style={styles.avatarContainer}>
-            {profilePic ? (<Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />) : (<View style={[styles.avatar, { backgroundColor: colors.accent }]}><Text style={styles.avatarText}>{initials}</Text></View>)}
-            <View style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.bg }]}><Ionicons name="camera" size={14} color={colors.accent} /></View>
-          </Pressable>
-          <Text style={[styles.displayName, { color: colors.text }]}>{displayName}</Text>
-          <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
+        {/* Profile banner + avatar */}
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(100)}>
+          <ProfileBanner banner={banner ?? null} height={120}>
+            {/* Blink avatar sits on the banner */}
+          </ProfileBanner>
+          <View style={[styles.avatarSection, { marginTop: -50 }]}>
+            <Pressable onPress={handlePickPhoto} style={styles.avatarContainer}>
+              <AvatarFrame frame={frame ?? null} size={80}>
+                {profilePic ? (
+                  <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
+                ) : (
+                  <AnimatedBlink expression={profileBlink} size={80} />
+                )}
+              </AvatarFrame>
+              <View style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.bg }]}>
+                <Ionicons name="camera" size={14} color={colors.accent} />
+              </View>
+            </Pressable>
+            <Text style={[styles.displayName, nameStyle]}>{displayName}</Text>
+            {/* Division badge */}
+            <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30' }]}>
+              <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}</Text>
+            </View>
+            <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
+          </View>
         </Animated.View>
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(200)}>
@@ -116,9 +154,9 @@ function ProfileScreen() {
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(500)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SOCIAL</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
+            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/friends')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Pressable style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}><Ionicons name="trophy" size={18} color={colors.gold} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Leaderboard</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
+            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/friends')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}><Ionicons name="trophy" size={18} color={colors.gold} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Leaderboard</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
           </View>
         </Animated.View>
 
@@ -171,4 +209,6 @@ const styles = StyleSheet.create({
   version: { textAlign: 'center', fontSize: 10, fontWeight: '600', marginTop: spacing.xxl, letterSpacing: 1 },
   achCountBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, minWidth: 28, alignItems: 'center' },
   achCountText: { fontSize: 13, fontWeight: '700' },
+  divisionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, marginBottom: spacing.xs },
+  divisionText: { fontSize: 11, fontWeight: '700' },
 });

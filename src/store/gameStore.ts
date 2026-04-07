@@ -189,6 +189,15 @@ export interface GameStore {
   answers: Answer[]; selectedOption: number | null; revealedCorrect: number | null; score: number;
   _hydrated: boolean;
 
+  // Cosmetics
+  ownedCosmetics: string[];   // IDs of owned cosmetics
+  equippedFrame: string;      // equipped frame ID
+  equippedBanner: string;     // equipped banner ID
+  equippedNameColor: string;  // equipped name color ID
+  purchaseCosmetic: (id: string, gemCost: number) => boolean;
+  unlockCosmetic: (id: string) => void;
+  equipCosmetic: (type: 'frame' | 'banner' | 'name_color', id: string) => void;
+
   // Economy
   addGems: (a: number) => void;
   spendGems: (a: number) => boolean;
@@ -259,6 +268,31 @@ export const useGameStore = create<GameStore>((set, get) => {
     score: 0,
     _authUserId: null,
     _hydrated: false,
+
+    // Cosmetics
+    ownedCosmetics: saved.ownedCosmetics ?? [],
+    equippedFrame: saved.equippedFrame ?? 'frame_blink_normal',
+    equippedBanner: saved.equippedBanner ?? 'banner_none',
+    equippedNameColor: saved.equippedNameColor ?? 'name_default',
+    purchaseCosmetic: (id, gemCost) => {
+      const { gems, ownedCosmetics } = get();
+      if (ownedCosmetics.includes(id) || gems < gemCost) return false;
+      set({ gems: gems - gemCost, ownedCosmetics: [...ownedCosmetics, id] });
+      setTimeout(() => saveState(get()), 0);
+      return true;
+    },
+    unlockCosmetic: (id) => {
+      const { ownedCosmetics } = get();
+      if (ownedCosmetics.includes(id)) return;
+      set({ ownedCosmetics: [...ownedCosmetics, id] });
+      setTimeout(() => saveState(get()), 0);
+    },
+    equipCosmetic: (type, id) => {
+      if (type === 'frame') set({ equippedFrame: id });
+      else if (type === 'banner') set({ equippedBanner: id });
+      else if (type === 'name_color') set({ equippedNameColor: id });
+      setTimeout(() => saveState(get()), 0);
+    },
 
     addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
