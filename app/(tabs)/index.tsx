@@ -11,6 +11,8 @@ import DailyLoginReward from '@/src/components/DailyLoginReward';
 import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { useGameStore } from '@/src/store';
+import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { fetchLevelById } from '@/src/data/levels';
@@ -166,6 +168,8 @@ function PlayTab() {
 
   // Daily login reward
   const [showDailyReward, setShowDailyReward] = useState(false);
+  const [showOutOfLives, setShowOutOfLives] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
@@ -279,7 +283,11 @@ function PlayTab() {
           {/* Play button with press animation */}
           <Pressable
             style={({ pressed }) => [styles.heroPlayButton, pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }]}
-            onPress={() => router.push(`/game/${nextLevelId}`)}
+            onPress={() => {
+              useGameStore.getState().checkLifeRegen();
+              if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
+              router.push(`/game/${nextLevelId}`);
+            }}
           >
             <Text style={styles.heroPlayText}>Play</Text>
           </Pressable>
@@ -355,6 +363,13 @@ function PlayTab() {
       <DailyLoginReward visible={showDailyReward} onDismiss={() => setShowDailyReward(false)} />
 
       {/* Tutorial overlay for first-time users */}
+      <OutOfLivesModal
+        visible={showOutOfLives}
+        onClose={() => setShowOutOfLives(false)}
+        onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
+        onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
+      />
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => setShowPaywall(false)} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
     </SafeAreaView>
     </TabTransition>
