@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { Blink } from '@/src/components/Blink';
+import type { BlinkExpression } from '@/src/components/Blink';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -115,29 +117,7 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
-          <LinearGradient
-            colors={[`${C.accent}15`, `${C.accentL}10`]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ width: 120, height: 120, borderRadius: 36, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <LinearGradient
-              colors={[`${C.accent}20`, `${C.accentL}15`]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Svg width={44} height={44} viewBox="0 0 48 48">
-                <Path
-                  d="M24,6 C18,6 14,10 14,14 C10,14 8,18 8,22 C8,26 10,28 12,29 C12,34 16,38 20,40 L20,42 L28,42 L28,40 C32,38 36,34 36,29 C38,28 40,26 40,22 C40,18 38,14 34,14 C34,10 30,6 24,6Z"
-                  fill="none" stroke={C.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-                />
-                <Path d="M24,14 L24,42" fill="none" stroke={C.accent} strokeWidth={1.5} strokeDasharray="2,3" opacity={0.4} />
-                <Path d="M18,20 C20,18 22,20 24,18" fill="none" stroke={C.accent} strokeWidth={1.5} strokeLinecap="round" opacity={0.6} />
-                <Path d="M24,24 C26,22 28,24 30,22" fill="none" stroke={C.accent} strokeWidth={1.5} strokeLinecap="round" opacity={0.6} />
-              </Svg>
-            </LinearGradient>
-          </LinearGradient>
+          <Blink expression="normal" size={100} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -165,7 +145,10 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
   return (
     <View style={s.screenLeft}>
       <FadeIn delay={200}>
-        <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Blink expression="memorise" size={36} />
+          <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
+        </View>
         <Text style={s.sectionTitle}>Memory training{'\n'}actually works</Text>
       </FadeIn>
 
@@ -241,7 +224,10 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
 
       <FadeIn delay={500}>
         <View style={s.weekCard}>
-          <Text style={s.weekLabel}>YOUR FIRST WEEK</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <Text style={[s.weekLabel, { marginBottom: 0 }]}>YOUR FIRST WEEK</Text>
+            <Blink expression="streak" size={32} />
+          </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             {days.map((d, i) => {
               const filled = i < filledDays;
@@ -331,7 +317,10 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
   return (
     <View style={s.screenLeft}>
       <FadeIn delay={200}>
-        <Text style={s.sectionLabel}>HOW IT WORKS</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Blink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
+          <Text style={s.sectionLabel}>HOW IT WORKS</Text>
+        </View>
         <Text style={s.sectionTitle}>Simple, fun,{'\n'}surprisingly addictive</Text>
       </FadeIn>
 
@@ -447,7 +436,10 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
               </Svg>
             </ScaleIn>
           </View>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Blink expression="love" size={32} />
+            <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
+          </View>
         </View>
       </FadeIn>
 
@@ -506,17 +498,7 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ translateY: logoFloat }] }}>
-          <LinearGradient
-            colors={[C.accent, C.accentL]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.logoBox}
-          >
-            <Svg width={42} height={26} viewBox="0 0 36 24">
-              <Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth={1.2} />
-              <Circle cx={18} cy={12} r={5} fill="white" />
-            </Svg>
-          </LinearGradient>
+          <Blink expression="celebrate" size={80} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -544,8 +526,8 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
         </View>
       </FadeIn>
 
-      <FadeIn delay={800}>
-        <View style={{ width: '100%' }}>
+      <FadeIn delay={800} style={{ width: '100%' }}>
+        <View>
           <Pressable onPress={onPlay} onPressIn={onPressIn} onPressOut={onPressOut}>
             <RNAnimated.View style={{ transform: [{ scale: btnScale }], borderRadius: 16, overflow: 'hidden' }}>
               <LinearGradient

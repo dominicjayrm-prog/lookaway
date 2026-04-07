@@ -19,20 +19,27 @@ import { fetchLevelById } from '@/src/data/levels';
 import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
 import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
+import { Blink } from '@/src/components/Blink';
+import type { BlinkExpression } from '@/src/components/Blink';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
 const WORLD_LEVEL_COUNTS = [20, 30, 35, 35, 40, 40];
 const EMDASH = String.fromCharCode(8212);
 
-function MiniEyeIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 36 36">
-      <Path d="M2 18Q18 6 34 18Q18 30 2 18Z" fill="rgba(255,255,255,0.3)" stroke="white" strokeWidth={2} />
-      <Circle cx={18} cy={18} r={5} fill="white" />
-      <Circle cx={18} cy={18} r={2.5} fill="rgba(108,92,231,0.5)" />
-    </Svg>
-  );
+function getHomeBlink(streakCount: number, lives: number): BlinkExpression {
+  if (streakCount >= 7) return 'streak';
+  if (lives <= 0) return 'sad';
+  return 'normal';
+}
+
+function getHomeGreeting(streakCount: number): string {
+  if (streakCount >= 3) return `Day ${streakCount}! Keep it going 🔥`;
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good morning! Ready to train?';
+  if (h >= 12 && h < 17) return "Let's exercise that memory";
+  if (h >= 17 && h < 21) return 'Evening brain boost?';
+  return 'Quick round before bed?';
 }
 
 function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: string }) {
@@ -260,10 +267,10 @@ function PlayTab() {
           <LinearGradient colors={['#6C5CE7', '#5B4CC8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
           {/* Logo row */}
           <View style={styles.heroLogoRow}>
-            <View style={styles.heroLogoBg}><MiniEyeIcon /></View>
+            <Blink expression={getHomeBlink(streakCount, lives)} size={36} />
             <View style={{ marginLeft: 10 }}>
               <Text style={styles.heroLogoText}>Blank<Text style={{ fontWeight: '800' }}>ed</Text></Text>
-              <Text style={styles.heroLogoSub}>Don't blank.</Text>
+              <Text style={styles.heroLogoSub}>{getHomeGreeting(streakCount)}</Text>
             </View>
           </View>
 

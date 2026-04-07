@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated } from 'react-native';
 import Svg, { Path, Circle, Polygon } from 'react-native-svg';
+import { Blink } from '@/src/components/Blink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { getNextMilestone } from '@/src/data/streakMilestones';
 
@@ -141,7 +142,7 @@ export const StreakCelebration = React.memo(function StreakCelebration({ visible
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             {/* Fire icon */}
             <RNAnimated.View style={{ transform: [{ scale: iconScale }] }}>
-              <FireIcon size={48} color={color} />
+              <Blink expression="streak" size={56} />
             </RNAnimated.View>
 
             {/* Streak text */}

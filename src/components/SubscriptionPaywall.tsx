@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { Blink } from '@/src/components/Blink';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const ACCENT = '#6C5CE7';
@@ -202,7 +203,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
           {/* Logo */}
           <View style={st.logoCircle}>
-            <EyeLogoSvg />
+            <Blink expression="celebrate" size={50} />
           </View>
           <Text style={st.headerTitle}>Blanked<Text style={{ fontWeight: '400', opacity: 0.75 }}>+</Text></Text>
           <Text style={st.headerSub}>Train your memory without limits</Text>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Modal }
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { Blink } from '@/src/components/Blink';
 import * as Haptics from 'expo-haptics';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
@@ -198,7 +199,8 @@ function GameScreen() {
 
       {gameState === 'TRANSITION' && (
         <AnimatedOrView entering={enterFade} style={styles.centered}>
-          <View style={styles.blankContainer}>
+          <Blink expression="blank" size={80} />
+          <View style={[styles.blankContainer, { marginTop: 16 }]}>
             <Text style={styles.blankText}>Go blank!</Text>
             <Text style={styles.blankSubtext}>What do you remember?</Text>
           </View>
