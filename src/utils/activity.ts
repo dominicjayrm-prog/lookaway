@@ -5,6 +5,9 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
+// NOTE: Uses localStorage (sync) for performance. Works on web; on native iOS
+// localStorage is unavailable so activity is silently not persisted.
+// TODO: migrate to AsyncStorage when native build is ready.
 const STORAGE_KEY = 'blanked_activity';
 const MAX_EVENTS = 20;
 

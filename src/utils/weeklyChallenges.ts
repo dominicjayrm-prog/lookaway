@@ -118,6 +118,15 @@ async function saveState(state: WeeklyChallengeState): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+// ── Mutex for read-modify-write safety ────────────────────────────────
+let _writeLock: Promise<void> = Promise.resolve();
+function withLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = _writeLock;
+  let resolve: () => void;
+  _writeLock = new Promise(r => { resolve = r; });
+  return prev.then(fn).finally(() => resolve!());
+}
+
 // ── Public API ────────────────────────────────────────────────────────
 
 /** Get current weekly challenge state */
@@ -127,16 +136,20 @@ export async function getWeeklyChallenges(): Promise<WeeklyChallengeState> {
 
 /** Increment progress for a tracking key (call from game flow) */
 export async function incrementWeeklyProgress(trackingKey: string, amount: number = 1): Promise<void> {
-  const state = await loadState();
-  state.progress[trackingKey] = (state.progress[trackingKey] ?? 0) + amount;
-  await saveState(state);
+  return withLock(async () => {
+    const state = await loadState();
+    state.progress[trackingKey] = (state.progress[trackingKey] ?? 0) + amount;
+    await saveState(state);
+  });
 }
 
 /** Set progress for a tracking key to at least `value` (for "max" type tracking like streaks) */
 export async function setWeeklyProgressMax(trackingKey: string, value: number): Promise<void> {
-  const state = await loadState();
-  state.progress[trackingKey] = Math.max(state.progress[trackingKey] ?? 0, value);
-  await saveState(state);
+  return withLock(async () => {
+    const state = await loadState();
+    state.progress[trackingKey] = Math.max(state.progress[trackingKey] ?? 0, value);
+    await saveState(state);
+  });
 }
 
 /** Claim a completed goal's gem reward. Returns gems earned (0 if already claimed or not done). */

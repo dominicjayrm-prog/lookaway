@@ -147,6 +147,20 @@ function saveState(state: GameStore) {
   }, 2000);
 }
 
+// Flush pending cloud sync on page unload (web)
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('beforeunload', () => {
+    const timer = (saveState as any)._syncTimer;
+    if (timer) {
+      clearTimeout(timer);
+      const state = useGameStore?.getState?.();
+      if (state?._authUserId) {
+        saveProgressToSupabase(state._authUserId, state).catch(() => {});
+      }
+    }
+  });
+}
+
 export interface GameStore {
   _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
@@ -230,7 +244,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     _authUserId: null,
     _hydrated: false,
 
-    addGems: (amount) => { set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
+    addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
     loseLife: () => {
       set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() }));

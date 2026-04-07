@@ -202,14 +202,18 @@ function ResultScreen() {
       }
 
       // Show starter pack after first failure (if not already shown/purchased)
-      AsyncStorage.getItem('starter_pack_shown').then(shown => {
-        AsyncStorage.getItem('starter_pack_purchased').then(purchased => {
+      (async () => {
+        try {
+          const [shown, purchased] = await Promise.all([
+            AsyncStorage.getItem('starter_pack_shown'),
+            AsyncStorage.getItem('starter_pack_purchased'),
+          ]);
           if (!shown && !purchased) {
             setTimeout(() => setShowStarterPack(true), 1200);
-            AsyncStorage.setItem('starter_pack_shown', 'true');
+            await AsyncStorage.setItem('starter_pack_shown', 'true');
           }
-        });
-      });
+        } catch {}
+      })();
     }
 
     if (passed) cancelStreakReminder();
