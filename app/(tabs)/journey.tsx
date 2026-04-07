@@ -15,6 +15,7 @@ import { spacing } from '@/src/theme/spacing';
 import Svg, { Rect, Path, Polygon, Circle as SvgCircle } from 'react-native-svg';
 import { supabase } from '@/src/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import { InfoCard } from '@/src/components/InfoCard';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 const GREEN = '#00B894';
@@ -98,6 +99,8 @@ function JourneyTab() {
   const { colors } = useTheme();
   const { totalStars, levelProgress } = useGameStore();
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [infoCard, setInfoCard] = useState<string | null>(null);
+  const [infoCardData, setInfoCardData] = useState<{ title: string; desc: string } | null>(null);
   const [sideCampaignProgress, setSideCampaignProgress] = useState<Record<string, { stars: number; best_score: number }>>({});
 
   // Load side campaign progress
@@ -229,10 +232,10 @@ function JourneyTab() {
       {/* Header */}
       <View style={st.header}>
         <Text style={[st.title, { color: colors.text }]}>Journey</Text>
-        <View style={[st.starPill, { backgroundColor: colors.goldSoft }]}>
+        <Pressable onPress={() => setInfoCard(infoCard === 'stars' ? null : 'stars')} style={[st.starPill, { backgroundColor: colors.goldSoft }]}>
           <StarSvg size={13} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
           <Text style={[st.starCount, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/{TOTAL_MAX_STARS}</Text>
-        </View>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
@@ -342,8 +345,20 @@ function JourneyTab() {
                       opacity: !w.unlocked ? 0.4 : 1,
                       ...(w.isCurrent ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 } : {}),
                     }]}
-                    onPress={() => navigateToWorld(w)}
-                    disabled={!w.unlocked}
+                    onPress={() => {
+                      if (w.unlocked) { navigateToWorld(w); }
+                      else {
+                        const prevWorld = worldsData[wi - 1];
+                        const remaining = prevWorld ? prevWorld.totalLevels - prevWorld.completed : 0;
+                        setInfoCardData({
+                          title: 'World Locked',
+                          desc: prevWorld
+                            ? `Complete all ${prevWorld.totalLevels} levels in World ${prevWorld.worldNum} "${prevWorld.name}" to unlock "${w.name}". You have ${remaining} ${remaining === 1 ? 'level' : 'levels'} to go!`
+                            : `"${w.name}" will unlock as you progress. Keep playing!`,
+                        });
+                        setInfoCard('locked');
+                      }
+                    }}
                   >
                     {/* Circle indicator */}
                     {w.isComplete ? (
@@ -415,6 +430,24 @@ function JourneyTab() {
           </View>
         )}
       </ScrollView>
+      {/* Info Cards */}
+      <InfoCard
+        visible={infoCard === 'stars'}
+        icon={<StarSvg size={20} color="#D4A012" />}
+        title="Total Stars"
+        description={`You've earned ${totalStars} out of ${TOTAL_MAX_STARS} possible stars across all game modes. That's ${TOTAL_MAX_STARS > 0 ? Math.round((totalStars / TOTAL_MAX_STARS) * 100) : 0}% of all available stars!`}
+        tip={totalStars < TOTAL_MAX_STARS / 2 ? 'Replay completed levels with higher scores to earn more stars' : totalStars < TOTAL_MAX_STARS * 0.8 ? "You're over halfway! Keep pushing for 3 stars on every level" : 'Almost there! You\'re a true memory master \uD83E\uDDE0'}
+        accentColor="#D4A012"
+        onClose={() => setInfoCard(null)}
+      />
+      <InfoCard
+        visible={infoCard === 'locked'}
+        icon={<LockSvg size={20} color="#636E72" />}
+        title={infoCardData?.title ?? 'World Locked'}
+        description={infoCardData?.desc ?? 'Complete previous levels to unlock.'}
+        accentColor="#636E72"
+        onClose={() => setInfoCard(null)}
+      />
     </SafeAreaView>
     </TabTransition>
   );
