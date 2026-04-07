@@ -70,7 +70,7 @@ function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: 
 
 function RecentActivityCard({ colors, router }: { colors: Record<string, string>; router: ReturnType<typeof useRouter> }) {
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
-  useEffect(() => { setActivities(getRecentActivity(3)); }, []);
+  useEffect(() => { getRecentActivity(3).then(setActivities); }, []);
 
   return (
     <View style={[actStyles.card, { backgroundColor: colors.card }]}>

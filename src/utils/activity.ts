@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export interface ActivityEvent {
   id: string;
   type: string;
@@ -5,31 +7,33 @@ export interface ActivityEvent {
   timestamp: string;
 }
 
-// NOTE: Uses localStorage (sync) for performance. Works on web; on native iOS
-// localStorage is unavailable so activity is silently not persisted.
-// TODO: migrate to AsyncStorage when native build is ready.
 const STORAGE_KEY = 'blanked_activity';
 const MAX_EVENTS = 20;
 
+/** Log an activity event. Fire-and-forget — never blocks gameplay. */
 export function logActivity(type: string, data: Record<string, unknown>): void {
-  try {
-    if (typeof localStorage === 'undefined') return;
-    const events: ActivityEvent[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    events.unshift({
-      id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      type,
-      data,
-      timestamp: new Date().toISOString(),
-    });
-    if (events.length > MAX_EVENTS) events.length = MAX_EVENTS;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-  } catch {}
+  (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      const events: ActivityEvent[] = raw ? JSON.parse(raw) : [];
+      events.unshift({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        type,
+        data,
+        timestamp: new Date().toISOString(),
+      });
+      if (events.length > MAX_EVENTS) events.length = MAX_EVENTS;
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    } catch {}
+  })();
 }
 
-export function getRecentActivity(limit: number = 3): ActivityEvent[] {
+/** Get recent activity events. */
+export async function getRecentActivity(limit: number = 3): Promise<ActivityEvent[]> {
   try {
-    if (typeof localStorage === 'undefined') return [];
-    const events: ActivityEvent[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const events: ActivityEvent[] = JSON.parse(raw);
     return events.slice(0, limit);
   } catch { return []; }
 }
