@@ -389,9 +389,9 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
         </View>
       </FadeIn>
 
-      <View style={{ flexDirection: 'row', gap: 10 }}>
+      <View style={{ flexDirection: 'row', gap: 8, width: '100%' }}>
         {steps.map((st, i) => (
-          <FadeIn key={i} delay={500 + i * 100}>
+          <FadeIn key={i} delay={500 + i * 100} style={{ flex: 1 }}>
             <Pressable
               onPress={() => setStep(i)}
               style={[
@@ -405,8 +405,8 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
               <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : '#F0EFEB' }]}>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : C.textD }}>{st.num}</Text>
               </View>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: i === step ? C.accent : C.text }}>{st.title}</Text>
-              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2, lineHeight: 12 }}>{st.desc}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: i === step ? C.accent : C.text }} numberOfLines={1}>{st.title}</Text>
+              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2, lineHeight: 12 }} numberOfLines={2}>{st.desc}</Text>
             </Pressable>
           </FadeIn>
         ))}
@@ -576,9 +576,6 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
               </LinearGradient>
             </RNAnimated.View>
           </Pressable>
-          <Text style={{ marginTop: 10, fontSize: 11, color: C.textD, textAlign: 'center' }}>
-            No account needed to try
-          </Text>
         </View>
       </FadeIn>
     </View>
@@ -718,11 +715,13 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+    overflow: 'hidden',
   },
   screenLeft: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    overflow: 'hidden',
   },
   heroTitle: {
     fontSize: 28,
