@@ -34,6 +34,7 @@ function GameScreen() {
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const peekTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, score } = useGameStore();
 
   const [level, setLevel] = useState<Level | null>(null);
@@ -72,6 +73,7 @@ function GameScreen() {
   const clearTimeouts = useCallback(() => {
     if (revealTimeout.current) { clearTimeout(revealTimeout.current); revealTimeout.current = null; }
     if (transitionTimeout.current) { clearTimeout(transitionTimeout.current); transitionTimeout.current = null; }
+    if (peekTimeout.current) { clearTimeout(peekTimeout.current); peekTimeout.current = null; }
   }, []);
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
@@ -125,7 +127,7 @@ function GameScreen() {
       setShowPeekScene(true);
       setActivePowerUp('peek');
       if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setTimeout(() => setShowPeekScene(false), 1500);
+      peekTimeout.current = setTimeout(() => setShowPeekScene(false), 1500);
     } else if (id === 'fiftyFifty' && currentQuestion) {
       usePowerUp('fiftyFifty');
       setUsedPowerUps(p => ({ ...p, fiftyFifty: true }));

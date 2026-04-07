@@ -11,19 +11,15 @@ import LevelMilestone from '@/src/components/LevelMilestone';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore } from '@/src/utils/scoring';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { useAuth } from '@/src/providers/AuthProvider';
 import { WORLD_LEVEL_COUNTS, WORLD_NAMES, WORLD_COLORS } from '@/src/data/worldPaths';
-import { checkStreakMilestone } from '@/src/data/streakMilestones';
 import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
-import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleLivesFullNotification } from '@/src/utils/notifications';
-import { incrementWeeklyProgress, setWeeklyProgressMax } from '@/src/utils/weeklyChallenges';
+import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder } from '@/src/utils/notifications';
+import { incrementWeeklyProgress } from '@/src/utils/weeklyChallenges';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { AchievementToast } from '@/src/components/AchievementToast';
-import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { useCelebrations } from '@/src/hooks/useCelebrations';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 
@@ -37,6 +33,7 @@ function parseLevelId(id: string): { worldId: number; levelNum: number } | null 
   return { worldId: parseInt(m[1], 10), levelNum: parseInt(m[2], 10) };
 }
 
+// ── Sub-components ────────────────────────────────────────────────────
 function GemRewardAnimation({ text, colors }: { text: string; colors: Record<string, string> }) {
   const scale = useRef(new RNAnimated.Value(0.8)).current;
   const opacity = useRef(new RNAnimated.Value(0)).current;
@@ -50,26 +47,24 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
     return () => clearTimeout(timer);
   }, [scale, opacity]);
   return (
-    <RNAnimated.View style={[styles.gemReward, { opacity, transform: [{ scale }] }]}>
-      <View style={[styles.gemRewardPill, { backgroundColor: colors.goldSoft }]}>
-        <Text style={styles.gemRewardIcon}>{GEM}</Text>
-        <Text style={[styles.gemRewardText, { color: colors.gold }]}>{text}</Text>
+    <RNAnimated.View style={[st.gemReward, { opacity, transform: [{ scale }] }]}>
+      <View style={[st.gemRewardPill, { backgroundColor: colors.goldSoft }]}>
+        <Text style={st.gemRewardIcon}>{GEM}</Text>
+        <Text style={[st.gemRewardText, { color: colors.gold }]}>{text}</Text>
       </View>
     </RNAnimated.View>
   );
 }
 
-/** Animated counter that counts up from 0 to `value` with easing */
-function AnimatedScore({ value, style }: { value: number; style: any }) {
-  var [display, setDisplay] = useState(0);
+function AnimatedScore({ value, style }: { value: number; style: object }) {
+  const [display, setDisplay] = useState(0);
   useEffect(() => {
-    var start = Date.now();
-    var duration = 900;
-    var frame = () => {
-      var elapsed = Date.now() - start;
-      var progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      var eased = 1 - Math.pow(1 - progress, 3);
+    const start = Date.now();
+    const duration = 900;
+    const frame = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
       setDisplay(Math.round(value * eased));
       if (progress < 1) requestAnimationFrame(frame);
     };
@@ -78,10 +73,11 @@ function AnimatedScore({ value, style }: { value: number; style: any }) {
   return <Text style={style}>{display}%</Text>;
 }
 
+// ── Main Screen ───────────────────────────────────────────────────────
 function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, loseLife, addStars, incrementStreak, addGems, levelProgress, streakCount, streakMilestonesClaimed } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress } = useGameStore();
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
   const stars = level ? getStarsForScore(score, level) : 0;
@@ -93,16 +89,8 @@ function ResultScreen() {
   const [wasReplay, setWasReplay] = useState(false);
   const [improved, setImproved] = useState(false);
   const [processed, setProcessed] = useState(false);
-  const [celebration, setCelebration] = useState<{ days: number; gems: number; title: string; color: string } | null>(null);
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
-  const [achievementUnlocks, setAchievementUnlocks] = useState<AchievementUnlock[]>([]);
-  const [extraLifeSaved, setExtraLifeSaved] = useState(false);
-  const [showWorldComplete, setShowWorldComplete] = useState(false);
-  const [showFirstLevel, setShowFirstLevel] = useState(false);
-  const [showCampaignComplete, setShowCampaignComplete] = useState(false);
-  const [showMilestone, setShowMilestone] = useState(false);
-  const [showStarterPack, setShowStarterPack] = useState(false);
-  const { user } = useAuth();
+
+  const celeb = useCelebrations();
 
   const parsed = level ? parseLevelId(level.id) : null;
   const worldId = parsed?.worldId ?? 1;
@@ -113,9 +101,16 @@ function ResultScreen() {
   const nextWorldName = nextWorldId ? WORLD_NAMES[nextWorldId] : null;
   const nextLevelId = !isLastLevelOfWorld ? `w${worldId}-l${levelNum + 1}` : null;
 
+  // ── Process level result (runs once) ──
   useEffect(() => {
     if (processed || !level) return;
     setProcessed(true);
+    let mounted = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const safeTimeout = (fn: () => void, ms: number) => {
+      const t = setTimeout(() => { if (mounted) fn(); }, ms);
+      timers.push(t);
+    };
 
     if (passed) {
       const existing = levelProgress[level.id];
@@ -128,12 +123,13 @@ function ResultScreen() {
       if (stars > 0) addStars(stars);
       incrementStreak();
 
-      // Track weekly challenge progress
+      // Weekly challenge tracking
       incrementWeeklyProgress('levels_completed');
       if (stars > 0) incrementWeeklyProgress('stars_earned', stars);
       if (stars === 3) incrementWeeklyProgress('perfect_levels');
       if (score >= 90) incrementWeeklyProgress('high_score_levels');
 
+      // Activity log
       if (didImprove) {
         logActivity('star_improved', { levelId: level.id, worldId, levelNumber: levelNum, oldStars: existing.stars, newStars: stars });
       } else if (!isReplay) {
@@ -141,95 +137,18 @@ function ResultScreen() {
         if (isLastLevelOfWorld) logActivity('world_complete', { worldId, worldName: WORLD_NAMES[worldId] ?? `World ${worldId}` });
       }
 
-      setTimeout(() => {
-        const newStreak = useGameStore.getState().streakCount;
-        const claimed = useGameStore.getState().streakMilestonesClaimed;
-        const milestone = checkStreakMilestone(newStreak, claimed);
-        if (milestone) setCelebration(milestone);
-
-        // Celebration triggers (checked after delay to let main UI render first)
-        const totalCompleted2 = Object.keys(useGameStore.getState().levelProgress).length;
-
-        // First level ever completed
-        if (totalCompleted2 === 1 && !isReplay) {
-          setTimeout(() => setShowFirstLevel(true), 1200);
-        }
-        // World complete
-        else if (isLastLevelOfWorld && !isReplay) {
-          const allWorldsDone = totalCompleted2 >= 200;
-          if (allWorldsDone) {
-            setTimeout(() => setShowCampaignComplete(true), 1200);
-          } else {
-            setTimeout(() => setShowWorldComplete(true), 1200);
-          }
-        }
-        // Level milestones (10, 25, 50, 100, 150, 200)
-        else if ([10, 25, 50, 100, 150, 200].includes(totalCompleted2) && !isReplay) {
-          setTimeout(() => setShowMilestone(true), 1000);
-        }
-      }, 100);
-
-      if (user?.id) {
-        const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
-        const worldLevelCounts = [20, 30, 35, 35, 40, 40];
-        let worldsComplete = 0;
-        let perfectWorlds = 0;
-        const lp = useGameStore.getState().levelProgress;
-        for (let w = 0; w < 6; w++) {
-          const prefix = `w${w + 1}-l`;
-          const wLevels = Array.from({ length: worldLevelCounts[w] }, (_, i) => lp[`${prefix}${i + 1}`]);
-          if (wLevels.every(l => l)) { worldsComplete++; if (wLevels.every(l => l && l.stars >= 3)) perfectWorlds++; }
-        }
-        checkAchievements(user.id, { type: 'level_complete', data: { totalLevelsCompleted: totalCompleted, totalWorldsCompleted: worldsComplete, totalPerfectWorlds: perfectWorlds } }).then(unlocks => {
-          if (unlocks.length > 0) {
-            const totalGems = unlocks.reduce((s, u) => s + u.gems, 0);
-            if (totalGems > 0) addGems(totalGems);
-            setTimeout(() => setAchievementUnlocks(unlocks), 1200);
-          }
-        });
-      }
+      celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout);
+      cancelStreakReminder();
     } else {
-      // Check for Extra Life power-up before losing a life
-      const hasExtraLife = useGameStore.getState().getPowerUpCount('extra_life') > 0;
-      if (hasExtraLife) {
-        useGameStore.getState().usePowerUp('extra_life');
-        // Show a brief message — the "Extra Life saved you!" is shown in the UI via extraLifeSaved state
-        setExtraLifeSaved(true);
-      } else {
-        loseLife();
-        const state = useGameStore.getState();
-        scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
-      }
-
-      // Show starter pack after first failure (if not already shown/purchased)
-      AsyncStorage.getItem('starter_pack_shown').then(shown => {
-        AsyncStorage.getItem('starter_pack_purchased').then(purchased => {
-          if (!shown && !purchased) {
-            setTimeout(() => setShowStarterPack(true), 1200);
-            AsyncStorage.setItem('starter_pack_shown', 'true');
-          }
-        });
-      });
+      celeb.triggerFailCelebrations(safeTimeout);
     }
 
-    if (passed) cancelStreakReminder();
+    celeb.triggerNotifPrompt(safeTimeout);
 
-    if (Platform.OS !== 'web') {
-      (async () => {
-        try {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          const asked = await AsyncStorage.getItem('blanked_notifications_asked');
-          const declined = await AsyncStorage.getItem('blanked_notifications_declined_count');
-          const completedCount = Object.keys(useGameStore.getState().levelProgress).length;
-          if (!asked && (completedCount === 1 || completedCount === 5)) {
-            const declinedNum = parseInt(declined ?? '0');
-            if (declinedNum < 2) setTimeout(() => setShowNotifPrompt(true), 1500);
-          }
-        } catch {}
-      })();
-    }
-  }, [passed, processed, level, stars, score, recordLevelComplete, loseLife, addStars, levelProgress]);
+    return () => { mounted = false; timers.forEach(clearTimeout); };
+  }, [processed, level, passed, stars, score, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress, celeb, worldId, levelNum, isLastLevelOfWorld]);
 
+  // ── Navigation handlers ──
   const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
   const handleNextWorld = () => { resetGame(); if (nextWorldId) router.replace(`/world/${nextWorldId}`); };
   const handleBackToMap = () => { resetGame(); router.replace(`/world/${worldId}`); };
@@ -241,58 +160,101 @@ function ResultScreen() {
     else if (improved) gemText = `+${gemsEarned} gem${gemsEarned !== 1 ? 's' : ''} (star improvement!)`;
   }
 
+  // ── Render ──
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={styles.content}>
+    <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
+      <View style={st.content}>
         {passed ? (
           <>
-            <Text style={[styles.completeTitle, { color: colors.correct }]}>Level complete!</Text>
-            {isPerfect && (<View style={styles.perfectBadge}><Text style={styles.perfectText}>PERFECT!</Text></View>)}
+            <Text style={[st.completeTitle, { color: colors.correct }]}>Level complete!</Text>
+            {isPerfect && <View style={st.perfectBadge}><Text style={st.perfectText}>PERFECT!</Text></View>}
             <View style={{ position: 'relative' }}>
               <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate />
               <ThreeStarBurst trigger={passed} stars={stars} />
             </View>
-            <AnimatedScore value={score} style={[styles.scoreText, { color: colors.text }]} />
-            <Text style={[styles.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
+            <AnimatedScore value={score} style={[st.scoreText, { color: colors.text }]} />
+            <Text style={[st.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
-            {passed && gemsEarned === 0 && wasReplay && !improved && (<Text style={[styles.noGemsText, { color: colors.textLight }]}>Already completed \u2014 improve your stars to earn more gems!</Text>)}
-            {isLastLevelOfWorld && (<View style={styles.worldCompleteBanner}><Text style={styles.worldCompleteEmoji}>{PARTY}</Text><Text style={[styles.worldCompleteTitle, { color: colors.accent }]}>{WORLD_NAMES[worldId]} Complete!</Text>{nextWorldName && (<Text style={[styles.worldCompleteSubtitle, { color: colors.textMid }]}>{nextWorldName} unlocked!</Text>)}</View>)}
-            <View style={styles.buttons}>
-              {isLastLevelOfWorld ? (nextWorldId ? (<Pressable style={styles.primaryButton} onPress={handleNextWorld}><Text style={styles.primaryButtonText}>Continue to {nextWorldName}</Text></Pressable>) : (<Pressable style={styles.primaryButton} onPress={handleBackToMap}><Text style={styles.primaryButtonText}>Back to map</Text></Pressable>)) : (<Pressable style={styles.primaryButton} onPress={handleNextLevel}><Text style={styles.primaryButtonText}>Next Level</Text></Pressable>)}
-              <Pressable style={styles.secondaryLink} onPress={handleBackToMap}><Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+            {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>Already completed {'\u2014'} improve your stars to earn more gems!</Text>}
+            {isLastLevelOfWorld && (
+              <View style={st.worldCompleteBanner}>
+                <Text style={st.worldCompleteEmoji}>{PARTY}</Text>
+                <Text style={[st.worldCompleteTitle, { color: colors.accent }]}>{WORLD_NAMES[worldId]} Complete!</Text>
+                {nextWorldName && <Text style={[st.worldCompleteSubtitle, { color: colors.textMid }]}>{nextWorldName} unlocked!</Text>}
+              </View>
+            )}
+            <View style={st.buttons}>
+              {isLastLevelOfWorld ? (
+                nextWorldId ? (
+                  <Pressable style={st.primaryButton} onPress={handleNextWorld}><Text style={st.primaryButtonText}>Continue to {nextWorldName}</Text></Pressable>
+                ) : (
+                  <Pressable style={st.primaryButton} onPress={handleBackToMap}><Text style={st.primaryButtonText}>Back to map</Text></Pressable>
+                )
+              ) : (
+                <Pressable style={st.primaryButton} onPress={handleNextLevel}><Text style={st.primaryButtonText}>Next Level</Text></Pressable>
+              )}
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
             </View>
           </>
         ) : (
           <>
-            <Text style={[styles.failedTitle, { color: colors.wrong }]}>Not quite...</Text>
-            <Text style={[styles.scoreText, { color: colors.text }]}>{correctCount}/{totalCount} correct</Text>
-            {extraLifeSaved ? (
-              <View style={[styles.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={styles.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[styles.lifeLostText, { color: colors.correct }]}>Extra Life saved you!</Text></View>
+            <Text style={[st.failedTitle, { color: colors.wrong }]}>Not quite...</Text>
+            <Text style={[st.scoreText, { color: colors.text }]}>{correctCount}/{totalCount} correct</Text>
+            {celeb.extraLifeSaved ? (
+              <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>Extra Life saved you!</Text></View>
             ) : (
-              <View style={[styles.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={styles.lifeLostIcon}>{HEART}</Text><Text style={[styles.lifeLostText, { color: colors.wrong }]}>-1 life</Text></View>
+              <View style={[st.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.wrong }]}>-1 life</Text></View>
             )}
-            {level && (<Text style={[styles.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>)}
-            <View style={styles.buttons}>
-              <Pressable style={styles.primaryButton} onPress={handleRetry}><Text style={styles.primaryButtonText}>Try again</Text></Pressable>
-              <Pressable style={styles.secondaryLink} onPress={handleBackToMap}><Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+            {level && <Text style={[st.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>}
+            <View style={st.buttons}>
+              <Pressable style={st.primaryButton} onPress={handleRetry}><Text style={st.primaryButtonText}>Try again</Text></Pressable>
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
             </View>
           </>
         )}
       </View>
 
-      {achievementUnlocks.length > 0 && (<AchievementToast unlocks={achievementUnlocks} onDismiss={() => setAchievementUnlocks([])} onTap={() => { setAchievementUnlocks([]); router.push('/profile'); }} />)}
+      {/* ── Celebration overlays ── */}
+      {celeb.achievementUnlocks.length > 0 && (
+        <AchievementToast unlocks={celeb.achievementUnlocks} onDismiss={() => celeb.setAchievementUnlocks([])} onTap={() => { celeb.setAchievementUnlocks([]); router.push('/profile'); }} />
+      )}
 
-      <NotificationPrompt visible={showNotifPrompt}
-        onEnable={async () => { setShowNotifPrompt(false); const granted = await requestNotificationPermission(); try { const AsyncStorage = require('@react-native-async-storage/async-storage').default; await AsyncStorage.setItem('blanked_notifications_asked', 'true'); } catch {} if (granted && user?.id) { await registerPushToken(user.id); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); } }}
-        onDismiss={async () => { setShowNotifPrompt(false); try { const AsyncStorage = require('@react-native-async-storage/async-storage').default; const current = parseInt((await AsyncStorage.getItem('blanked_notifications_declined_count')) ?? '0'); await AsyncStorage.setItem('blanked_notifications_declined_count', String(current + 1)); if (current + 1 >= 2) await AsyncStorage.setItem('blanked_notifications_asked', 'true'); } catch {} }}
+      <NotificationPrompt
+        visible={celeb.showNotifPrompt}
+        onEnable={async () => {
+          celeb.setShowNotifPrompt(false);
+          const granted = await requestNotificationPermission();
+          try { const AS = require('@react-native-async-storage/async-storage').default; await AS.setItem('blanked_notifications_asked', 'true'); } catch {}
+          if (granted) {
+            const { user } = useGameStore.getState() as unknown as { user?: { id?: string } };
+            if (user?.id) { await registerPushToken(user.id); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
+          }
+        }}
+        onDismiss={async () => {
+          celeb.setShowNotifPrompt(false);
+          try { const AS = require('@react-native-async-storage/async-storage').default; const cur = parseInt((await AS.getItem('blanked_notifications_declined_count')) ?? '0'); await AS.setItem('blanked_notifications_declined_count', String(cur + 1)); if (cur + 1 >= 2) await AS.setItem('blanked_notifications_asked', 'true'); } catch {}
+        }}
       />
 
-      {celebration && (<StreakCelebration visible days={celebration.days} gems={celebration.gems} title={celebration.title} color={celebration.color} onDismiss={() => { addGems(celebration.gems); logActivity('streak_milestone', { days: celebration.days, gems: celebration.gems, title: celebration.title }); useGameStore.setState((s) => ({ streakMilestonesClaimed: [...s.streakMilestonesClaimed, celebration.days] })); setCelebration(null); }} />)}
+      {celeb.celebration && (
+        <StreakCelebration
+          visible
+          days={celeb.celebration.days}
+          gems={celeb.celebration.gems}
+          title={celeb.celebration.title}
+          color={celeb.celebration.color}
+          onDismiss={() => {
+            addGems(celeb.celebration!.gems);
+            logActivity('streak_milestone', { days: celeb.celebration!.days, gems: celeb.celebration!.gems, title: celeb.celebration!.title });
+            useGameStore.setState((s) => ({ streakMilestonesClaimed: [...s.streakMilestonesClaimed, celeb.celebration!.days] }));
+            celeb.setCelebration(null);
+          }}
+        />
+      )}
 
-      {/* Premium celebration overlays */}
-      <FirstLevelCelebration visible={showFirstLevel} onDismiss={() => setShowFirstLevel(false)} />
+      <FirstLevelCelebration visible={celeb.showFirstLevel} onDismiss={() => celeb.setShowFirstLevel(false)} />
       <WorldCompleteCelebration
-        visible={showWorldComplete}
+        visible={celeb.showWorldComplete}
         worldNumber={worldId}
         worldName={WORLD_NAMES[worldId] ?? `World ${worldId}`}
         worldColor={WORLD_COLORS[worldId] ?? '#00B894'}
@@ -300,37 +262,23 @@ function ResultScreen() {
         totalStars={worldTotalLevels * 3}
         isPerfect={Object.entries(levelProgress).filter(([k]) => k.startsWith(`w${worldId}-`)).every(([, v]) => v?.stars >= 3)}
         nextWorldName={nextWorldName ?? undefined}
-        onDismiss={() => setShowWorldComplete(false)}
+        onDismiss={() => celeb.setShowWorldComplete(false)}
       />
       <CampaignCompleteCelebration
-        visible={showCampaignComplete}
+        visible={celeb.showCampaignComplete}
         totalStars={Object.values(levelProgress).reduce((s, v) => s + (v?.stars ?? 0), 0)}
         maxStars={600}
-        onDismiss={() => setShowCampaignComplete(false)}
+        onDismiss={() => celeb.setShowCampaignComplete(false)}
       />
-      {showMilestone && (
-        <LevelMilestone
-          levelCount={Object.keys(levelProgress).length}
-          onDone={() => setShowMilestone(false)}
-        />
-      )}
-
-      {/* Starter pack popup (after World 1 complete) */}
-      <StarterPackPopup
-        visible={showStarterPack}
-        onDismiss={() => setShowStarterPack(false)}
-        onPurchase={() => {
-          setShowStarterPack(false);
-          Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.');
-        }}
-      />
+      {celeb.showMilestone && <LevelMilestone levelCount={Object.keys(levelProgress).length} onDone={() => celeb.setShowMilestone(false)} />}
+      <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
     </SafeAreaView>
   );
 }
 
 export default ResultScreen;
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
   completeTitle: { fontSize: typography.sizes.xxl, fontWeight: typography.weights.bold },
