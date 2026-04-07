@@ -137,7 +137,7 @@ function ResultScreen() {
         if (isLastLevelOfWorld) logActivity('world_complete', { worldId, worldName: WORLD_NAMES[worldId] ?? `World ${worldId}` });
       }
 
-      celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout);
+      celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout, worldId);
       cancelStreakReminder();
     } else {
       celeb.triggerFailCelebrations(safeTimeout);
