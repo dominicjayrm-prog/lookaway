@@ -12,6 +12,7 @@ interface AnimatedBlinkProps {
   entrance?: Entrance;
   entranceDelay?: number;
   style?: ViewStyle;
+  lookOffset?: { x: number; y: number };
 }
 
 function AnimatedBlinkComponent({
@@ -21,6 +22,7 @@ function AnimatedBlinkComponent({
   entrance = 'none',
   entranceDelay = 0,
   style,
+  lookOffset,
 }: AnimatedBlinkProps) {
   // ─── Breathing (idle pulse) ──────────────────────────
   const breathScale = useRef(new RNAnimated.Value(1)).current;
@@ -90,7 +92,7 @@ function AnimatedBlinkComponent({
         style,
       ]}
     >
-      <Blink expression={expression} size={size} />
+      <Blink expression={expression} size={size} lookOffset={lookOffset} />
     </RNAnimated.View>
   );
 }
