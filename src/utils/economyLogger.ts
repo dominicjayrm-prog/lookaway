@@ -7,7 +7,7 @@ export function logEconomyEvent(
   userId: string,
   eventType: string,
   amount: number,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
 ) {
   supabase
     .from('economy_events')

@@ -116,6 +116,9 @@ function ResultScreen() {
   useEffect(() => {
     if (processed || !level) return;
     setProcessed(true);
+    let mounted = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const safeTimeout = (fn: () => void, ms: number) => { const t = setTimeout(() => { if (mounted) fn(); }, ms); timers.push(t); };
 
     if (passed) {
       const existing = levelProgress[level.id];
@@ -141,7 +144,7 @@ function ResultScreen() {
         if (isLastLevelOfWorld) logActivity('world_complete', { worldId, worldName: WORLD_NAMES[worldId] ?? `World ${worldId}` });
       }
 
-      setTimeout(() => {
+      safeTimeout(() => {
         const newStreak = useGameStore.getState().streakCount;
         const claimed = useGameStore.getState().streakMilestonesClaimed;
         const milestone = checkStreakMilestone(newStreak, claimed);
@@ -152,20 +155,20 @@ function ResultScreen() {
 
         // First level ever completed
         if (totalCompleted2 === 1 && !isReplay) {
-          setTimeout(() => setShowFirstLevel(true), 1200);
+          safeTimeout(() => setShowFirstLevel(true), 1200);
         }
         // World complete
         else if (isLastLevelOfWorld && !isReplay) {
           const allWorldsDone = totalCompleted2 >= 200;
           if (allWorldsDone) {
-            setTimeout(() => setShowCampaignComplete(true), 1200);
+            safeTimeout(() => setShowCampaignComplete(true), 1200);
           } else {
-            setTimeout(() => setShowWorldComplete(true), 1200);
+            safeTimeout(() => setShowWorldComplete(true), 1200);
           }
         }
         // Level milestones (10, 25, 50, 100, 150, 200)
         else if ([10, 25, 50, 100, 150, 200].includes(totalCompleted2) && !isReplay) {
-          setTimeout(() => setShowMilestone(true), 1000);
+          safeTimeout(() => setShowMilestone(true), 1000);
         }
       }, 100);
 
@@ -184,7 +187,7 @@ function ResultScreen() {
           if (unlocks.length > 0) {
             const totalGems = unlocks.reduce((s, u) => s + u.gems, 0);
             if (totalGems > 0) addGems(totalGems);
-            setTimeout(() => setAchievementUnlocks(unlocks), 1200);
+            safeTimeout(() => setAchievementUnlocks(unlocks), 1200);
           }
         });
       }
@@ -209,7 +212,7 @@ function ResultScreen() {
             AsyncStorage.getItem('starter_pack_purchased'),
           ]);
           if (!shown && !purchased) {
-            setTimeout(() => setShowStarterPack(true), 1200);
+            safeTimeout(() => setShowStarterPack(true), 1200);
             await AsyncStorage.setItem('starter_pack_shown', 'true');
           }
         } catch {}
@@ -227,11 +230,12 @@ function ResultScreen() {
           const completedCount = Object.keys(useGameStore.getState().levelProgress).length;
           if (!asked && (completedCount === 1 || completedCount === 5)) {
             const declinedNum = parseInt(declined ?? '0');
-            if (declinedNum < 2) setTimeout(() => setShowNotifPrompt(true), 1500);
+            if (declinedNum < 2) safeTimeout(() => setShowNotifPrompt(true), 1500);
           }
         } catch {}
       })();
     }
+    return () => { mounted = false; timers.forEach(clearTimeout); };
   }, [passed, processed, level, stars, score, recordLevelComplete, loseLife, addStars, levelProgress]);
 
   const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
