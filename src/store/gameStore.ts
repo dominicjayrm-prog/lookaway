@@ -503,6 +503,9 @@ export const useGameStore = create<GameStore>((set, get) => {
 
       // For gems/lives: if local has real progress, trust local (it's more current).
       // Only use cloud values if local is fresh/empty (new device).
+      // Merge cosmetics — keep union of both local and cloud (never lose a purchase)
+      const mergedCosmetics = [...new Set([...local.ownedCosmetics, ...cloud.ownedCosmetics])];
+
       set({
         gems: localHasProgress ? local.gems : cloud.gems,
         lives: localHasProgress ? local.lives : cloud.lives,
@@ -512,6 +515,11 @@ export const useGameStore = create<GameStore>((set, get) => {
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,
         completedScores: mergedScores,
+        ownedCosmetics: mergedCosmetics,
+        equippedFrame: localHasProgress ? local.equippedFrame : cloud.equippedFrame,
+        equippedBanner: localHasProgress ? local.equippedBanner : cloud.equippedBanner,
+        equippedNameColor: localHasProgress ? local.equippedNameColor : cloud.equippedNameColor,
+        equippedExpression: localHasProgress ? local.equippedExpression : cloud.equippedExpression,
       });
       setTimeout(() => saveState(get()), 0);
     },

@@ -30,6 +30,9 @@ export async function saveProgressToSupabase(userId: string, state: {
       memory_score_avg: memoryScore,
       equipped_frame: state.equippedFrame ?? null,
       equipped_expression: state.equippedExpression ?? null,
+      equipped_banner: state.equippedBanner ?? null,
+      equipped_name_color: state.equippedNameColor ?? null,
+      owned_cosmetics: state.ownedCosmetics ?? [],
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -67,6 +70,11 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   highestWorld: number;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
   completedScores: number[];
+  ownedCosmetics: string[];
+  equippedFrame: string;
+  equippedBanner: string;
+  equippedNameColor: string;
+  equippedExpression: string;
 } | null> {
   try {
     // Load profile
@@ -105,6 +113,11 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       highestWorld: profile.highest_world ?? 1,
       levelProgress,
       completedScores,
+      ownedCosmetics: Array.isArray(profile.owned_cosmetics) ? profile.owned_cosmetics : [],
+      equippedFrame: profile.equipped_frame ?? 'frame_blink_normal',
+      equippedBanner: profile.equipped_banner ?? 'banner_none',
+      equippedNameColor: profile.equipped_name_color ?? 'name_default',
+      equippedExpression: profile.equipped_expression ?? 'expr_normal',
     };
   } catch (e) {
     console.warn('Progress sync error:', e);
