@@ -32,12 +32,13 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   const [correctNextIdx, setCorrectNextIdx] = useState<number | null>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const mountedRef = useRef(true);
 
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
   const shapes = round?.shapes ?? [];
 
-  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
   const startShowing = useCallback(() => {
     setPhase('showing');
@@ -48,15 +49,17 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
 
     let idx = 0;
     const showNext = () => {
+      if (!mountedRef.current) return;
       if (idx < shapes.length) {
         setShowingIdx(idx);
         idx++;
         timerRef.current = setTimeout(() => {
+          if (!mountedRef.current) return;
           setShowingIdx(-1);
           timerRef.current = setTimeout(showNext, 300);
         }, 1000);
       } else {
-        timerRef.current = setTimeout(() => setPhase('pause'), 300);
+        timerRef.current = setTimeout(() => { if (mountedRef.current) setPhase('pause'); }, 300);
       }
     };
     timerRef.current = setTimeout(showNext, 500);

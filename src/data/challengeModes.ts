@@ -36,5 +36,5 @@ export function getMaxScore(mode: string): number {
 
 export function getScorePercentage(mode: string, rawScore: number): number {
   if (mode === 'classic') return rawScore;
-  return Math.round((rawScore / getMaxScore(mode)) * 100);
+  return Math.min(100, Math.round((rawScore / getMaxScore(mode)) * 100));
 }

@@ -105,7 +105,8 @@ export function generateSnapMatchLevel(levelData: any) {
       case 'removed': {
         removedShape = sceneA[targetIndex];
         sceneB = sceneA.filter((_: any, i: number) => i !== targetIndex);
-        description = `${sceneA[targetIndex].type} was removed`;
+        description = `${removedShape.type} was removed`;
+        targetIndex = -1; // No target in sceneB — use removedShape for tap detection
         break;
       }
       case 'type': {

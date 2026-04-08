@@ -69,10 +69,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
       setPhase('blank');
-      timerRef.current = setTimeout(() => {
+      const inner = setTimeout(() => {
         setPhase('sceneB');
         setResponseStartTime(Date.now());
       }, 800);
+      timerRef.current = inner;
     }, viewingTimeMs);
   }, [viewingTimeMs]);
 
