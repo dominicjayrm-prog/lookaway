@@ -191,7 +191,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
       <View style={s.scoreRow}>
         {roundScores.map((sc, i) => (
           <View key={i} style={[s.scoreDot, { backgroundColor: sc > 0 ? colors.correct : colors.wrong }]}>
-            <Text style={s.scoreDotText}>{sc > 0 ? '\\u2713' : '\\u2715'}</Text>
+            <Text style={s.scoreDotText}>{sc > 0 ? '\u2713' : '\u2715'}</Text>
           </View>
         ))}
         {Array.from({ length: totalRounds - roundScores.length }).map((_, i) => (

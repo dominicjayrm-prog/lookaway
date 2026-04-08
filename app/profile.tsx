@@ -47,12 +47,16 @@ function ProfileScreen() {
   const profileBlink: BlinkExpression = eqExprCosmetic ? eqExprCosmetic.blinkExpression : 'normal';
 
   // Division badge
-  const division = totalStars >= 800 ? { name: 'Master', emoji: '👑', color: '#D4A012' }
-    : totalStars >= 500 ? { name: 'Diamond', emoji: '⭐', color: '#74B9FF' }
-    : totalStars >= 300 ? { name: 'Platinum', emoji: '💎', color: '#A29BFE' }
-    : totalStars >= 150 ? { name: 'Gold', emoji: '🥇', color: '#D4A012' }
-    : totalStars >= 50 ? { name: 'Silver', emoji: '🥈', color: '#B2BEC3' }
-    : { name: 'Bronze', emoji: '🥉', color: '#CD7F32' };
+  const divisionThresholds = [
+    { name: 'Master', emoji: '👑', color: '#D4A012', min: 800, next: null },
+    { name: 'Diamond', emoji: '⭐', color: '#74B9FF', min: 500, next: 800 },
+    { name: 'Platinum', emoji: '💎', color: '#A29BFE', min: 300, next: 500 },
+    { name: 'Gold', emoji: '🥇', color: '#D4A012', min: 150, next: 300 },
+    { name: 'Silver', emoji: '🥈', color: '#B2BEC3', min: 50, next: 150 },
+    { name: 'Bronze', emoji: '🥉', color: '#CD7F32', min: 0, next: 50 },
+  ];
+  const division = divisionThresholds.find(d => totalStars >= d.min) ?? divisionThresholds[5];
+  const toNext = division.next ? division.next - totalStars : 0;
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerAchievement>>({});
@@ -139,7 +143,7 @@ function ProfileScreen() {
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30' }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
-              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` — ${toNext} to next` : ''}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
 

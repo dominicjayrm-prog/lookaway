@@ -98,6 +98,12 @@ function FriendsTab() {
           {searchText.length > 0 && <Pressable onPress={() => setSearchText('')}><Ionicons name="close-circle" size={18} color={colors.textLight} /></Pressable>}
         </View>
 
+        {searchText.trim().length > 0 && searchResults.length === 0 && (
+          <View style={[styles.searchResultsCard, { backgroundColor: colors.card, padding: 16, alignItems: 'center' }]}>
+            <Text style={{ fontSize: 13, color: colors.textLight }}>No players found matching "{searchText}"</Text>
+          </View>
+        )}
+
         {searchResults.length > 0 && (
           <View style={[styles.searchResultsCard, { backgroundColor: colors.card }]}>
             {searchResults.map((u) => (

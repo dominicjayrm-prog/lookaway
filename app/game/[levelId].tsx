@@ -128,7 +128,7 @@ function GameScreen() {
       setShowPeekScene(true);
       setActivePowerUp('peek');
       if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      peekTimeout.current = setTimeout(() => setShowPeekScene(false), 1500);
+      peekTimeout.current = setTimeout(() => setShowPeekScene(false), 2000);
     } else if (id === 'fiftyFifty' && currentQuestion) {
       usePowerUp('fiftyFifty');
       setUsedPowerUps(p => ({ ...p, fiftyFifty: true }));

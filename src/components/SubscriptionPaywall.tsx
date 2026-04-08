@@ -229,7 +229,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly</Text>
+                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly (Save £17)</Text>
                   <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
                 </View>
                 <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>{'\u00A3'}1.66/month</Text>

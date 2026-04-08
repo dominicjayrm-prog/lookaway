@@ -98,9 +98,9 @@ export const FRAMES: FrameCosmetic[] = [
   { id: 'frame_double_ring', type: 'frame', name: 'Double Ring', description: 'Two-ring elegant border', unlock: 'gems', gemCost: 80, rarity: 'rare', borderColor: '#A29BFE', borderWidth: 3, glowColor: '#6C5CE7' },
 
   // ── Seasonal Frames ──
-  { id: 'frame_christmas', type: 'frame', name: 'Festive', description: 'Holiday candy cane ring', unlock: 'seasonal', seasonal: 'christmas', gemCost: 100, rarity: 'epic', borderColor: '#FF6B6B', borderWidth: 4, glowColor: '#00B894' },
-  { id: 'frame_halloween', type: 'frame', name: 'Spooky', description: 'Halloween orange ring', unlock: 'seasonal', seasonal: 'halloween', gemCost: 100, rarity: 'epic', borderColor: '#E17055', borderWidth: 4, glowColor: '#2D3436' },
-  { id: 'frame_valentines', type: 'frame', name: 'Sweetheart', description: 'Valentine pink glow', unlock: 'seasonal', seasonal: 'valentines', gemCost: 80, rarity: 'rare', borderColor: '#FD79A8', borderWidth: 3, glowColor: '#FDCFE8' },
+  { id: 'frame_christmas', type: 'frame', name: 'Festive', description: 'Limited edition holiday ring', unlock: 'seasonal', seasonal: 'christmas', gemCost: 200, rarity: 'legendary', borderColor: '#FF6B6B', borderWidth: 4, glowColor: '#00B894' },
+  { id: 'frame_halloween', type: 'frame', name: 'Spooky', description: 'Limited edition spooky ring', unlock: 'seasonal', seasonal: 'halloween', gemCost: 180, rarity: 'legendary', borderColor: '#E17055', borderWidth: 4, glowColor: '#2D3436' },
+  { id: 'frame_valentines', type: 'frame', name: 'Sweetheart', description: 'Limited edition love glow', unlock: 'seasonal', seasonal: 'valentines', gemCost: 150, rarity: 'epic', borderColor: '#FD79A8', borderWidth: 3, glowColor: '#FDCFE8' },
 ];
 
 // ─── ALL BANNERS ───────────────────────────────────────────
