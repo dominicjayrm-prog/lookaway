@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Platform } from 'react-native';
+import { useTheme } from '@/src/providers/ThemeProvider';
 
 interface InfoCardProps {
   visible: boolean;
@@ -28,6 +29,7 @@ function InfoCardComponent({
   actionLabel,
   onClose,
 }: InfoCardProps) {
+  const { colors } = useTheme();
   const opacity = useRef(new RNAnimated.Value(0)).current;
   const translateY = useRef(new RNAnimated.Value(8)).current;
 
@@ -53,7 +55,7 @@ function InfoCardComponent({
       {/* Backdrop — tap to dismiss */}
       <Pressable style={st.backdrop} onPress={handleClose}>
         <RNAnimated.View
-          style={[st.cardContainer, { opacity, transform: [{ translateY }], maxWidth: Platform.OS === 'web' ? 430 : undefined }]}
+          style={[st.cardContainer, { opacity, transform: [{ translateY }], maxWidth: Platform.OS === 'web' ? 430 : undefined, backgroundColor: colors.card }]}
         >
           {/* Prevent card taps from dismissing */}
           <Pressable onPress={(e) => e.stopPropagation()}>
@@ -67,11 +69,11 @@ function InfoCardComponent({
                   {icon}
                 </View>
                 <View style={st.headerText}>
-                  <Text style={st.title}>{title}</Text>
-                  <Text style={st.description}>{description}</Text>
+                  <Text style={[st.title, { color: colors.text }]}>{title}</Text>
+                  <Text style={[st.description, { color: colors.textMid }]}>{description}</Text>
                 </View>
-                <Pressable onPress={handleClose} style={st.closeBtn}>
-                  <Text style={st.closeX}>{'\u2715'}</Text>
+                <Pressable onPress={handleClose} style={[st.closeBtn, { backgroundColor: colors.surface }]}>
+                  <Text style={[st.closeX, { color: colors.textLight }]}>{'\u2715'}</Text>
                 </Pressable>
               </View>
 
