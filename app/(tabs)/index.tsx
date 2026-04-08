@@ -21,6 +21,7 @@ import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 import { Blink } from '@/src/components/Blink';
 import { InfoCard } from '@/src/components/InfoCard';
+import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -168,6 +169,7 @@ function PlayTab() {
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   const [infoCard, setInfoCard] = useState<string | null>(null);
+  const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
@@ -367,8 +369,18 @@ function PlayTab() {
         onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
         onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
       />
-      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => setShowPaywall(false)} />
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => {
+        setShowPaywall(false);
+        // Unlock premium cosmetics (no auto-equip — player may have their own photo/frame)
+        const store = useGameStore.getState();
+        store.unlockCosmetic('frame_premium_gold');
+        store.unlockCosmetic('expr_premium');
+        store.unlockCosmetic('banner_premium_gold');
+        store.addGems(300);
+        setShowPremiumCelebration(true);
+      }} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
+      <PremiumCelebration visible={showPremiumCelebration} onDismiss={() => setShowPremiumCelebration(false)} />
 
       {/* Info Cards */}
       <InfoCard

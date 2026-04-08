@@ -25,7 +25,8 @@ export type BlinkExpression =
   | 'sad'
   | 'sleeping'
   | 'surprised'
-  | 'love';
+  | 'love'
+  | 'premium';
 
 interface BlinkProps {
   expression?: BlinkExpression;
@@ -335,6 +336,27 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
         <Path d={heartPath(cx + s * 0.1, cy - s * 0.04, s * 0.08)} fill={C.coral} />
         {smile(0.06, 0.07)}
         {blushCheeks()}
+      </>
+    ),
+
+    premium: (
+      <>
+        {/* Eye whites */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.05} rx={s * 0.085 * 1.1} ry={s * 0.11 * 1.15} fill="white" />
+        <Ellipse cx={cx + s * 0.1} cy={cy - s * 0.05} rx={s * 0.085 * 1.1} ry={s * 0.11 * 1.15} fill="white" />
+        {/* Gold star pupils */}
+        <Polygon points={starPts(cx - s * 0.085, cy - s * 0.04, s * 0.05)} fill={C.gold} />
+        <Polygon points={starPts(cx + s * 0.115, cy - s * 0.04, s * 0.05)} fill={C.gold} />
+        {/* Sparkle dots */}
+        <Circle cx={cx - s * 0.07} cy={cy - s * 0.06} r={s * 0.012} fill="white" />
+        <Circle cx={cx + s * 0.13} cy={cy - s * 0.06} r={s * 0.012} fill="white" />
+        {/* Gold sparkle lines around head */}
+        <Line x1={cx - s * 0.24} y1={cy - s * 0.2} x2={cx - s * 0.2} y2={cy - s * 0.16} stroke={C.gold} strokeWidth={sw(0.8, 0.015)} strokeLinecap="round" />
+        <Line x1={cx + s * 0.22} y1={cy - s * 0.22} x2={cx + s * 0.19} y2={cy - s * 0.18} stroke={C.gold} strokeWidth={sw(0.8, 0.015)} strokeLinecap="round" />
+        <Line x1={cx} y1={cy - s * 0.36} x2={cx} y2={cy - s * 0.3} stroke={C.gold} strokeWidth={sw(0.8, 0.015)} strokeLinecap="round" />
+        <Line x1={cx - s * 0.26} y1={cy - s * 0.1} x2={cx - s * 0.2} y2={cy - s * 0.12} stroke={C.gold} strokeWidth={sw(0.6, 0.012)} strokeLinecap="round" />
+        <Line x1={cx + s * 0.24} y1={cy - s * 0.12} x2={cx + s * 0.2} y2={cy - s * 0.14} stroke={C.gold} strokeWidth={sw(0.6, 0.012)} strokeLinecap="round" />
+        {bigSmile()}
       </>
     ),
   };
