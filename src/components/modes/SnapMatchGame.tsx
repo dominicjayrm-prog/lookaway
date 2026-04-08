@@ -91,20 +91,24 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
   const handleTapSceneB = useCallback((tapX: number, tapY: number) => {
     if (phase !== 'sceneB' || !round) return;
+    if (canvasSize.w === 0 || canvasSize.h === 0) return; // Don't process taps before layout
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     const elapsed = Date.now() - responseStartTime;
     const { changeType, targetIndex, sceneB, removedShape, description } = round;
     let correct = false;
 
+    // Use generous hit radius — vary by change type
+    const hitRadius = changeType === 'removed' ? 22 : changeType === 'position' ? 24 : 20;
+
     if (changeType === 'removed' && removedShape) {
       const dist = Math.sqrt((tapX - removedShape.x) ** 2 + (tapY - removedShape.y) ** 2);
-      correct = dist < 20; // Generous radius for empty space
+      correct = dist < hitRadius;
     } else {
       const target = sceneB[targetIndex];
       if (target) {
         const dist = Math.sqrt((tapX - target.x) ** 2 + (tapY - target.y) ** 2);
-        correct = dist < 18; // Generous radius for shape tap
+        correct = dist < hitRadius;
       }
     }
 

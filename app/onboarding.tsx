@@ -249,7 +249,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
       <FadeIn delay={500}>
         <View style={[s.weekCard, { backgroundColor: tc.card }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <Text style={[s.weekLabel, { marginBottom: 0 }]}>YOUR FIRST WEEK</Text>
+            <Text style={[s.weekLabel, { marginBottom: 0, color: tc.textLight }]}>YOUR FIRST WEEK</Text>
             <AnimatedBlink expression="streak" size={32} entrance="fade" />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -670,7 +670,7 @@ export default function OnboardingFlow() {
       {/* Skip button */}
       {!isLast && (
         <Pressable onPress={() => goTo(TOTAL_SCREENS - 1)} style={[s.skipBtn, { top: insets.top + 12 }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textLight }}>Skip</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>Skip</Text>
         </Pressable>
       )}
 
@@ -788,7 +788,6 @@ const s = StyleSheet.create({
   weekLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: tc.textLight,
     letterSpacing: 1,
     marginBottom: 12,
   },

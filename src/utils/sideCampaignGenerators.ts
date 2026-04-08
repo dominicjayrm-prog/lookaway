@@ -132,8 +132,8 @@ export function generateSequenceLevel(levelData: any) {
     for (let i = 0; i < sequenceLength; i++) {
       let x, y, valid, attempts = 0;
       do {
-        x = 12 + Math.random() * 76;
-        y = 12 + Math.random() * 76;
+        x = 14 + Math.random() * 72;
+        y = 14 + Math.random() * 68; // Tighter range to keep shapes + badges inside canvas
         valid = shapes.every((s: any) => Math.sqrt((s.x - x) ** 2 + (s.y - y) ** 2) > 16);
         attempts++;
       } while (!valid && attempts < 50);

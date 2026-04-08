@@ -72,7 +72,8 @@ function ShopTab() {
     store.unlockCosmetic('frame_premium_gold');
     store.unlockCosmetic('expr_premium');
     store.unlockCosmetic('banner_premium_gold');
-    store.addGems(300);
+    // Only give gems on paid subscription, not free trial
+    if (!trial) store.addGems(300);
     setShowPremiumCelebration(true);
     // RevenueCat integration point — actual purchase will happen here
   };
@@ -284,7 +285,7 @@ function ShopTab() {
         {/* Tab bar */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 14 }}>
           {(['featured', 'frames', 'banners', 'expressions'] as const).map(tab => (
-            <Pressable key={tab} onPress={() => setCosmeticTab(tab)} style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}>
+            <Pressable key={tab} onPress={() => { setCosmeticTab(tab); setCelebrationItem(null); }} style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: cosmeticTab === tab ? '#FFF' : colors.textMid }}>
                 {tab === 'featured' ? '✨ Today' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
@@ -308,9 +309,9 @@ function ShopTab() {
                     if (ok) { setCelebrationItem(c); }
                     else setGemShortfall({ cost: discountedPrice, name: c.name });
                   }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
-                    {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: (c as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
-                    {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={(c as any).blinkExpression ?? 'normal'} size={40} /></View>}
-                    {c.type === 'banner' && <LinearGradient colors={(c as any).gradientColors ?? [colors.accent, colors.accentLight]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
+                    {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'borderColor' in c ? (c as FrameCosmetic).borderColor : colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
+                    {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={'blinkExpression' in c ? (c as ExpressionCosmetic).blinkExpression : 'normal'} size={40} /></View>}
+                    {c.type === 'banner' && <LinearGradient colors={'gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{c.name}</Text>
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
                     {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text> : (

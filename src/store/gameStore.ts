@@ -236,6 +236,7 @@ export interface GameStore {
   hydrate: () => void;
   saveState: () => void;
   setAuthUserId: (id: string) => void;
+  revokeSubscription: () => void;
 
   // Gameplay
   startLevel: (l: Level) => void;
@@ -441,10 +442,10 @@ export const useGameStore = create<GameStore>((set, get) => {
           levelProgress: saved.levelProgress ?? {},
           completedScores: saved.completedScores ?? [],
           ownedCosmetics: saved.ownedCosmetics ?? [],
-          equippedFrame: saved.equippedFrame ?? 'frame_blink_normal',
-          equippedBanner: saved.equippedBanner ?? 'banner_none',
-          equippedNameColor: saved.equippedNameColor ?? 'name_default',
-          equippedExpression: saved.equippedExpression ?? 'expr_normal',
+          equippedFrame: (saved.ownedCosmetics ?? []).includes(saved.equippedFrame ?? '') || saved.equippedFrame === 'frame_blink_normal' || saved.equippedFrame === 'frame_none' ? (saved.equippedFrame ?? 'frame_blink_normal') : 'frame_blink_normal',
+          equippedBanner: (saved.ownedCosmetics ?? []).includes(saved.equippedBanner ?? '') || saved.equippedBanner === 'banner_none' || saved.equippedBanner === 'banner_purple_wave' ? (saved.equippedBanner ?? 'banner_none') : 'banner_none',
+          equippedNameColor: (saved.ownedCosmetics ?? []).includes(saved.equippedNameColor ?? '') || saved.equippedNameColor === 'name_default' ? (saved.equippedNameColor ?? 'name_default') : 'name_default',
+          equippedExpression: (saved.ownedCosmetics ?? []).includes(saved.equippedExpression ?? '') || saved.equippedExpression === 'expr_normal' ? (saved.equippedExpression ?? 'expr_normal') : 'expr_normal',
           _hydrated: true,
         });
       } else {
@@ -453,6 +454,20 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     saveState: () => saveState(get()),
     setAuthUserId: (id: string) => set({ _authUserId: id }),
+    revokeSubscription: () => {
+      // Remove subscriber-only cosmetics and reset equipped items to defaults
+      const SUBSCRIBER_IDS = ['frame_prismatic', 'frame_diamond', 'frame_premium_gold', 'banner_aurora', 'banner_holographic', 'banner_premium_gold', 'expr_premium', 'name_purple', 'name_gold', 'name_coral', 'name_ocean', 'name_mint'];
+      const { ownedCosmetics, equippedFrame, equippedBanner, equippedNameColor, equippedExpression } = get();
+      const cleaned = ownedCosmetics.filter(id => !SUBSCRIBER_IDS.includes(id));
+      set({
+        ownedCosmetics: cleaned,
+        equippedFrame: SUBSCRIBER_IDS.includes(equippedFrame) ? 'frame_blink_normal' : equippedFrame,
+        equippedBanner: SUBSCRIBER_IDS.includes(equippedBanner) ? 'banner_none' : equippedBanner,
+        equippedNameColor: SUBSCRIBER_IDS.includes(equippedNameColor) ? 'name_default' : equippedNameColor,
+        equippedExpression: SUBSCRIBER_IDS.includes(equippedExpression) ? 'expr_normal' : equippedExpression,
+      });
+      setTimeout(() => saveState(get()), 0);
+    },
 
     // Cloud sync
     syncToCloud: () => {

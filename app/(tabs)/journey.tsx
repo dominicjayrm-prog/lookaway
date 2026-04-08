@@ -145,7 +145,7 @@ function JourneyTab() {
       c.levelsPerWorld.forEach((count, i) => {
         for (let l = 1; l <= count; l++) {
           const p = levelProgress[`w${i + 1}-l${l}`];
-          if (p) { completedLevels++; totalCompletedStars += p.stars; }
+          if (p && p.stars > 0) { completedLevels++; totalCompletedStars += p.stars; }
         }
       });
     } else {
@@ -153,7 +153,7 @@ function JourneyTab() {
       c.levelsPerWorld.forEach((count, i) => {
         for (let l = 1; l <= count; l++) {
           const p = sideCampaignProgress[`${prefix}_w${i + 1}_l${l}`];
-          if (p) { completedLevels++; totalCompletedStars += p.stars; }
+          if (p && p.stars > 0) { completedLevels++; totalCompletedStars += p.stars; }
         }
       });
     }
@@ -178,13 +178,13 @@ function JourneyTab() {
       if (selected.id === 'classic') {
         for (let l = 1; l <= totalLevels; l++) {
           const p = levelProgress[`w${worldNum}-l${l}`];
-          if (p) { completed++; stars += p.stars; }
+          if (p && p.stars > 0) { completed++; stars += p.stars; }
         }
       } else {
         const prefix = SIDE_PREFIX[selected.id] ?? selected.id;
         for (let l = 1; l <= totalLevels; l++) {
           const p = sideCampaignProgress[`${prefix}_w${worldNum}_l${l}`];
-          if (p) { completed++; stars += p.stars; }
+          if (p && p.stars > 0) { completed++; stars += p.stars; }
         }
       }
 
