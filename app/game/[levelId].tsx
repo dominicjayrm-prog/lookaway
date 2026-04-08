@@ -65,6 +65,18 @@ function GameScreen() {
     return () => { cancelled = true; };
   }, [levelId]);
 
+  // Reset local state when level changes (prevents power-up/state bleed)
+  useEffect(() => {
+    setUsedPowerUps({ slowTime: false, peek: false, fiftyFifty: false, skip: false });
+    setHiddenOptions([]);
+    setShowPeekScene(false);
+    setBuyPopupId(null);
+    setTimerBonus(0);
+    setShowQuitConfirm(false);
+    setCorrectStreak(0);
+    setActivePowerUp(null);
+  }, [levelId]);
+
   useEffect(() => { if (level) resetGame(); }, [level]);
 
   const currentScene = level?.scenes[currentSceneIndex];
