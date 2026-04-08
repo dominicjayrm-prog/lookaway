@@ -93,6 +93,7 @@ function ScaleIn({ delay = 0, children, active = true }: { delay?: number; child
 
 // ═══ SCREEN 1: EMOTIONAL HOOK ═══════════════════════════════
 function Screen1({ isVisible }: { isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   const floatAnim = useRef(new RNAnimated.Value(0)).current;
   // Eye look-down: Blink glances down at the text after a pause
@@ -143,13 +144,13 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
       </FadeIn>
 
       <FadeIn delay={500}>
-        <Text style={s.heroTitle}>
+        <Text style={[s.heroTitle, { color: tc.text }]}>
           Your memory is{'\n'}more powerful{'\n'}than you think
         </Text>
       </FadeIn>
 
       <FadeIn delay={800}>
-        <Text style={s.heroSub}>You just need to train it.</Text>
+        <Text style={[s.heroSub, { color: tc.textMid }]}>You just need to train it.</Text>
       </FadeIn>
     </View>
   );
@@ -157,6 +158,7 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
 
 // ═══ SCREEN 2: SCIENCE-BACKED BENEFITS ══════════════════════
 function Screen2({ isVisible }: { isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   const benefits = [
     { stat: 23, label: 'faster recall', desc: 'Memory training improves how quickly you retrieve information', color: C.blue },
     { stat: 31, label: 'better focus', desc: 'Visual memory exercises strengthen attention and concentration', color: C.green },
@@ -170,12 +172,12 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
           <AnimatedBlink expression="memorise" size={36} entrance="fade" />
           <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
         </View>
-        <Text style={s.sectionTitle}>Memory training{'\n'}actually works</Text>
+        <Text style={[s.sectionTitle, { color: tc.text }]}>Memory training{'\n'}actually works</Text>
       </FadeIn>
 
       {benefits.map((b, i) => (
         <FadeIn key={i} delay={400 + i * 200}>
-          <View style={[s.benefitRow, i < 2 && s.benefitBorder]}>
+          <View style={[s.benefitRow, i < 2 && [s.benefitBorder, { borderBottomColor: tc.border }]]}>
             <ScaleIn delay={500 + i * 200} active={isVisible}>
               <View style={[s.benefitIcon, { backgroundColor: `${b.color}08` }]}>
                 {i === 0 && (
@@ -201,9 +203,9 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
                 <Counter target={b.stat} suffix="%" duration={1200 + i * 300} active={isVisible} style={{ fontSize: 22, fontWeight: '800', color: b.color }} />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>{b.label}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: tc.text }}>{b.label}</Text>
               </View>
-              <Text style={{ fontSize: 11, color: C.textM, lineHeight: 15 }}>{b.desc}</Text>
+              <Text style={{ fontSize: 11, color: tc.textMid, lineHeight: 15 }}>{b.desc}</Text>
             </View>
           </View>
         </FadeIn>
@@ -214,6 +216,7 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
 
 // ═══ SCREEN 3: THE COMMITMENT ═══════════════════════════════
 function Screen3({ isVisible }: { isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const [filledDays, setFilledDays] = useState(0);
   const hasRunDays = useRef(false);
@@ -239,12 +242,12 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
   return (
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
-        <Text style={[s.sectionTitle, { textAlign: 'center' }]}>Just 2 minutes a day</Text>
-        <Text style={[s.heroSub, { marginBottom: 28 }]}>That's all it takes to build a sharper memory</Text>
+        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>Just 2 minutes a day</Text>
+        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>That's all it takes to build a sharper memory</Text>
       </FadeIn>
 
       <FadeIn delay={500}>
-        <View style={s.weekCard}>
+        <View style={[s.weekCard, { backgroundColor: tc.card }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={[s.weekLabel, { marginBottom: 0 }]}>YOUR FIRST WEEK</Text>
             <AnimatedBlink expression="streak" size={32} entrance="fade" />
@@ -257,7 +260,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
                   <RNAnimated.View style={[
                     s.dayCircle,
                     {
-                      backgroundColor: filled ? `${C.coral}12` : '#F5F4F0',
+                      backgroundColor: filled ? `${C.coral}12` : tc.surface,
                       borderColor: filled ? C.coral : 'transparent',
                       transform: [{ scale: dayAnims[i] }],
                     },
@@ -270,7 +273,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
                         />
                       </Svg>
                     ) : (
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E0DCDA' }} />
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tc.textLight }} />
                     )}
                   </RNAnimated.View>
                   <Text style={{ fontSize: 10, fontWeight: '600', color: filled ? C.text : C.textD }}>{d}</Text>
@@ -295,9 +298,9 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
             { value: '14 min', label: 'per week', color: C.blue },
             { value: '12 hrs', label: 'per year', color: C.green },
           ].map((stat, i) => (
-            <View key={i} style={s.microStat}>
+            <View key={i} style={[s.microStat, { backgroundColor: tc.card }]}>
               <Text style={{ fontSize: 16, fontWeight: '800', color: stat.color }}>{stat.value}</Text>
-              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2 }}>{stat.label}</Text>
+              <Text style={{ fontSize: 9, color: tc.textLight, marginTop: 2 }}>{stat.label}</Text>
             </View>
           ))}
         </View>
@@ -308,6 +311,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
 
 // ═══ SCREEN 4: HOW IT WORKS ═════════════════════════════════
 function Screen4({ isVisible }: { isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   const [step, setStep] = useState(0);
   const hasRunSteps = useRef(false);
   useEffect(() => {
@@ -342,14 +346,14 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
           <AnimatedBlink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
           <Text style={s.sectionLabel}>HOW IT WORKS</Text>
         </View>
-        <Text style={s.sectionTitle}>Simple, fun,{'\n'}surprisingly addictive</Text>
+        <Text style={[s.sectionTitle, { color: tc.text }]}>Simple, fun,{'\n'}surprisingly addictive</Text>
       </FadeIn>
 
       <FadeIn delay={400}>
         <View style={{ marginBottom: 20, height: 120 }}>
           {/* Step 0: Memorise shapes */}
           <RNAnimated.View style={{ opacity: step0Opacity, position: 'absolute', width: '100%' }}>
-            <View style={s.stepVisual}>
+            <View style={[s.stepVisual, { backgroundColor: tc.card }]}>
               <View style={{ position: 'absolute', left: '15%', top: '18%' }}>
                 <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.coral }} />
               </View>
@@ -375,19 +379,19 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
           </RNAnimated.View>
           {/* Step 1: Gone! */}
           <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center' }]}>
+            <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center', backgroundColor: tc.card }]}>
               <AnimatedBlink expression="blank" size={56} />
-              <Text style={{ fontSize: 11, color: C.textD, marginTop: 4 }}>Gone!</Text>
+              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>Gone!</Text>
             </View>
           </RNAnimated.View>
           {/* Step 2: Answer */}
           <RNAnimated.View style={{ opacity: step2Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { padding: 10 }]}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: C.text, marginBottom: 8 }}>How many shapes?</Text>
+            <View style={[s.stepVisual, { padding: 10, backgroundColor: tc.card }]}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: tc.text, marginBottom: 8 }}>How many shapes?</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
                 {['4', '5', '6', '3'].map((v, i) => (
                   <View key={i} style={[
-                    s.answerOption,
+                    s.answerOption, { backgroundColor: tc.surface },
                     i === 1 && { backgroundColor: `${C.green}12`, borderColor: C.green, borderWidth: 1.5 },
                   ]}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: i === 1 ? C.green : C.textD }}>{v}</Text>
@@ -407,16 +411,16 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
               style={[
                 s.stepCard,
                 {
-                  backgroundColor: i === step ? `${C.accent}06` : 'white',
-                  borderColor: i === step ? `${C.accent}20` : 'rgba(0,0,0,0.04)',
+                  backgroundColor: i === step ? `${C.accent}06` : tc.card,
+                  borderColor: i === step ? `${C.accent}20` : tc.border,
                 },
               ]}
             >
-              <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : '#F0EFEB' }]}>
+              <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : tc.surface }]}>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : C.textD }}>{st.num}</Text>
               </View>
               <Text style={{ fontSize: 11, fontWeight: '700', color: i === step ? C.accent : C.text }} numberOfLines={1}>{st.title}</Text>
-              <Text style={{ fontSize: 9, color: C.textD, marginTop: 2, lineHeight: 12 }} numberOfLines={2}>{st.desc}</Text>
+              <Text style={{ fontSize: 9, color: tc.textLight, marginTop: 2, lineHeight: 12 }} numberOfLines={2}>{st.desc}</Text>
             </Pressable>
           </FadeIn>
         ))}
@@ -427,6 +431,7 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
 
 // ═══ SCREEN 5: SOCIAL PROOF ═════════════════════════════════
 function Screen5({ isVisible }: { isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   const testimonials = [
     { name: 'Sarah M.', streak: '42 day streak', text: "I play every morning with my coffee. It's become my favourite way to wake up my brain.", avatar: 'S', color: C.coral },
     { name: 'James K.', streak: '28 day streak', text: "Started to improve my focus at work. Now I'm addicted to getting 3 stars on every level.", avatar: 'J', color: C.blue },
@@ -459,14 +464,14 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <AnimatedBlink expression="love" size={32} entrance="fade" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: C.textM }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textMid }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
           </View>
         </View>
       </FadeIn>
 
       {testimonials.map((t, i) => (
         <FadeIn key={i} delay={400 + i * 200}>
-          <View style={s.testimonialCard}>
+          <View style={[s.testimonialCard, { backgroundColor: tc.card }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <ScaleIn delay={500 + i * 200} active={isVisible}>
                 <View style={[s.avatar, { backgroundColor: `${t.color}15` }]}>
@@ -474,11 +479,11 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
                 </View>
               </ScaleIn>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{t.name}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: tc.text }}>{t.name}</Text>
                 <Text style={{ fontSize: 9, color: t.color, fontWeight: '600' }}>{'🔥 '}{t.streak}</Text>
               </View>
             </View>
-            <Text style={{ fontSize: 12, color: C.textM, lineHeight: 18 }}>{`\u201c${t.text}\u201d`}</Text>
+            <Text style={{ fontSize: 12, color: tc.textMid, lineHeight: 18 }}>{`\u201c${t.text}\u201d`}</Text>
           </View>
         </FadeIn>
       ))}
@@ -488,6 +493,7 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
 
 // ═══ SCREEN 6: GET STARTED ══════════════════════════════════
 function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean }) {
+  const { colors: tc } = useTheme();
   // Shimmer sweep
   const shimmerAnim = useRef(new RNAnimated.Value(-30)).current;
   useEffect(() => {
@@ -524,8 +530,8 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
       </FadeIn>
 
       <FadeIn delay={400}>
-        <Text style={[s.sectionTitle, { textAlign: 'center' }]}>Ready to train{'\n'}your memory?</Text>
-        <Text style={[s.heroSub, { marginBottom: 28 }]}>
+        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>Ready to train{'\n'}your memory?</Text>
+        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>
           Free to play. 2 minutes a day.{'\n'}Your brain will thank you.
         </Text>
       </FadeIn>
@@ -540,7 +546,7 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
             <ScaleIn key={i} delay={700 + i * 100} active={isVisible}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</Text>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: C.textM }}>{f.label}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: tc.textMid }}>{f.label}</Text>
               </View>
             </ScaleIn>
           ))}
@@ -596,7 +602,7 @@ function Dots({ total, current }: { total: number; current: number }) {
             width: i === current ? 18 : 6,
             height: 6,
             borderRadius: 3,
-            backgroundColor: i === current ? C.accent : i < current ? C.accentL : '#E0DCDA',
+            backgroundColor: i === current ? C.accent : i < current ? C.accentL : colors.textLight,
           }}
         />
       ))}
@@ -660,11 +666,11 @@ export default function OnboardingFlow() {
   const keyExtractor = useCallback((_: number, index: number) => String(index), []);
 
   return (
-    <View style={[s.container, { backgroundColor: C.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: Platform.OS === 'web' ? 'center' : undefined, width: '100%' }]}>
+    <View style={[s.container, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: Platform.OS === 'web' ? 'center' : undefined, width: '100%' }]}>
       {/* Skip button */}
       {!isLast && (
         <Pressable onPress={() => goTo(TOTAL_SCREENS - 1)} style={[s.skipBtn, { top: insets.top + 12 }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: C.textD }}>Skip</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textLight }}>Skip</Text>
         </Pressable>
       )}
 
@@ -729,7 +735,6 @@ const s = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: C.text,
     lineHeight: 34,
     textAlign: 'center',
     marginTop: 32,
@@ -737,7 +742,6 @@ const s = StyleSheet.create({
   },
   heroSub: {
     fontSize: 15,
-    color: C.textM,
     lineHeight: 24,
     textAlign: 'center',
   },
@@ -751,7 +755,6 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: C.text,
     lineHeight: 29,
     marginBottom: 24,
   },
@@ -772,7 +775,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   weekCard: {
-    backgroundColor: 'white',
     borderRadius: 18,
     padding: 18,
     width: '100%',
@@ -786,7 +788,7 @@ const s = StyleSheet.create({
   weekLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: C.textD,
+    color: tc.textLight,
     letterSpacing: 1,
     marginBottom: 12,
   },
@@ -812,7 +814,6 @@ const s = StyleSheet.create({
   },
   microStat: {
     flex: 1,
-    backgroundColor: 'white',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 6,
@@ -826,7 +827,6 @@ const s = StyleSheet.create({
   stepVisual: {
     width: '100%',
     height: 120,
-    backgroundColor: 'white',
     borderRadius: 14,
     position: 'relative',
     shadowColor: '#000',
@@ -840,7 +840,6 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#F5F4F0',
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
@@ -859,7 +858,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   testimonialCard: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 14,
     marginBottom: 8,
