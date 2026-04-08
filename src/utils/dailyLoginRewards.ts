@@ -135,7 +135,7 @@ async function claimDailyReward(): Promise<typeof REWARDS[number] & { streak: nu
 
   await saveState(state);
 
-  return { ...check.reward, streak: check.streak, cosmeticId: undefined as string | undefined };
+  return { ...check.reward, streak: check.streak };
 }
 
 /**

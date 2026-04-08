@@ -88,7 +88,7 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message = 'Add
     // 5. Auto-dismiss after 2.5s
     const timer = setTimeout(() => dismiss(), 2500);
     return () => clearTimeout(timer);
-  }, [visible, item]);
+  }, [visible, item, onDismiss]);
 
   const dismiss = () => {
     RNAnimated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onDismiss());

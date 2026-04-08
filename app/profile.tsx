@@ -95,7 +95,7 @@ function ProfileScreen() {
     } else {
       Alert.alert('Coming soon', 'Photo picker will be available on mobile devices.');
     }
-    setShowAvatarPicker(false);
+    setShowPhotoOptions(false);
   }, []);
   const handleSignOut = useCallback(async () => { try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
 
