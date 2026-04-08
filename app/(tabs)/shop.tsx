@@ -26,6 +26,7 @@ function ShopTab() {
   const [cosmeticTab, setCosmeticTab] = useState<'featured' | 'frames' | 'banners' | 'expressions'>('featured');
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
   const [celebrationItem, setCelebrationItem] = useState<Cosmetic | null>(null);
+  const [showUnavailable, setShowUnavailable] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const dailyFeatured = getDailyFeatured(today);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -329,16 +330,14 @@ function ShopTab() {
               return (
                 <Pressable key={f.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('frame', f.id); }
-                  else if (f.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost); if (ok) { useGameStore.getState().equipCosmetic('frame', f.id); setCelebrationItem(f); } else setGemShortfall({ cost: f.gemCost!, name: f.name }); }
-                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  else { setShowUnavailable(true); }
+                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.4 }]}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
                     <Blink expression={exprs[fi % exprs.length]} size={30} />
                   </View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
                   {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : f.gemCost ? <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{f.gemCost} gems</Text>
-                    : f.subscriberOnly ? <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 3 }}>BLANKED+</Text>
                     : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
                 </Pressable>
               );
@@ -354,14 +353,12 @@ function ShopTab() {
               return (
                 <Pressable key={b.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('banner', b.id); }
-                  else if (b.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(b.id, b.gemCost); if (ok) { useGameStore.getState().equipCosmetic('banner', b.id); setCelebrationItem(b); } else setGemShortfall({ cost: b.gemCost!, name: b.name }); }
-                }} style={[styles.cosmeticCardWide, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  else { setShowUnavailable(true); }
+                }} style={[styles.cosmeticCardWide, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.4 }]}>
                   <LinearGradient colors={b.gradientColors} style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{b.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[b.rarity], fontWeight: '600' }}>{b.rarity.toUpperCase()}</Text>
                   {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : b.gemCost ? <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{b.gemCost} gems</Text>
-                    : b.subscriberOnly ? <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 3 }}>BLANKED+</Text>
                     : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
                 </Pressable>
               );
@@ -377,13 +374,13 @@ function ShopTab() {
               return (
                 <Pressable key={e.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('expression', e.id); }
-                  else if (e.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(e.id, e.gemCost); if (ok) { useGameStore.getState().equipCosmetic('expression', e.id); setCelebrationItem(e); } else setGemShortfall({ cost: e.gemCost!, name: e.name }); }
-                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.6 }]}>
+                  else { setShowUnavailable(true); }
+                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.4 }]}>
                   <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
                   {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : <Text style={{ fontSize: 10, fontWeight: '700', color: colors.accent, marginTop: 3 }}>{e.gemCost} gems</Text>}
+                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
                 </Pressable>
               );
             })}
@@ -423,6 +420,17 @@ function ShopTab() {
           Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.');
         }}
       />
+      {/* Item unavailable info card */}
+      <InfoCard
+        visible={showUnavailable}
+        icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
+        title="Not Available Yet"
+        description="This item isn't in today's shop. Check back tomorrow \u2014 the featured items rotate daily with 20% off!"
+        tip="Tap the \u2728 Today tab to see what's available right now"
+        accentColor="#6C5CE7"
+        onClose={() => setShowUnavailable(false)}
+      />
+
       {/* Purchase celebration */}
       <CosmeticCelebration visible={!!celebrationItem} item={celebrationItem} onDismiss={() => setCelebrationItem(null)} />
 
