@@ -261,8 +261,8 @@ function ProfileScreen() {
 
       {/* Photo Options Modal (simple) */}
       <Modal visible={showPhotoOptions} transparent animationType="fade" onRequestClose={() => setShowPhotoOptions(false)}>
-        <Pressable style={[styles.pickerBackdrop, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }]} onPress={() => setShowPhotoOptions(false)}>
-          <View style={[styles.photoSheet, { backgroundColor: colors.card }]}>
+        <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }} onPress={() => setShowPhotoOptions(false)}>
+          <View style={[styles.photoSheet, { backgroundColor: colors.card, maxWidth: Platform.OS === 'web' ? 360 : undefined, width: '85%' }]}>
             <Pressable onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}>
               <Ionicons name="camera" size={18} color={colors.accent} />
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>

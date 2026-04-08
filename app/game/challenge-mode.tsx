@@ -161,7 +161,7 @@ function ChallengeModeScreen() {
       </View>
       <View style={s.progressRow}>{Array.from({ length: modeData?.rounds?.length ?? 5 }).map((_, i) => (<View key={i} style={[s.progressSeg, { backgroundColor: i <= roundIdx ? mColor : colors.border }]} />))}</View>
 
-      {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} \u00b7 {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
+      {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
 
       {phase === 'show' && isExternalMode && modeData && (<>
         {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}

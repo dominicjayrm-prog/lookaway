@@ -389,7 +389,7 @@ function PlayTab() {
         description={lives >= 5
           ? 'You have full lives! Lose one each time you fail a level. Lives regenerate 1 every 30 minutes.'
           : `You have ${lives} ${lives === 1 ? 'life' : 'lives'} left. Lives regenerate 1 every 30 minutes.`}
-        tip={lives < 5 ? 'Get unlimited lives with Blanked+ \u2014 never wait to play again' : undefined}
+        tip={lives < 5 ? 'Get unlimited lives with Blanked+ — never wait to play again' : undefined}
         accentColor="#FF6B6B"
         action={lives < 5 ? () => setShowPaywall(true) : undefined}
         actionLabel={lives < 5 ? 'Learn about Blanked+' : undefined}

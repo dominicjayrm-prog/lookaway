@@ -43,8 +43,8 @@ function SingleToast({ unlock, onDismiss, onTap }: { unlock: AchievementUnlock; 
         </View>
         <View style={styles.toastContent}>
           <Text style={styles.toastTitle}>Achievement Unlocked!</Text>
-          <Text style={styles.toastName}>{unlock.achievementName} \u2014 {tierLabel}</Text>
-          <Text style={styles.toastDesc}>{unlock.description} \u00b7 <Text style={styles.toastGems}>+{unlock.gems} gems {GEM}</Text></Text>
+          <Text style={styles.toastName}>{unlock.achievementName} —{tierLabel}</Text>
+          <Text style={styles.toastDesc}>{unlock.description} ·<Text style={styles.toastGems}>+{unlock.gems} gems {GEM}</Text></Text>
         </View>
       </Pressable>
     </RNAnimated.View>

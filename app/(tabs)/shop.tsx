@@ -425,8 +425,8 @@ function ShopTab() {
         visible={showUnavailable}
         icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
         title="Not Available Yet"
-        description="This item isn't in today's shop. Check back tomorrow \u2014 the featured items rotate daily with 20% off!"
-        tip="Tap the \u2728 Today tab to see what's available right now"
+        description="This item isn't in today's shop. Check back tomorrow — the featured items rotate daily with 20% off!"
+        tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
         onClose={() => setShowUnavailable(false)}
       />
@@ -439,7 +439,7 @@ function ShopTab() {
         visible={gemShortfall !== null}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" style={{ opacity: 0.4 }} />}
         title="Not Enough Gems"
-        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems \u2014 every level gives 1-3 gems based on your stars.` : ''}
+        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems — every level gives 1-3 gems based on your stars.` : ''}
         tip="Play levels to earn gems, or check gem packs below"
         accentColor="#6C5CE7"
         onClose={() => setGemShortfall(null)}
