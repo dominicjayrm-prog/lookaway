@@ -44,9 +44,7 @@ function ProfileScreen() {
   const nameStyle = nameColor && nameColor.color !== 'theme' ? { color: nameColor.color } : { color: colors.text };
   const eqExprCosmetic = getExpressionById(eqExpr);
   const eqFrame = equippedFrame;
-  const profileBlink: BlinkExpression = eqExprCosmetic && eqExprCosmetic.blinkExpression !== 'normal'
-    ? eqExprCosmetic.blinkExpression
-    : streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
+  const profileBlink: BlinkExpression = eqExprCosmetic ? eqExprCosmetic.blinkExpression : 'normal';
 
   // Division badge
   const division = totalStars >= 800 ? { name: 'Master', emoji: '👑', color: '#D4A012' }
