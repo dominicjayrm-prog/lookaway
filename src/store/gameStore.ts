@@ -531,6 +531,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         // Streak milestones: union of claimed milestones (prevent re-claiming)
         streakMilestonesClaimed: [...new Set([...local.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
         lastPlayDate: local.lastPlayDate ?? cloud.lastPlayDate,
+        completedScores: localHasProgress ? local.completedScores : cloud.completedScores,
+        maxLives: Math.max(local.maxLives, cloud.maxLives),
       });
       setTimeout(() => saveState(get()), 0);
     },

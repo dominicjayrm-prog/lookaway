@@ -36,6 +36,8 @@ export async function saveProgressToSupabase(userId: string, state: {
       power_ups: state.powerUps ?? {},
       streak_milestones_claimed: state.streakMilestonesClaimed ?? [],
       last_play_date: state.lastPlayDate ?? null,
+      completed_scores: state.completedScores ?? [],
+      max_lives: state.maxLives ?? 5,
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -81,6 +83,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   powerUps: Record<string, number>;
   streakMilestonesClaimed: number[];
   lastPlayDate: string | null;
+  completedScores: number[];
+  maxLives: number;
 } | null> {
   try {
     // Load profile
@@ -127,6 +131,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       powerUps: profile.power_ups && typeof profile.power_ups === 'object' ? profile.power_ups : {},
       streakMilestonesClaimed: Array.isArray(profile.streak_milestones_claimed) ? profile.streak_milestones_claimed : [],
       lastPlayDate: profile.last_play_date ?? null,
+      completedScores: Array.isArray(profile.completed_scores) ? profile.completed_scores : [],
+      maxLives: profile.max_lives ?? 5,
     };
   } catch (e) {
     console.warn('Progress sync error:', e);

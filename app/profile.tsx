@@ -90,7 +90,7 @@ function ProfileScreen() {
           const uri = reader.result as string;
           setProfilePic(uri);
           saveProfilePic(uri);
-          if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
+          if (user?.id) uploadAvatar(user.id, uri).catch(() => Alert.alert('Upload failed', 'Your photo was saved locally but couldn\'t sync to the cloud. It will retry next time.'));
         };
         reader.readAsDataURL(file);
       };
@@ -236,11 +236,11 @@ function ProfileScreen() {
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(400)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SETTINGS</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <SettingsRow icon="volume-high" label="Sound effects" colors={colors} />
+            <SettingsRow icon="volume-high" label="Sound effects" colors={colors} storageKey="sound" />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SettingsRow icon="phone-portrait" label="Haptic feedback" colors={colors} />
+            <SettingsRow icon="phone-portrait" label="Haptic feedback" colors={colors} storageKey="haptics" />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SettingsRow icon="notifications" label="Notifications" colors={colors} />
+            <SettingsRow icon="notifications" label="Notifications" colors={colors} storageKey="notifications" />
           </View>
         </Animated.View>
 
@@ -309,7 +309,7 @@ function ProfileScreen() {
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
             </Pressable>
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
                 <Ionicons name="close-circle" size={18} color={colors.wrong} />
                 <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo</Text>
               </Pressable>
@@ -375,8 +375,17 @@ function ProfileScreen() {
   );
 }
 
-function SettingsRow({ icon, label, colors }: { icon: string; label: string; colors: any }) {
-  return (<View style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}><Ionicons name={icon as any} size={18} color={colors.accent} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>{label}</Text></View><Switch value={true} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" /></View>);
+function SettingsRow({ icon, label, colors, storageKey }: { icon: string; label: string; colors: any; storageKey: string }) {
+  const [enabled, setEnabled] = useState(true);
+  useEffect(() => {
+    try { const v = localStorage.getItem(`blanked_setting_${storageKey}`); if (v === 'false') setEnabled(false); } catch {}
+  }, [storageKey]);
+  const toggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    try { localStorage.setItem(`blanked_setting_${storageKey}`, String(next)); } catch {}
+  };
+  return (<View style={styles.settingsRow}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}><Ionicons name={icon as any} size={18} color={colors.accent} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>{label}</Text></View><Switch value={enabled} onValueChange={toggle} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" /></View>);
 }
 
 export default ProfileScreen;
