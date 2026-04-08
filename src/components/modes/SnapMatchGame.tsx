@@ -99,12 +99,12 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
     if (changeType === 'removed' && removedShape) {
       const dist = Math.sqrt((tapX - removedShape.x) ** 2 + (tapY - removedShape.y) ** 2);
-      correct = dist < 15; // More generous for empty space
+      correct = dist < 20; // Generous radius for empty space
     } else {
       const target = sceneB[targetIndex];
       if (target) {
         const dist = Math.sqrt((tapX - target.x) ** 2 + (tapY - target.y) ** 2);
-        correct = dist < 12;
+        correct = dist < 18; // Generous radius for shape tap
       }
     }
 
