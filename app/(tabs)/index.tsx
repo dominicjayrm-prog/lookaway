@@ -370,14 +370,15 @@ function PlayTab() {
         onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
         onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
       />
-      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => {
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={(plan: string, trial: boolean) => {
         setShowPaywall(false);
-        // Unlock premium cosmetics (no auto-equip — player may have their own photo/frame)
         const store = useGameStore.getState();
+        // Always unlock premium cosmetics
         store.unlockCosmetic('frame_premium_gold');
         store.unlockCosmetic('expr_premium');
         store.unlockCosmetic('banner_premium_gold');
-        store.addGems(300);
+        // Only give gems on paid subscription, not free trial
+        if (!trial) store.addGems(300);
         setShowPremiumCelebration(true);
       }} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />

@@ -328,7 +328,7 @@ function ProfileScreen() {
         equippedId={eqFrame}
         onEquip={(id) => equipCosmetic('frame', id)}
         renderPreview={(item) => (
-          <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: (item as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: 'borderColor' in item ? String(item.borderColor) : colors.accent, alignItems: 'center', justifyContent: 'center' }}>
             <Blink expression="normal" size={34} />
           </View>
         )}
@@ -345,7 +345,7 @@ function ProfileScreen() {
         onEquip={(id) => equipCosmetic('expression', id)}
         renderPreview={(item) => (
           <View style={{ marginBottom: 4 }}>
-            <Blink expression={(item as any).blinkExpression ?? 'normal'} size={40} />
+            <Blink expression={'blinkExpression' in item ? String(item.blinkExpression) as any : 'normal'} size={40} />
           </View>
         )}
       />
@@ -361,7 +361,7 @@ function ProfileScreen() {
         onEquip={(id) => equipCosmetic('banner', id)}
         renderPreview={(item) => (
           <LinearGradient
-            colors={(item as any).gradientColors ?? ['#6C5CE7', '#A29BFE']}
+            colors={'gradientColors' in item ? (item as any).gradientColors : ['#6C5CE7', '#A29BFE']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={{ width: 60, height: 28, borderRadius: 8 }}
