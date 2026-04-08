@@ -13,10 +13,13 @@ import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achie
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { AvatarFrame } from '@/src/components/AvatarFrame';
 import { ProfileBanner } from '@/src/components/ProfileBanner';
-import { getFrameById, getBannerById, getNameColorById, getExpressionById, FRAMES, EXPRESSIONS, RARITY_COLORS } from '@/src/data/cosmetics';
+import { getFrameById, getBannerById, getNameColorById, getExpressionById, getAvailableFrames, getAvailableBanners, getAvailableExpressions, RARITY_COLORS } from '@/src/data/cosmetics';
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 import { uploadAvatar, removeAvatar } from '@/src/utils/avatarUpload';
+import { CosmeticPicker } from '@/src/components/CosmeticPicker';
+import { PowerUpViewer } from '@/src/components/PowerUpViewer';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const isWeb = Platform.OS === 'web';
 
@@ -27,7 +30,7 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, purchaseCosmetic, equipCosmetic } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic } = useGameStore();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
@@ -60,7 +63,15 @@ function ProfileScreen() {
   const unlockedCount = countUnlockedTiers(playerProgress);
   const totalTiers = achievements.length * 3;
 
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showFramePicker, setShowFramePicker] = useState(false);
+  const [showExprPicker, setShowExprPicker] = useState(false);
+  const [showBannerPicker, setShowBannerPicker] = useState(false);
+  const [showPowerUpViewer, setShowPowerUpViewer] = useState(false);
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+
+  const frameData = getAvailableFrames(ownedCosmetics);
+  const bannerData = getAvailableBanners(ownedCosmetics);
+  const exprData = getAvailableExpressions(ownedCosmetics);
 
   const handlePickPhoto = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -99,11 +110,14 @@ function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile banner + avatar */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(100)}>
-          <ProfileBanner banner={banner ?? null} height={120}>
-            {/* Blink avatar sits on the banner */}
-          </ProfileBanner>
+          <View style={{ position: 'relative' }}>
+            <ProfileBanner banner={banner ?? null} height={120} />
+            <Pressable onPress={() => setShowBannerPicker(true)} style={styles.bannerEditBtn}>
+              <Ionicons name="pencil" size={12} color="#FFF" />
+            </Pressable>
+          </View>
           <View style={[styles.avatarSection, { marginTop: -50 }]}>
-            <Pressable onPress={() => setShowAvatarPicker(true)} style={styles.avatarContainer}>
+            <Pressable onPress={() => setShowPhotoOptions(true)} style={styles.avatarContainer}>
               <AvatarFrame frame={frame ?? null} size={80}>
                 {profilePic ? (
                   <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
@@ -122,6 +136,18 @@ function ProfileScreen() {
               <Text style={[styles.divisionText, { color: division.color }]}>{division.name}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
+
+            {/* Customisation pill buttons */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <Pressable onPress={() => setShowFramePicker(true)} style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Ionicons name="ellipse-outline" size={14} color={colors.accent} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Frame</Text>
+              </Pressable>
+              <Pressable onPress={() => setShowExprPicker(true)} style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Ionicons name="happy-outline" size={14} color={colors.accent} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Expression</Text>
+              </Pressable>
+            </View>
           </View>
         </Animated.View>
 
@@ -163,7 +189,7 @@ function ProfileScreen() {
         {/* Power-ups / Boosts card */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(250)}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/shop')}>
+            <Pressable style={styles.settingsRow} onPress={() => setShowPowerUpViewer(true)}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
                   <Ionicons name="flash" size={18} color={colors.blue} />
@@ -227,105 +253,77 @@ function ProfileScreen() {
         <Text style={[styles.version, { color: colors.textLight }]}>BLANKED v1.0.0</Text>
       </ScrollView>
 
-      {/* Avatar Picker Modal */}
-      <Modal visible={showAvatarPicker} transparent animationType="slide" onRequestClose={() => setShowAvatarPicker(false)}>
-        <View style={styles.pickerBackdrop}>
-          <Pressable style={styles.pickerBackdropTouch} onPress={() => setShowAvatarPicker(false)} />
-          <View style={[styles.pickerSheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: 'center', width: '100%' }]}>
-            <View style={styles.pickerHandle} />
-            <Text style={[styles.pickerTitle, { color: colors.text }]}>Choose Avatar</Text>
-
-            {/* Upload photo option */}
-            <Pressable onPress={handlePickPhoto} style={[styles.pickerUploadBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Ionicons name="camera" size={20} color={colors.accent} />
+      {/* Photo Options Modal (simple) */}
+      <Modal visible={showPhotoOptions} transparent animationType="fade" onRequestClose={() => setShowPhotoOptions(false)}>
+        <Pressable style={styles.pickerBackdrop} onPress={() => setShowPhotoOptions(false)}>
+          <View style={[styles.photoSheet, { backgroundColor: colors.card }]}>
+            <Pressable onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+              <Ionicons name="camera" size={18} color={colors.accent} />
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
             </Pressable>
-
-            {/* Clear photo if one is set */}
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); if (user?.id) removeAvatar(user.id).catch(() => {}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
-                <Ionicons name="close-circle" size={20} color={colors.wrong} />
-                <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo (show Blink)</Text>
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+                <Ionicons name="close-circle" size={18} color={colors.wrong} />
+                <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo</Text>
               </Pressable>
             )}
-
-            {/* Blink frames grid */}
-            <Text style={[styles.pickerSectionLabel, { color: colors.textMid }]}>AVATAR FRAMES</Text>
-            <FlatList
-              data={FRAMES.filter(f => f.id !== 'frame_none')}
-              numColumns={3}
-              keyExtractor={f => f.id}
-              contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
-              columnWrapperStyle={{ gap: 10 }}
-              renderItem={({ item: f, index: fIdx }) => {
-                const owned = f.unlock === 'free' || ownedCosmetics.includes(f.id);
-                const equipped = eqFrame === f.id;
-                // Each frame shows a different Blink expression for variety
-                const previewExpressions: BlinkExpression[] = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'];
-                const previewExpr = previewExpressions[fIdx % previewExpressions.length];
-                return (
-                  <Pressable
-                    onPress={() => {
-                      if (owned) {
-                        equipCosmetic('frame', f.id);
-                        setShowAvatarPicker(false);
-                      } else if (f.gemCost) {
-                        const ok = purchaseCosmetic(f.id, f.gemCost);
-                        if (ok) { equipCosmetic('frame', f.id); setShowAvatarPicker(false); }
-                        else Alert.alert('Not enough gems', `You need ${f.gemCost} gems.`);
-                      } else if (f.subscriberOnly) {
-                        Alert.alert('Blanked+ Required', 'Subscribe to Blanked+ to unlock this frame.');
-                      } else if (f.achievementId) {
-                        Alert.alert('Achievement Required', f.description);
-                      }
-                    }}
-                    style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: equipped ? f.borderColor : colors.border, opacity: owned ? 1 : 0.5 }]}
-                  >
-                    <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                      <Blink expression={previewExpr} size={34} />
-                    </View>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
-                    <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
-                    {equipped && <Text style={{ fontSize: 8, color: colors.correct, fontWeight: '800', marginTop: 2 }}>EQUIPPED</Text>}
-                    {!owned && f.gemCost && <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 2 }}>{f.gemCost} gems</Text>}
-                    {!owned && f.subscriberOnly && <Text style={{ fontSize: 8, color: colors.gold, fontWeight: '700', marginTop: 2 }}>BLANKED+</Text>}
-                    {!owned && f.achievementId && !f.subscriberOnly && !f.gemCost && <Ionicons name="lock-closed" size={12} color={colors.textLight} style={{ marginTop: 2 }} />}
-                  </Pressable>
-                );
-              }}
-            />
-
-            {/* Expressions section */}
-            <Text style={[styles.pickerSectionLabel, { color: colors.textMid }]}>EXPRESSIONS</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 20 }}>
-              {EXPRESSIONS.map(e => {
-                const exprOwned = e.unlock === 'free' || ownedCosmetics.includes(e.id);
-                const exprEquipped = eqExpr === e.id;
-                return (
-                  <Pressable
-                    key={e.id}
-                    onPress={() => {
-                      if (exprOwned) { equipCosmetic('expression', e.id); setShowAvatarPicker(false); }
-                      else if (e.gemCost) {
-                        const ok = purchaseCosmetic(e.id, e.gemCost);
-                        if (ok) { equipCosmetic('expression', e.id); setShowAvatarPicker(false); }
-                        else Alert.alert('Not enough gems', `You need ${e.gemCost} gems.`);
-                      }
-                    }}
-                    style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: exprEquipped ? colors.accent : colors.border, opacity: exprOwned ? 1 : 0.5 }]}
-                  >
-                    <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={34} /></View>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
-                    <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
-                    {exprEquipped && <Text style={{ fontSize: 8, color: colors.correct, fontWeight: '800', marginTop: 2 }}>EQUIPPED</Text>}
-                    {!exprOwned && e.gemCost && <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 2 }}>{e.gemCost} gems</Text>}
-                  </Pressable>
-                );
-              })}
-            </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
+
+      {/* Frame Picker */}
+      <CosmeticPicker
+        visible={showFramePicker}
+        onDismiss={() => setShowFramePicker(false)}
+        title="Change Frame"
+        ownedItems={frameData.owned}
+        lockedItems={frameData.locked}
+        equippedId={eqFrame}
+        onEquip={(id) => equipCosmetic('frame', id)}
+        renderPreview={(item) => (
+          <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: (item as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+            <Blink expression="normal" size={34} />
+          </View>
+        )}
+      />
+
+      {/* Expression Picker */}
+      <CosmeticPicker
+        visible={showExprPicker}
+        onDismiss={() => setShowExprPicker(false)}
+        title="Change Expression"
+        ownedItems={exprData.owned}
+        lockedItems={exprData.locked}
+        equippedId={eqExpr}
+        onEquip={(id) => equipCosmetic('expression', id)}
+        renderPreview={(item) => (
+          <View style={{ marginBottom: 4 }}>
+            <Blink expression={(item as any).blinkExpression ?? 'normal'} size={40} />
+          </View>
+        )}
+      />
+
+      {/* Banner Picker */}
+      <CosmeticPicker
+        visible={showBannerPicker}
+        onDismiss={() => setShowBannerPicker(false)}
+        title="Change Banner"
+        ownedItems={bannerData.owned}
+        lockedItems={bannerData.locked}
+        equippedId={equippedBanner}
+        onEquip={(id) => equipCosmetic('banner', id)}
+        renderPreview={(item) => (
+          <LinearGradient
+            colors={(item as any).gradientColors ?? ['#6C5CE7', '#A29BFE']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ width: 60, height: 28, borderRadius: 8 }}
+          />
+        )}
+      />
+
+      {/* Power-up Viewer */}
+      <PowerUpViewer visible={showPowerUpViewer} onDismiss={() => setShowPowerUpViewer(false)} />
     </SafeAreaView>
   );
 }
@@ -368,6 +366,9 @@ const styles = StyleSheet.create({
   achCountText: { fontSize: 13, fontWeight: '700' },
   divisionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, marginBottom: spacing.xs },
   divisionText: { fontSize: 11, fontWeight: '700' },
+  customPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  bannerEditBtn: { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+  photoSheet: { borderRadius: 20, padding: 16, marginHorizontal: 40, marginTop: 'auto', marginBottom: 120, gap: 8 },
   pickerBackdrop: { flex: 1, justifyContent: 'flex-end' },
   pickerBackdropTouch: { flex: 1 },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40, maxHeight: '80%' },
