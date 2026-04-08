@@ -201,6 +201,21 @@ function SideCampaignScreen() {
 
   // ─── Navigate to next level ───
   const goToNextLevel = useCallback(() => {
+    // Reset ALL state before navigating — router.replace reuses the component
+    setPhase('loading');
+    setTotalScore(0);
+    setScorePct(0);
+    setStarsState(0);
+    setGemsEarned(0);
+    setModeData(null);
+    setLevelData(null);
+    setRoundIdx(0);
+    setShapeIdx(0);
+    setRoundScores([]);
+    setShapeScores([]);
+    setTapResult(null);
+    setShowQuitConfirm(false);
+
     const wNum = parseInt(worldNumber ?? '1');
     const lNum = parseInt(levelNumber ?? '1');
     const nextLevelNum = lNum + 1;
@@ -366,15 +381,19 @@ function SideCampaignScreen() {
               <Text style={[s.btnTextSecondary, { color: colors.textMid }]}>Back to map</Text>
             </Pressable>
             <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
-              // Retry — regenerate data
+              // Retry — regenerate data and fully reset state
               if (levelData && mode) {
                 const regenerated = generateSideCampaignData(mode, levelData);
                 setModeData(regenerated);
                 setTotalScore(0);
                 setScorePct(0);
                 setStarsState(0);
+                setGemsEarned(0);
                 setRoundIdx(0);
+                setShapeIdx(0);
                 setRoundScores([]);
+                setShapeScores([]);
+                setTapResult(null);
                 setPhase('ready');
               }
             }}>

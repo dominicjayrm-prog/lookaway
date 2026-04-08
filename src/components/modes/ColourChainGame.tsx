@@ -41,12 +41,13 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     };
   }, []);
 
-  // Init tile states
+  // Init/reset tile states (on mount and between rounds)
   useEffect(() => {
+    const total = gridCols * gridRows;
     const init: Record<number, TileState> = {};
-    for (let i = 0; i < 12; i++) init[i] = 'hidden';
+    for (let i = 0; i < total; i++) init[i] = 'hidden';
     setTileStates(init);
-  }, []);
+  }, [recallIdx, gridCols, gridRows]);
 
   // Memorise phase \u2014 3 second timer
   useEffect(() => {
