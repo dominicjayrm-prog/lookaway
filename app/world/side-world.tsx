@@ -115,7 +115,7 @@ function SideWorldMap() {
 
   var completedUpTo = useMemo(() => {
     var c = 0;
-    for (var i = 1; i <= totalLevels; i++) { if (progress[lid(i)]) c = i; else break; }
+    for (var i = 1; i <= totalLevels; i++) { if (progress[lid(i)]?.stars > 0) c = i; else break; }
     return c;
   }, [progress, totalLevels, prefix, worldNum]);
 

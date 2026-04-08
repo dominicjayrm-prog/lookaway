@@ -153,8 +153,8 @@ function SideCampaignScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId && levelId) {
-        // Check existing progress for replay detection
+      if (userId && levelId && pct >= 50) {
+        // Only save progress when player passes — failed attempts don't count
         const { data: existing } = await supabase
           .from('side_campaign_progress')
           .select('stars, best_score')
@@ -164,18 +164,17 @@ function SideCampaignScreen() {
 
         const previousStars = existing?.stars ?? 0;
         if (earnedStars > previousStars) {
-          gems = earnedStars - previousStars; // Only earn the difference
+          gems = earnedStars - previousStars;
         } else if (previousStars === 0 && earnedStars > 0) {
-          gems = earnedStars; // First completion
+          gems = earnedStars;
         }
 
-        // Save progress (never downgrade stars or best score)
         await supabase.from('side_campaign_progress').upsert({
           user_id: userId,
           level_id: levelId,
           stars: Math.max(earnedStars, previousStars),
           best_score: Math.max(pct, existing?.best_score ?? 0),
-          completed_at: earnedStars > 0 ? new Date().toISOString() : existing?.completed_at ?? null,
+          completed_at: new Date().toISOString(),
         }, { onConflict: 'user_id,level_id' });
       }
     } catch (e) {
