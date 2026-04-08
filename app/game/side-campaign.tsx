@@ -242,7 +242,12 @@ function SideCampaignScreen() {
   if (phase === 'loading') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
-        <Text style={[s.loadingText, { color: colors.textMid }]}>Loading level...</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 }}>
+          <View style={{ width: 120, height: 16, borderRadius: 8, backgroundColor: colors.surface }} />
+          <View style={{ width: 200, height: 200, borderRadius: 20, backgroundColor: colors.surface }} />
+          <View style={{ width: 160, height: 12, borderRadius: 6, backgroundColor: colors.surface }} />
+          <View style={{ width: '80%', height: 48, borderRadius: 14, backgroundColor: colors.surface }} />
+        </View>
       </SafeAreaView>
     );
   }
