@@ -30,6 +30,14 @@ export async function saveProgressToSupabase(userId: string, state: {
       memory_score_avg: memoryScore,
       equipped_frame: state.equippedFrame ?? null,
       equipped_expression: state.equippedExpression ?? null,
+      equipped_banner: state.equippedBanner ?? null,
+      equipped_name_color: state.equippedNameColor ?? null,
+      owned_cosmetics: state.ownedCosmetics ?? [],
+      power_ups: state.powerUps ?? {},
+      streak_milestones_claimed: state.streakMilestonesClaimed ?? [],
+      last_play_date: state.lastPlayDate ?? null,
+      completed_scores: state.completedScores ?? [],
+      max_lives: state.maxLives ?? 5,
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -67,6 +75,16 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   highestWorld: number;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
   completedScores: number[];
+  ownedCosmetics: string[];
+  equippedFrame: string;
+  equippedBanner: string;
+  equippedNameColor: string;
+  equippedExpression: string;
+  powerUps: Record<string, number>;
+  streakMilestonesClaimed: number[];
+  lastPlayDate: string | null;
+  completedScores: number[];
+  maxLives: number;
 } | null> {
   try {
     // Load profile
@@ -105,6 +123,16 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       highestWorld: profile.highest_world ?? 1,
       levelProgress,
       completedScores,
+      ownedCosmetics: Array.isArray(profile.owned_cosmetics) ? profile.owned_cosmetics : [],
+      equippedFrame: profile.equipped_frame ?? 'frame_blink_normal',
+      equippedBanner: profile.equipped_banner ?? 'banner_none',
+      equippedNameColor: profile.equipped_name_color ?? 'name_default',
+      equippedExpression: profile.equipped_expression ?? 'expr_normal',
+      powerUps: profile.power_ups && typeof profile.power_ups === 'object' ? profile.power_ups : {},
+      streakMilestonesClaimed: Array.isArray(profile.streak_milestones_claimed) ? profile.streak_milestones_claimed : [],
+      lastPlayDate: profile.last_play_date ?? null,
+      completedScores: Array.isArray(profile.completed_scores) ? profile.completed_scores : [],
+      maxLives: profile.max_lives ?? 5,
     };
   } catch (e) {
     console.warn('Progress sync error:', e);
