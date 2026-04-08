@@ -73,7 +73,7 @@ function SideCampaignScreen() {
     return () => { cancelled = true; };
   }, [levelId]);
 
-  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
+  useEffect(() => { return () => { if (timerRef.current) clearTimeout(timerRef.current); if (srIntervalRef.current) clearInterval(srIntervalRef.current); }; }, []);
 
   const isExternalMode = mode && ['snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
 
@@ -82,12 +82,29 @@ function SideCampaignScreen() {
   const currentShape = currentRound?.shapes?.[shapeIdx];
   const viewingTime = (modeData?.viewingTime ?? levelData?.viewingTime ?? 3) * 1000;
 
+  // Speed recall timer progress for visual countdown
+  const [srTimerProgress, setSrTimerProgress] = useState(1);
+  const srIntervalRef = useRef<ReturnType<typeof setInterval>>();
+
   const startRound = useCallback(() => {
     setShapeIdx(0);
     setShapeScores([]);
     setTapResult(null);
+    setSrTimerProgress(1);
     setPhase('show');
-    timerRef.current = setTimeout(() => setPhase('recall'), viewingTime);
+    // Visual countdown
+    const start = Date.now();
+    if (srIntervalRef.current) clearInterval(srIntervalRef.current);
+    srIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - start;
+      setSrTimerProgress(Math.max(0, 1 - elapsed / viewingTime));
+      if (elapsed >= viewingTime) { if (srIntervalRef.current) clearInterval(srIntervalRef.current); }
+    }, 50);
+    timerRef.current = setTimeout(() => {
+      if (srIntervalRef.current) clearInterval(srIntervalRef.current);
+      setSrTimerProgress(0);
+      setPhase('recall');
+    }, viewingTime);
   }, [viewingTime]);
 
   const handleCanvasTap = useCallback((e: any) => {
@@ -312,6 +329,10 @@ function SideCampaignScreen() {
       {phase === 'show' && !isExternalMode && currentRound && (
         <View style={s.gameArea}>
           <Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text>
+          {/* Timer bar */}
+          <View style={{ width: '100%', height: 6, borderRadius: 3, backgroundColor: colors.border, marginBottom: 10, overflow: 'hidden' }}>
+            <View style={{ width: `${Math.round(srTimerProgress * 100)}%`, height: '100%', borderRadius: 3, backgroundColor: srTimerProgress > 0.4 ? mColor : srTimerProgress > 0.15 ? '#D4A012' : '#FF6B6B' }} />
+          </View>
           <View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
             {currentRound.shapes.map((sh: any, i: number) => (
               <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}>
