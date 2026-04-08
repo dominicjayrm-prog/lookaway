@@ -3,7 +3,7 @@
  * Rendered on the Friends tab.
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Blink } from '@/src/components/Blink';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -149,10 +149,14 @@ function LeaderboardSection() {
   );
 }
 
-function Avatar({ username, color, size = 32 }: { username: string; color: string; size?: number }) {
+function Avatar({ username, color, size = 32, avatarUrl }: { username: string; color: string; size?: number; avatarUrl?: string | null }) {
   return (
     <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color + '15', borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      <Blink expression="normal" size={size - 4} />
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={{ width: size - 4, height: size - 4, borderRadius: (size - 4) * 0.3 }} />
+      ) : (
+        <Blink expression="normal" size={size - 4} />
+      )}
     </View>
   );
 }
@@ -181,7 +185,7 @@ function LeaderboardRow({ entry, isMe, colors, isLast }: RowProps) {
       <View style={st.rankCol}>
         <RankDisplay rank={entry.rank} colors={colors} />
       </View>
-      <Avatar username={entry.username} color={entry.avatar_color} size={30} />
+      <Avatar username={entry.username} color={entry.avatar_color} size={30} avatarUrl={entry.avatar_url} />
       <View style={st.nameCol}>
         <Text style={[st.username, { color: colors.text }, isMe && { fontWeight: '800' }]} numberOfLines={1}>
           {isMe ? 'You' : `@${entry.username}`}

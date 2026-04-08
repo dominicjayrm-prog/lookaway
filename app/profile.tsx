@@ -16,6 +16,7 @@ import { ProfileBanner } from '@/src/components/ProfileBanner';
 import { getFrameById, getBannerById, getNameColorById, getExpressionById, FRAMES, EXPRESSIONS, RARITY_COLORS } from '@/src/data/cosmetics';
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
+import { uploadAvatar, removeAvatar } from '@/src/utils/avatarUpload';
 
 const isWeb = Platform.OS === 'web';
 
@@ -70,7 +71,13 @@ function ProfileScreen() {
         const file = e.target?.files?.[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => { const uri = reader.result as string; setProfilePic(uri); saveProfilePic(uri); };
+        reader.onload = () => {
+          const uri = reader.result as string;
+          setProfilePic(uri);
+          saveProfilePic(uri);
+          // Upload to Supabase so other users can see it
+          if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
+        };
         reader.readAsDataURL(file);
       };
       input.click();
@@ -236,7 +243,7 @@ function ProfileScreen() {
 
             {/* Clear photo if one is set */}
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); if (user?.id) removeAvatar(user.id).catch(() => {}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
                 <Ionicons name="close-circle" size={20} color={colors.wrong} />
                 <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo (show Blink)</Text>
               </Pressable>

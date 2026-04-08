@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +17,14 @@ import LeaderboardSection from '@/src/components/LeaderboardSection';
 import ReferralCard from '@/src/components/ReferralCard';
 import { Blink } from '@/src/components/Blink';
 
-function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
+function Avatar({ username, color, size = 36, avatarUrl }: { username: string; color: string; size?: number; avatarUrl?: string | null }) {
   return (
     <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color + '15', borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      <Blink expression="normal" size={size - 4} />
+      {avatarUrl ? (
+        <Image source={{ uri: avatarUrl }} style={{ width: size - 4, height: size - 4, borderRadius: (size - 4) * 0.3 }} />
+      ) : (
+        <Blink expression="normal" size={size - 4} />
+      )}
     </View>
   );
 }
@@ -98,7 +102,7 @@ function FriendsTab() {
           <View style={[styles.searchResultsCard, { backgroundColor: colors.card }]}>
             {searchResults.map((u) => (
               <View key={u.id} style={[styles.searchResultRow, { borderBottomColor: colors.border }]}>
-                <Avatar username={u.username} color={u.avatar_color} size={32} />
+                <Avatar username={u.username} color={u.avatar_color} size={32} avatarUrl={u.avatar_url} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.searchResultName, { color: colors.text }]}>@{u.username}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight }}>World {u.highest_world} · {'\u2B50'} {u.total_stars}</Text>
@@ -111,9 +115,9 @@ function FriendsTab() {
           </View>
         )}
 
-        {requests.length > 0 && (<><SectionLabel label="FRIEND REQUESTS" colors={colors} />{requests.map((r) => (<View key={r.id} style={[styles.requestCard, { backgroundColor: colors.card }]}><Avatar username={r.requester.username} color={r.requester.avatar_color} size={38} /><View style={{ flex: 1, marginLeft: 12 }}><Text style={[styles.requestName, { color: colors.text }]}>@{r.requester.username}</Text><Text style={{ fontSize: 12, color: colors.textMid }}>Wants to be friends</Text></View><Pressable style={[styles.acceptBtn, { backgroundColor: colors.accent }]} onPress={() => handleAccept(r.id)}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Accept</Text></Pressable><Pressable style={styles.declineBtn} onPress={() => handleDecline(r.id)}><Ionicons name="close" size={18} color={colors.textLight} /></Pressable></View>))}</>)}
+        {requests.length > 0 && (<><SectionLabel label="FRIEND REQUESTS" colors={colors} />{requests.map((r) => (<View key={r.id} style={[styles.requestCard, { backgroundColor: colors.card }]}><Avatar username={r.requester.username} color={r.requester.avatar_color} size={38} avatarUrl={r.requester.avatar_url} /><View style={{ flex: 1, marginLeft: 12 }}><Text style={[styles.requestName, { color: colors.text }]}>@{r.requester.username}</Text><Text style={{ fontSize: 12, color: colors.textMid }}>Wants to be friends</Text></View><Pressable style={[styles.acceptBtn, { backgroundColor: colors.accent }]} onPress={() => handleAccept(r.id)}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Accept</Text></Pressable><Pressable style={styles.declineBtn} onPress={() => handleDecline(r.id)}><Ionicons name="close" size={18} color={colors.textLight} /></Pressable></View>))}</>)}
 
-        {challenges.length > 0 && (<><SectionLabel label="ACTIVE CHALLENGES" colors={colors} />{challenges.map((c) => (<View key={c.id} style={[styles.challengeCard, { backgroundColor: colors.card }]}><View style={{ position: 'relative' }}><Avatar username={c.opponent.username} color={c.opponent.avatar_color} size={34} /><StatusDot lastActiveAt={c.opponent.last_seen} size={8} borderColor={colors.card} /></View><View style={{ flex: 1, marginLeft: 10 }}><Text style={[styles.challengeText, { color: colors.text }]}>{c.my_score === null ? `@${c.opponent.username} challenged you${c.mode !== 'classic' ? ` to ${c.mode.replace(/_/g, ' ')}` : ''}` : `You vs @${c.opponent.username}`}</Text><Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text></View>{c.my_score === null ? (<Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => { const cMode = (c as any).mode ?? 'classic'; if (cMode === 'classic') { router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } }); } else { router.push({ pathname: '/game/challenge-mode', params: { challengeId: c.id, mode: cMode, action: 'play' } }); } }}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text></Pressable>) : (<View style={[styles.pendingBadge, { backgroundColor: colors.goldSoft }]}><Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>Pending</Text></View>)}</View>))}</>)}
+        {challenges.length > 0 && (<><SectionLabel label="ACTIVE CHALLENGES" colors={colors} />{challenges.map((c) => (<View key={c.id} style={[styles.challengeCard, { backgroundColor: colors.card }]}><View style={{ position: 'relative' }}><Avatar username={c.opponent.username} color={c.opponent.avatar_color} size={34} avatarUrl={c.opponent.avatar_url} /><StatusDot lastActiveAt={c.opponent.last_seen} size={8} borderColor={colors.card} /></View><View style={{ flex: 1, marginLeft: 10 }}><Text style={[styles.challengeText, { color: colors.text }]}>{c.my_score === null ? `@${c.opponent.username} challenged you${c.mode !== 'classic' ? ` to ${c.mode.replace(/_/g, ' ')}` : ''}` : `You vs @${c.opponent.username}`}</Text><Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text></View>{c.my_score === null ? (<Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => { const cMode = (c as any).mode ?? 'classic'; if (cMode === 'classic') { router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } }); } else { router.push({ pathname: '/game/challenge-mode', params: { challengeId: c.id, mode: cMode, action: 'play' } }); } }}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text></Pressable>) : (<View style={[styles.pendingBadge, { backgroundColor: colors.goldSoft }]}><Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>Pending</Text></View>)}</View>))}</>)}
 
         <SectionLabel label={`YOUR FRIENDS (${friends.length})`} colors={colors} />
         {friends.length === 0 ? (
@@ -121,7 +125,7 @@ function FriendsTab() {
         ) : (
           friends.map((f) => (
             <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
-              <View style={{ position: 'relative' }}><Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} /><StatusDot lastActiveAt={f.profile.last_seen} borderColor={colors.card} /></View>
+              <View style={{ position: 'relative' }}><Avatar username={f.profile.username} color={f.profile.avatar_color} size={40} avatarUrl={f.profile.avatar_url} /><StatusDot lastActiveAt={f.profile.last_seen} borderColor={colors.card} /></View>
               <View style={{ flex: 1, marginLeft: 12 }}><Text style={[styles.friendName, { color: colors.text }]}>@{f.profile.username}</Text><Text style={{ fontSize: 11, color: colors.textLight }}>{getLastActiveText(f.profile.last_seen)} · World {f.profile.highest_world} · {'\u2B50'} {f.profile.total_stars}</Text></View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
             </Pressable>
