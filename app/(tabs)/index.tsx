@@ -20,6 +20,7 @@ import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
 import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 import { Blink } from '@/src/components/Blink';
+import { getExpressionById } from '@/src/data/cosmetics';
 import { InfoCard } from '@/src/components/InfoCard';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 
@@ -128,7 +129,7 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression } = useGameStore();
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
   // Parse world/level from ID format "w1-l3"
@@ -250,7 +251,7 @@ function PlayTab() {
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
               ) : (
-                <Blink expression="normal" size={32} />
+                <Blink expression={getExpressionById(equippedExpression)?.blinkExpression ?? 'normal'} size={32} />
               )}
             </Pressable>
           </View>
