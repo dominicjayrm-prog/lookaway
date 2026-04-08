@@ -3,7 +3,7 @@
  * 5-second sequence with gold rings, Blink star-eyes, cosmetic previews, confetti.
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from './Blink';
 import { AvatarFrame } from './AvatarFrame';
@@ -158,6 +158,7 @@ function PremiumCelebrationComponent({ visible, onDismiss }: Props) {
   const premiumFrame = getFrameById('frame_premium_gold');
 
   return (
+    <Modal visible transparent animationType="none" statusBarTranslucent>
     <View style={StyleSheet.absoluteFill}>
       {/* Dark backdrop */}
       <RNAnimated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdrop }]} />
@@ -235,6 +236,7 @@ function PremiumCelebrationComponent({ visible, onDismiss }: Props) {
         </RNAnimated.View>
       </View>
     </View>
+    </Modal>
   );
 }
 

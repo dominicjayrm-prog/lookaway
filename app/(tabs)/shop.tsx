@@ -305,7 +305,7 @@ function ShopTab() {
                   <Pressable key={c.id} onPress={() => {
                     if (owned) return;
                     const ok = useGameStore.getState().purchaseCosmetic(c.id, discountedPrice);
-                    if (ok) { useGameStore.getState().equipCosmetic(c.type as any, c.id); setCelebrationItem(c); }
+                    if (ok) { setCelebrationItem(c); }
                     else setGemShortfall({ cost: discountedPrice, name: c.name });
                   }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
                     {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: (c as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
