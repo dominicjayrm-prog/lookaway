@@ -13,7 +13,7 @@ import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achie
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { AvatarFrame } from '@/src/components/AvatarFrame';
 import { ProfileBanner } from '@/src/components/ProfileBanner';
-import { getFrameById, getBannerById, getNameColorById, FRAMES, RARITY_COLORS } from '@/src/data/cosmetics';
+import { getFrameById, getBannerById, getNameColorById, getExpressionById, FRAMES, EXPRESSIONS, RARITY_COLORS } from '@/src/data/cosmetics';
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 
@@ -37,7 +37,10 @@ function ProfileScreen() {
   const banner = getBannerById(equippedBanner);
   const nameColor = getNameColorById(equippedNameColor);
   const nameStyle = nameColor && nameColor.color !== 'theme' ? { color: nameColor.color } : { color: colors.text };
-  const profileBlink: BlinkExpression = streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
+  const eqExprCosmetic = getExpressionById(eqExpr);
+  const profileBlink: BlinkExpression = eqExprCosmetic && eqExprCosmetic.blinkExpression !== 'normal'
+    ? eqExprCosmetic.blinkExpression
+    : streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
 
   // Division badge
   const division = totalStars >= 800 ? { name: 'Master', emoji: '👑', color: '#D4A012' }
@@ -56,7 +59,7 @@ function ProfileScreen() {
   const totalTiers = achievements.length * 3;
 
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const { ownedCosmetics, equippedFrame: eqFrame, purchaseCosmetic, equipCosmetic } = useGameStore();
+  const { ownedCosmetics, equippedFrame: eqFrame, equippedExpression: eqExpr, purchaseCosmetic, equipCosmetic } = useGameStore();
 
   const handlePickPhoto = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -195,7 +198,7 @@ function ProfileScreen() {
       <Modal visible={showAvatarPicker} transparent animationType="slide" onRequestClose={() => setShowAvatarPicker(false)}>
         <View style={styles.pickerBackdrop}>
           <Pressable style={styles.pickerBackdropTouch} onPress={() => setShowAvatarPicker(false)} />
-          <View style={[styles.pickerSheet, { backgroundColor: colors.bg }]}>
+          <View style={[styles.pickerSheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: 'center', width: '100%' }]}>
             <View style={styles.pickerHandle} />
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Choose Avatar</Text>
 
@@ -221,9 +224,12 @@ function ProfileScreen() {
               keyExtractor={f => f.id}
               contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
               columnWrapperStyle={{ gap: 10 }}
-              renderItem={({ item: f }) => {
+              renderItem={({ item: f, index: fIdx }) => {
                 const owned = f.unlock === 'free' || ownedCosmetics.includes(f.id);
                 const equipped = eqFrame === f.id;
+                // Each frame shows a different Blink expression for variety
+                const previewExpressions: BlinkExpression[] = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'];
+                const previewExpr = previewExpressions[fIdx % previewExpressions.length];
                 return (
                   <Pressable
                     onPress={() => {
@@ -243,7 +249,7 @@ function ProfileScreen() {
                     style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: equipped ? f.borderColor : colors.border, opacity: owned ? 1 : 0.5 }]}
                   >
                     <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                      <Blink expression="normal" size={34} />
+                      <Blink expression={previewExpr} size={34} />
                     </View>
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
@@ -255,6 +261,35 @@ function ProfileScreen() {
                 );
               }}
             />
+
+            {/* Expressions section */}
+            <Text style={[styles.pickerSectionLabel, { color: colors.textMid }]}>EXPRESSIONS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 20 }}>
+              {EXPRESSIONS.map(e => {
+                const exprOwned = e.unlock === 'free' || ownedCosmetics.includes(e.id);
+                const exprEquipped = eqExpr === e.id;
+                return (
+                  <Pressable
+                    key={e.id}
+                    onPress={() => {
+                      if (exprOwned) { equipCosmetic('expression', e.id); setShowAvatarPicker(false); }
+                      else if (e.gemCost) {
+                        const ok = purchaseCosmetic(e.id, e.gemCost);
+                        if (ok) { equipCosmetic('expression', e.id); setShowAvatarPicker(false); }
+                        else Alert.alert('Not enough gems', `You need ${e.gemCost} gems.`);
+                      }
+                    }}
+                    style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: exprEquipped ? colors.accent : colors.border, opacity: exprOwned ? 1 : 0.5 }]}
+                  >
+                    <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={34} /></View>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
+                    <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
+                    {exprEquipped && <Text style={{ fontSize: 8, color: colors.correct, fontWeight: '800', marginTop: 2 }}>EQUIPPED</Text>}
+                    {!exprOwned && e.gemCost && <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 2 }}>{e.gemCost} gems</Text>}
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </View>
       </Modal>

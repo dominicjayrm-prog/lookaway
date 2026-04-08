@@ -21,6 +21,7 @@ import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { Blink } from '@/src/components/Blink';
+import { InfoCard } from '@/src/components/InfoCard';
 import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
@@ -177,6 +178,7 @@ function PlayTab() {
   // Daily login reward
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
+  const [infoCard, setInfoCard] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
@@ -240,16 +242,16 @@ function PlayTab() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <View ref={livesRef} collapsable={false} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
+          <Pressable ref={livesRef} collapsable={false} onPress={() => setInfoCard(infoCard === 'lives' ? null : 'lives')} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
             ))}
-          </View>
+          </Pressable>
           <View style={styles.topBarRight}>
-            <View ref={gemsRef} collapsable={false} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
+            <Pressable ref={gemsRef} collapsable={false} onPress={() => setInfoCard(infoCard === 'gems' ? null : 'gems')} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
-            </View>
+            </Pressable>
             <Pressable
               style={styles.profileButton}
               onPress={() => router.push('/profile')}
@@ -319,13 +321,13 @@ function PlayTab() {
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STARS</Text>
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Pressable onPress={() => setInfoCard(infoCard === 'streak' ? null : 'streak')} style={[styles.statCard, { backgroundColor: colors.card }]}>
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Your Journey */}
@@ -378,6 +380,41 @@ function PlayTab() {
       />
       <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => setShowPaywall(false)} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
+
+      {/* Info Cards */}
+      <InfoCard
+        visible={infoCard === 'lives'}
+        icon={<Ionicons name="heart" size={20} color="#FF6B6B" />}
+        title="Lives"
+        description={lives >= 5
+          ? 'You have full lives! Lose one each time you fail a level. Lives regenerate 1 every 30 minutes.'
+          : `You have ${lives} ${lives === 1 ? 'life' : 'lives'} left. Lives regenerate 1 every 30 minutes.`}
+        tip={lives < 5 ? 'Get unlimited lives with Blanked+ \u2014 never wait to play again' : undefined}
+        accentColor="#FF6B6B"
+        action={lives < 5 ? () => setShowPaywall(true) : undefined}
+        actionLabel={lives < 5 ? 'Learn about Blanked+' : undefined}
+        onClose={() => setInfoCard(null)}
+      />
+      <InfoCard
+        visible={infoCard === 'gems'}
+        icon={<Ionicons name="diamond" size={20} color="#6C5CE7" />}
+        title="Gems"
+        description={`You have ${gems} gems. Gems buy power-ups and cosmetics from the shop. The more you play, the more you earn.`}
+        tip="Earn 1-3 gems per level based on your star rating. Streaks give bonus gems!"
+        accentColor="#6C5CE7"
+        onClose={() => setInfoCard(null)}
+      />
+      <InfoCard
+        visible={infoCard === 'streak'}
+        icon={<Text style={{ fontSize: 20 }}>{'\u{1F525}'}</Text>}
+        title="Daily Streak"
+        description={streakCount === 0
+          ? 'Play at least one level every day to start a streak. Longer streaks unlock bonus rewards!'
+          : `You're on a ${streakCount}-day streak! Play at least one level today to keep it alive.`}
+        tip={streakCount > 0 ? 'Buy Streak Shields in the shop to protect your streak if you miss a day' : undefined}
+        accentColor="#FF6B6B"
+        onClose={() => setInfoCard(null)}
+      />
     </SafeAreaView>
     </TabTransition>
   );
