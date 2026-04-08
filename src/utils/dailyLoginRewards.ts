@@ -5,14 +5,32 @@
  * Falls back to AsyncStorage on native.
  */
 import { Platform } from 'react-native';
+import { FRAMES, BANNERS, EXPRESSIONS } from '@/src/data/cosmetics';
+
+/**
+ * Pick a random cosmetic from the appropriate pool, excluding already-owned items.
+ * Returns the cosmetic ID, or null if all are owned (fallback to gems).
+ */
+function pickRandomCosmetic(cosmeticType: 'frame' | 'banner' | 'expression', ownedIds: string[]): string | null {
+  const pool = cosmeticType === 'frame' ? FRAMES
+    : cosmeticType === 'banner' ? BANNERS
+    : EXPRESSIONS;
+  const candidates = pool.filter(c =>
+    (c.rarity === 'common' || c.rarity === 'rare') &&
+    c.unlock !== 'subscriber' &&
+    !ownedIds.includes(c.id),
+  );
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)].id;
+}
 
 var REWARDS = [
   { day: 1, type: 'gems' as const, amount: 5, label: '5 gems', icon: '\uD83D\uDC8E' },
-  { day: 2, type: 'powerup' as const, amount: 1, powerupId: 'slowTime', label: 'Slow Time', icon: '\u23F1\uFE0F' },
+  { day: 2, type: 'cosmetic' as const, amount: 1, cosmeticType: 'banner' as const, label: 'Random Banner', icon: '\uD83C\uDFA8' },
   { day: 3, type: 'gems' as const, amount: 10, label: '10 gems', icon: '\uD83D\uDC8E' },
-  { day: 4, type: 'powerup' as const, amount: 1, powerupId: 'peek', label: 'Peek', icon: '\uD83D\uDC41' },
+  { day: 4, type: 'cosmetic' as const, amount: 1, cosmeticType: 'expression' as const, label: 'Random Expression', icon: '\uD83D\uDE0A' },
   { day: 5, type: 'gems' as const, amount: 15, label: '15 gems', icon: '\uD83D\uDC8E' },
-  { day: 6, type: 'powerup' as const, amount: 1, powerupId: 'fiftyFifty', label: '50/50', icon: '\u2702\uFE0F' },
+  { day: 6, type: 'cosmetic' as const, amount: 1, cosmeticType: 'frame' as const, label: 'Random Frame', icon: '\uD83D\uDDBC\uFE0F' },
   { day: 7, type: 'gems' as const, amount: 25, label: '25 gems + mystery', icon: '\uD83C\uDF81' },
 ];
 
@@ -120,4 +138,11 @@ async function claimDailyReward(): Promise<typeof REWARDS[number] & { streak: nu
   return { ...check.reward, streak: check.streak };
 }
 
-export { REWARDS, checkDailyReward, claimDailyReward, getState as getLoginRewardState };
+/**
+ * Claim a cosmetic reward. Call after claimDailyReward for cosmetic days.
+ */
+function pickCosmeticReward(cosmeticType: 'frame' | 'banner' | 'expression', ownedIds: string[]): string | null {
+  return pickRandomCosmetic(cosmeticType, ownedIds);
+}
+
+export { REWARDS, checkDailyReward, claimDailyReward, pickCosmeticReward, getState as getLoginRewardState };

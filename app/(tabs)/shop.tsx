@@ -12,6 +12,8 @@ import { Blink } from '@/src/components/Blink';
 import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, type FrameCosmetic, type BannerCosmetic, type ExpressionCosmetic } from '@/src/data/cosmetics';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { InfoCard } from '@/src/components/InfoCard';
+import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
+import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 
@@ -23,6 +25,7 @@ function ShopTab() {
   const [selectedMode, setSelectedMode] = useState('classic');
   const [cosmeticTab, setCosmeticTab] = useState<'featured' | 'frames' | 'banners' | 'expressions'>('featured');
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
+  const [celebrationItem, setCelebrationItem] = useState<Cosmetic | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const dailyFeatured = getDailyFeatured(today);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -296,7 +299,7 @@ function ShopTab() {
                   <Pressable key={c.id} onPress={() => {
                     if (owned) return;
                     const ok = useGameStore.getState().purchaseCosmetic(c.id, discountedPrice);
-                    if (ok) useGameStore.getState().equipCosmetic(c.type as any, c.id);
+                    if (ok) { useGameStore.getState().equipCosmetic(c.type as any, c.id); setCelebrationItem(c); }
                     else setGemShortfall({ cost: discountedPrice, name: c.name });
                   }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
                     {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: (c as any).borderColor ?? colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
@@ -326,7 +329,7 @@ function ShopTab() {
               return (
                 <Pressable key={f.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('frame', f.id); }
-                  else if (f.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost); if (ok) useGameStore.getState().equipCosmetic('frame', f.id); else setGemShortfall({ cost: f.gemCost!, name: f.name }); }
+                  else if (f.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(f.id, f.gemCost); if (ok) { useGameStore.getState().equipCosmetic('frame', f.id); setCelebrationItem(f); } else setGemShortfall({ cost: f.gemCost!, name: f.name }); }
                 }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.6 }]}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
                     <Blink expression={exprs[fi % exprs.length]} size={30} />
@@ -351,7 +354,7 @@ function ShopTab() {
               return (
                 <Pressable key={b.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('banner', b.id); }
-                  else if (b.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(b.id, b.gemCost); if (ok) useGameStore.getState().equipCosmetic('banner', b.id); else setGemShortfall({ cost: b.gemCost!, name: b.name }); }
+                  else if (b.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(b.id, b.gemCost); if (ok) { useGameStore.getState().equipCosmetic('banner', b.id); setCelebrationItem(b); } else setGemShortfall({ cost: b.gemCost!, name: b.name }); }
                 }} style={[styles.cosmeticCardWide, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.6 }]}>
                   <LinearGradient colors={b.gradientColors} style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{b.name}</Text>
@@ -374,7 +377,7 @@ function ShopTab() {
               return (
                 <Pressable key={e.id} onPress={() => {
                   if (owned) { useGameStore.getState().equipCosmetic('expression', e.id); }
-                  else if (e.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(e.id, e.gemCost); if (ok) useGameStore.getState().equipCosmetic('expression', e.id); else setGemShortfall({ cost: e.gemCost!, name: e.name }); }
+                  else if (e.gemCost) { const ok = useGameStore.getState().purchaseCosmetic(e.id, e.gemCost); if (ok) { useGameStore.getState().equipCosmetic('expression', e.id); setCelebrationItem(e); } else setGemShortfall({ cost: e.gemCost!, name: e.name }); }
                 }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.6 }]}>
                   <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
@@ -420,6 +423,9 @@ function ShopTab() {
           Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.');
         }}
       />
+      {/* Purchase celebration */}
+      <CosmeticCelebration visible={!!celebrationItem} item={celebrationItem} onDismiss={() => setCelebrationItem(null)} />
+
       {/* Not enough gems info card */}
       <InfoCard
         visible={gemShortfall !== null}
