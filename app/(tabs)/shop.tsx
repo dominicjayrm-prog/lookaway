@@ -116,7 +116,7 @@ function ShopTab() {
               </View>
               <View>
                 <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
-                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 100 gems/mo</Text>
+                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 300 gems/mo</Text>
               </View>
             </View>
             <View style={styles.plusArrow}>
