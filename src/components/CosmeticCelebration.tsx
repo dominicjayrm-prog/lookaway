@@ -19,7 +19,10 @@ interface Props {
   message?: string;
 }
 
-function CosmeticCelebrationComponent({ visible, item, onDismiss, message = 'Added to your collection!' }: Props) {
+function CosmeticCelebrationComponent({ visible, item, onDismiss, message }: Props) {
+  const rarityLabel = item?.rarity ? item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1) : '';
+  const typeLabel = item?.type === 'frame' ? 'Frame' : item?.type === 'banner' ? 'Banner' : item?.type === 'expression' ? 'Expression' : 'Item';
+  const displayMessage = message ?? `${rarityLabel} ${typeLabel} Unlocked!`;
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
   const itemScale = useRef(new RNAnimated.Value(0)).current;
   const textOpacity = useRef(new RNAnimated.Value(0)).current;
@@ -85,8 +88,8 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message = 'Add
       RNAnimated.timing(textOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     }, 600);
 
-    // 5. Auto-dismiss after 2.5s
-    const timer = setTimeout(() => dismiss(), 2500);
+    // 5. Auto-dismiss after 3.5s
+    const timer = setTimeout(() => dismiss(), 3500);
     return () => clearTimeout(timer);
   }, [visible, item, onDismiss]);
 
@@ -105,8 +108,8 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message = 'Add
             key={i}
             style={[st.particle, {
               backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-              width: 6 + Math.random() * 6,
-              height: 6 + Math.random() * 6,
+              width: 8 + Math.random() * 8,
+              height: 8 + Math.random() * 8,
               borderRadius: Math.random() > 0.5 ? 999 : 2,
               opacity: p.opacity,
               transform: [{ translateX: p.x }, { translateY: p.y }, { scale: p.scale }],
@@ -136,7 +139,7 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message = 'Add
 
         {/* Message */}
         <RNAnimated.View style={{ opacity: textOpacity, marginTop: 20 }}>
-          <Text style={st.message}>{message}</Text>
+          <Text style={st.message}>{displayMessage}</Text>
         </RNAnimated.View>
       </RNAnimated.View>
     </Pressable>

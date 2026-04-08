@@ -48,9 +48,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 20,
     overflow: 'hidden',
-    justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 40,
   },
   patternOverlay: {
     ...StyleSheet.absoluteFillObject,

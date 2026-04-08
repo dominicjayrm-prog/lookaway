@@ -15,25 +15,18 @@ import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { fetchLevelById } from '@/src/data/levels';
+
 import { getRecentActivity, getTimeAgo } from '@/src/utils/activity';
 import type { ActivityEvent } from '@/src/utils/activity';
 import Svg, { Path, Circle, Polygon, Rect } from 'react-native-svg';
-import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { Blink } from '@/src/components/Blink';
 import { InfoCard } from '@/src/components/InfoCard';
-import type { BlinkExpression } from '@/src/components/AnimatedBlink';
+import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
 const WORLD_LEVEL_COUNTS = [20, 30, 35, 35, 40, 40];
 const EMDASH = String.fromCharCode(8212);
-
-function getHomeBlink(streakCount: number, lives: number): BlinkExpression {
-  if (streakCount >= 7) return 'streak';
-  if (lives <= 0) return 'sad';
-  return 'normal';
-}
 
 function getHomeGreeting(streakCount: number): string {
   if (streakCount >= 3) return `Day ${streakCount}! Keep it going 🔥`;
@@ -148,10 +141,7 @@ function PlayTab() {
   const memoryScore = getMemoryScore();
 
   // Fetch level title from Supabase
-  const [nextLevelTitle, setNextLevelTitle] = useState('Loading...');
-  useEffect(() => {
-    fetchLevelById(nextLevelId).then(l => setNextLevelTitle(l?.title ?? `Level ${nextLevelNumber}`));
-  }, [nextLevelId, nextLevelNumber]);
+  // Level title fetch removed — heroSubtitle handles display
 
   // Contextual hero subtitle
   const heroSubtitle = (() => {
@@ -179,6 +169,7 @@ function PlayTab() {
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   const [infoCard, setInfoCard] = useState<string | null>(null);
+  const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
@@ -378,8 +369,18 @@ function PlayTab() {
         onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
         onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
       />
-      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => setShowPaywall(false)} />
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={() => {
+        setShowPaywall(false);
+        // Unlock premium cosmetics (no auto-equip — player may have their own photo/frame)
+        const store = useGameStore.getState();
+        store.unlockCosmetic('frame_premium_gold');
+        store.unlockCosmetic('expr_premium');
+        store.unlockCosmetic('banner_premium_gold');
+        store.addGems(300);
+        setShowPremiumCelebration(true);
+      }} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
+      <PremiumCelebration visible={showPremiumCelebration} onDismiss={() => setShowPremiumCelebration(false)} />
 
       {/* Info Cards */}
       <InfoCard
@@ -389,7 +390,7 @@ function PlayTab() {
         description={lives >= 5
           ? 'You have full lives! Lose one each time you fail a level. Lives regenerate 1 every 30 minutes.'
           : `You have ${lives} ${lives === 1 ? 'life' : 'lives'} left. Lives regenerate 1 every 30 minutes.`}
-        tip={lives < 5 ? 'Get unlimited lives with Blanked+ \u2014 never wait to play again' : undefined}
+        tip={lives < 5 ? 'Get unlimited lives with Blanked+ — never wait to play again' : undefined}
         accentColor="#FF6B6B"
         action={lives < 5 ? () => setShowPaywall(true) : undefined}
         actionLabel={lives < 5 ? 'Learn about Blanked+' : undefined}

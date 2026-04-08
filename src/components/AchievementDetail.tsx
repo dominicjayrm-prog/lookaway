@@ -53,7 +53,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
 
                   {isUnlocked && unlockedAt && (
                     <Text style={[styles.tierMeta, { color: colors.textLight }]}>
-                      Unlocked {new Date(unlockedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} \u00b7 <Text style={{ color: '#00B894', fontWeight: '700' }}>+{tier.gems} gems</Text>
+                      Unlocked {new Date(unlockedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · <Text style={{ color: '#00B894', fontWeight: '700' }}>+{tier.gems} gems</Text>
                     </Text>
                   )}
 
@@ -67,7 +67,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
                   )}
 
                   {!isUnlocked && !isNext && (
-                    <Text style={[styles.tierMeta, { color: colors.textLight }]}>{tier.target} needed \u00b7 +{tier.gems} gems</Text>
+                    <Text style={[styles.tierMeta, { color: colors.textLight }]}>{tier.target} needed · +{tier.gems} gems</Text>
                   )}
                 </View>
               );

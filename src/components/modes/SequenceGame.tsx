@@ -114,7 +114,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
       {phase === 'pause' && <Text style={[s.phaseLabel, { color: modeColor }]}>Now tap them in order!</Text>}
       {phase === 'recall' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order \u2014 Next: #{nextExpected}</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order — Next: #{nextExpected}</Text>
           <Text style={[s.progressText, { color: colors.textLight }]}>{tappedOrder.length}/{shapes.length} correct</Text>
         </>
       )}

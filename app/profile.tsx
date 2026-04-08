@@ -44,17 +44,19 @@ function ProfileScreen() {
   const nameStyle = nameColor && nameColor.color !== 'theme' ? { color: nameColor.color } : { color: colors.text };
   const eqExprCosmetic = getExpressionById(eqExpr);
   const eqFrame = equippedFrame;
-  const profileBlink: BlinkExpression = eqExprCosmetic && eqExprCosmetic.blinkExpression !== 'normal'
-    ? eqExprCosmetic.blinkExpression
-    : streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
+  const profileBlink: BlinkExpression = eqExprCosmetic ? eqExprCosmetic.blinkExpression : 'normal';
 
   // Division badge
-  const division = totalStars >= 800 ? { name: 'Master', emoji: '👑', color: '#D4A012' }
-    : totalStars >= 500 ? { name: 'Diamond', emoji: '⭐', color: '#74B9FF' }
-    : totalStars >= 300 ? { name: 'Platinum', emoji: '💎', color: '#A29BFE' }
-    : totalStars >= 150 ? { name: 'Gold', emoji: '🥇', color: '#D4A012' }
-    : totalStars >= 50 ? { name: 'Silver', emoji: '🥈', color: '#B2BEC3' }
-    : { name: 'Bronze', emoji: '🥉', color: '#CD7F32' };
+  const divisionThresholds = [
+    { name: 'Master', emoji: '👑', color: '#D4A012', min: 800, next: null },
+    { name: 'Diamond', emoji: '⭐', color: '#74B9FF', min: 500, next: 800 },
+    { name: 'Platinum', emoji: '💎', color: '#A29BFE', min: 300, next: 500 },
+    { name: 'Gold', emoji: '🥇', color: '#D4A012', min: 150, next: 300 },
+    { name: 'Silver', emoji: '🥈', color: '#B2BEC3', min: 50, next: 150 },
+    { name: 'Bronze', emoji: '🥉', color: '#CD7F32', min: 0, next: 50 },
+  ];
+  const division = divisionThresholds.find(d => totalStars >= d.min) ?? divisionThresholds[5];
+  const toNext = division.next ? division.next - totalStars : 0;
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [playerProgress, setPlayerProgress] = useState<Record<string, PlayerAchievement>>({});
@@ -141,7 +143,7 @@ function ProfileScreen() {
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30' }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
-              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` — ${toNext} to next` : ''}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
 
@@ -263,8 +265,8 @@ function ProfileScreen() {
 
       {/* Photo Options Modal (simple) */}
       <Modal visible={showPhotoOptions} transparent animationType="fade" onRequestClose={() => setShowPhotoOptions(false)}>
-        <Pressable style={[styles.pickerBackdrop, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }]} onPress={() => setShowPhotoOptions(false)}>
-          <View style={[styles.photoSheet, { backgroundColor: colors.card }]}>
+        <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }} onPress={() => setShowPhotoOptions(false)}>
+          <View style={[styles.photoSheet, { backgroundColor: colors.card, maxWidth: Platform.OS === 'web' ? 360 : undefined, width: '85%' }]}>
             <Pressable onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}>
               <Ionicons name="camera" size={18} color={colors.accent} />
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>

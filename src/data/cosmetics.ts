@@ -85,6 +85,7 @@ export const FRAMES: FrameCosmetic[] = [
   // ── Premium Animated Frames (subscriber-only) ──
   { id: 'frame_prismatic', type: 'frame', name: 'Prismatic', description: 'Animated rainbow border', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', borderColor: '#6C5CE7', borderWidth: 4, glowColor: '#A29BFE', animated: true },
   { id: 'frame_diamond', type: 'frame', name: 'Diamond', description: 'Sparkling diamond ring', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', borderColor: '#74B9FF', borderWidth: 4, glowColor: '#DFE6E9', animated: true },
+  { id: 'frame_premium_gold', type: 'frame', name: 'Premium Gold', description: 'Exclusive Blanked+ gold ring', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', borderColor: '#D4A012', borderWidth: 4, glowColor: '#FDCB6E', animated: true },
 
   // ── Achievement Mastery Frames ──
   { id: 'frame_perfectionist', type: 'frame', name: 'Perfectionist', description: 'Get 3 stars on 20 levels', unlock: 'achievement', achievementId: 'perfectionist', tier: 'gold', rarity: 'epic', borderColor: '#D4A012', borderWidth: 4, glowColor: '#F9CA24' },
@@ -98,9 +99,9 @@ export const FRAMES: FrameCosmetic[] = [
   { id: 'frame_double_ring', type: 'frame', name: 'Double Ring', description: 'Two-ring elegant border', unlock: 'gems', gemCost: 80, rarity: 'rare', borderColor: '#A29BFE', borderWidth: 3, glowColor: '#6C5CE7' },
 
   // ── Seasonal Frames ──
-  { id: 'frame_christmas', type: 'frame', name: 'Festive', description: 'Holiday candy cane ring', unlock: 'seasonal', seasonal: 'christmas', gemCost: 100, rarity: 'epic', borderColor: '#FF6B6B', borderWidth: 4, glowColor: '#00B894' },
-  { id: 'frame_halloween', type: 'frame', name: 'Spooky', description: 'Halloween orange ring', unlock: 'seasonal', seasonal: 'halloween', gemCost: 100, rarity: 'epic', borderColor: '#E17055', borderWidth: 4, glowColor: '#2D3436' },
-  { id: 'frame_valentines', type: 'frame', name: 'Sweetheart', description: 'Valentine pink glow', unlock: 'seasonal', seasonal: 'valentines', gemCost: 80, rarity: 'rare', borderColor: '#FD79A8', borderWidth: 3, glowColor: '#FDCFE8' },
+  { id: 'frame_christmas', type: 'frame', name: 'Festive', description: 'Limited edition holiday ring', unlock: 'seasonal', seasonal: 'christmas', gemCost: 200, rarity: 'legendary', borderColor: '#FF6B6B', borderWidth: 4, glowColor: '#00B894' },
+  { id: 'frame_halloween', type: 'frame', name: 'Spooky', description: 'Limited edition spooky ring', unlock: 'seasonal', seasonal: 'halloween', gemCost: 180, rarity: 'legendary', borderColor: '#E17055', borderWidth: 4, glowColor: '#2D3436' },
+  { id: 'frame_valentines', type: 'frame', name: 'Sweetheart', description: 'Limited edition love glow', unlock: 'seasonal', seasonal: 'valentines', gemCost: 150, rarity: 'epic', borderColor: '#FD79A8', borderWidth: 3, glowColor: '#FDCFE8' },
 ];
 
 // ─── ALL BANNERS ───────────────────────────────────────────
@@ -117,6 +118,7 @@ export const BANNERS: BannerCosmetic[] = [
   // Subscriber
   { id: 'banner_aurora', type: 'banner', name: 'Aurora', description: 'Animated northern lights', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', gradientColors: ['#6C5CE7', '#00B894'] },
   { id: 'banner_holographic', type: 'banner', name: 'Holographic', description: 'Shifting prismatic colours', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', gradientColors: ['#A29BFE', '#FD79A8'] },
+  { id: 'banner_premium_gold', type: 'banner', name: 'Premium Gold', description: 'Exclusive Blanked+ gold gradient', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', gradientColors: ['#2D3436', '#D4A012'] },
 
   // ── More Gem Banners ──
   { id: 'banner_candy', type: 'banner', name: 'Candy', description: 'Sweet pink-to-purple', unlock: 'gems', gemCost: 80, rarity: 'rare', gradientColors: ['#FD79A8', '#A29BFE'] },
@@ -151,6 +153,7 @@ export const EXPRESSIONS: ExpressionCosmetic[] = [
   { id: 'expr_surprised', type: 'expression', name: 'Shocked', description: 'Eyes wide open', unlock: 'gems', gemCost: 40, rarity: 'rare', blinkExpression: 'surprised' },
   { id: 'expr_love', type: 'expression', name: 'Lovestruck', description: 'Heart eyes and blush', unlock: 'gems', gemCost: 50, rarity: 'rare', blinkExpression: 'love' },
   { id: 'expr_blank', type: 'expression', name: 'Go Blank!', description: 'The signature pose', unlock: 'gems', gemCost: 80, rarity: 'epic', blinkExpression: 'blank' },
+  { id: 'expr_premium', type: 'expression', name: 'Premium', description: 'Exclusive Blanked+ star eyes', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', blinkExpression: 'premium' },
 ];
 
 // ─── DAILY FEATURED SHOP ──────────────────────────────────

@@ -66,7 +66,7 @@ function NoAdsSvg() {
 // ── Benefits data ─────────────────────────────────────────────────────
 const BENEFITS = [
   { Icon: HeartSvg, color: '#FF6B6B', title: 'Unlimited lives', desc: 'Never wait to play again' },
-  { Icon: GemSvg, color: ACCENT, title: '100 gems every month', desc: 'Deposited on renewal day' },
+  { Icon: GemSvg, color: ACCENT, title: '300 gems every month', desc: 'Deposited on renewal day' },
   { Icon: StarSvg, color: '#D4A012', title: 'Free daily power-up', desc: 'Random boost every 24 hours' },
   { Icon: NoAdsSvg, color: '#0984E3', title: 'No ads', desc: 'Clean, uninterrupted play' },
 ];
@@ -229,7 +229,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly</Text>
+                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly (Save £17)</Text>
                   <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
                 </View>
                 <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>{'\u00A3'}1.66/month</Text>

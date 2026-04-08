@@ -348,12 +348,12 @@ function JourneyTab() {
                     onPress={() => {
                       if (w.unlocked) { navigateToWorld(w); }
                       else {
-                        const prevWorld = worldsData[wi - 1];
-                        const remaining = prevWorld ? prevWorld.totalLevels - prevWorld.completed : 0;
+                        const prev = i > 0 ? worlds[i - 1] : null;
+                        const remaining = prev ? prev.totalLevels - prev.completed : 0;
                         setInfoCardData({
                           title: 'World Locked',
-                          desc: prevWorld
-                            ? `Complete all ${prevWorld.totalLevels} levels in World ${prevWorld.worldNum} "${prevWorld.name}" to unlock "${w.name}". You have ${remaining} ${remaining === 1 ? 'level' : 'levels'} to go!`
+                          desc: prev
+                            ? `Complete all ${prev.totalLevels} levels in World ${prev.worldNum} "${prev.name}" to unlock "${w.name}". You have ${remaining} ${remaining === 1 ? 'level' : 'levels'} to go!`
                             : `"${w.name}" will unlock as you progress. Keep playing!`,
                         });
                         setInfoCard('locked');

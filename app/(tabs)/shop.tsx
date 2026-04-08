@@ -13,6 +13,7 @@ import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, type Fra
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { InfoCard } from '@/src/components/InfoCard';
 import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
+import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
@@ -27,6 +28,7 @@ function ShopTab() {
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
   const [celebrationItem, setCelebrationItem] = useState<Cosmetic | null>(null);
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const dailyFeatured = getDailyFeatured(today);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -64,12 +66,15 @@ function ShopTab() {
   const visiblePowerups = getPowerupsForMode(selectedMode);
 
   const handleSubscribe = (plan: 'monthly' | 'yearly', trial: boolean = false) => {
-    // RevenueCat integration point — for now show confirmation
-    Alert.alert(
-      'Blanked+',
-      `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. In-app purchases will be available when RevenueCat is configured.`,
-      [{ text: 'OK', onPress: () => setShowPaywall(false) }]
-    );
+    setShowPaywall(false);
+    // Unlock premium cosmetics (no auto-equip — player keeps their own customisation)
+    const store = useGameStore.getState();
+    store.unlockCosmetic('frame_premium_gold');
+    store.unlockCosmetic('expr_premium');
+    store.unlockCosmetic('banner_premium_gold');
+    store.addGems(300);
+    setShowPremiumCelebration(true);
+    // RevenueCat integration point — actual purchase will happen here
   };
 
 
@@ -116,7 +121,7 @@ function ShopTab() {
               </View>
               <View>
                 <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
-                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 100 gems/mo</Text>
+                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 300 gems/mo</Text>
               </View>
             </View>
             <View style={styles.plusArrow}>
@@ -425,11 +430,14 @@ function ShopTab() {
         visible={showUnavailable}
         icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
         title="Not Available Yet"
-        description="This item isn't in today's shop. Check back tomorrow \u2014 the featured items rotate daily with 20% off!"
-        tip="Tap the \u2728 Today tab to see what's available right now"
+        description="This item isn't in today's shop. Check back tomorrow — the featured items rotate daily with 20% off!"
+        tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
         onClose={() => setShowUnavailable(false)}
       />
+
+      {/* Premium celebration */}
+      <PremiumCelebration visible={showPremiumCelebration} onDismiss={() => setShowPremiumCelebration(false)} />
 
       {/* Purchase celebration */}
       <CosmeticCelebration visible={!!celebrationItem} item={celebrationItem} onDismiss={() => setCelebrationItem(null)} />
@@ -439,7 +447,7 @@ function ShopTab() {
         visible={gemShortfall !== null}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" style={{ opacity: 0.4 }} />}
         title="Not Enough Gems"
-        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems \u2014 every level gives 1-3 gems based on your stars.` : ''}
+        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems — every level gives 1-3 gems based on your stars.` : ''}
         tip="Play levels to earn gems, or check gem packs below"
         accentColor="#6C5CE7"
         onClose={() => setGemShortfall(null)}

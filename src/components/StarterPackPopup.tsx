@@ -204,7 +204,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           {/* Green banner */}
           <View style={st.greenBanner}>
             <Ionicons name="checkmark-circle" size={16} color="#00B894" />
-            <Text style={st.greenText}>Everything you need to get started</Text>
+            <Text style={st.greenText}>200 gems, 3 boosts, and unlimited play for 1 hour!</Text>
           </View>
 
           {/* Shimmer CTA */}
