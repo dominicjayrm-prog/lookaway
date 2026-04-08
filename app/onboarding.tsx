@@ -276,7 +276,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
                       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tc.textLight }} />
                     )}
                   </RNAnimated.View>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: filled ? C.text : C.textD }}>{d}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '600', color: filled ? tc.text : tc.textLight }}>{d}</Text>
                 </View>
               );
             })}
@@ -394,7 +394,7 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
                     s.answerOption, { backgroundColor: tc.surface },
                     i === 1 && { backgroundColor: `${C.green}12`, borderColor: C.green, borderWidth: 1.5 },
                   ]}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: i === 1 ? C.green : C.textD }}>{v}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: i === 1 ? C.green : tc.textLight }}>{v}</Text>
                   </View>
                 ))}
               </View>
@@ -417,9 +417,9 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
               ]}
             >
               <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : tc.surface }]}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : C.textD }}>{st.num}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : tc.textLight }}>{st.num}</Text>
               </View>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: i === step ? C.accent : C.text }} numberOfLines={1}>{st.title}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: i === step ? C.accent : tc.text }} numberOfLines={1}>{st.title}</Text>
               <Text style={{ fontSize: 9, color: tc.textLight, marginTop: 2, lineHeight: 12 }} numberOfLines={2}>{st.desc}</Text>
             </Pressable>
           </FadeIn>
@@ -602,7 +602,7 @@ function Dots({ total, current }: { total: number; current: number }) {
             width: i === current ? 18 : 6,
             height: 6,
             borderRadius: 3,
-            backgroundColor: i === current ? C.accent : i < current ? C.accentL : colors.textLight,
+            backgroundColor: i === current ? C.accent : i < current ? C.accentL : C.textD,
           }}
         />
       ))}

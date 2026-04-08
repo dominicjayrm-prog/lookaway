@@ -142,7 +142,6 @@ function PlayTab() {
   const memoryScore = getMemoryScore();
 
   // Fetch level title from Supabase
-  // Level title fetch removed — heroSubtitle handles display
 
   // Contextual hero subtitle
   const heroSubtitle = (() => {
