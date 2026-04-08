@@ -6,7 +6,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { REWARDS, checkDailyReward, claimDailyReward } from '@/src/utils/dailyLoginRewards';
+import { REWARDS, checkDailyReward, claimDailyReward, pickCosmeticReward } from '@/src/utils/dailyLoginRewards';
+import { getCosmeticById, type Cosmetic } from '@/src/data/cosmetics';
+import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
 
 var { width: SW } = Dimensions.get('window');
 
@@ -19,10 +21,13 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
   var { colors } = useTheme();
   var addGems = useGameStore(s => s.addGems);
   var buyPowerUp = useGameStore(s => s.buyPowerUp);
+  var unlockCosmetic = useGameStore(s => s.unlockCosmetic);
+  var ownedCosmetics = useGameStore(s => s.ownedCosmetics);
   var [rewardDay, setRewardDay] = useState(1);
   var [streak, setStreak] = useState(0);
   var [claimed, setClaimed] = useState(false);
   var [claimedReward, setClaimedReward] = useState<typeof REWARDS[number] | null>(null);
+  var [celebrationItem, setCelebrationItem] = useState<Cosmetic | null>(null);
 
   var backdrop = useRef(new RNAnimated.Value(0)).current;
   var cardScale = useRef(new RNAnimated.Value(0.8)).current;
@@ -54,8 +59,18 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
       // Apply reward
       if (reward.type === 'gems') {
         addGems(reward.amount);
-      } else if (reward.type === 'powerup' && reward.powerupId) {
-        buyPowerUp(reward.powerupId, reward.amount, 0); // free power-up (cost=0)
+      } else if (reward.type === 'powerup' && (reward as any).powerupId) {
+        buyPowerUp((reward as any).powerupId, reward.amount, 0);
+      } else if (reward.type === 'cosmetic' && (reward as any).cosmeticType) {
+        const cosmeticId = pickCosmeticReward((reward as any).cosmeticType, ownedCosmetics);
+        if (cosmeticId) {
+          unlockCosmetic(cosmeticId);
+          const item = getCosmeticById(cosmeticId);
+          if (item) setCelebrationItem(item as Cosmetic);
+        } else {
+          // All cosmetics of this type owned — give bonus gems instead
+          addGems(10);
+        }
       }
 
       // Day 7 mystery bonus
@@ -85,6 +100,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
   var todayReward = REWARDS[rewardDay - 1];
 
   return (
+    <>
     <Modal visible transparent animationType="none">
       <View style={st.container}>
         <RNAnimated.View style={[StyleSheet.absoluteFill, {
@@ -151,6 +167,14 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
         </RNAnimated.View>
       </View>
     </Modal>
+    {/* Cosmetic reward celebration */}
+    <CosmeticCelebration
+      visible={!!celebrationItem}
+      item={celebrationItem}
+      onDismiss={() => setCelebrationItem(null)}
+      message="Daily reward unlocked!"
+    />
+    </>
   );
 }
 
