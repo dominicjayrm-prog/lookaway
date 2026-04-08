@@ -32,6 +32,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const [timerProgress, setTimerProgress] = useState(1); // 1 = full, 0 = empty
   const [lastResult, setLastResult] = useState<{ correct: boolean; score: number; description: string; time: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
+  const canvasRef = useRef<View>(null);
+  const canvasPos = useRef({ x: 0, y: 0 });
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -129,8 +131,12 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
   const handleCanvasPress = useCallback((e: any) => {
     const nativeEvent = e.nativeEvent;
-    const lx = nativeEvent.locationX ?? nativeEvent.offsetX ?? 0;
-    const ly = nativeEvent.locationY ?? nativeEvent.offsetY ?? 0;
+    // Use pageX/pageY relative to canvas position for accurate coordinates
+    // offsetX/locationX can be relative to child elements (shapes), not the canvas
+    const px = nativeEvent.pageX ?? nativeEvent.clientX ?? 0;
+    const py = nativeEvent.pageY ?? nativeEvent.clientY ?? 0;
+    const lx = px - canvasPos.current.x;
+    const ly = py - canvasPos.current.y;
     const tapX = canvasSize.w > 0 ? (lx / canvasSize.w) * 100 : 50;
     const tapY = canvasSize.h > 0 ? (ly / canvasSize.h) * 100 : 50;
     handleTapSceneB(tapX, tapY);
@@ -195,9 +201,14 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
       {/* Canvas */}
       <Pressable
+        ref={canvasRef as any}
         style={[s.canvas, { backgroundColor: colors.card }]}
         onPress={phase === 'sceneB' ? handleCanvasPress : undefined}
-        onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+        onLayout={(e) => {
+          setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
+          // Measure canvas position on screen for accurate tap coordinates
+          (canvasRef.current as any)?.measureInWindow?.((x: number, y: number) => { canvasPos.current = { x, y }; });
+        }}
       >
         {phase === 'sceneA' && renderScene(round.sceneA)}
         {phase === 'sceneB' && renderScene(round.sceneB)}
