@@ -44,13 +44,16 @@ export interface LeaderboardEntry {
   highest_world: number;
   division: Division;
   rank: number;
+  avatar_url?: string | null;
+  equipped_frame?: string | null;
+  equipped_expression?: string | null;
 }
 
 // ── Global leaderboard ───────────────────────────────────────────────
 export async function getGlobalLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world')
+    .select('id, username, avatar_color, total_stars, highest_world, avatar_url, equipped_frame, equipped_expression')
     .not('username', 'is', null)
     .order('total_stars', { ascending: false })
     .limit(limit);
@@ -89,7 +92,7 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world')
+    .select('id, username, avatar_color, total_stars, highest_world, avatar_url, equipped_frame, equipped_expression')
     .in('id', friendIds)
     .order('total_stars', { ascending: false });
 

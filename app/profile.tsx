@@ -16,6 +16,7 @@ import { ProfileBanner } from '@/src/components/ProfileBanner';
 import { getFrameById, getBannerById, getNameColorById, getExpressionById, FRAMES, EXPRESSIONS, RARITY_COLORS } from '@/src/data/cosmetics';
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
+import { uploadAvatar, removeAvatar } from '@/src/utils/avatarUpload';
 
 const isWeb = Platform.OS === 'web';
 
@@ -26,7 +27,7 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, purchaseCosmetic, equipCosmetic } = useGameStore();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
@@ -38,6 +39,7 @@ function ProfileScreen() {
   const nameColor = getNameColorById(equippedNameColor);
   const nameStyle = nameColor && nameColor.color !== 'theme' ? { color: nameColor.color } : { color: colors.text };
   const eqExprCosmetic = getExpressionById(eqExpr);
+  const eqFrame = equippedFrame;
   const profileBlink: BlinkExpression = eqExprCosmetic && eqExprCosmetic.blinkExpression !== 'normal'
     ? eqExprCosmetic.blinkExpression
     : streakCount >= 7 ? 'streak' : totalStars >= 300 ? 'celebrate' : memoryScore >= 80 ? 'correct' : 'normal';
@@ -59,7 +61,6 @@ function ProfileScreen() {
   const totalTiers = achievements.length * 3;
 
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const { ownedCosmetics, equippedFrame: eqFrame, equippedExpression: eqExpr, purchaseCosmetic, equipCosmetic } = useGameStore();
 
   const handlePickPhoto = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -70,7 +71,13 @@ function ProfileScreen() {
         const file = e.target?.files?.[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => { const uri = reader.result as string; setProfilePic(uri); saveProfilePic(uri); };
+        reader.onload = () => {
+          const uri = reader.result as string;
+          setProfilePic(uri);
+          saveProfilePic(uri);
+          // Upload to Supabase so other users can see it
+          if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
+        };
         reader.readAsDataURL(file);
       };
       input.click();
@@ -153,6 +160,32 @@ function ProfileScreen() {
           </View>
         </Animated.View>
 
+        {/* Power-ups / Boosts card */}
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(250)}>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/shop')}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
+                  <Ionicons name="flash" size={18} color={colors.blue} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Power-ups</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
+                    {(() => {
+                      const p = useGameStore.getState().powerUps;
+                      const total = (p.slowTime ?? 0) + (p.peek ?? 0) + (p.fiftyFifty ?? 0) + (p.skip ?? 0) + (p.extra_life ?? 0);
+                      return total > 0 ? `${total} boost${total !== 1 ? 's' : ''} available` : 'None — buy in the shop';
+                    })()}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.settingsRowRight}>
+                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
+
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(300)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>APPEARANCE</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
@@ -210,7 +243,7 @@ function ProfileScreen() {
 
             {/* Clear photo if one is set */}
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowAvatarPicker(false); if (user?.id) removeAvatar(user.id).catch(() => {}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
                 <Ionicons name="close-circle" size={20} color={colors.wrong} />
                 <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo (show Blink)</Text>
               </Pressable>

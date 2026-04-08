@@ -28,6 +28,8 @@ export async function saveProgressToSupabase(userId: string, state: {
       total_stars: state.totalStars,
       highest_world: state.highestWorld,
       memory_score_avg: memoryScore,
+      equipped_frame: state.equippedFrame ?? null,
+      equipped_expression: state.equippedExpression ?? null,
     }, { onConflict: 'id' });
 
     // Upsert level progress

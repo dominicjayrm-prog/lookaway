@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Blink } from '@/src/components/Blink';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { getOnlineStatus, getLastActiveText, STATUS_COLORS } from '@/src/utils/onlineStatus';
@@ -36,8 +37,8 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: profile.avatar_color }]}>
-            <Text style={styles.avatarText}>{initial}</Text>
+          <View style={[styles.avatar, { backgroundColor: profile.avatar_color + '15', borderWidth: 3, borderColor: profile.avatar_color }]}>
+            <Blink expression="normal" size={56} />
           </View>
 
           {/* Username */}
