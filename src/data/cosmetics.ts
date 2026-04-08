@@ -228,6 +228,16 @@ export function getExpressionById(id: string): ExpressionCosmetic | undefined {
   return EXPRESSIONS.find(e => e.id === id);
 }
 
+export function getAvailableExpressions(ownedIds: string[]): { owned: ExpressionCosmetic[]; locked: ExpressionCosmetic[] } {
+  const owned = EXPRESSIONS.filter(e => e.unlock === 'free' || ownedIds.includes(e.id));
+  const locked = EXPRESSIONS.filter(e => e.unlock !== 'free' && !ownedIds.includes(e.id));
+  return { owned, locked };
+}
+
+export function getCosmeticById(id: string): (FrameCosmetic | BannerCosmetic | ExpressionCosmetic | NameColorCosmetic) | undefined {
+  return (FRAMES as Cosmetic[]).concat(BANNERS, EXPRESSIONS, NAME_COLORS).find(c => c.id === id) as any;
+}
+
 export const RARITY_COLORS: Record<string, string> = {
   common: '#636E72',
   rare: '#0984E3',
