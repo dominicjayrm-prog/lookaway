@@ -177,6 +177,13 @@ export function generateCountingBlitzLevel(levelData: any) {
       });
       t += popInterval + Math.random() * 0.08;
     }
+    // Ensure at least 3 events exist (prevents impossible levels)
+    if (events.length < 3) {
+      for (let e = events.length; e < 3; e++) {
+        const c = colors[e % colors.length];
+        events.push({ id: id++, color: c.hex, colorName: c.name, appearAt: 0.3 * e, duration: 1.5, x: 15 + Math.random() * 70, y: 15 + Math.random() * 70, size: 25, shapeType: shapePool[0] });
+      }
+    }
     const counts: Record<string, number> = {};
     colors.forEach(c => counts[c.name] = 0);
     events.forEach(e => counts[e.colorName]++);
@@ -186,7 +193,7 @@ export function generateCountingBlitzLevel(levelData: any) {
     let iterations = 0;
     while (opts.size < 4 && iterations < 100) {
       const o = correct + Math.floor(Math.random() * 5) - 2;
-      if (o > 0) opts.add(o);
+      if (o >= 0) opts.add(o);
       iterations++;
     }
     while (opts.size < 4) opts.add(correct + opts.size);

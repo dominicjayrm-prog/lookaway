@@ -123,13 +123,25 @@ function SideCampaignScreen() {
 
   // ─── COMPLETION HANDLER (must be before nextRound which references it) ───
   const finishLevel = useCallback(async (rawScore: number) => {
-    // For campaign speed recall, max = rounds × shapeCount × 100
+    // Calculate actual max score dynamically from modeData (not hardcoded getMaxScore)
     const totalRounds = modeData?.rounds?.length ?? 1;
-    const shapesPerRound = modeData?.rounds?.[0]?.shapes?.length ?? 5;
-    const actualMax = totalRounds * shapesPerRound * 100;
-    const pct = mode === 'speed_recall' || !isExternalMode
-      ? Math.min(100, Math.round((rawScore / actualMax) * 100))
-      : getScorePercentage(mode ?? 'speed_recall', rawScore);
+    let maxScore: number;
+    if (mode === 'speed_recall') {
+      const shapesPerRound = modeData?.rounds?.[0]?.shapes?.length ?? 5;
+      maxScore = totalRounds * shapesPerRound * 100;
+    } else if (mode === 'sequence') {
+      const seqLen = modeData?.rounds?.[0]?.shapes?.length ?? 5;
+      maxScore = totalRounds * (seqLen * 20 + 50);
+    } else if (mode === 'counting_blitz') {
+      maxScore = totalRounds * 100;
+    } else if (mode === 'colour_chain') {
+      maxScore = totalRounds * 100;
+    } else if (mode === 'snap_match') {
+      maxScore = totalRounds * 100;
+    } else {
+      maxScore = 100; // fallback
+    }
+    const pct = Math.min(100, Math.round((rawScore / Math.max(1, maxScore)) * 100));
     const earnedStars = getStarsForScore(pct);
     setTotalScore(rawScore);
     setScorePct(pct);

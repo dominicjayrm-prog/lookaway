@@ -182,7 +182,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
           </View>
           {phase === 'feedback' && (
             <Text style={[s.feedbackText, { color: selectedOption === round.correctIndex ? colors.correct : colors.wrong }]}>
-              {selectedOption === round.correctIndex ? 'Correct! +100 pts' : `Wrong! It was ${round.correctCount}`}
+              {selectedOption === round.correctIndex ? 'Correct! +100 pts' : `Wrong! It was ${round.correctCount ?? '?'}`}
             </Text>
           )}
         </View>
