@@ -17,6 +17,7 @@ import { getFrameById, getBannerById, getNameColorById, getExpressionById, getAv
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 import { uploadAvatar, removeAvatar } from '@/src/utils/avatarUpload';
+import * as ImagePicker from 'expo-image-picker';
 import { CosmeticPicker } from '@/src/components/CosmeticPicker';
 import { PowerUpViewer } from '@/src/components/PowerUpViewer';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,7 +74,8 @@ function ProfileScreen() {
   const bannerData = getAvailableBanners(ownedCosmetics);
   const exprData = getAvailableExpressions(ownedCosmetics);
 
-  const handlePickPhoto = useCallback(() => {
+  const handlePickPhoto = useCallback(async () => {
+    setShowPhotoOptions(false);
     if (Platform.OS === 'web') {
       const input = document.createElement('input');
       input.type = 'file';
@@ -86,17 +88,23 @@ function ProfileScreen() {
           const uri = reader.result as string;
           setProfilePic(uri);
           saveProfilePic(uri);
-          // Upload to Supabase so other users can see it
           if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
         };
         reader.readAsDataURL(file);
       };
       input.click();
     } else {
-      Alert.alert('Coming soon', 'Photo picker will be available on mobile devices.');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photo library.'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        setProfilePic(uri);
+        saveProfilePic(uri);
+        if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
+      }
     }
-    setShowPhotoOptions(false);
-  }, []);
+  }, [user?.id]);
   const handleSignOut = useCallback(async () => { try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
 
   return (
@@ -116,7 +124,7 @@ function ProfileScreen() {
               <Ionicons name="pencil" size={12} color="#FFF" />
             </Pressable>
           </View>
-          <View style={[styles.avatarSection, { marginTop: -50 }]}>
+          <View style={[styles.avatarSection, { marginTop: -44, paddingTop: 0 }]}>
             <Pressable onPress={() => setShowPhotoOptions(true)} style={styles.avatarContainer}>
               <AvatarFrame frame={frame ?? null} size={80}>
                 {profilePic ? (
@@ -255,7 +263,7 @@ function ProfileScreen() {
 
       {/* Photo Options Modal (simple) */}
       <Modal visible={showPhotoOptions} transparent animationType="fade" onRequestClose={() => setShowPhotoOptions(false)}>
-        <Pressable style={styles.pickerBackdrop} onPress={() => setShowPhotoOptions(false)}>
+        <Pressable style={[styles.pickerBackdrop, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }]} onPress={() => setShowPhotoOptions(false)}>
           <View style={[styles.photoSheet, { backgroundColor: colors.card }]}>
             <Pressable onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}>
               <Ionicons name="camera" size={18} color={colors.accent} />
@@ -340,7 +348,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold },
   headerSpacer: { width: 40 },
   scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
-  avatarSection: { alignItems: 'center', paddingVertical: spacing.xxl },
+  avatarSection: { alignItems: 'center', paddingBottom: spacing.lg },
   avatarContainer: { position: 'relative' as const, marginBottom: spacing.md },
   avatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   cameraButton: { position: 'absolute' as const, bottom: 0, right: -2, width: 28, height: 28, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const, borderWidth: 2 },
@@ -368,7 +376,7 @@ const styles = StyleSheet.create({
   divisionText: { fontSize: 11, fontWeight: '700' },
   customPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   bannerEditBtn: { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
-  photoSheet: { borderRadius: 20, padding: 16, marginHorizontal: 40, marginTop: 'auto', marginBottom: 120, gap: 8 },
+  photoSheet: { borderRadius: 20, padding: 16, marginHorizontal: 24, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 8 },
   pickerBackdrop: { flex: 1, justifyContent: 'flex-end' },
   pickerBackdropTouch: { flex: 1 },
   pickerSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40, maxHeight: '80%' },
