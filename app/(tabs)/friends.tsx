@@ -15,11 +15,12 @@ import { getOnlineStatus, getLastActiveText } from '@/src/utils/onlineStatus';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import LeaderboardSection from '@/src/components/LeaderboardSection';
 import ReferralCard from '@/src/components/ReferralCard';
+import { Blink } from '@/src/components/Blink';
 
 function Avatar({ username, color, size = 36 }: { username: string; color: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: '#FFF', fontSize: size * 0.4, fontWeight: '800' }}>{(username || '?')[0].toUpperCase()}</Text>
+    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color + '15', borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <Blink expression="normal" size={size - 4} />
     </View>
   );
 }

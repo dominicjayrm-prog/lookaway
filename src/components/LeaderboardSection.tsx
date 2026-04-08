@@ -5,6 +5,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Blink } from '@/src/components/Blink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import {
@@ -150,8 +151,8 @@ function LeaderboardSection() {
 
 function Avatar({ username, color, size = 32 }: { username: string; color: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: '#FFF', fontSize: size * 0.4, fontWeight: '800' }}>{(username || '?')[0].toUpperCase()}</Text>
+    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: color + '15', borderWidth: 2, borderColor: color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <Blink expression="normal" size={size - 4} />
     </View>
   );
 }
