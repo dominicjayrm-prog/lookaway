@@ -520,6 +520,17 @@ export const useGameStore = create<GameStore>((set, get) => {
         equippedBanner: localHasProgress ? local.equippedBanner : cloud.equippedBanner,
         equippedNameColor: localHasProgress ? local.equippedNameColor : cloud.equippedNameColor,
         equippedExpression: localHasProgress ? local.equippedExpression : cloud.equippedExpression,
+        // Power-ups: keep the max of each type from local and cloud
+        powerUps: (() => {
+          const merged = { ...local.powerUps };
+          for (const [key, val] of Object.entries(cloud.powerUps)) {
+            merged[key as keyof typeof merged] = Math.max((merged as any)[key] ?? 0, val as number);
+          }
+          return merged;
+        })(),
+        // Streak milestones: union of claimed milestones (prevent re-claiming)
+        streakMilestonesClaimed: [...new Set([...local.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
+        lastPlayDate: local.lastPlayDate ?? cloud.lastPlayDate,
       });
       setTimeout(() => saveState(get()), 0);
     },
