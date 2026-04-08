@@ -38,13 +38,13 @@ function ChevronSvg({ size = 16, color = '#B2BEC3' }: { size?: number; color?: s
 }
 
 // ── Progress Ring ─────────────────────────────────────────────────────
-function ProgressRing({ percentage, color, size = 26 }: { percentage: number; color: string; size?: number }) {
+function ProgressRing({ percentage, color, trackColor = '#ECEAE8', size = 26 }: { percentage: number; color: string; trackColor?: string; size?: number }) {
   const r = (size - 3) / 2;
   const circumference = 2 * Math.PI * r;
   const offset = circumference * (1 - Math.min(percentage, 100) / 100);
   return (
     <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-      <SvgCircle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ECEAE8" strokeWidth={2.5} />
+      <SvgCircle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={2.5} />
       {percentage > 0 && (
         <SvgCircle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={2.5}
           strokeDasharray={`${circumference}`} strokeDashoffset={offset} strokeLinecap="round" />
@@ -256,15 +256,15 @@ function JourneyTab() {
               <Pressable
                 key={m.id}
                 style={[st.pill, {
-                  backgroundColor: isActive ? c.color + '08' : '#FFF',
-                  borderColor: isActive ? c.color + '22' : '#E8E6E3',
+                  backgroundColor: isActive ? c.color + '08' : colors.card,
+                  borderColor: isActive ? c.color + '22' : colors.border,
                   opacity: m.locked ? 0.45 : 1,
                 }]}
                 onPress={() => !m.locked && setSelectedIdx(i)}
                 disabled={m.locked}
               >
                 <View style={st.pillRingWrap}>
-                  <ProgressRing percentage={pct} color={m.locked ? '#B2BEC3' : c.color} size={26} />
+                  <ProgressRing percentage={pct} color={m.locked ? '#B2BEC3' : c.color} trackColor={colors.surface} size={26} />
                   <Text style={[st.pillLetter, { color: m.locked ? '#B2BEC3' : isActive ? c.color : '#636E72' }]}>{c.name[0]}</Text>
                 </View>
                 <Text style={[st.pillName, { color: m.locked ? '#B2BEC3' : isActive ? c.color : '#636E72' }]} numberOfLines={1}>{c.name}</Text>
@@ -323,7 +323,7 @@ function JourneyTab() {
               const almostDone = w.unlocked && !w.isComplete && w.completed / w.totalLevels >= 0.8;
 
               // Connector line colour
-              let connectorColor = '#E8E6E1';
+              let connectorColor = colors.surface;
               if (prevWorld?.isComplete && w.isComplete) connectorColor = GREEN;
               else if (prevWorld?.isComplete && w.isCurrent) connectorColor = modeColor + '40';
 
@@ -370,11 +370,11 @@ function JourneyTab() {
                         <Text style={[st.worldCircleNum, { color: modeColor }]}>{w.worldNum}</Text>
                       </View>
                     ) : w.unlocked ? (
-                      <View style={[st.worldCircle, { backgroundColor: '#F0EFEC' }]}>
+                      <View style={[st.worldCircle, { backgroundColor: colors.surface }]}>
                         <Text style={[st.worldCircleNum, { color: '#636E72' }]}>{w.worldNum}</Text>
                       </View>
                     ) : (
-                      <View style={[st.worldCircle, { backgroundColor: '#F0EFEC' }]}>
+                      <View style={[st.worldCircle, { backgroundColor: colors.surface }]}>
                         <LockSvg size={14} color="#B2BEC3" />
                       </View>
                     )}
@@ -391,14 +391,14 @@ function JourneyTab() {
                         {w.isComplete && (
                           <View style={st.miniStars}>
                             {[1, 2, 3].map(s => (
-                              <StarSvg key={s} size={10} color={w.stars >= w.maxStars * (s / 3) ? '#D4A012' : '#E8E6E3'} />
+                              <StarSvg key={s} size={10} color={w.stars >= w.maxStars * (s / 3) ? '#D4A012' : colors.border} />
                             ))}
                           </View>
                         )}
                       </View>
                       {w.unlocked ? (
                         <View style={st.worldProgressRow}>
-                          <View style={[st.worldTrack, { maxWidth: 100 }]}>
+                          <View style={[st.worldTrack, { maxWidth: 100, backgroundColor: colors.surface }]}>
                             <View style={[st.worldFill, { width: `${Math.round((w.completed / w.totalLevels) * 100)}%`, backgroundColor: w.isComplete ? GREEN : modeColor }]} />
                           </View>
                           <Text style={[st.worldCount, { color: w.isComplete ? GREEN : colors.textLight }]}>
@@ -412,7 +412,7 @@ function JourneyTab() {
 
                     {/* Chevron */}
                     {w.unlocked && (
-                      <ChevronSvg size={16} color={w.isCurrent ? modeColor + '80' : '#D0CEC8'} />
+                      <ChevronSvg size={16} color={w.isCurrent ? modeColor + '80' : colors.textLight} />
                     )}
                   </Pressable>
                 </React.Fragment>
@@ -510,7 +510,7 @@ const st = StyleSheet.create({
   almostText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
   miniStars: { flexDirection: 'row', gap: 2 },
   worldProgressRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  worldTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: '#ECEAE8', overflow: 'hidden' },
+  worldTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
   worldFill: { height: '100%', borderRadius: 2 },
   worldCount: { fontSize: 11, fontWeight: '600' },
   worldLocked: { fontSize: 11 },

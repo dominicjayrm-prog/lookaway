@@ -56,7 +56,7 @@ export const darkColors: typeof lightColors = {
   borderStrong: 'rgba(255, 255, 255, 0.12)',
   tabBar: '#0E0D1A',
   tabBarBorder: 'rgba(255, 255, 255, 0.06)',
-  tabBarInactive: '#4A4862',
+  tabBarInactive: '#7A7890',
   heartFilled: '#FF6B6B',
   heartEmpty: '#2A2840',
   overlayBg: 'rgba(0,0,0,0.6)',

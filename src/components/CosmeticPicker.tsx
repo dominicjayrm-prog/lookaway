@@ -40,7 +40,7 @@ function CosmeticPickerComponent({
       <View style={st.backdrop}>
         <Pressable style={st.backdropTouch} onPress={onDismiss} />
         <View style={[st.sheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined }]}>
-          <View style={st.handle} />
+          <View style={[st.handle, { backgroundColor: colors.borderStrong }]} />
           <Text style={[st.title, { color: colors.text }]}>{title}</Text>
           <Text style={[st.counter, { color: colors.textLight }]}>{ownedItems.length}/{totalCount} collected</Text>
 

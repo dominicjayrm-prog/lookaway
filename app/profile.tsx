@@ -244,13 +244,50 @@ function ProfileScreen() {
           </View>
         </Animated.View>
 
+        {/* Game Stats card */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(500)}>
-          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SOCIAL</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/friends')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}><Ionicons name="people" size={18} color={colors.blue} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Friends</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Pressable style={styles.settingsRow} onPress={() => router.push('/(tabs)/friends')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}><Ionicons name="trophy" size={18} color={colors.gold} /></View><Text style={[styles.settingsLabel, { color: colors.text }]}>Leaderboard</Text></View><View style={styles.settingsRowRight}><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></View></Pressable>
+            <View style={styles.settingsRow}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="bar-chart" size={18} color={colors.accent} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Game Stats</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
+                    {(() => {
+                      const lp = useGameStore.getState().levelProgress;
+                      const entries = Object.values(lp);
+                      const perfectLevels = entries.filter(e => e.stars === 3).length;
+                      const totalAttempts = entries.reduce((sum, e) => sum + (e.attempts ?? 0), 0);
+                      const bestScore = entries.length > 0 ? Math.max(...entries.map(e => e.bestScore ?? 0)) : 0;
+                      return `Best: ${bestScore}% · ${perfectLevels} perfect · ${totalAttempts} attempts`;
+                    })()}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
+        </Animated.View>
+
+        {/* Cosmetics Inventory */}
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(550)}>
+          <Pressable onPress={() => router.push('/(tabs)/shop')} style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <View style={styles.settingsRow}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
+                  <Ionicons name="sparkles" size={18} color={colors.gold} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Cosmetics</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
+                    {ownedCosmetics.length} collected
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(600)}>
