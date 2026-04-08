@@ -3,7 +3,7 @@
  * Shows the item preview with a particle burst and a message.
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from './Blink';
 import { AvatarFrame } from './AvatarFrame';
@@ -100,6 +100,7 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message }: Pro
   if (!visible || !item) return null;
 
   return (
+    <Modal visible transparent animationType="none" statusBarTranslucent>
     <Pressable style={StyleSheet.absoluteFill} onPress={dismiss}>
       <RNAnimated.View style={[st.backdrop, { opacity: backdropOpacity }]}>
         {/* Confetti particles */}
@@ -143,6 +144,7 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message }: Pro
         </RNAnimated.View>
       </RNAnimated.View>
     </Pressable>
+    </Modal>
   );
 }
 
