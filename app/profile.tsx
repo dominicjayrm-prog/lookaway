@@ -141,7 +141,7 @@ function ProfileScreen() {
             </Pressable>
             <Text style={[styles.displayName, nameStyle]}>{displayName}</Text>
             {/* Division badge */}
-            <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30' }]}>
+            <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30', shadowColor: division.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
               <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` — ${toNext} to next` : ''}</Text>
             </View>

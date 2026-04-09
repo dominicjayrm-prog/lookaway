@@ -171,8 +171,8 @@ function SideWorldMap() {
 
         <RNAnimated.View style={{ ...StyleSheet.absoluteFillObject, opacity: anims.pathLine }}>
           <Svg style={StyleSheet.absoluteFill} width={mapWidth} height={mapHeight + 100}>
-            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={24} strokeOpacity={0.08} fill="none" strokeLinecap="round" />}
-            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={4} fill="none" strokeLinecap="round" />}
+            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={28} strokeOpacity={0.1} fill="none" strokeLinecap="round" />}
+            {completedUpTo > 0 && <Path d={buildPathD(path, 0, Math.min(completedUpTo - 1, path.length - 1), mapWidth)} stroke={worldColor} strokeWidth={6} fill="none" strokeLinecap="round" />}
             {completedUpTo < path.length && <Path d={buildPathD(path, Math.max(0, completedUpTo - 1), path.length - 1, mapWidth)} stroke="rgba(0,0,0,0.08)" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeDasharray="10,8" />}
           </Svg>
         </RNAnimated.View>
@@ -192,7 +192,7 @@ function SideWorldMap() {
                 {checkpoint && <View style={[st.checkpointBadge, { backgroundColor: state === 'completed' || state === 'boss-completed' ? worldColor + '15' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'completed' || state === 'boss-completed' ? worldColor : '#B2BEC3' }]}>{checkpoint}</Text></View>}
                 {isBoss && <View style={[st.checkpointBadge, { backgroundColor: state === 'boss-completed' ? 'rgba(212,160,18,0.1)' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>FINALE</Text></View>}
                 {renderNode(state, levelNum, worldColor, nodeSize, isBoss)}
-                {(state === 'completed' || state === 'boss-completed') && <View style={st.starsRow}>{[1, 2, 3].map(s => <StarSvg key={s} size={11} filled={stars >= s} />)}</View>}
+                {(state === 'completed' || state === 'boss-completed') && <View style={[st.starsRow, stars === 3 && { shadowColor: '#D4A012', shadowOpacity: 0.4, shadowRadius: 4, elevation: 2 }]}>{[1, 2, 3].map(s => <StarSvg key={s} size={13} filled={stars >= s} />)}</View>}
                 {state === 'current' && <Text style={[st.playLabel, { color: worldColor }]}>PLAY</Text>}
               </Pressable>
             </RNAnimated.View>

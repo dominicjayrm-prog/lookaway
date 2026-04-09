@@ -3,8 +3,11 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import OfflineBanner from '@/src/components/OfflineBanner';
+
+const isWeb = Platform.OS === 'web';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -51,6 +54,9 @@ function TabLayout() {
         <Tabs.Screen
           key={tab.name}
           name={tab.name}
+          listeners={{
+            tabPress: () => { if (!isWeb) Haptics.selectionAsync(); },
+          }}
           options={{
             title: tab.title,
             tabBarIcon: ({ focused }) => (
