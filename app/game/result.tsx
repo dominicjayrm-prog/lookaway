@@ -60,7 +60,7 @@ function AnimatedScore({ value, style }: { value: number; style: object }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     const start = Date.now();
-    const duration = 900;
+    const duration = 1200;
     const frame = () => {
       const elapsed = Date.now() - start;
       const progress = Math.min(elapsed / duration, 1);
@@ -174,6 +174,7 @@ function ResultScreen() {
             </View>
             <AnimatedScore value={score} style={[st.scoreText, { color: colors.text }]} />
             <Text style={[st.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>90%+ = 3 stars · 70%+ = 2 stars · 50%+ = pass</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
             {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>Already completed {'\u2014'} improve your stars to earn more gems!</Text>}
             {isLastLevelOfWorld && (

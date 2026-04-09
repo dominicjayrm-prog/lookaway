@@ -98,6 +98,7 @@ function JourneyTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { totalStars, levelProgress } = useGameStore();
+  const scrollRef = useRef<ScrollView>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [infoCard, setInfoCard] = useState<string | null>(null);
   const [infoCardData, setInfoCardData] = useState<{ title: string; desc: string } | null>(null);
@@ -238,7 +239,13 @@ function JourneyTab() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false} onLayout={() => {
+        // Auto-scroll to current world after layout
+        const currentWorldIdx = worlds.findIndex(w => w.isCurrent);
+        if (currentWorldIdx > 1) {
+          setTimeout(() => scrollRef.current?.scrollTo({ y: currentWorldIdx * 80, animated: true }), 300);
+        }
+      }}>
         {/* ── Mode Selector Pills ── */}
         <View style={st.pillContainer}>
           <ScrollView

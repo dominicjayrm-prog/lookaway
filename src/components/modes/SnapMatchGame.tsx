@@ -131,12 +131,20 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
   const handleCanvasPress = useCallback((e: any) => {
     const nativeEvent = e.nativeEvent;
-    // Use pageX/pageY relative to canvas position for accurate coordinates
-    // offsetX/locationX can be relative to child elements (shapes), not the canvas
-    const px = nativeEvent.pageX ?? nativeEvent.clientX ?? 0;
-    const py = nativeEvent.pageY ?? nativeEvent.clientY ?? 0;
-    const lx = px - canvasPos.current.x;
-    const ly = py - canvasPos.current.y;
+    let lx: number, ly: number;
+
+    // Prefer pageX/pageY minus canvas position (most accurate)
+    const px = nativeEvent.pageX ?? nativeEvent.clientX;
+    const py = nativeEvent.pageY ?? nativeEvent.clientY;
+    if (px != null && py != null && canvasPos.current.x > 0) {
+      lx = px - canvasPos.current.x;
+      ly = py - canvasPos.current.y;
+    } else {
+      // Fallback: offsetX/locationX (works when tapping the canvas directly, not child shapes)
+      lx = nativeEvent.locationX ?? nativeEvent.offsetX ?? 0;
+      ly = nativeEvent.locationY ?? nativeEvent.offsetY ?? 0;
+    }
+
     const tapX = canvasSize.w > 0 ? (lx / canvasSize.w) * 100 : 50;
     const tapY = canvasSize.h > 0 ? (ly / canvasSize.h) * 100 : 50;
     handleTapSceneB(tapX, tapY);
@@ -205,9 +213,17 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
         style={[s.canvas, { backgroundColor: colors.card }]}
         onPress={phase === 'sceneB' ? handleCanvasPress : undefined}
         onLayout={(e) => {
-          setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
-          // Measure canvas position on screen for accurate tap coordinates
-          (canvasRef.current as any)?.measureInWindow?.((x: number, y: number) => { canvasPos.current = { x, y }; });
+          const { width, height, x, y } = e.nativeEvent.layout;
+          setCanvasSize({ w: width, h: height });
+          // Try measureInWindow for accurate screen-relative position
+          try {
+            (canvasRef.current as any)?.measureInWindow?.((mx: number, my: number) => {
+              if (mx !== undefined && my !== undefined) canvasPos.current = { x: mx, y: my };
+            });
+          } catch {
+            // Fallback: use layout position (may be relative to parent)
+            canvasPos.current = { x, y };
+          }
         }}
       >
         {phase === 'sceneA' && renderScene(round.sceneA)}

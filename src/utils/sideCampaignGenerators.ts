@@ -133,7 +133,7 @@ export function generateSequenceLevel(levelData: any) {
       let x, y, valid, attempts = 0;
       do {
         x = 14 + Math.random() * 72;
-        y = 14 + Math.random() * 68; // Tighter range to keep shapes + badges inside canvas
+        y = 14 + Math.random() * 62; // Keep shapes + badges well inside canvas (max y=76%)
         valid = shapes.every((s: any) => Math.sqrt((s.x - x) ** 2 + (s.y - y) ** 2) > 16);
         attempts++;
       } while (!valid && attempts < 50);

@@ -127,7 +127,7 @@ function FriendsTab() {
 
         <SectionLabel label={`YOUR FRIENDS (${friends.length})`} colors={colors} />
         {friends.length === 0 ? (
-          <View style={[styles.emptySection, { backgroundColor: colors.card }]}><Text style={[styles.emptyText, { color: colors.textLight }]}>No friends yet. Search for a username or share your invite link to get started.</Text></View>
+          <View style={[styles.emptySection, { backgroundColor: colors.card, alignItems: 'center', paddingVertical: 24 }]}><Blink expression="sad" size={48} /><Text style={[styles.emptyText, { color: colors.textLight, marginTop: 12 }]}>No friends yet. Search for a username or share your invite link to get started.</Text></View>
         ) : (
           friends.map((f) => (
             <Pressable key={f.friendshipId} style={[styles.friendCard, { backgroundColor: colors.card }]} onPress={() => setSelectedFriend(f)}>
