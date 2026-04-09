@@ -199,7 +199,7 @@ function SideWorldMap() {
           );
         })}
 
-        <View style={[st.markerPill, { top: (path[0]?.y ?? 2050) + 40, left: mapWidth / 2 - 30 }]}><Text style={[st.markerText, { color: worldColor }]}>START</Text></View>
+        <View style={[st.markerPill, { top: (path[0]?.y ?? 2050) + 60, left: mapWidth / 2 - 30 }]}><Text style={[st.markerText, { color: worldColor }]}>START</Text></View>
         <View style={[st.markerPill, { top: (path[path.length - 1]?.y ?? 250) - 50, left: mapWidth / 2 - 45 }]}>
           <Text style={[st.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>{completedUpTo >= totalLevels ? 'COMPLETE!' : worldNum < totalWorlds ? `WORLD ${worldNum + 1} AWAITS` : 'THE SUMMIT'}</Text>
         </View>

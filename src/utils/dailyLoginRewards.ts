@@ -18,6 +18,7 @@ function pickRandomCosmetic(cosmeticType: 'frame' | 'banner' | 'expression', own
   const candidates = pool.filter(c =>
     (c.rarity === 'common' || c.rarity === 'rare') &&
     c.unlock !== 'subscriber' &&
+    c.unlock !== 'free' &&          // Exclude free defaults (player already has them)
     !ownedIds.includes(c.id),
   );
   if (candidates.length === 0) return null;

@@ -363,7 +363,7 @@ function SideCampaignScreen() {
                 {/* Dashed circle around actual position */}
                 <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 48, height: 48, borderRadius: 24, borderWidth: 2.5, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -24 }, { translateY: -24 }] }} />
                 {/* Score label */}
-                <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY - 8}%`, transform: [{ translateX: -24 }, { translateY: -32 }] }}>
+                <View style={{ position: 'absolute', left: `${Math.min(85, Math.max(15, tapResult.actualX))}%`, top: `${Math.max(12, tapResult.actualY - 8)}%`, transform: [{ translateX: -24 }, { translateY: -32 }] }}>
                   <Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text>
                 </View>
               </>

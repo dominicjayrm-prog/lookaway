@@ -214,7 +214,7 @@ const s = StyleSheet.create({
   container: { flex: 1, gap: 6 },
   phaseLabel: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
   progressText: { fontSize: 12, textAlign: 'center' },
-  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden' },
+  canvas: { aspectRatio: 1, width: '100%', borderRadius: 16, position: 'relative', overflow: 'hidden', zIndex: 1 },
   orderBadge: { position: 'absolute', bottom: -2, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   orderText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
