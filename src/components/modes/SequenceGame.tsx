@@ -31,7 +31,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [correctNextIdx, setCorrectNextIdx] = useState<number | null>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
 
   const round = modeData?.rounds?.[roundIdx];

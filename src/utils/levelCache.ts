@@ -5,6 +5,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 var CLASSIC_CACHE_KEY = 'blanked_levels_classic';
 var SIDE_CACHE_KEY = 'blanked_levels_side';
@@ -130,7 +131,7 @@ async function syncLevelCache(): Promise<void> {
 
     await AsyncStorage.setItem(CACHE_VERSION_KEY, CURRENT_VERSION);
   } catch (e) {
-    console.warn('Level cache sync failed (offline?):', e);
+    log.warn('cache', 'Level cache sync failed (offline?)', { error: String(e) });
   }
 }
 

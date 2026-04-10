@@ -209,14 +209,14 @@ function ResultScreen() {
             <View style={st.buttons}>
               {isLastLevelOfWorld ? (
                 nextWorldId ? (
-                  <Pressable style={st.primaryButton} onPress={handleNextWorld}><Text style={st.primaryButtonText}>Continue to {nextWorldName}</Text></Pressable>
+                  <Pressable style={st.primaryButton} onPress={handleNextWorld} accessibilityRole="button" accessibilityLabel={`Continue to ${nextWorldName}`}><Text style={st.primaryButtonText}>Continue to {nextWorldName}</Text></Pressable>
                 ) : (
-                  <Pressable style={st.primaryButton} onPress={handleBackToMap}><Text style={st.primaryButtonText}>Back to map</Text></Pressable>
+                  <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={st.primaryButtonText}>Back to map</Text></Pressable>
                 )
               ) : (
-                <Pressable style={st.primaryButton} onPress={handleNextLevel}><Text style={st.primaryButtonText}>Next Level</Text></Pressable>
+                <Pressable style={st.primaryButton} onPress={handleNextLevel} accessibilityRole="button" accessibilityLabel="Next level"><Text style={st.primaryButtonText}>Next Level</Text></Pressable>
               )}
-              <Pressable style={st.secondaryLink} onPress={handleBackToMap}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
             </View>
           </>
         ) : (
@@ -230,8 +230,8 @@ function ResultScreen() {
             )}
             {level && <Text style={[st.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>}
             <View style={st.buttons}>
-              <Pressable style={st.primaryButton} onPress={handleRetry}><Text style={st.primaryButtonText}>Try again</Text></Pressable>
-              <Pressable style={st.secondaryLink} onPress={handleBackToMap}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+              <Pressable style={st.primaryButton} onPress={handleRetry} accessibilityRole="button" accessibilityLabel="Try again"><Text style={st.primaryButtonText}>Try again</Text></Pressable>
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
             </View>
           </>
         )}
@@ -258,8 +258,13 @@ function ResultScreen() {
           const granted = await requestNotificationPermission();
           try { const AS = require('@react-native-async-storage/async-storage').default; await AS.setItem('blanked_notifications_asked', 'true'); } catch {}
           if (granted) {
-            const { user } = useGameStore.getState() as unknown as { user?: { id?: string } };
-            if (user?.id) { await registerPushToken(user.id); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
+            // The store exposes the authenticated user id as
+            // `_authUserId` (set by CloudSyncLoader), not a `user`
+            // object — the previous `(store as { user?: {id?: string} })`
+            // cast was returning undefined and silently skipping the
+            // push token registration every time.
+            const uid = useGameStore.getState()._authUserId;
+            if (uid) { await registerPushToken(uid); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
           }
         }}
         onDismiss={async () => {

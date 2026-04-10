@@ -6,6 +6,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
 import { LevelCache } from '@/src/utils/levelCache';
+import { log } from '@/src/lib/logger';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { CHALLENGE_MODES, getScorePercentage, getMaxScore } from '@/src/data/challengeModes';
 import { generateSideCampaignData } from '@/src/utils/sideCampaignGenerators';
@@ -47,7 +48,7 @@ function SideCampaignScreen() {
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const [shapeScores, setShapeScores] = useState<number[]>([]);
   const [tapResult, setTapResult] = useState<{ tapX: number; tapY: number; actualX: number; actualY: number; score: number } | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
 
   const modeConfig = CHALLENGE_MODES[mode ?? ''];
@@ -84,7 +85,7 @@ function SideCampaignScreen() {
 
   // Speed recall timer progress for visual countdown
   const [srTimerProgress, setSrTimerProgress] = useState(1);
-  const srIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const srIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const startRound = useCallback(() => {
     setShapeIdx(0);
@@ -195,7 +196,7 @@ function SideCampaignScreen() {
         }, { onConflict: 'user_id,level_id' });
       }
     } catch (e) {
-      console.warn('Failed to save side campaign progress:', e);
+      log.error('side-campaign', 'save progress failed', e);
     }
 
     setGemsEarned(gems);

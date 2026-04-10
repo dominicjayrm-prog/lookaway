@@ -245,23 +245,29 @@ function SideWorldMap() {
       </RNAnimated.View>
 
       {/* Popup */}
-      {popup !== null && (
+      {popup !== null && (() => {
+        // Capture into a local so the inner arrow functions don't lose
+        // narrowing — TypeScript can't follow `popup !== null` across the
+        // JSX boundary into the map / onPress callbacks.
+        const popupLevel = popup;
+        return (
         <Modal visible transparent animationType="fade" onRequestClose={() => setPopup(null)}>
           <View style={st.popupBackdrop}>
             <Pressable style={st.popupBackdropTouch} onPress={() => setPopup(null)} />
             <View style={[st.popupCard, { backgroundColor: themeColors.card }]}>
-              <View style={[st.popupCircle, { backgroundColor: worldColor }]}><Text style={st.popupCircleNum}>{popup}</Text></View>
-              <Text style={[st.popupTitle, { color: themeColors.text }]}>Level {popup}</Text>
+              <View style={[st.popupCircle, { backgroundColor: worldColor }]}><Text style={st.popupCircleNum}>{popupLevel}</Text></View>
+              <Text style={[st.popupTitle, { color: themeColors.text }]}>Level {popupLevel}</Text>
               <Text style={[st.popupSub, { color: themeColors.textMid }]}>{campaign?.name} — {wName}</Text>
-              <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={starCount(popup) >= s} />)}</View>
+              <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={starCount(popupLevel) >= s} />)}</View>
               <View style={st.popupButtons}>
-                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); goToLevel(popup); }}><Text style={st.popupPlayText}>Replay</Text></Pressable>
+                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); goToLevel(popupLevel); }}><Text style={st.popupPlayText}>Replay</Text></Pressable>
                 <Pressable style={[st.popupCloseBtn, { backgroundColor: themeColors.surface }]} onPress={() => setPopup(null)}><Text style={[st.popupCloseText, { color: themeColors.textMid }]}>Close</Text></Pressable>
               </View>
             </View>
           </View>
         </Modal>
-      )}
+        );
+      })()}
       <OutOfLivesModal
         visible={showOutOfLives}
         onClose={() => setShowOutOfLives(false)}

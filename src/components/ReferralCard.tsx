@@ -14,6 +14,7 @@ import {
   REFERRAL_REWARD,
   type ReferralStats,
 } from '@/src/utils/referral';
+import { log } from '@/src/lib/logger';
 
 function ReferralCard() {
   const { colors } = useTheme();
@@ -26,8 +27,8 @@ function ReferralCard() {
 
   useEffect(() => {
     if (!userId) return;
-    getMyReferralCode(userId).then(setCode).catch(() => {});
-    getReferralStats(userId).then(setStats).catch(() => {});
+    getMyReferralCode(userId).then(setCode).catch((e) => log.warn('referral', 'getMyReferralCode failed', { error: String(e) }));
+    getReferralStats(userId).then(setStats).catch((e) => log.warn('referral', 'getReferralStats failed', { error: String(e) }));
     // Get username for share message
     (async () => {
       try {

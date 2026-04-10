@@ -1,4 +1,5 @@
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ export async function checkAchievements(
       );
     }
   } catch (e) {
-    console.warn('checkAchievements error:', e);
+    log.error('achievements', 'checkAchievements threw', e);
   }
 
   return unlocks;

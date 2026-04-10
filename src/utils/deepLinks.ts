@@ -1,4 +1,5 @@
 import { addFriendById } from '@/src/utils/friends';
+import { log } from '@/src/lib/logger';
 
 const PENDING_INVITE_KEY = 'blanked_pending_invite';
 
@@ -30,7 +31,7 @@ export async function processPendingInvite(myUserId: string): Promise<void> {
     await addFriendById(inviterId, myUserId);
     localStorage.removeItem(PENDING_INVITE_KEY);
   } catch (e) {
-    console.warn('Process pending invite failed:', e);
+    log.error('deeplinks', 'processPendingInvite threw', e);
   }
 }
 

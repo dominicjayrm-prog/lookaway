@@ -22,8 +22,8 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
   const [tileStates, setTileStates] = useState<Record<number, TileState>>({});
   const [memoriseProgress, setMemoriseProgress] = useState(1);
   const [lastCorrect, setLastCorrect] = useState<boolean | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const grid = modeData?.grid ?? [];
   const rounds = modeData?.rounds ?? [];

@@ -1,4 +1,5 @@
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 /**
  * Log an economy event to Supabase. Fire and forget — never blocks gameplay.
@@ -9,16 +10,23 @@ export function logEconomyEvent(
   amount: number,
   details?: Record<string, unknown>,
 ) {
-  supabase
-    .from('economy_events')
-    .insert({
-      user_id: userId,
-      event_type: eventType,
-      amount,
-      details: details ?? {},
-    })
-    .then(() => {})
-    .catch((e) => console.warn('Economy log error:', e));
+  // Postgrest's query builder returns a `PromiseLike`, not a real Promise,
+  // so it has no `.catch()`. Wrap in an async IIFE so the error path is
+  // routed through the logger instead of escaping unhandled.
+  void (async () => {
+    try {
+      await supabase
+        .from('economy_events')
+        .insert({
+          user_id: userId,
+          event_type: eventType,
+          amount,
+          details: details ?? {},
+        });
+    } catch (e) {
+      log.error('economy', 'logEconomyEvent failed', e, { userId, eventType, amount });
+    }
+  })();
 }
 
 // Event type constants

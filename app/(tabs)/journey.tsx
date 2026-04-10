@@ -233,7 +233,13 @@ function JourneyTab() {
       {/* Header */}
       <View style={st.header}>
         <Text style={[st.title, { color: colors.text }]}>Journey</Text>
-        <Pressable onPress={() => setInfoCard(infoCard === 'stars' ? null : 'stars')} style={[st.starPill, { backgroundColor: colors.goldSoft }]}>
+        <Pressable
+          onPress={() => setInfoCard(infoCard === 'stars' ? null : 'stars')}
+          style={[st.starPill, { backgroundColor: colors.goldSoft }]}
+          accessibilityRole="button"
+          accessibilityLabel={`${totalStars} of ${TOTAL_MAX_STARS} stars`}
+          accessibilityHint="Tap to learn how stars work"
+        >
           <StarSvg size={13} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
           <Text style={[st.starCount, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/{TOTAL_MAX_STARS}</Text>
         </Pressable>
@@ -269,6 +275,9 @@ function JourneyTab() {
                 }]}
                 onPress={() => !m.locked && setSelectedIdx(i)}
                 disabled={m.locked}
+                accessibilityRole="button"
+                accessibilityLabel={`${c.name}${m.locked ? ', locked' : ''}, ${pct} percent complete`}
+                accessibilityState={{ selected: isActive, disabled: m.locked }}
               >
                 <View style={st.pillRingWrap}>
                   <ProgressRing percentage={pct} color={m.locked ? '#B2BEC3' : c.color} trackColor={colors.surface} size={26} />
@@ -287,7 +296,12 @@ function JourneyTab() {
         {!selected.locked && (
           hasStarted ? (
             // Continue state
-            <Pressable onPress={() => navigateToWorld(continueWorld)} style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}>
+            <Pressable
+              onPress={() => navigateToWorld(continueWorld)}
+              style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Continue ${continueWorld.name}, world ${continueWorld.worldNum}`}
+            >
               <LinearGradient colors={[modeColor, modeColor + 'DD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.heroCard}>
                 <View style={st.heroContent}>
                   <Text style={st.heroLabel}>{`CONTINUE \u00B7 WORLD ${continueWorld.worldNum}`}</Text>
@@ -306,7 +320,12 @@ function JourneyTab() {
             </Pressable>
           ) : (
             // Start state (new campaign)
-            <Pressable onPress={() => navigateToWorld(worlds[0])} style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}>
+            <Pressable
+              onPress={() => navigateToWorld(worlds[0])}
+              style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Start ${campaign.name} campaign`}
+            >
               <LinearGradient colors={[modeColor + '20', modeColor + '08']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.heroCard, st.heroCardNew, { borderColor: modeColor + '18' }]}>
                 <View style={st.heroContent}>
                   <Text style={[st.heroLabel, { color: modeColor, opacity: 0.6 }]}>NEW CAMPAIGN</Text>
@@ -352,6 +371,9 @@ function JourneyTab() {
                       opacity: !w.unlocked ? 0.4 : 1,
                       ...(w.isCurrent ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 } : {}),
                     }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`World ${w.worldNum}: ${w.name}${w.unlocked ? '' : ', locked'}${w.isComplete ? ', complete' : ''}`}
+                    accessibilityState={{ disabled: !w.unlocked }}
                     onPress={() => {
                       if (w.unlocked) { navigateToWorld(w); }
                       else {

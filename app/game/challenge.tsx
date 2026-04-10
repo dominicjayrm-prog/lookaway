@@ -18,6 +18,7 @@ import {
 import type { Level, Scene } from '@/src/types/game';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+import { log } from '@/src/lib/logger';
 
 type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'reveal' | 'scene_done' | 'complete' | 'error';
 
@@ -180,7 +181,7 @@ function ChallengeGameScreen() {
         // Challenged player finishing their half — update the row via
         // the existing recordChallengeScore path.
         const saved = await recordChallengeScore(dbChallengeId, userId, pct, stars);
-        if (!saved) console.warn('Failed to save challenge score');
+        if (!saved) log.warn('challenges', 'recordChallengeScore returned false', { dbChallengeId, userId });
       }
     }
   }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty]);

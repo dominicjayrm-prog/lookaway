@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Wordmark } from '@/src/components/Wordmark';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -41,7 +42,7 @@ function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
-  const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Debounced username availability check
   const handleUsernameChange = (text: string) => {
@@ -136,6 +137,8 @@ function AuthScreen() {
               setSignUpSuccess(false);
               setPassword('');
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Back to sign in"
           >
             <Text style={styles.primaryButtonText}>Back to sign in</Text>
           </Pressable>
@@ -242,6 +245,9 @@ function AuthScreen() {
               style={[styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'login' ? 'Sign in' : 'Create account'}
+              accessibilityState={{ disabled: loading, busy: loading }}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
@@ -259,7 +265,12 @@ function AuthScreen() {
                 ? "Don't have an account?"
                 : 'Already have an account?'}
             </Text>
-            <Pressable onPress={toggleMode} style={{ padding: 4 }}>
+            <Pressable
+              onPress={toggleMode}
+              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'login' ? 'Switch to sign up' : 'Switch to sign in'}
+            >
               <Text style={[styles.toggleLink, { color: colors.accent }]}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>

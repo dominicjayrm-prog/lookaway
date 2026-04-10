@@ -171,7 +171,13 @@ function WorldMapScreen() {
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       {/* ── HEADER ── */}
       <RNAnimated.View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.bg, opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Back to journey"
+        >
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
         <View style={styles.headerCenter}>
@@ -234,6 +240,9 @@ function WorldMapScreen() {
             <Pressable
               onPress={() => handleNodeTap(levelNum)}
               style={{ alignItems: 'center' }}
+              accessibilityRole="button"
+              accessibilityLabel={`Level ${levelNum}${state === 'near-locked' || state === 'far-locked' || state === 'boss-locked' ? ', locked' : state === 'completed' || state === 'boss-completed' ? `, ${stars} of 3 stars` : state === 'current' ? ', current' : ''}`}
+              accessibilityState={{ disabled: state === 'near-locked' || state === 'far-locked' || state === 'boss-locked' }}
             >
               {/* Checkpoint badge above */}
               {checkpoint && (
@@ -304,7 +313,12 @@ function WorldMapScreen() {
           <Text style={[styles.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
         </View>
         {currentLevel <= totalLevels && (
-          <Pressable style={[styles.playButton, { backgroundColor: worldColor }]} onPress={handlePlay}>
+          <Pressable
+            style={[styles.playButton, { backgroundColor: worldColor }]}
+            onPress={handlePlay}
+            accessibilityRole="button"
+            accessibilityLabel={`Play level ${currentLevel}: ${currentLevelTitle}`}
+          >
             <Text style={styles.playButtonText}>Play</Text>
           </Pressable>
         )}
@@ -431,7 +445,12 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.popupBackdrop}>
-        <Pressable style={styles.popupBackdropTouchable} onPress={onClose} />
+        <Pressable
+          style={styles.popupBackdropTouchable}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss level info"
+        />
         <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={[styles.popupCircle, { backgroundColor: worldColor }]}>
             <Text style={styles.popupCircleNum}>{levelNum}</Text>
@@ -450,10 +469,20 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
             </>
           )}
           <View style={styles.popupButtons}>
-            <Pressable style={[styles.popupPlayBtn, { backgroundColor: worldColor }]} onPress={onPlay}>
+            <Pressable
+              style={[styles.popupPlayBtn, { backgroundColor: worldColor }]}
+              onPress={onPlay}
+              accessibilityRole="button"
+              accessibilityLabel={isCompleted ? `Replay level ${levelNum}` : `Play level ${levelNum}`}
+            >
               <Text style={styles.popupPlayText}>{isCompleted ? 'Replay' : 'Play'}</Text>
             </Pressable>
-            <Pressable style={[styles.popupCloseBtn, { backgroundColor: colors.surface }]} onPress={onClose}>
+            <Pressable
+              style={[styles.popupCloseBtn, { backgroundColor: colors.surface }]}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Text style={[styles.popupCloseText, { color: colors.textMid }]}>Close</Text>
             </Pressable>
           </View>

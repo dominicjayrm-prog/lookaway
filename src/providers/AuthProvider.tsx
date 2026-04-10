@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 interface AuthContextType {
   session: Session | null;
@@ -28,11 +29,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      // Attach the user id to every subsequent log call so we can
+      // correlate breadcrumbs to the specific player who hit the issue.
+      log.setUser(session?.user?.id ?? null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
+        log.setUser(session?.user?.id ?? null);
+        log.breadcrumb('auth', `state changed: ${_event}`, { userId: session?.user?.id });
       },
     );
 

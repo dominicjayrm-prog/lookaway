@@ -1,20 +1,17 @@
 import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
-import type { SubscriptionStatus } from '@/src/store/gameStore';
+import type { SubscriptionStatus, GameStore } from '@/src/store/gameStore';
+import { log } from '@/src/lib/logger';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
+ *
+ * Accepts the full `GameStore` shape because the upsert body reads
+ * ~20 fields off it — the old signature only typed 8 of them and
+ * relied on TypeScript's structural subtyping to silently accept
+ * the extras, which meant any field renames would go unnoticed.
  */
-export async function saveProgressToSupabase(userId: string, state: {
-  gems: number;
-  lives: number;
-  livesLastLostAt: number | null;
-  streakCount: number;
-  totalStars: number;
-  highestWorld: number;
-  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
-  completedScores: number[];
-}) {
+export async function saveProgressToSupabase(userId: string, state: GameStore) {
   try {
     // Update profile
     const memoryScore = state.completedScores.length > 0
@@ -71,7 +68,7 @@ export async function saveProgressToSupabase(userId: string, state: {
       }
     }
   } catch (e) {
-    console.warn('Progress sync error:', e);
+    log.error('sync', 'saveProgressToSupabase threw', e, { userId });
   }
 }
 
@@ -98,11 +95,14 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   powerUps: Record<string, number>;
   streakMilestonesClaimed: number[];
   lastPlayDate: string | null;
-  completedScores: number[];
   maxLives: number;
   loginReward: LoginRewardState;
   username: string | null;
   avatarUrl: string | null;
+  /** Cloud's last write time in ms since epoch. Used by the merge
+   *  logic to decide whether local or cloud is the more recent source
+   *  of truth for scalar fields like gems and equipped_*. */
+  cloudUpdatedAt: number;
 } | null> {
   try {
     // Load profile
@@ -121,7 +121,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       .eq('user_id', userId);
 
     const levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }> = {};
-    const completedScores: number[] = [];
 
     (progress ?? []).forEach((p: { level_id: string; stars: number; best_score: number; attempts: number }) => {
       levelProgress[p.level_id] = {
@@ -129,7 +128,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
         bestScore: p.best_score,
         attempts: p.attempts,
       };
-      if (p.best_score > 0) completedScores.push(p.best_score);
     });
 
     return {
@@ -145,7 +143,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,
       levelProgress,
-      completedScores,
       ownedCosmetics: Array.isArray(profile.owned_cosmetics) ? profile.owned_cosmetics : [],
       equippedFrame: profile.equipped_frame ?? 'frame_blink_normal',
       equippedBanner: profile.equipped_banner ?? 'banner_none',
@@ -154,6 +151,10 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       powerUps: profile.power_ups && typeof profile.power_ups === 'object' ? profile.power_ups : {},
       streakMilestonesClaimed: Array.isArray(profile.streak_milestones_claimed) ? profile.streak_milestones_claimed : [],
       lastPlayDate: profile.last_play_date ?? null,
+      // completed_scores lives directly on the profile row — it's the
+      // denormalized cache that saveProgressToSupabase writes back. We
+      // used to also recompute it from user_progress here, but that
+      // path was dead because the second key overrode the first.
       completedScores: Array.isArray(profile.completed_scores) ? profile.completed_scores : [],
       maxLives: profile.max_lives ?? 5,
       loginReward: {
@@ -161,9 +162,10 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
         lastClaimDate: profile.login_reward_last_claim ?? INITIAL_LOGIN_REWARD_STATE.lastClaimDate,
         streak: typeof profile.login_reward_streak === 'number' ? profile.login_reward_streak : INITIAL_LOGIN_REWARD_STATE.streak,
       },
+      cloudUpdatedAt: profile.updated_at ? new Date(profile.updated_at).getTime() : 0,
     };
   } catch (e) {
-    console.warn('Progress sync error:', e);
+    log.error('sync', 'loadProgressFromSupabase threw', e, { userId });
     return null;
   }
 }

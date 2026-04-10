@@ -48,7 +48,7 @@ function ChallengeModeScreen() {
   const [shapeScores, setShapeScores] = useState<number[]>([]);
   const [tapResult, setTapResult] = useState<{ tapX: number; tapY: number; actualX: number; actualY: number; score: number } | null>(null);
   const [totalScore, setTotalScore] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
 
   useEffect(() => {
@@ -164,8 +164,11 @@ function ChallengeModeScreen() {
       <View style={s.header}>
         <Pressable
           onPress={() => {
-            // Skip the confirmation when nothing is at stake
-            if (phase === 'loading' || phase === 'error' || phase === 'complete') {
+            // Skip the confirmation when nothing is at stake. Loading
+            // and error phases short-circuit earlier in the render and
+            // never reach this button — only the `complete` phase is
+            // reachable here as a no-confirmation exit.
+            if (phase === 'complete') {
               router.back();
               return;
             }

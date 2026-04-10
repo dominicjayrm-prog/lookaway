@@ -30,7 +30,12 @@ export const lightColors = {
   overlayBg: 'rgba(0,0,0,0.4)',
 } as const;
 
-export const darkColors: typeof lightColors = {
+// Dark mode palette. Must match the exact key set of lightColors so both
+// look-ups through `useTheme().colors` are type-safe, but the VALUES are
+// free to differ — we use `Record<keyof ..., string>` (not
+// `typeof lightColors`) so dark values aren't forced to literally equal
+// the light hex strings.
+export const darkColors: Record<keyof typeof lightColors, string> = {
   bg: '#0A0914',
   card: '#13122A',
   cardBorder: 'rgba(255,255,255,0.06)',
@@ -60,9 +65,14 @@ export const darkColors: typeof lightColors = {
   heartFilled: '#FF6B6B',
   heartEmpty: '#2A2840',
   overlayBg: 'rgba(0,0,0,0.6)',
-} as const;
+};
 
-export type ThemeColors = typeof lightColors;
+// ThemeColors is the shape consumers interact with via `useTheme().colors`.
+// Using a mapped type here (rather than `typeof lightColors`) widens every
+// hex literal to `string`, so downstream `<View style={{ color: colors.correct }} />`
+// calls don't choke with "'#00B894' is not assignable to 'string'" errors
+// once we enable stricter flags.
+export type ThemeColors = { [K in keyof typeof lightColors]: string };
 
 // Default export for backwards compat
 export const colors = lightColors;
