@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
@@ -9,7 +9,12 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { fetchLevelById } from '@/src/data/levels';
-import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import {
+  pickChallengeLevels,
+  insertChallengeRow,
+  recordChallengeScore,
+  type ChallengeDifficulty,
+} from '@/src/utils/challengeFlow';
 import type { Level, Scene } from '@/src/types/game';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
@@ -19,8 +24,9 @@ type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'rev
 interface Answer { correct: boolean; }
 
 function ChallengeGameScreen() {
-  const { challengeId, friendId, mode: modeParam } = useLocalSearchParams<{ challengeId?: string; friendId?: string; mode?: string }>();
+  const { challengeId, friendId, mode: modeParam, difficulty: difficultyParam } = useLocalSearchParams<{ challengeId?: string; friendId?: string; mode?: string; difficulty?: string }>();
   const isChallenger = modeParam === 'create';
+  const difficulty: ChallengeDifficulty = (difficultyParam === 'easy' || difficultyParam === 'hard') ? difficultyParam : 'medium';
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -46,7 +52,12 @@ function ChallengeGameScreen() {
   // Clear timeout on unmount
   useEffect(() => { return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }; }, []);
 
-  // Load levels
+  // Load levels. Challenger path no longer inserts a DB row here —
+  // it just picks the ids so the challenger can play their half
+  // locally first. The row is inserted (with the challenger's real
+  // score) later in `handleNextScene` when all scenes are finished.
+  // That prevents the phantom "pending with no score" row from
+  // showing up on both sides if the challenger abandons mid-run.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -54,17 +65,10 @@ function ChallengeGameScreen() {
     async function load() {
       try {
         if (isChallenger && friendId) {
-          // Challenger: pick levels and create challenge
-          const result = await createChallenge(userId!, friendId);
-          if (cancelled || !result) { if (!cancelled) setPhase('error'); return; }
-          setDbChallengeId(result);
-
-          // Fetch the challenge to get level_ids
-          const { data: ch } = await supabase.from('friend_challenges').select('level_ids').eq('id', result).single();
-          if (!ch?.level_ids || cancelled) { if (!cancelled) setPhase('error'); return; }
-          setLevelIds(ch.level_ids);
-
-          const loaded = await Promise.all(ch.level_ids.map((id: string) => fetchLevelById(id)));
+          const ids = await pickChallengeLevels(userId!, friendId, difficulty);
+          if (cancelled || ids.length === 0) { if (!cancelled) setPhase('error'); return; }
+          setLevelIds(ids);
+          const loaded = await Promise.all(ids.map((id) => fetchLevelById(id)));
           if (cancelled) return;
           const valid = loaded.filter((l): l is Level => l !== undefined);
           if (valid.length === 0) { setPhase('error'); return; }
@@ -90,7 +94,7 @@ function ChallengeGameScreen() {
 
     load();
     return () => { cancelled = true; };
-  }, [userId, friendId, challengeId, isChallenger]);
+  }, [userId, friendId, challengeId, isChallenger, difficulty]);
 
   const startChallenge = useCallback(() => {
     setSceneIdx(0);
@@ -157,17 +161,62 @@ function ChallengeGameScreen() {
       const pct = totalQ > 0 ? Math.round((totalCorrect / totalQ) * 100) : 0;
       const stars = pct === 100 ? 3 : pct >= 80 ? 2 : pct >= 60 ? 1 : 0;
 
-      if (dbChallengeId && userId) {
+      if (!userId) return;
+
+      if (isChallenger && !dbChallengeId && friendId) {
+        // Challenger path — insert the row NOW, with a real score, and
+        // fire the "you've been challenged" notification to the friend.
+        const id = await insertChallengeRow({
+          challengerId: userId,
+          challengedId: friendId,
+          levelIds,
+          difficulty,
+          challengerScore: pct,
+          challengerStars: stars,
+          modeName: 'Classic',
+        });
+        if (id) setDbChallengeId(id);
+      } else if (dbChallengeId) {
+        // Challenged player finishing their half — update the row via
+        // the existing recordChallengeScore path.
         const saved = await recordChallengeScore(dbChallengeId, userId, pct, stars);
         if (!saved) console.warn('Failed to save challenge score');
       }
     }
-  }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId]);
+  }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty]);
 
+  /** Shared "leave this challenge?" guard. Shows a confirmation Alert
+   *  because half-finished challenges shouldn't be discarded by a
+   *  stray tap on the back button. Safe to call from both the
+   *  challenger path (no DB row yet) and the challenged path (row
+   *  exists; leaving just navigates away — the addressee can still
+   *  play later because the pending row remains). */
   const handleAbandon = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    router.back();
-  }, [router]);
+    // Phase-based short-circuit: if we haven't started or are already
+    // done, just navigate away without nagging the user.
+    if (phase === 'loading' || phase === 'error' || phase === 'ready' || phase === 'complete') {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      router.back();
+      return;
+    }
+    Alert.alert(
+      'Leave challenge?',
+      isChallenger
+        ? 'Your progress will be lost and no challenge will be sent to your friend.'
+        : 'Your progress will be lost. You can come back later as long as the challenge is still pending.',
+      [
+        { text: 'Keep playing', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            router.back();
+          },
+        },
+      ],
+    );
+  }, [router, phase, isChallenger]);
 
   // Score calculation for complete phase
   const totalCorrect = answers.filter(a => a.correct).length;

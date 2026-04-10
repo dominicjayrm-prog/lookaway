@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Polygon, Rect, Line } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { CHALLENGE_MODES, MODE_ORDER, EXCLUSIVE_MODES } from '@/src/data/challengeModes';
+import { DIFFICULTY_META, type ChallengeDifficulty } from '@/src/utils/challengeFlow';
 import { spacing } from '@/src/theme/spacing';
 
 function ModeIcon({ mode, size = 22, color = '#FFF' }: { mode: string; size?: number; color?: string }) {
@@ -24,11 +25,12 @@ function ChallengeSelectScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [selectedMode, setSelectedMode] = useState('classic');
+  const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('medium');
   const selected = CHALLENGE_MODES[selectedMode];
 
   const handleStart = () => {
     if (selectedMode === 'classic') {
-      router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create' } });
+      router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create', difficulty } });
     } else {
       router.push({ pathname: '/game/challenge-mode', params: { friendId, mode: selectedMode, action: 'create' } });
     }
@@ -66,6 +68,37 @@ function ChallengeSelectScreen() {
           </View>
           <Text style={styles.classicMeta}>{CHALLENGE_MODES.classic.roundLabel} · {CHALLENGE_MODES.classic.estimatedTime}</Text>
         </Pressable>
+
+        {/* Difficulty selector — only meaningful for the classic flow,
+            which uses level_ids drawn from the campaign pool. Exclusive
+            modes generate their own data and don't use worlds. */}
+        {selectedMode === 'classic' && (
+          <View style={styles.difficultySection}>
+            <Text style={[styles.difficultyLabel, { color: colors.textMid }]}>DIFFICULTY</Text>
+            <View style={styles.difficultyRow}>
+              {(Object.keys(DIFFICULTY_META) as ChallengeDifficulty[]).map((d) => {
+                const meta = DIFFICULTY_META[d];
+                const isActive = difficulty === d;
+                return (
+                  <Pressable
+                    key={d}
+                    onPress={() => setDifficulty(d)}
+                    style={[
+                      styles.difficultyCard,
+                      {
+                        backgroundColor: isActive ? meta.color + '15' : colors.card,
+                        borderColor: isActive ? meta.color : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.difficultyName, { color: isActive ? meta.color : colors.text }]}>{meta.label}</Text>
+                    <Text style={[styles.difficultyDesc, { color: isActive ? meta.color : colors.textMid }]} numberOfLines={2}>{meta.description}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Divider */}
         <View style={styles.divider}>
@@ -143,6 +176,23 @@ const styles = StyleSheet.create({
   classicMeta: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 10 },
   checkCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
   checkMark: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+
+  // Difficulty picker
+  difficultySection: { marginTop: 4, marginBottom: 8 },
+  difficultyLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 10, marginLeft: 4 },
+  difficultyRow: { flexDirection: 'row', gap: 8 },
+  difficultyCard: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 2,
+    alignItems: 'center',
+    minHeight: 76,
+    justifyContent: 'center',
+  },
+  difficultyName: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
+  difficultyDesc: { fontSize: 9, textAlign: 'center', lineHeight: 12 },
 
   // Divider
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 12 },

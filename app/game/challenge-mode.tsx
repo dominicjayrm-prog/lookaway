@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Polygon, Line } from 'react-native-svg';
@@ -162,7 +162,27 @@ function ChallengeModeScreen() {
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={s.header}>
-        <Pressable onPress={() => router.back()} style={s.closeBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}><Text style={[s.closeX, { color: colors.textMid }]}>{'\u2715'}</Text></Pressable>
+        <Pressable
+          onPress={() => {
+            // Skip the confirmation when nothing is at stake
+            if (phase === 'loading' || phase === 'error' || phase === 'complete') {
+              router.back();
+              return;
+            }
+            Alert.alert(
+              'Leave challenge?',
+              action === 'create'
+                ? 'Your progress will be lost and no challenge will be sent to your friend.'
+                : 'Your progress will be lost. You can come back later as long as the challenge is still pending.',
+              [
+                { text: 'Keep playing', style: 'cancel' },
+                { text: 'Leave', style: 'destructive', onPress: () => router.back() },
+              ],
+            );
+          }}
+          style={s.closeBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        ><Text style={[s.closeX, { color: colors.textMid }]}>{'\u2715'}</Text></Pressable>
         <Text style={[s.headerTitle, { color: mColor }]}>{modeConfig?.name}</Text>
         <Text style={[s.headerRound, { color: colors.textMid }]}>Round {roundIdx + 1}/{modeData?.rounds?.length ?? 5}</Text>
       </View>

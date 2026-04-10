@@ -8,6 +8,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useGameStore } from '@/src/store';
 import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus, addFriendById } from '@/src/utils/friends';
+import { declineChallenge, cancelOutgoingChallenge } from '@/src/utils/challengeFlow';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
 import { StatusDot } from '@/src/components/StatusDot';
@@ -165,6 +166,58 @@ function FriendsTab() {
   }, [userId]);
   const handleAccept = useCallback(async (id: string) => { await acceptFriendRequest(id, userId); loadData(); }, [loadData, userId]);
   const handleDecline = useCallback(async (id: string) => { await declineFriendRequest(id); loadData(); }, [loadData]);
+
+  /** Called when the addressee taps Decline on an incoming challenge
+   *  row. Confirms before deleting because challenges are harder to
+   *  replace than friend requests — the opponent would have to start
+   *  over. On success the row vanishes from the list and a "declined"
+   *  notification is sent to the challenger. */
+  const handleDeclineChallenge = useCallback((challengeId: string, opponentUsername: string) => {
+    Alert.alert(
+      'Decline challenge?',
+      `@${opponentUsername} won't be able to play this one against you.`,
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            if (!userId) return;
+            const ok = await declineChallenge(challengeId, userId);
+            if (ok) {
+              setToast({ title: `Declined @${opponentUsername}'s challenge`, tone: 'info' });
+              loadData();
+            }
+          },
+        },
+      ],
+    );
+  }, [userId, loadData]);
+
+  /** Challenger bailing on a challenge they sent before the opponent
+   *  played. Lets idjpvp back out of a challenge juanjo never saw so
+   *  it doesn't sit in the friends tab forever. */
+  const handleCancelOutgoing = useCallback((challengeId: string, opponentUsername: string) => {
+    Alert.alert(
+      'Cancel this challenge?',
+      `@${opponentUsername} hasn't played yet — it'll be removed and nothing is sent.`,
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Cancel challenge',
+          style: 'destructive',
+          onPress: async () => {
+            if (!userId) return;
+            const ok = await cancelOutgoingChallenge(challengeId, userId);
+            if (ok) {
+              setToast({ title: 'Challenge cancelled', tone: 'info' });
+              loadData();
+            }
+          },
+        },
+      ],
+    );
+  }, [userId, loadData]);
   const handleShare = useCallback(async () => { try { await Share.share({ message: `Think you've got a good memory? Challenge me on Blanked! playblanked.app/invite/${userId}` }); } catch {} }, [userId]);
   const handleChallenge = useCallback((friendId: string) => { const friend = friends.find(f => f.profile.id === friendId); setSelectedFriend(null); router.push({ pathname: '/game/challenge-select', params: { friendId, friendUsername: friend?.profile.username ?? 'friend' } }); }, [router, friends]);
   const handleRemoveFriend = useCallback(async (friendshipId: string) => { Alert.alert('Remove friend?', 'You can always add them back later.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { await removeFriend(friendshipId); setSelectedFriend(null); loadData(); } }]); }, [loadData]);
@@ -225,7 +278,76 @@ function FriendsTab() {
 
         {requests.length > 0 && (<><SectionLabel label="FRIEND REQUESTS" colors={colors} />{requests.map((r) => (<View key={r.id} style={[styles.requestCard, { backgroundColor: colors.card }]}><FriendAvatar username={r.requester.username} avatarColor={r.requester.avatar_color} avatarUrl={r.requester.avatar_url} equippedFrame={r.requester.equipped_frame} equippedExpression={r.requester.equipped_expression} size={38} /><View style={{ flex: 1, marginLeft: 12 }}><Text style={[styles.requestName, { color: colors.text }]}>@{r.requester.username}</Text><Text style={{ fontSize: 12, color: colors.textMid }}>Wants to be friends</Text></View><Pressable style={[styles.acceptBtn, { backgroundColor: colors.accent }]} onPress={() => handleAccept(r.id)}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Accept</Text></Pressable><Pressable style={styles.declineBtn} onPress={() => handleDecline(r.id)}><Ionicons name="close" size={18} color={colors.textLight} /></Pressable></View>))}</>)}
 
-        {challenges.length > 0 && (<><SectionLabel label="ACTIVE CHALLENGES" colors={colors} />{challenges.map((c) => (<View key={c.id} style={[styles.challengeCard, { backgroundColor: colors.card }]}><View style={{ position: 'relative' }}><FriendAvatar username={c.opponent.username} avatarColor={c.opponent.avatar_color} avatarUrl={c.opponent.avatar_url} equippedFrame={c.opponent.equipped_frame} equippedExpression={c.opponent.equipped_expression} size={34} /><StatusDot lastActiveAt={c.opponent.last_seen} size={8} borderColor={colors.card} /></View><View style={{ flex: 1, marginLeft: 10 }}><Text style={[styles.challengeText, { color: colors.text }]}>{c.my_score === null ? `@${c.opponent.username} challenged you${c.mode !== 'classic' ? ` to ${c.mode.replace(/_/g, ' ')}` : ''}` : `You vs @${c.opponent.username}`}</Text><Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text></View>{c.my_score === null ? (<Pressable style={[styles.playBtn, { backgroundColor: colors.wrong }]} onPress={() => { const cMode = (c as any).mode ?? 'classic'; if (cMode === 'classic') { router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } }); } else { router.push({ pathname: '/game/challenge-mode', params: { challengeId: c.id, mode: cMode, action: 'play' } }); } }}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text></Pressable>) : (<View style={[styles.pendingBadge, { backgroundColor: colors.goldSoft }]}><Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>Pending</Text></View>)}</View>))}</>)}
+        {challenges.length > 0 && (
+          <>
+            <SectionLabel label="ACTIVE CHALLENGES" colors={colors} />
+            {challenges.map((c) => {
+              // Who still owes a turn?
+              // my_score === null → current user needs to play → show Play + Decline.
+              // my_score !== null && their_score === null → current user played,
+              //   waiting on opponent → show Cancel so abandoned challenges can be
+              //   cleared instead of sitting forever.
+              const iNeedToPlay = c.my_score === null;
+              const waitingForOpponent = c.my_score !== null && c.their_score === null;
+              const cMode = (c as unknown as { mode?: string }).mode ?? 'classic';
+              const modeLabel = cMode !== 'classic' ? ` to ${cMode.replace(/_/g, ' ')}` : '';
+              const label = iNeedToPlay
+                ? `@${c.opponent.username} challenged you${modeLabel}`
+                : waitingForOpponent
+                  ? `Waiting for @${c.opponent.username}`
+                  : `You vs @${c.opponent.username}`;
+              return (
+                <View key={c.id} style={[styles.challengeCard, { backgroundColor: colors.card }]}>
+                  <View style={{ position: 'relative' }}>
+                    <FriendAvatar username={c.opponent.username} avatarColor={c.opponent.avatar_color} avatarUrl={c.opponent.avatar_url} equippedFrame={c.opponent.equipped_frame} equippedExpression={c.opponent.equipped_expression} size={34} />
+                    <StatusDot lastActiveAt={c.opponent.last_seen} size={8} borderColor={colors.card} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={[styles.challengeText, { color: colors.text }]}>{label}</Text>
+                    <Text style={{ fontSize: 11, color: colors.textMid }}>{c.level_ids.length} levels</Text>
+                  </View>
+                  {iNeedToPlay ? (
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <Pressable
+                        style={[styles.declineChallengeBtn, { backgroundColor: colors.surface }]}
+                        onPress={() => handleDeclineChallenge(c.id, c.opponent.username)}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="close" size={16} color={colors.textMid} />
+                      </Pressable>
+                      <Pressable
+                        style={[styles.playBtn, { backgroundColor: colors.wrong }]}
+                        onPress={() => {
+                          if (cMode === 'classic') router.push({ pathname: '/game/challenge', params: { challengeId: c.id, mode: 'play' } });
+                          else router.push({ pathname: '/game/challenge-mode', params: { challengeId: c.id, mode: cMode, action: 'play' } });
+                        }}
+                      >
+                        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text>
+                      </Pressable>
+                    </View>
+                  ) : waitingForOpponent ? (
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <View style={[styles.pendingBadge, { backgroundColor: colors.goldSoft }]}>
+                        <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>Pending</Text>
+                      </View>
+                      <Pressable
+                        onPress={() => handleCancelOutgoing(c.id, c.opponent.username)}
+                        hitSlop={6}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="close" size={16} color={colors.textLight} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={[styles.pendingBadge, { backgroundColor: colors.correctSoft }]}>
+                      <Text style={{ color: colors.correct, fontSize: 11, fontWeight: '700' }}>Done</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
 
         <SectionLabel label={`YOUR FRIENDS (${friends.length})`} colors={colors} />
         {friends.length === 0 ? (
@@ -301,6 +423,13 @@ const styles = StyleSheet.create({
   challengeCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
   challengeText: { fontSize: 13, fontWeight: '600' },
   playBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 10 },
+  declineChallengeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pendingBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
   emptySection: { borderRadius: borderRadius.lg, paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, alignItems: 'center', marginBottom: spacing.sm, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
   emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
