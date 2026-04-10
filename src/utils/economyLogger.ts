@@ -1,4 +1,5 @@
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 /**
  * Log an economy event to Supabase. Fire and forget — never blocks gameplay.
@@ -18,7 +19,7 @@ export function logEconomyEvent(
       details: details ?? {},
     })
     .then(() => {})
-    .catch((e) => console.warn('Economy log error:', e));
+    .catch((e) => log.error('economy', 'logEconomyEvent failed', e, { userId, eventType, amount }));
 }
 
 // Event type constants

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 // ─── Push Token Registration ────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export async function registerPushToken(userId: string): Promise<string | null> 
 
     return token;
   } catch (e) {
-    console.warn('Push registration failed:', e);
+    log.error('notifications', 'registerPushToken failed', e, { userId });
     return null;
   }
 }
@@ -127,7 +128,7 @@ export async function notifyUser(
       notification_type: notifType ?? 'generic',
     }).catch(() => {}); // Don't fail if log insert fails
   } catch (e) {
-    console.warn('Push notification failed:', e);
+    log.error('notifications', 'sendPushNotification failed', e);
   }
 }
 
@@ -161,7 +162,7 @@ export async function scheduleStreakReminder(currentStreak: number): Promise<voi
       trigger: { date: eightPm },
     });
   } catch (e) {
-    console.warn('scheduleStreakReminder failed:', e);
+    log.error('notifications', 'scheduleStreakReminder failed', e);
   }
 }
 
@@ -204,7 +205,7 @@ export async function scheduleLivesFullNotification(
       trigger: { seconds: secondsUntilFull },
     });
   } catch (e) {
-    console.warn('scheduleLivesFullNotification failed:', e);
+    log.error('notifications', 'scheduleLivesFullNotification failed', e);
   }
 }
 
@@ -327,6 +328,6 @@ export async function saveNotificationPreferences(
       .update({ notification_preferences: prefs })
       .eq('id', userId);
   } catch (e) {
-    console.warn('saveNotificationPreferences failed:', e);
+    log.error('notifications', 'saveNotificationPreferences failed', e);
   }
 }

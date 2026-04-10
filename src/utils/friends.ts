@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { notifyFriendRequest } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
+import { log } from '@/src/lib/logger';
 
 // \u2500\u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -52,7 +53,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
     .ilike('username', `${query}%`)
     .neq('id', currentUserId)
     .limit(5);
-  if (error) { console.warn('searchUsers error:', error.message); return []; }
+  if (log.supabaseError('friends', 'searchUsers', error, { query })) return [];
   return (data ?? []) as FriendProfile[];
 }
 
@@ -60,7 +61,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
 
 export async function sendFriendRequest(requesterId: string, addresseeId: string): Promise<boolean> {
   const { error } = await supabase.from('friendships').insert({ requester_id: requesterId, addressee_id: addresseeId, status: 'pending' });
-  if (error) { console.warn('sendFriendRequest error:', error.message); return false; }
+  if (log.supabaseError('friends', 'sendFriendRequest', error, { requesterId, addresseeId })) return false;
   const { data: requesterProfile } = await supabase.from('profiles').select('username').eq('id', requesterId).single();
   if (requesterProfile?.username) { notifyFriendRequest(addresseeId, requesterProfile.username); }
   return true;
@@ -96,7 +97,7 @@ export async function addFriendById(myId: string, targetId: string): Promise<Add
       .select('id, status')
       .or(`and(requester_id.eq.${myId},addressee_id.eq.${targetId}),and(requester_id.eq.${targetId},addressee_id.eq.${myId})`)
       .limit(1);
-    if (existingError) { console.warn('addFriendById check error:', existingError.message); return 'error'; }
+    if (log.supabaseError('friends', 'addFriendById.check', existingError, { myId, targetId })) return 'error';
     if (existing && existing.length > 0) {
       const row = existing[0] as { status: string };
       if (row.status === 'accepted') return 'already_friends';
@@ -105,14 +106,14 @@ export async function addFriendById(myId: string, targetId: string): Promise<Add
     const ok = await sendFriendRequest(myId, targetId);
     return ok ? 'sent' : 'error';
   } catch (e) {
-    console.warn('addFriendById error:', e);
+    log.error('friends', 'addFriendById threw', e, { myId, targetId });
     return 'error';
   }
 }
 
 export async function acceptFriendRequest(friendshipId: string, myUserId?: string): Promise<boolean> {
   const { error } = await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId);
-  if (error) { console.warn('acceptFriendRequest error:', error.message); return false; }
+  if (log.supabaseError('friends', 'acceptFriendRequest', error, { friendshipId })) return false;
   if (myUserId) {
     const { count } = await supabase.from('friendships').select('id', { count: 'exact', head: true }).eq('status', 'accepted').or(`requester_id.eq.${myUserId},addressee_id.eq.${myUserId}`);
     checkAchievements(myUserId, { type: 'friend_added', data: { totalFriends: count ?? 0 } }).catch(() => {});
@@ -122,13 +123,13 @@ export async function acceptFriendRequest(friendshipId: string, myUserId?: strin
 
 export async function declineFriendRequest(friendshipId: string): Promise<boolean> {
   const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
-  if (error) { console.warn('declineFriendRequest error:', error.message); return false; }
+  if (log.supabaseError('friends', 'declineFriendRequest', error, { friendshipId })) return false;
   return true;
 }
 
 export async function removeFriend(friendshipId: string): Promise<boolean> {
   const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
-  if (error) { console.warn('removeFriend error:', error.message); return false; }
+  if (log.supabaseError('friends', 'removeFriend', error, { friendshipId })) return false;
   return true;
 }
 
@@ -136,13 +137,13 @@ export async function removeFriend(friendshipId: string): Promise<boolean> {
 
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
   const { data, error } = await supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
-  if (error) { console.warn('getFriendRequests error:', error.message); return []; }
+  if (log.supabaseError('friends', 'getFriendRequests', error, { userId })) return [];
   return (data ?? []).map((row: Record<string, unknown>) => ({ id: row.id as string, requester: row.requester as FriendProfile, created_at: row.created_at as string }));
 }
 
 export async function getFriends(userId: string): Promise<Friend[]> {
   const { data, error } = await supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-  if (error) { console.warn('getFriends error:', error.message); return []; }
+  if (log.supabaseError('friends', 'getFriends', error, { userId })) return [];
   return (data ?? []).map((row: Record<string, unknown>) => { const isRequester = row.requester_id === userId; return { friendshipId: row.id as string, profile: (isRequester ? row.addressee : row.requester) as FriendProfile }; });
 }
 
@@ -150,13 +151,13 @@ export async function getFriends(userId: string): Promise<Friend[]> {
 
 export async function getActiveChallenges(userId: string): Promise<Challenge[]> {
   const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
-  if (error) { console.warn('getActiveChallenges error:', error.message); return []; }
+  if (log.supabaseError('friends', 'getActiveChallenges', error, { userId })) return [];
   return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
 }
 
 export async function getRecentResults(userId: string, limit: number): Promise<Challenge[]> {
   const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
-  if (error) { console.warn('getRecentResults error:', error.message); return []; }
+  if (log.supabaseError('friends', 'getRecentResults', error, { userId, limit })) return [];
   return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
 }
 
@@ -164,7 +165,7 @@ export async function getRecentResults(userId: string, limit: number): Promise<C
 
 export async function getHeadToHeadRecord(myId: string, friendId: string): Promise<{ wins: number; losses: number; draws: number }> {
   const { data, error } = await supabase.from('friend_challenges').select('challenger_id, challenged_id, challenger_score, challenged_score').eq('status', 'completed').or(`and(challenger_id.eq.${myId},challenged_id.eq.${friendId}),and(challenger_id.eq.${friendId},challenged_id.eq.${myId})`);
-  if (error) { console.warn('getHeadToHeadRecord error:', error.message); return { wins: 0, losses: 0, draws: 0 }; }
+  if (log.supabaseError('friends', 'getHeadToHeadRecord', error, { myId, friendId })) return { wins: 0, losses: 0, draws: 0 };
   let wins = 0, losses = 0, draws = 0;
   for (const row of data ?? []) {
     const iAmChallenger = row.challenger_id === myId;
@@ -180,6 +181,6 @@ export async function getHeadToHeadRecord(myId: string, friendId: string): Promi
 
 export async function updateOnlineStatus(userId: string): Promise<boolean> {
   const { error } = await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', userId);
-  if (error) { console.warn('updateOnlineStatus error:', error.message); return false; }
+  if (log.supabaseError('friends', 'updateOnlineStatus', error, { userId })) return false;
   return true;
 }

@@ -5,6 +5,7 @@ import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 
 /** In-memory fallback for platforms where localStorage is unavailable */
 let _memoryUserId: string | null = null;
@@ -25,7 +26,7 @@ function getUserId(): string {
     localStorage.setItem('blanked-user-id', id);
     return id;
   } catch (e) {
-    console.warn('localStorage unavailable, using in-memory fallback:', e);
+    log.warn('storage', 'localStorage unavailable, using in-memory fallback', { error: String(e) });
   }
   // Final fallback: in-memory ID for native platforms
   if (!_memoryUserId) {
@@ -132,7 +133,7 @@ function migrateWorldProgress() {
     }
     localStorage.setItem('blanked_world_migrated', 'true');
   } catch (e) {
-    console.warn('World migration failed:', e);
+    log.error('migration', 'World migration failed', e);
   }
 }
 
@@ -216,7 +217,7 @@ function saveState(state: GameStore) {
       localUpdatedAt: stampedAt,
     }));
   } catch (e) {
-    console.warn('Save state failed:', e);
+    log.error('storage', 'saveState failed', e);
   }
 
   // Also sync to Supabase (debounced, fire and forget). The timer
@@ -229,7 +230,7 @@ function saveState(state: GameStore) {
     const live = useGameStore.getState();
     const uid = live._authUserId;
     if (uid) {
-      saveProgressToSupabase(uid, live).catch((e) => console.warn('Sync failed:', e));
+      saveProgressToSupabase(uid, live).catch((e) => log.error('sync', 'debounced sync failed', e, { uid }));
     }
   }, 2000);
 }
@@ -424,7 +425,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // close before the 2s debounce fires, and so friends can see
       // the player wearing it as soon as they equip it.
       const uid = get()._authUserId;
-      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Purchase sync failed:', e));
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'purchase sync failed', e, { uid }));
       return true;
     },
     unlockCosmetic: (id) => {
@@ -433,7 +434,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ ownedCosmetics: [...ownedCosmetics, id] });
       setTimeout(() => saveState(get()), 0);
       const uid = get()._authUserId;
-      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Unlock sync failed:', e));
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'unlock sync failed', e, { uid }));
     },
     equipCosmetic: (type, id) => {
       if (type === 'frame') set({ equippedFrame: id });
@@ -447,7 +448,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // save (level complete, gem gain, etc). Equipping is rare
       // enough that the extra write per tap is fine.
       const uid = get()._authUserId;
-      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Equip sync failed:', e));
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'equip sync failed', e, { uid }));
     },
 
     addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
@@ -561,7 +562,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Immediately sync to cloud so progress is saved even if app is killed
       const uid = get()._authUserId;
       if (uid) {
-        setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => console.warn('Post-level sync failed:', e)), 500);
+        setTimeout(() => saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'post-level sync failed', e, { uid })), 500);
       }
 
       // Log to economy tracker
@@ -586,7 +587,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // subsequent foreground resume / loadFromCloud can't race the sync
       // and mistakenly strip the unlock we just granted.
       const uid = get()._authUserId;
-      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Activate sync failed:', e));
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'activate plus sync failed', e, { uid }));
     },
 
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
@@ -650,7 +651,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     syncToCloud: () => {
       const uid = get()._authUserId;
       if (uid) {
-        saveProgressToSupabase(uid, get()).catch((e) => console.warn('Sync failed:', e));
+        saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'manual syncToCloud failed', e, { uid }));
       }
     },
     loadFromCloud: async (userId: string) => {

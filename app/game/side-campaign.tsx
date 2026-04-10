@@ -6,6 +6,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
 import { LevelCache } from '@/src/utils/levelCache';
+import { log } from '@/src/lib/logger';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { CHALLENGE_MODES, getScorePercentage, getMaxScore } from '@/src/data/challengeModes';
 import { generateSideCampaignData } from '@/src/utils/sideCampaignGenerators';
@@ -195,7 +196,7 @@ function SideCampaignScreen() {
         }, { onConflict: 'user_id,level_id' });
       }
     } catch (e) {
-      console.warn('Failed to save side campaign progress:', e);
+      log.error('side-campaign', 'save progress failed', e);
     }
 
     setGemsEarned(gems);

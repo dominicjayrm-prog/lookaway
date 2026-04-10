@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/src/lib/supabase';
 import { Platform } from 'react-native';
+import { log } from '@/src/lib/logger';
 
 /**
  * Upload a profile picture (base64 data URI) to Supabase Storage.
@@ -39,8 +40,7 @@ export async function uploadAvatar(userId: string, dataUri: string): Promise<str
         upsert: true, // Replace existing avatar
       });
 
-    if (error) {
-      console.warn('Avatar upload failed:', error.message);
+    if (log.supabaseError('avatar', 'upload', error)) {
       return null;
     }
 
@@ -55,7 +55,7 @@ export async function uploadAvatar(userId: string, dataUri: string): Promise<str
 
     return publicUrl;
   } catch (e) {
-    console.warn('Avatar upload error:', e);
+    log.error('avatar', 'upload threw', e);
     return null;
   }
 }
@@ -69,6 +69,6 @@ export async function removeAvatar(userId: string): Promise<void> {
     await supabase.storage.from('avatars').remove([`${userId}/avatar.jpg`, `${userId}/avatar.png`]);
     await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId);
   } catch (e) {
-    console.warn('Avatar removal error:', e);
+    log.error('avatar', 'removal threw', e);
   }
 }

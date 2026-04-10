@@ -16,6 +16,7 @@ import {
   getNextDivision,
   type LeaderboardEntry,
 } from '@/src/utils/leaderboard';
+import { log } from '@/src/lib/logger';
 
 type Tab = 'friends' | 'global';
 
@@ -46,7 +47,7 @@ function LeaderboardSection() {
         setMyRank(rank);
       }
     } catch (e) {
-      console.warn('Leaderboard load failed:', e);
+      log.error('leaderboard', 'load failed', e);
     } finally {
       setLoading(false);
     }

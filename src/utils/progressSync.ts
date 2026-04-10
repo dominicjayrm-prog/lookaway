@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import type { SubscriptionStatus, GameStore } from '@/src/store/gameStore';
+import { log } from '@/src/lib/logger';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
@@ -67,7 +68,7 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       }
     }
   } catch (e) {
-    console.warn('Progress sync error:', e);
+    log.error('sync', 'saveProgressToSupabase threw', e, { userId });
   }
 }
 
@@ -163,7 +164,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       cloudUpdatedAt: profile.updated_at ? new Date(profile.updated_at).getTime() : 0,
     };
   } catch (e) {
-    console.warn('Progress sync error:', e);
+    log.error('sync', 'loadProgressFromSupabase threw', e, { userId });
     return null;
   }
 }

@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { notifyChallengeResult, notifyChallengeReceived, notifyChallengeDeclined } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
+import { log } from '@/src/lib/logger';
 
 // ──────────────────────────────────────────────────────────────────────
 // Difficulty tiers map to world ranges. Easy = worlds 1-2 (shape +
@@ -120,7 +121,7 @@ export async function pickChallengeLevels(
 
     const tierLevels = filterByDifficulty(allLevels, difficulty);
     if (tierLevels.length === 0) {
-      console.warn(`No challenge levels for difficulty ${difficulty} — falling back to all levels`);
+      log.warn('challenges', `no levels for difficulty ${difficulty}, falling back to all`, { difficulty });
     }
 
     const bothCompleted = tierLevels.filter(l => myCompleted.has(l.id) && theirCompleted.has(l.id));
@@ -137,7 +138,7 @@ export async function pickChallengeLevels(
     const selected = pickWithSpread(pool, worlds, 5);
     return selected.map(l => l.id);
   } catch (e) {
-    console.warn('pickChallengeLevels failed:', e);
+    log.error('challenges', 'pickChallengeLevels threw', e, { myId, friendId, difficulty });
     return [];
   }
 }
@@ -175,7 +176,7 @@ export async function insertChallengeRow(params: {
       })
       .select('id')
       .single();
-    if (error) { console.warn('insertChallengeRow error:', error); return null; }
+    if (log.supabaseError('challenges', 'insertChallengeRow', error, { challengerId: params.challengerId, challengedId: params.challengedId })) return null;
     const id = data?.id ?? null;
     if (id) {
       // Fire and forget the "you've been challenged" notification now
@@ -189,7 +190,7 @@ export async function insertChallengeRow(params: {
     }
     return id;
   } catch (e) {
-    console.warn('insertChallengeRow failed:', e);
+    log.error('challenges', 'insertChallengeRow threw', e, { challengerId: params.challengerId, challengedId: params.challengedId });
     return null;
   }
 }
@@ -250,7 +251,7 @@ export async function declineChallenge(
       .from('friend_challenges')
       .delete()
       .eq('id', challengeId);
-    if (error) { console.warn('Decline challenge delete error:', error); return false; }
+    if (log.supabaseError('challenges', 'declineChallenge.delete', error, { challengeId, myUserId })) return false;
 
     // Fire the "X declined your challenge" notification.
     const { data: myProfile } = await supabase
@@ -263,7 +264,7 @@ export async function declineChallenge(
     }
     return true;
   } catch (e) {
-    console.warn('Decline challenge failed:', e);
+    log.error('challenges', 'declineChallenge threw', e, { challengeId, myUserId });
     return false;
   }
 }
@@ -292,10 +293,10 @@ export async function cancelOutgoingChallenge(
       .from('friend_challenges')
       .delete()
       .eq('id', challengeId);
-    if (error) { console.warn('Cancel challenge delete error:', error); return false; }
+    if (log.supabaseError('challenges', 'cancelOutgoingChallenge.delete', error, { challengeId, myUserId })) return false;
     return true;
   } catch (e) {
-    console.warn('Cancel challenge failed:', e);
+    log.error('challenges', 'cancelOutgoingChallenge threw', e, { challengeId, myUserId });
     return false;
   }
 }
@@ -326,7 +327,7 @@ export async function sendChallengeNotification(
       );
     }
   } catch (e) {
-    console.warn('sendChallengeNotification failed:', e);
+    log.error('challenges', 'sendChallengeNotification threw', e, { challengeId, challengerId, challengedId });
   }
 }
 
@@ -367,7 +368,7 @@ export async function recordChallengeScore(
       .update(update)
       .eq('id', challengeId);
 
-    if (error) { console.warn('Record challenge score error:', error); return false; }
+    if (log.supabaseError('challenges', 'recordChallengeScore', error, { challengeId, userId, score })) return false;
 
     // Check challenge achievements (challenge sent for challenger, challenge won for winner)
     if (update.status === 'completed') {
@@ -410,7 +411,7 @@ export async function recordChallengeScore(
 
     return true;
   } catch (e) {
-    console.warn('Record challenge score failed:', e);
+    log.error('challenges', 'recordChallengeScore threw', e, { challengeId, userId, score });
     return false;
   }
 }
@@ -438,6 +439,6 @@ export async function expireOldChallenges(): Promise<void> {
       .eq('status', 'pending')
       .lt('created_at', cutoff);
   } catch (e) {
-    console.warn('Expire challenges failed:', e);
+    log.error('challenges', 'expireOldChallenges threw', e);
   }
 }
