@@ -3,6 +3,7 @@ import type { Level, GameState } from '@/src/types/game';
 import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
+import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import { supabase } from '@/src/lib/supabase';
 
 /** In-memory fallback for platforms where localStorage is unavailable */
@@ -133,15 +134,37 @@ interface SavedState {
   equippedBanner?: string;
   equippedNameColor?: string;
   equippedExpression?: string;
+  loginReward?: LoginRewardState;
+}
+
+// One-time migration: lift legacy `blanked_login_rewards` key into the main
+// progress blob so daily login streaks start syncing across devices.
+function migrateLoginReward(saved: SavedState): SavedState {
+  if (saved.loginReward) return saved;
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return saved;
+    const legacy = localStorage.getItem('blanked_login_rewards');
+    if (!legacy) return saved;
+    const parsed = JSON.parse(legacy) as LoginRewardState;
+    if (parsed && typeof parsed.currentDay === 'number' && typeof parsed.lastClaimDate === 'string') {
+      saved.loginReward = {
+        currentDay: parsed.currentDay ?? 0,
+        lastClaimDate: parsed.lastClaimDate ?? '',
+        streak: parsed.streak ?? 0,
+      };
+      localStorage.removeItem('blanked_login_rewards');
+    }
+  } catch {}
+  return saved;
 }
 
 function loadState(): SavedState {
   try {
-    if (typeof window === 'undefined') return {};
+    if (typeof window === 'undefined') return migrateLoginReward({});
     const saved = localStorage.getItem('blanked-progress');
-    if (!saved) return {};
-    return JSON.parse(saved) as SavedState;
-  } catch { return {}; }
+    const parsed = saved ? (JSON.parse(saved) as SavedState) : {};
+    return migrateLoginReward(parsed);
+  } catch { return migrateLoginReward({}); }
 }
 
 function saveState(state: GameStore) {
@@ -155,6 +178,7 @@ function saveState(state: GameStore) {
       powerUps: state.powerUps,
       ownedCosmetics: state.ownedCosmetics, equippedFrame: state.equippedFrame,
       equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor, equippedExpression: state.equippedExpression,
+      loginReward: state.loginReward,
     }));
   } catch (e) {
     console.warn('Save state failed:', e);
@@ -205,6 +229,10 @@ export interface GameStore {
   purchaseCosmetic: (id: string, gemCost: number) => boolean;
   unlockCosmetic: (id: string) => void;
   equipCosmetic: (type: 'frame' | 'banner' | 'name_color' | 'expression', id: string) => void;
+
+  // Daily login reward (synced across devices)
+  loginReward: LoginRewardState;
+  claimLoginReward: (next: LoginRewardState) => void;
 
   // Economy
   addGems: (a: number) => void;
@@ -284,6 +312,13 @@ export const useGameStore = create<GameStore>((set, get) => {
     equippedBanner: saved.equippedBanner ?? 'banner_none',
     equippedNameColor: saved.equippedNameColor ?? 'name_default',
     equippedExpression: saved.equippedExpression ?? 'expr_normal',
+
+    // Daily login reward
+    loginReward: saved.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE },
+    claimLoginReward: (next) => {
+      set({ loginReward: next });
+      setTimeout(() => saveState(get()), 0);
+    },
     purchaseCosmetic: (id, gemCost) => {
       const { gems, ownedCosmetics } = get();
       if (ownedCosmetics.includes(id) || gems < gemCost) return false;
@@ -446,6 +481,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           equippedBanner: (saved.ownedCosmetics ?? []).includes(saved.equippedBanner ?? '') || saved.equippedBanner === 'banner_none' || saved.equippedBanner === 'banner_purple_wave' ? (saved.equippedBanner ?? 'banner_none') : 'banner_none',
           equippedNameColor: (saved.ownedCosmetics ?? []).includes(saved.equippedNameColor ?? '') || saved.equippedNameColor === 'name_default' ? (saved.equippedNameColor ?? 'name_default') : 'name_default',
           equippedExpression: (saved.ownedCosmetics ?? []).includes(saved.equippedExpression ?? '') || saved.equippedExpression === 'expr_normal' ? (saved.equippedExpression ?? 'expr_normal') : 'expr_normal',
+          loginReward: saved.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE },
           _hydrated: true,
         });
       } else {
@@ -506,6 +542,17 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Merge cosmetics — keep union of both local and cloud (never lose a purchase)
       const mergedCosmetics = [...new Set([...local.ownedCosmetics, ...cloud.ownedCosmetics])];
 
+      // Login reward: pick whichever record was claimed most recently so the
+      // player's streak and position in the 7-day cycle follow them across
+      // devices. A claim from today always wins.
+      const pickLoginReward = (): LoginRewardState => {
+        const localLR = local.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE };
+        const cloudLR = cloud.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE };
+        if (!localLR.lastClaimDate) return cloudLR;
+        if (!cloudLR.lastClaimDate) return localLR;
+        return cloudLR.lastClaimDate >= localLR.lastClaimDate ? cloudLR : localLR;
+      };
+
       set({
         gems: localHasProgress ? local.gems : cloud.gems,
         lives: localHasProgress ? local.lives : cloud.lives,
@@ -533,6 +580,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         lastPlayDate: local.lastPlayDate ?? cloud.lastPlayDate,
         completedScores: localHasProgress ? local.completedScores : cloud.completedScores,
         maxLives: Math.max(local.maxLives, cloud.maxLives),
+        loginReward: pickLoginReward(),
       });
       setTimeout(() => saveState(get()), 0);
     },

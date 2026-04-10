@@ -1,10 +1,11 @@
 /**
  * Daily Login Rewards — 7-day cycle
  * Each day gives increasing rewards. Missing a day resets to Day 1.
- * Uses localStorage on web (same as game store) for persistence reliability.
- * Falls back to AsyncStorage on native.
+ *
+ * State lives in the Zustand game store (and syncs to Supabase like everything
+ * else) so the streak follows the player across devices. This module is now
+ * pure: it derives the next reward from a passed-in state snapshot.
  */
-import { Platform } from 'react-native';
 import { FRAMES, BANNERS, EXPRESSIONS } from '@/src/data/cosmetics';
 
 /**
@@ -35,58 +36,25 @@ var REWARDS = [
   { day: 7, type: 'gems' as const, amount: 25, label: '25 gems + mystery', icon: '\uD83C\uDF81' },
 ];
 
-var STORAGE_KEY = 'blanked_login_rewards';
-
-interface LoginRewardState {
-  currentDay: number; // 1-7
-  lastClaimDate: string; // YYYY-MM-DD
-  streak: number; // consecutive days
+export interface LoginRewardState {
+  currentDay: number;       // 1-7, the day of the LAST claimed reward
+  lastClaimDate: string;    // YYYY-MM-DD of the last claim
+  streak: number;           // consecutive-day login streak
 }
 
 function getTodayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// ── Storage abstraction (localStorage on web, AsyncStorage on native) ──
-async function storageGet(key: string): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    try { return localStorage.getItem(key); } catch { return null; }
-  }
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  return AsyncStorage.getItem(key);
-}
-
-async function storageSet(key: string, value: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    try { localStorage.setItem(key, value); } catch {}
-    return;
-  }
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  await AsyncStorage.setItem(key, value);
-}
-
-async function getState(): Promise<LoginRewardState> {
-  try {
-    var raw = await storageGet(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { currentDay: 1, lastClaimDate: '', streak: 0 };
-}
-
-async function saveState(state: LoginRewardState): Promise<void> {
-  await storageSet(STORAGE_KEY, JSON.stringify(state));
-}
-
 /**
- * Check if there's a reward available to claim today.
+ * Given a store snapshot, figure out whether a reward is available and what day it is.
  */
-async function checkDailyReward(): Promise<{
+function checkDailyReward(state: LoginRewardState): {
   available: boolean;
   currentDay: number;
   reward: typeof REWARDS[number];
   streak: number;
-} | null> {
-  var state = await getState();
+} {
   var today = getTodayStr();
 
   // Already claimed today
@@ -94,56 +62,52 @@ async function checkDailyReward(): Promise<{
     return { available: false, currentDay: state.currentDay, reward: REWARDS[state.currentDay - 1], streak: state.streak };
   }
 
-  // Check if streak is broken (missed more than 1 day)
   var yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   var yesterdayStr = yesterday.toISOString().split('T')[0];
 
   var nextDay: number;
+  var nextStreak: number;
   if (state.lastClaimDate === yesterdayStr) {
-    // Consecutive — advance to next day
+    // Consecutive — advance to next day (cycle back to 1 after 7)
     nextDay = state.currentDay >= 7 ? 1 : state.currentDay + 1;
+    nextStreak = state.streak + 1;
   } else if (state.lastClaimDate === '') {
     // First ever login
     nextDay = 1;
+    nextStreak = 1;
   } else {
     // Streak broken — reset to day 1
     nextDay = 1;
+    nextStreak = 1;
   }
 
   return {
     available: true,
     currentDay: nextDay,
     reward: REWARDS[nextDay - 1],
-    streak: state.lastClaimDate === yesterdayStr ? state.streak + 1 : 1,
+    streak: nextStreak,
   };
 }
 
 /**
- * Claim today's reward. Returns the reward details.
+ * Compute the next LoginRewardState after claiming today's reward.
+ * Caller is responsible for actually persisting the new state.
  */
-async function claimDailyReward(): Promise<typeof REWARDS[number] & { streak: number }> {
-  var check = await checkDailyReward();
-  if (!check || !check.available) {
-    throw new Error('No reward available');
-  }
-
-  var state: LoginRewardState = {
+function advanceLoginReward(state: LoginRewardState): LoginRewardState {
+  var check = checkDailyReward(state);
+  if (!check.available) return state;
+  return {
     currentDay: check.currentDay,
     lastClaimDate: getTodayStr(),
     streak: check.streak,
   };
-
-  await saveState(state);
-
-  return { ...check.reward, streak: check.streak };
 }
 
-/**
- * Claim a cosmetic reward. Call after claimDailyReward for cosmetic days.
- */
 function pickCosmeticReward(cosmeticType: 'frame' | 'banner' | 'expression', ownedIds: string[]): string | null {
   return pickRandomCosmetic(cosmeticType, ownedIds);
 }
 
-export { REWARDS, checkDailyReward, claimDailyReward, pickCosmeticReward, getState as getLoginRewardState };
+var INITIAL_LOGIN_REWARD_STATE: LoginRewardState = { currentDay: 0, lastClaimDate: '', streak: 0 };
+
+export { REWARDS, checkDailyReward, advanceLoginReward, pickCosmeticReward, INITIAL_LOGIN_REWARD_STATE };

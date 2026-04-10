@@ -173,16 +173,25 @@ function PlayTab() {
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
+      if (cancelled) return;
       if (!seen) {
-        setTimeout(() => setShowTutorial(true), 800);
-      } else {
-        // Only show daily reward if tutorial is done
-        checkDailyReward().then(check => {
-          if (check?.available) setTimeout(() => setShowDailyReward(true), 500);
-        });
+        setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
+        return;
       }
+      // Wait a moment so cloud sync has a chance to merge the latest
+      // loginReward from Supabase before we decide whether to show the modal.
+      // This prevents a Day 1 prompt on a new device when the player is
+      // mid-streak on another device.
+      setTimeout(() => {
+        if (cancelled) return;
+        const latest = useGameStore.getState().loginReward;
+        const check = checkDailyReward(latest);
+        if (check.available) setShowDailyReward(true);
+      }, 1200);
     });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {

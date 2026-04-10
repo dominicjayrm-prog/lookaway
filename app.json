@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.playlookaway.lookaway",
+      "bundleIdentifier": "com.blanked.app",
       "associatedDomains": ["applinks:playlookaway.app"]
     },
     "android": {
@@ -24,7 +24,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "app.playlookaway.lookaway",
+      "package": "com.blanked.app",
       "intentFilters": [
         {
           "action": "VIEW",
