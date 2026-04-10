@@ -167,56 +167,42 @@ function FriendsTab() {
   const handleAccept = useCallback(async (id: string) => { await acceptFriendRequest(id, userId); loadData(); }, [loadData, userId]);
   const handleDecline = useCallback(async (id: string) => { await declineFriendRequest(id); loadData(); }, [loadData]);
 
-  /** Called when the addressee taps Decline on an incoming challenge
-   *  row. Confirms before deleting because challenges are harder to
-   *  replace than friend requests — the opponent would have to start
-   *  over. On success the row vanishes from the list and a "declined"
-   *  notification is sent to the challenger. */
-  const handleDeclineChallenge = useCallback((challengeId: string, opponentUsername: string) => {
-    Alert.alert(
-      'Decline challenge?',
-      `@${opponentUsername} won't be able to play this one against you.`,
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            if (!userId) return;
-            const ok = await declineChallenge(challengeId, userId);
-            if (ok) {
-              setToast({ title: `Declined @${opponentUsername}'s challenge`, tone: 'info' });
-              loadData();
-            }
-          },
-        },
-      ],
-    );
+  /** Called when the addressee taps the X on an incoming challenge.
+   *  We optimistically remove the row from local state and decline
+   *  on Supabase in the background — confirmations via Alert.alert
+   *  don't reliably render on Safari web, so we skip the prompt and
+   *  surface the result as a toast instead. The toast already gives
+   *  the player a moment to see what happened; if they really want
+   *  to accept after declining they can still send their own
+   *  challenge back. */
+  const handleDeclineChallenge = useCallback(async (challengeId: string, opponentUsername: string) => {
+    if (!userId) return;
+    // Optimistic removal so the card disappears instantly even if
+    // the network round-trip is slow.
+    setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+    const ok = await declineChallenge(challengeId, userId);
+    if (ok) {
+      setToast({ title: `Declined @${opponentUsername}'s challenge`, tone: 'info' });
+    } else {
+      // Put the card back if the server rejected the delete
+      setToast({ title: 'Couldn\u2019t decline challenge', subtitle: 'Try again in a moment', tone: 'error' });
+      loadData();
+    }
   }, [userId, loadData]);
 
   /** Challenger bailing on a challenge they sent before the opponent
-   *  played. Lets idjpvp back out of a challenge juanjo never saw so
-   *  it doesn't sit in the friends tab forever. */
-  const handleCancelOutgoing = useCallback((challengeId: string, opponentUsername: string) => {
-    Alert.alert(
-      'Cancel this challenge?',
-      `@${opponentUsername} hasn't played yet — it'll be removed and nothing is sent.`,
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Cancel challenge',
-          style: 'destructive',
-          onPress: async () => {
-            if (!userId) return;
-            const ok = await cancelOutgoingChallenge(challengeId, userId);
-            if (ok) {
-              setToast({ title: 'Challenge cancelled', tone: 'info' });
-              loadData();
-            }
-          },
-        },
-      ],
-    );
+   *  played. Same optimistic-removal pattern as decline above so the
+   *  X tap feels instant on the web. */
+  const handleCancelOutgoing = useCallback(async (challengeId: string, _opponentUsername: string) => {
+    if (!userId) return;
+    setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+    const ok = await cancelOutgoingChallenge(challengeId, userId);
+    if (ok) {
+      setToast({ title: 'Challenge cancelled', tone: 'info' });
+    } else {
+      setToast({ title: 'Couldn\u2019t cancel challenge', subtitle: 'Try again in a moment', tone: 'error' });
+      loadData();
+    }
   }, [userId, loadData]);
   const handleShare = useCallback(async () => { try { await Share.share({ message: `Think you've got a good memory? Challenge me on Blanked! playblanked.app/invite/${userId}` }); } catch {} }, [userId]);
   const handleChallenge = useCallback((friendId: string) => { const friend = friends.find(f => f.profile.id === friendId); setSelectedFriend(null); router.push({ pathname: '/game/challenge-select', params: { friendId, friendUsername: friend?.profile.username ?? 'friend' } }); }, [router, friends]);

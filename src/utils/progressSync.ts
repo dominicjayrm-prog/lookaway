@@ -103,6 +103,10 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   loginReward: LoginRewardState;
   username: string | null;
   avatarUrl: string | null;
+  /** Cloud's last write time in ms since epoch. Used by the merge
+   *  logic to decide whether local or cloud is the more recent source
+   *  of truth for scalar fields like gems and equipped_*. */
+  cloudUpdatedAt: number;
 } | null> {
   try {
     // Load profile
@@ -161,6 +165,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
         lastClaimDate: profile.login_reward_last_claim ?? INITIAL_LOGIN_REWARD_STATE.lastClaimDate,
         streak: typeof profile.login_reward_streak === 'number' ? profile.login_reward_streak : INITIAL_LOGIN_REWARD_STATE.streak,
       },
+      cloudUpdatedAt: profile.updated_at ? new Date(profile.updated_at).getTime() : 0,
     };
   } catch (e) {
     console.warn('Progress sync error:', e);

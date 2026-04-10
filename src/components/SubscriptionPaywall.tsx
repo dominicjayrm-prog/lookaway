@@ -19,9 +19,80 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { useTheme } from '@/src/providers/ThemeProvider';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const ACCENT = '#6C5CE7';
+
+// ── Theme palettes ──────────────────────────────────────────────────
+// Everything that varies between light/dark lives here. The purple
+// gradient header stays the same across both themes because the
+// Blanked+ brand colour reads well on either background.
+interface PaywallPalette {
+  modalBg: string;
+  sheetBg: string;
+  sheetShadow: string;
+  contentBg: string;
+  benefitBorder: string;
+  benefitTitle: string;
+  benefitDesc: string;
+  planBorder: string;
+  planBg: string;
+  planNameInactive: string;
+  planNameActive: string;
+  planSubInactive: string;
+  planSubActive: string;
+  planPriceInactive: string;
+  planPriceActive: string;
+  radioBorder: string;
+  reassuranceMuted: string;
+  legalMuted: string;
+  legalDot: string;
+}
+
+const LIGHT: PaywallPalette = {
+  modalBg: 'rgba(0,0,0,0.4)',
+  sheetBg: '#FFFFFF',
+  sheetShadow: '#000',
+  contentBg: '#FFFFFF',
+  benefitBorder: 'rgba(0,0,0,0.04)',
+  benefitTitle: '#1A1A18',
+  benefitDesc: '#636E72',
+  planBorder: '#E8E6E3',
+  planBg: '#FAFAF8',
+  planNameInactive: '#636E72',
+  planNameActive: '#1A1A18',
+  planSubInactive: '#B2BEC3',
+  planSubActive: '#636E72',
+  planPriceInactive: '#B2BEC3',
+  planPriceActive: '#1A1A18',
+  radioBorder: '#D0CEC8',
+  reassuranceMuted: '#636E72',
+  legalMuted: '#B2BEC3',
+  legalDot: '#D0CEC8',
+};
+
+const DARK: PaywallPalette = {
+  modalBg: 'rgba(0,0,0,0.65)',
+  sheetBg: '#0F1020',
+  sheetShadow: '#000',
+  contentBg: '#0F1020',
+  benefitBorder: 'rgba(255,255,255,0.08)',
+  benefitTitle: '#F5F5F7',
+  benefitDesc: 'rgba(255,255,255,0.55)',
+  planBorder: 'rgba(255,255,255,0.12)',
+  planBg: '#1A1B2E',
+  planNameInactive: 'rgba(255,255,255,0.5)',
+  planNameActive: '#FFFFFF',
+  planSubInactive: 'rgba(255,255,255,0.3)',
+  planSubActive: 'rgba(255,255,255,0.6)',
+  planPriceInactive: 'rgba(255,255,255,0.35)',
+  planPriceActive: '#FFFFFF',
+  radioBorder: 'rgba(255,255,255,0.3)',
+  reassuranceMuted: 'rgba(255,255,255,0.55)',
+  legalMuted: 'rgba(255,255,255,0.35)',
+  legalDot: 'rgba(255,255,255,0.2)',
+};
 
 interface Props {
   visible: boolean;
@@ -104,7 +175,7 @@ function ShimmerButton({ text, onPress }: { text: string; onPress: () => void })
 }
 
 // ── Animated Benefit Row ──────────────────────────────────────────────
-function BenefitRow({ item, index }: { item: typeof BENEFITS[number]; index: number }) {
+function BenefitRow({ item, index, palette }: { item: typeof BENEFITS[number]; index: number; palette: PaywallPalette }) {
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
   const slideAnim = useRef(new RNAnimated.Value(16)).current;
   const checkScale = useRef(new RNAnimated.Value(0)).current;
@@ -119,13 +190,13 @@ function BenefitRow({ item, index }: { item: typeof BENEFITS[number]; index: num
   }, []);
 
   return (
-    <RNAnimated.View style={[st.benefitRow, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <View style={[st.benefitIcon, { backgroundColor: item.color + '12' }]}>
+    <RNAnimated.View style={[st.benefitRow, { borderBottomColor: palette.benefitBorder, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <View style={[st.benefitIcon, { backgroundColor: item.color + '18' }]}>
         <item.Icon />
       </View>
       <View style={st.benefitText}>
-        <Text style={st.benefitTitle}>{item.title}</Text>
-        <Text style={st.benefitDesc}>{item.desc}</Text>
+        <Text style={[st.benefitTitle, { color: palette.benefitTitle }]}>{item.title}</Text>
+        <Text style={[st.benefitDesc, { color: palette.benefitDesc }]}>{item.desc}</Text>
       </View>
       <RNAnimated.View style={{ transform: [{ scale: checkScale }] }}>
         <Ionicons name="checkmark-circle" size={18} color="#00B894" />
@@ -150,6 +221,8 @@ function TrialBanner() {
 // ── Main Component ────────────────────────────────────────────────────
 function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = true }: Props) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const palette: PaywallPalette = isDark ? DARK : LIGHT;
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
   const slideAnim = useRef(new RNAnimated.Value(SH)).current;
   // Intro offer only applies to the yearly plan AND only if the user qualifies.
@@ -191,9 +264,10 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
-      <View style={st.webCenter}>
-      <RNAnimated.View style={[st.fullScreen, { transform: [{ translateY: slideAnim }] }]}>
-        {/* Purple gradient header */}
+      <View style={[st.webCenter, { backgroundColor: Platform.OS === 'web' ? palette.modalBg : 'transparent' }]}>
+      <RNAnimated.View style={[st.fullScreen, { backgroundColor: palette.sheetBg, shadowColor: palette.sheetShadow }, { transform: [{ translateY: slideAnim }] }]}>
+        {/* Purple gradient header — unchanged across themes (brand colour
+            reads well on both light and dark) */}
         <LinearGradient
           colors={['#6C5CE7', '#A29BFE', '#4A3BBF']}
           start={{ x: 0.1, y: 0 }}
@@ -204,7 +278,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
             <Text style={st.restoreText}>Restore</Text>
           </Pressable>
           <Pressable style={st.closeBtn} onPress={handleDismiss} hitSlop={12}>
-            <Ionicons name="close" size={18} color="rgba(255,255,255,0.4)" />
+            <Ionicons name="close" size={18} color="rgba(255,255,255,0.6)" />
           </Pressable>
 
           {/* Logo */}
@@ -216,39 +290,53 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
         </LinearGradient>
 
         {/* Content */}
-        <ScrollView style={st.content} contentContainerStyle={[st.contentInner, { paddingBottom: Math.max(insets.bottom + 12, 28) }]} showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView style={[st.content, { backgroundColor: palette.contentBg }]} contentContainerStyle={[st.contentInner, { paddingBottom: Math.max(insets.bottom + 12, 28) }]} showsVerticalScrollIndicator={false} bounces={false}>
           {/* Benefits */}
-          {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} />)}
+          {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} palette={palette} />)}
 
           {/* Plan cards — stacked */}
           <View style={st.planSection}>
             {/* Yearly */}
-            <Pressable onPress={() => { setPlan('yearly'); }} style={[st.planCard, plan === 'yearly' && st.planCardActive]}>
+            <Pressable
+              onPress={() => { setPlan('yearly'); }}
+              style={[
+                st.planCard,
+                { borderColor: palette.planBorder, backgroundColor: palette.planBg },
+                plan === 'yearly' && { borderColor: ACCENT, borderWidth: 2, backgroundColor: isDark ? ACCENT + '18' : ACCENT + '06' },
+              ]}
+            >
               {plan === 'yearly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
-              <View style={[st.planRadio, plan === 'yearly' && st.planRadioActive]}>
+              <View style={[st.planRadio, { borderColor: palette.radioBorder }, plan === 'yearly' && st.planRadioActive]}>
                 {plan === 'yearly' && <View style={st.planRadioDot} />}
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly (Save £17)</Text>
+                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]}>Yearly (Save £17)</Text>
                   <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
                 </View>
-                <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>{'\u00A3'}1.66/month</Text>
+                <Text style={[st.planSub, { color: palette.planSubInactive }, plan === 'yearly' && { color: palette.planSubActive }]}>{'\u00A3'}1.66/month</Text>
                 {showTrial && <TrialBanner />}
               </View>
-              <Text style={[st.planPrice, plan === 'yearly' && st.planPriceActive]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
             </Pressable>
 
             {/* Monthly */}
-            <Pressable onPress={() => { setPlan('monthly'); }} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
+            <Pressable
+              onPress={() => { setPlan('monthly'); }}
+              style={[
+                st.planCard,
+                { borderColor: palette.planBorder, backgroundColor: palette.planBg },
+                plan === 'monthly' && { borderColor: ACCENT, borderWidth: 2, backgroundColor: isDark ? ACCENT + '18' : ACCENT + '06' },
+              ]}
+            >
               {plan === 'monthly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
-              <View style={[st.planRadio, plan === 'monthly' && st.planRadioActive]}>
+              <View style={[st.planRadio, { borderColor: palette.radioBorder }, plan === 'monthly' && st.planRadioActive]}>
                 {plan === 'monthly' && <View style={st.planRadioDot} />}
               </View>
               <View style={st.planLeft}>
-                <Text style={[st.planName, plan === 'monthly' && st.planNameActive]}>Monthly</Text>
+                <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'monthly' && { color: palette.planNameActive }]}>Monthly</Text>
               </View>
-              <Text style={[st.planPrice, plan === 'monthly' && st.planPriceActive]}>{'\u00A3'}2.99<Text style={st.planPricePer}>/month</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'monthly' && { color: palette.planPriceActive }]}>{'\u00A3'}2.99<Text style={st.planPricePer}>/month</Text></Text>
             </Pressable>
           </View>
 
@@ -263,17 +351,17 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
                 <Text style={st.reassuranceGreen}>{`No charge for 3 days \u2014 cancel anytime`}</Text>
               </View>
             ) : (
-              <Text style={st.reassuranceGrey}>Cancel anytime in Settings</Text>
+              <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>Cancel anytime in Settings</Text>
             )}
           </View>
 
           {/* Legal */}
           <View style={st.legalRow}>
-            <Pressable><Text style={st.legalLink}>Terms</Text></Pressable>
-            <Text style={st.legalDot}>{'\u00B7'}</Text>
-            <Pressable><Text style={st.legalLink}>Privacy</Text></Pressable>
-            <Text style={st.legalDot}>{'\u00B7'}</Text>
-            <Pressable onPress={handleDismiss}><Text style={st.legalLink}>Restore</Text></Pressable>
+            <Pressable><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms</Text></Pressable>
+            <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
+            <Pressable><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy</Text></Pressable>
+            <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
+            <Pressable onPress={handleDismiss}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
           </View>
         </ScrollView>
       </RNAnimated.View>

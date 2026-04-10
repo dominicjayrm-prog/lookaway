@@ -148,6 +148,10 @@ interface SavedState {
   username?: string | null;
   avatarUrl?: string | null;
   subscriptionStatus?: SubscriptionStatus;
+  /** Last time saveState fired locally, in ms since epoch. Compared
+   *  against the cloud's `updated_at` during loadFromCloud so we can
+   *  prefer whichever side is actually newer for scalar fields. */
+  localUpdatedAt?: number;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
   totalStars?: number;
@@ -194,6 +198,7 @@ function loadState(): SavedState {
 }
 
 function saveState(state: GameStore) {
+  const stampedAt = Date.now();
   try {
     if (typeof window === 'undefined') return;
     localStorage.setItem('blanked-progress', JSON.stringify({
@@ -208,6 +213,7 @@ function saveState(state: GameStore) {
       ownedCosmetics: state.ownedCosmetics, equippedFrame: state.equippedFrame,
       equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor, equippedExpression: state.equippedExpression,
       loginReward: state.loginReward,
+      localUpdatedAt: stampedAt,
     }));
   } catch (e) {
     console.warn('Save state failed:', e);
@@ -244,6 +250,11 @@ export interface GameStore {
   username: string | null;
   avatarUrl: string | null;
   subscriptionStatus: SubscriptionStatus;
+  /** Last time `saveState` ran in ms since epoch. Compared against the
+   *  cloud's `updated_at` in loadFromCloud to decide which side wins
+   *  for scalar fields (gems, equipped_*, etc). Not persisted to
+   *  Supabase — Postgres maintains its own `updated_at` via trigger. */
+  localUpdatedAt: number;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
@@ -363,6 +374,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     username: saved.username ?? null,
     avatarUrl: saved.avatarUrl ?? null,
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
+    localUpdatedAt: saved.localUpdatedAt ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
@@ -589,6 +601,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           username: saved.username ?? null,
           avatarUrl: saved.avatarUrl ?? null,
           subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
+          localUpdatedAt: saved.localUpdatedAt ?? 0,
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
           totalStars: saved.totalStars ?? 0,
@@ -639,9 +652,22 @@ export const useGameStore = create<GameStore>((set, get) => {
       const cloud = await loadProgressFromSupabase(userId);
       if (!cloud) return;
       const local = get();
-      const localHasProgress = Object.keys(local.levelProgress).length > 0;
 
-      // Merge level progress — keep the best from either source
+      // ── Timestamp-based truth source ─────────────────────────────
+      // Previously this code used `localHasProgress = levelProgress has entries`
+      // to decide whether to prefer local or cloud for scalar fields
+      // like gems and equipped_*. That was wrong because a device
+      // with STALE local data (from an earlier session) would still
+      // have a populated levelProgress and would silently overwrite
+      // the cloud's fresh state. Now we compare `local.localUpdatedAt`
+      // against the cloud's `updated_at` trigger timestamp and use
+      // whichever side wrote more recently. On a fresh device with
+      // no local save at all, `localUpdatedAt` is 0 and cloud wins
+      // by default.
+      const localIsNewer = local.localUpdatedAt > cloud.cloudUpdatedAt;
+
+      // Merge level progress — always keep the best from either source
+      // regardless of timestamps, since levels can only improve.
       const mergedProgress = { ...cloud.levelProgress };
       for (const [id, lp] of Object.entries(local.levelProgress)) {
         const cp = mergedProgress[id];
@@ -702,10 +728,16 @@ export const useGameStore = create<GameStore>((set, get) => {
         return cloudLR.lastClaimDate >= localLR.lastClaimDate ? cloudLR : localLR;
       };
 
+      // Scalar merge — newer side wins. gems/lives/livesLastLostAt and
+      // all four equipped slots fall into this bucket. Counters that
+      // can only grow (streak/bestStreak/daysPlayed/totalStars/highestWorld)
+      // use Math.max regardless so nobody loses a record.
+      const pickScalar = <T,>(localVal: T, cloudVal: T): T => (localIsNewer ? localVal : cloudVal);
+
       set({
-        gems: localHasProgress ? local.gems : cloud.gems,
-        lives: localHasProgress ? local.lives : cloud.lives,
-        livesLastLostAt: localHasProgress ? local.livesLastLostAt : cloud.livesLastLostAt,
+        gems: pickScalar(local.gems, cloud.gems),
+        lives: pickScalar(local.lives, cloud.lives),
+        livesLastLostAt: pickScalar(local.livesLastLostAt, cloud.livesLastLostAt),
         streakCount: Math.max(cloud.streakCount, local.streakCount),
         bestStreak: Math.max(cloud.bestStreak ?? 0, local.bestStreak ?? 0, cloud.streakCount, local.streakCount),
         daysPlayed: Math.max(cloud.daysPlayed ?? 0, local.daysPlayed ?? 0),
@@ -713,20 +745,21 @@ export const useGameStore = create<GameStore>((set, get) => {
         // keep local only as a fallback if cloud hasn't returned one.
         username: cloud.username ?? local.username ?? null,
         // Avatar url is server-sourced too (set via avatarUpload.ts
-        // after a Supabase Storage upload succeeds). Cloud wins so a
-        // fresh device picks up the player's uploaded photo on first
-        // login without needing localStorage.
-        avatarUrl: cloud.avatarUrl ?? local.avatarUrl ?? null,
+        // after a Supabase Storage upload succeeds). Prefer cloud
+        // unless local was updated more recently (covers the narrow
+        // window where the user JUST uploaded on this device and the
+        // first save with the new URL hasn't persisted to cloud yet).
+        avatarUrl: pickScalar(local.avatarUrl, cloud.avatarUrl),
         totalStars: mergedTotalStars,
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,
         completedScores: mergedScores,
         subscriptionStatus: cloudSubStatus,
         ownedCosmetics: mergedCosmetics,
-        equippedFrame: resolveEquipped(localHasProgress ? local.equippedFrame : cloud.equippedFrame, 'frame_blink_normal'),
-        equippedBanner: resolveEquipped(localHasProgress ? local.equippedBanner : cloud.equippedBanner, 'banner_none'),
-        equippedNameColor: resolveEquipped(localHasProgress ? local.equippedNameColor : cloud.equippedNameColor, 'name_default'),
-        equippedExpression: resolveEquipped(localHasProgress ? local.equippedExpression : cloud.equippedExpression, 'expr_normal'),
+        equippedFrame: resolveEquipped(pickScalar(local.equippedFrame, cloud.equippedFrame), 'frame_blink_normal'),
+        equippedBanner: resolveEquipped(pickScalar(local.equippedBanner, cloud.equippedBanner), 'banner_none'),
+        equippedNameColor: resolveEquipped(pickScalar(local.equippedNameColor, cloud.equippedNameColor), 'name_default'),
+        equippedExpression: resolveEquipped(pickScalar(local.equippedExpression, cloud.equippedExpression), 'expr_normal'),
         // Power-ups: keep the max of each type from local and cloud
         powerUps: (() => {
           const merged = { ...local.powerUps };
