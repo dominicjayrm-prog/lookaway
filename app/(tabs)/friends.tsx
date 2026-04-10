@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Share, Alert, Image, Animated as RNAnimated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
-import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus } from '@/src/utils/friends';
+import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus, addFriendById } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
 import { StatusDot } from '@/src/components/StatusDot';
@@ -18,6 +18,8 @@ import ReferralCard from '@/src/components/ReferralCard';
 import { Blink } from '@/src/components/Blink';
 import { FriendQRSheet } from '@/src/components/FriendQRSheet';
 import { FriendQRScanner } from '@/src/components/FriendQRScanner';
+import { FriendRequestToast, type ToastTone } from '@/src/components/FriendRequestToast';
+import * as Haptics from 'expo-haptics';
 
 function Avatar({ username, color, size = 36, avatarUrl }: { username: string; color: string; size?: number; avatarUrl?: string | null }) {
   return (
@@ -33,6 +35,59 @@ function Avatar({ username, color, size = 36, avatarUrl }: { username: string; c
 
 function SectionLabel({ label, colors }: { label: string; colors: Record<string, string> }) {
   return <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{label}</Text>;
+}
+
+/**
+ * Animated Add → Sent button for search results. When `sent` flips true
+ * the pill morphs into a green checkmark with a spring scale. Both
+ * states share the same wrapper Animated.View so the scale transition
+ * plays instead of the component unmounting and remounting.
+ */
+function AnimatedAddButton({ sent, onPress, colors }: { sent: boolean; onPress: () => void; colors: Record<string, string> }) {
+  // Drives the sent-state scale pop. 0 = add state, 1 = sent state.
+  const morph = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    if (sent) {
+      RNAnimated.spring(morph, { toValue: 1, friction: 5, tension: 180, useNativeDriver: true }).start();
+    } else {
+      morph.setValue(0);
+    }
+  }, [sent, morph]);
+
+  const scaleStyle = {
+    transform: [
+      { scale: morph.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 1.15, 1] }) },
+    ],
+  };
+
+  return (
+    <RNAnimated.View style={scaleStyle}>
+      {sent ? (
+        <RNAnimated.View
+          style={[
+            styles.sentPill,
+            {
+              backgroundColor: colors.correctSoft,
+              borderColor: colors.correct + '55',
+            },
+          ]}
+        >
+          <Ionicons name="checkmark" size={14} color={colors.correct} />
+          <Text style={[styles.sentPillText, { color: colors.correct }]}>Sent</Text>
+        </RNAnimated.View>
+      ) : (
+        <Pressable
+          style={({ pressed }) => [
+            styles.addBtnSmall,
+            { backgroundColor: colors.accent, opacity: pressed ? 0.85 : 1 },
+          ]}
+          onPress={onPress}
+        >
+          <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Add</Text>
+        </Pressable>
+      )}
+    </RNAnimated.View>
+  );
 }
 
 function FriendsTab() {
@@ -52,6 +107,7 @@ function FriendsTab() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [toast, setToast] = useState<{ title: string; subtitle?: string; tone: ToastTone } | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
   const searchInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -73,7 +129,28 @@ function FriendsTab() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchText, userId]);
 
-  const handleSendRequest = useCallback(async (addresseeId: string) => { if (!userId) return; await sendFriendRequest(userId, addresseeId); setSentRequests(prev => new Set(prev).add(addresseeId)); Alert.alert('Request sent!', 'They will see your request in their Friends tab.'); }, [userId]);
+  const handleSendRequest = useCallback(async (addresseeId: string, username: string) => {
+    if (!userId) return;
+    // Use the consolidated helper so we catch already-friends / pending
+    // cases instead of silently double-inserting.
+    const outcome = await addFriendById(userId, addresseeId);
+    if (outcome === 'sent') {
+      setSentRequests(prev => new Set(prev).add(addresseeId));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setToast({ title: `Request sent to @${username}`, subtitle: 'They will see it in their Friends tab', tone: 'success' });
+    } else if (outcome === 'already_friends') {
+      setSentRequests(prev => new Set(prev).add(addresseeId));
+      setToast({ title: `You and @${username} are already friends`, tone: 'info' });
+    } else if (outcome === 'request_pending') {
+      setSentRequests(prev => new Set(prev).add(addresseeId));
+      setToast({ title: `Request to @${username} is pending`, subtitle: 'Hold tight — they haven\u2019t responded yet', tone: 'info' });
+    } else if (outcome === 'self') {
+      setToast({ title: 'You can\u2019t add yourself', tone: 'error' });
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setToast({ title: 'Couldn\u2019t send request', subtitle: 'Check your connection and try again', tone: 'error' });
+    }
+  }, [userId]);
   const handleAccept = useCallback(async (id: string) => { await acceptFriendRequest(id, userId); loadData(); }, [loadData, userId]);
   const handleDecline = useCallback(async (id: string) => { await declineFriendRequest(id); loadData(); }, [loadData]);
   const handleShare = useCallback(async () => { try { await Share.share({ message: `Think you've got a good memory? Challenge me on Blanked! playblanked.app/invite/${userId}` }); } catch {} }, [userId]);
@@ -85,6 +162,13 @@ function FriendsTab() {
   return (
     <TabTransition>
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+      <FriendRequestToast
+        visible={!!toast}
+        title={toast?.title ?? ''}
+        subtitle={toast?.subtitle}
+        tone={toast?.tone ?? 'success'}
+        onDismiss={() => setToast(null)}
+      />
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
@@ -117,9 +201,11 @@ function FriendsTab() {
                   <Text style={[styles.searchResultName, { color: colors.text }]}>@{u.username}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight }}>World {u.highest_world} · {'\u2B50'} {u.total_stars}</Text>
                 </View>
-                {sentRequests.has(u.id) ? (<Text style={{ fontSize: 12, color: colors.textLight, fontWeight: '600' }}>Sent</Text>) : (
-                  <Pressable style={[styles.addBtnSmall, { backgroundColor: colors.accent }]} onPress={() => handleSendRequest(u.id)}><Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Add</Text></Pressable>
-                )}
+                <AnimatedAddButton
+                  sent={sentRequests.has(u.id)}
+                  onPress={() => handleSendRequest(u.id, u.username)}
+                  colors={colors}
+                />
               </View>
             ))}
           </View>
@@ -185,6 +271,16 @@ const styles = StyleSheet.create({
   searchResultRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1 },
   searchResultName: { fontSize: 14, fontWeight: '600' },
   addBtnSmall: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
+  sentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  sentPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginBottom: spacing.sm, marginTop: spacing.lg },
   requestCard: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.lg, padding: 12, marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2, borderLeftWidth: 3, borderLeftColor: '#00B894' },
   requestName: { fontSize: 14, fontWeight: '600' },

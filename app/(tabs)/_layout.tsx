@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import OfflineBanner from '@/src/components/OfflineBanner';
+import { useFriendsBadgeCount } from '@/src/hooks/useFriendsBadgeCount';
 
 const isWeb = Platform.OS === 'web';
 
@@ -27,6 +28,7 @@ function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : 16;
+  const friendsBadge = useFriendsBadgeCount();
   return (
     <>
     <OfflineBanner />
@@ -50,27 +52,41 @@ function TabLayout() {
         },
       }}
     >
-      {TAB_CONFIG.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          listeners={{
-            tabPress: () => { if (!isWeb) Haptics.selectionAsync(); },
-          }}
-          options={{
-            title: tab.title,
-            tabBarIcon: ({ focused }) => (
-              <View style={focused ? [styles.activeIconContainer, { backgroundColor: colors.accentSoft }] : styles.inactiveIconContainer}>
-                <Ionicons
-                  name={focused ? tab.iconFocused : tab.icon}
-                  size={22}
-                  color={focused ? colors.accent : colors.tabBarInactive}
-                />
-              </View>
-            ),
-          }}
-        />
-      ))}
+      {TAB_CONFIG.map((tab) => {
+        const badge = tab.name === 'friends' && friendsBadge > 0 ? friendsBadge : undefined;
+        return (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            listeners={{
+              tabPress: () => { if (!isWeb) Haptics.selectionAsync(); },
+            }}
+            options={{
+              title: tab.title,
+              tabBarBadge: badge,
+              tabBarBadgeStyle: {
+                backgroundColor: colors.wrong,
+                color: '#FFFFFF',
+                fontSize: 10,
+                fontWeight: '800',
+                minWidth: 16,
+                height: 16,
+                lineHeight: 16,
+                paddingHorizontal: 4,
+              },
+              tabBarIcon: ({ focused }) => (
+                <View style={focused ? [styles.activeIconContainer, { backgroundColor: colors.accentSoft }] : styles.inactiveIconContainer}>
+                  <Ionicons
+                    name={focused ? tab.iconFocused : tab.icon}
+                    size={22}
+                    color={focused ? colors.accent : colors.tabBarInactive}
+                  />
+                </View>
+              ),
+            }}
+          />
+        );
+      })}
     </Tabs>
     </>
   );
