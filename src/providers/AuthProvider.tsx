@@ -6,6 +6,32 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 
+/** Key we use to hand Apple's suggested display name across the
+ *  router boundary between the login screen and the username picker.
+ *  Stored on `localStorage` (or the in-memory shim on platforms where
+ *  localStorage doesn't exist) and consumed + cleared by username.tsx. */
+const USERNAME_SUGGESTION_KEY = 'blanked_username_suggestion';
+
+export function stashUsernameSuggestion(name: string) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(USERNAME_SUGGESTION_KEY, name);
+  } catch {
+    // Best-effort only — the picker will just start with an empty input.
+  }
+}
+
+export function consumeUsernameSuggestion(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const v = localStorage.getItem(USERNAME_SUGGESTION_KEY);
+    if (v) localStorage.removeItem(USERNAME_SUGGESTION_KEY);
+    return v;
+  } catch {
+    return null;
+  }
+}
+
 /** Possible outcomes of a social sign-in attempt. Distinguishing
  *  `cancelled` from `error` matters because the UI should stay silent
  *  on cancel (user deliberately backed out) but surface a toast on
@@ -94,9 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *   3. Hand Apple's identityToken to Supabase via signInWithIdToken.
    *      Supabase validates the JWT's signature, audience, and our
    *      raw nonce, then creates or resumes the user row.
-   *   4. If this was a first-time sign-in AND the profile doesn't yet
-   *      have a username, seed it from Apple's fullName. Apple's
-   *      private-relay emails are useless as display names.
+   *   4. On first sign-in, stash Apple's fullName as a *suggestion* for
+   *      the username picker screen — NOT an auto-assignment. The
+   *      picker (app/username.tsx) prefills the input with it but the
+   *      user always gets to see + confirm + override. This is what
+   *      makes the "you're in, pick your username" onboarding step feel
+   *      intentional instead of silent.
    *
    * Returns a discriminated union so the UI can decide whether to
    * stay silent (cancelled) or surface a toast (error).
@@ -166,38 +195,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // First-time signup seeding. Apple only returns fullName on the
-      // very first authorisation of the app against this Apple ID, so
-      // this branch runs exactly once per (user, app) pair.
+      // First-time-only suggestion stash. Apple only returns fullName on
+      // the very first authorisation of the app against this Apple ID,
+      // so this branch runs exactly once per (user, app) pair. We store
+      // the slugified version for the username picker to pre-fill —
+      // we do NOT write to profiles.username directly, because the
+      // picker is meant to be an intentional choice, not a silent
+      // assignment. The user can accept the suggestion or type their own.
       const userId = data.session.user.id;
       const fullName = credential.fullName;
       if (fullName?.givenName || fullName?.familyName) {
-        try {
-          const { data: existing } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', userId)
-            .single();
-          if (!existing?.username) {
-            const suggestedUsername = [fullName.givenName, fullName.familyName]
-              .filter(Boolean)
-              .join(' ')
-              .trim()
-              .toLowerCase()
-              .replace(/\s+/g, '_')
-              .replace(/[^a-z0-9_]/g, '')
-              .slice(0, 20);
-            if (suggestedUsername) {
-              await supabase
-                .from('profiles')
-                .update({ username: suggestedUsername })
-                .eq('id', userId);
-            }
-          }
-        } catch (e) {
-          // Username seeding is best-effort — if it fails the user
-          // just ends up on the username-picker screen later.
-          log.warn('auth', 'apple username seeding failed', { error: String(e) });
+        const slug = [fullName.givenName, fullName.familyName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '')
+          .slice(0, 16);
+        if (slug.length >= 3) {
+          stashUsernameSuggestion(slug);
         }
       }
 
