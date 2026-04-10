@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Wordmark } from '@/src/components/Wordmark';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { BlankedLogo } from '@/src/components/BlankedLogo';
@@ -24,8 +25,8 @@ import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 type Mode = 'login' | 'signup';
 
 function AuthScreen() {
-  const { colors } = useTheme();
-  const { signIn, signUp, session } = useAuth();
+  const { colors, isDark } = useTheme();
+  const { signIn, signUp, signInWithApple, session } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
 
@@ -114,6 +115,25 @@ function AuthScreen() {
     setLoading(false);
   };
 
+  const handleApplePress = async () => {
+    setError(null);
+    setLoading(true);
+    const result = await signInWithApple();
+    setLoading(false);
+
+    if (result.ok) {
+      // Session useEffect will redirect. Explicit replace belt-and-braces
+      // in case the listener fires before the render cycle.
+      router.replace('/');
+      return;
+    }
+    if (result.reason === 'cancelled') {
+      // User dismissed the native sheet — stay silent, no toast.
+      return;
+    }
+    setError(result.message);
+  };
+
   const toggleMode = () => {
     setMode(mode === 'login' ? 'signup' : 'login');
     setError(null);
@@ -175,6 +195,36 @@ function AuthScreen() {
                 ? 'Sign in to continue your journey'
                 : 'Start training your memory today'}
             </Text>
+
+            {/* Social sign-in — iOS only for now. Apple's Human Interface
+                Guidelines require the native AppleAuthenticationButton
+                component; we can't style our own "Sign in with Apple"
+                button. Button style adapts to the theme: black on light,
+                white on dark. */}
+            {Platform.OS === 'ios' && (
+              <View style={styles.socialSection}>
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    mode === 'login'
+                      ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                      : AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+                  }
+                  buttonStyle={
+                    isDark
+                      ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                      : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={borderRadius.md}
+                  style={styles.appleButton}
+                  onPress={handleApplePress}
+                />
+                <View style={styles.dividerRow}>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  <Text style={[styles.dividerText, { color: colors.textLight }]}>or continue with email</Text>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                </View>
+              </View>
+            )}
 
             {mode === 'signup' && (
               <View style={styles.inputContainer}>
@@ -314,4 +364,9 @@ const styles = StyleSheet.create({
   successContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xxl, gap: spacing.lg },
   successTitle: { fontSize: 22, fontWeight: '700', marginTop: spacing.md },
   successBody: { fontSize: typography.sizes.md, textAlign: 'center', lineHeight: 22 },
+  socialSection: { marginBottom: spacing.lg },
+  appleButton: { width: '100%', height: 52 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
 });
