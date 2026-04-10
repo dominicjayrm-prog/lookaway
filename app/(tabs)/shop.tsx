@@ -80,7 +80,12 @@ function CosmeticStatus({
 
 function ShopTab() {
   const { colors } = useTheme();
-  const { gems, powerUps, buyPowerUp, refillLivesWithGems, addGems } = useGameStore();
+  // NOTE: destructuring `ownedCosmetics` here is load-bearing — without
+  // it, the three cosmetic tabs read via `useGameStore.getState()` which
+  // doesn't subscribe the component to changes, so buying an item (or
+  // ad-unlocking a common) wouldn't flip the card to OWNED until some
+  // other state change forced a re-render.
+  const { gems, powerUps, buyPowerUp, refillLivesWithGems, addGems, ownedCosmetics } = useGameStore();
   const [selectedMode, setSelectedMode] = useState('classic');
   const [cosmeticTab, setCosmeticTab] = useState<'featured' | 'frames' | 'banners' | 'expressions'>('featured');
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
@@ -311,7 +316,7 @@ function ShopTab() {
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {dailyFeatured.map(({ cosmetic: c, originalPrice, discountedPrice }) => {
-                const owned = useGameStore.getState().ownedCosmetics.includes(c.id);
+                const owned = ownedCosmetics.includes(c.id);
                 const isFrame = c.type === 'frame';
                 const isExpr = c.type === 'expression';
                 return (
@@ -343,7 +348,7 @@ function ShopTab() {
         {cosmeticTab === 'frames' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {sortByRarity(FRAMES.filter(f => f.id !== 'frame_none')).map((f, fi) => {
-              const owned = f.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(f.id);
+              const owned = f.unlock === 'free' || ownedCosmetics.includes(f.id);
               const exprs = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'] as const;
               const isLegendary = f.rarity === 'legendary';
               const isLoading = adLoadingId === f.id;
@@ -370,7 +375,7 @@ function ShopTab() {
         {cosmeticTab === 'banners' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {sortByRarity(BANNERS.filter(b => b.id !== 'banner_none')).map(b => {
-              const owned = b.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(b.id);
+              const owned = b.unlock === 'free' || ownedCosmetics.includes(b.id);
               const isLegendary = b.rarity === 'legendary';
               const isLoading = adLoadingId === b.id;
               const vert = b.gradientDirection === 'vert';
@@ -400,7 +405,7 @@ function ShopTab() {
         {cosmeticTab === 'expressions' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {sortByRarity(EXPRESSIONS).map(e => {
-              const owned = e.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(e.id);
+              const owned = e.unlock === 'free' || ownedCosmetics.includes(e.id);
               const isLegendary = e.rarity === 'legendary';
               const isLoading = adLoadingId === e.id;
               return (

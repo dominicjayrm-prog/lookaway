@@ -219,12 +219,17 @@ function saveState(state: GameStore) {
     console.warn('Save state failed:', e);
   }
 
-  // Also sync to Supabase (debounced, fire and forget)
+  // Also sync to Supabase (debounced, fire and forget). The timer
+  // reads the CURRENT auth + state via `useGameStore.getState()`
+  // inside the callback — reading from the closure-captured `state`
+  // was unsafe across logout/login transitions and could push a
+  // stale snapshot for a user who'd already signed out.
   clearTimeout((saveState as { _syncTimer?: ReturnType<typeof setTimeout> })._syncTimer);
   (saveState as { _syncTimer?: ReturnType<typeof setTimeout> })._syncTimer = setTimeout(() => {
-    const uid = state._authUserId;
+    const live = useGameStore.getState();
+    const uid = live._authUserId;
     if (uid) {
-      saveProgressToSupabase(uid, state).catch((e) => console.warn('Sync failed:', e));
+      saveProgressToSupabase(uid, live).catch((e) => console.warn('Sync failed:', e));
     }
   }, 2000);
 }

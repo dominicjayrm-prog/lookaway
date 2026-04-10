@@ -258,8 +258,13 @@ function ResultScreen() {
           const granted = await requestNotificationPermission();
           try { const AS = require('@react-native-async-storage/async-storage').default; await AS.setItem('blanked_notifications_asked', 'true'); } catch {}
           if (granted) {
-            const { user } = useGameStore.getState() as unknown as { user?: { id?: string } };
-            if (user?.id) { await registerPushToken(user.id); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
+            // The store exposes the authenticated user id as
+            // `_authUserId` (set by CloudSyncLoader), not a `user`
+            // object — the previous `(store as { user?: {id?: string} })`
+            // cast was returning undefined and silently skipping the
+            // push token registration every time.
+            const uid = useGameStore.getState()._authUserId;
+            if (uid) { await registerPushToken(uid); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
           }
         }}
         onDismiss={async () => {

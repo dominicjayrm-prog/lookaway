@@ -275,7 +275,7 @@ function FriendsTab() {
               //   cleared instead of sitting forever.
               const iNeedToPlay = c.my_score === null;
               const waitingForOpponent = c.my_score !== null && c.their_score === null;
-              const cMode = (c as unknown as { mode?: string }).mode ?? 'classic';
+              const cMode = c.mode ?? 'classic';
               const modeLabel = cMode !== 'classic' ? ` to ${cMode.replace(/_/g, ' ')}` : '';
               const label = iNeedToPlay
                 ? `@${c.opponent.username} challenged you${modeLabel}`

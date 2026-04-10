@@ -1,20 +1,16 @@
 import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
-import type { SubscriptionStatus } from '@/src/store/gameStore';
+import type { SubscriptionStatus, GameStore } from '@/src/store/gameStore';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
+ *
+ * Accepts the full `GameStore` shape because the upsert body reads
+ * ~20 fields off it — the old signature only typed 8 of them and
+ * relied on TypeScript's structural subtyping to silently accept
+ * the extras, which meant any field renames would go unnoticed.
  */
-export async function saveProgressToSupabase(userId: string, state: {
-  gems: number;
-  lives: number;
-  livesLastLostAt: number | null;
-  streakCount: number;
-  totalStars: number;
-  highestWorld: number;
-  levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
-  completedScores: number[];
-}) {
+export async function saveProgressToSupabase(userId: string, state: GameStore) {
   try {
     // Update profile
     const memoryScore = state.completedScores.length > 0
@@ -98,7 +94,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   powerUps: Record<string, number>;
   streakMilestonesClaimed: number[];
   lastPlayDate: string | null;
-  completedScores: number[];
   maxLives: number;
   loginReward: LoginRewardState;
   username: string | null;
