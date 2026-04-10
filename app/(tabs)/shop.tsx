@@ -250,6 +250,8 @@ function ShopTab() {
         <Pressable
           style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
           onPress={() => setShowPaywall(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open Blanked Plus subscription"
         >
           <LinearGradient
             colors={['#6C5CE7', '#5B4CC8']}
@@ -277,6 +279,8 @@ function ShopTab() {
           <Pressable
             style={({ pressed }) => [styles.starterBanner, { backgroundColor: colors.card }, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
             onPress={() => setShowStarterPack(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open Starter Pack offer, 75 percent off"
           >
             <View style={[styles.starterIconBg, { backgroundColor: '#FF6B6B12' }]}>
               <Ionicons name="gift" size={20} color="#FF6B6B" />
@@ -300,7 +304,14 @@ function ShopTab() {
         {/* Tab bar */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 14 }}>
           {(['featured', 'frames', 'banners', 'expressions'] as const).map(tab => (
-            <Pressable key={tab} onPress={() => { setCosmeticTab(tab); setCelebrationItem(null); }} style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}>
+            <Pressable
+              key={tab}
+              onPress={() => { setCosmeticTab(tab); setCelebrationItem(null); }}
+              style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${tab} tab`}
+              accessibilityState={{ selected: cosmeticTab === tab }}
+            >
               <Text style={{ fontSize: 12, fontWeight: '700', color: cosmeticTab === tab ? '#FFF' : colors.textMid }}>
                 {tab === 'featured' ? '✨ Today' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
@@ -320,12 +331,19 @@ function ShopTab() {
                 const isFrame = c.type === 'frame';
                 const isExpr = c.type === 'expression';
                 return (
-                  <Pressable key={c.id} onPress={() => {
-                    if (owned) return;
-                    const ok = useGameStore.getState().purchaseCosmetic(c.id, discountedPrice);
-                    if (ok) { setCelebrationItem(c); }
-                    else setGemShortfall({ cost: discountedPrice, name: c.name });
-                  }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
+                  <Pressable
+                    key={c.id}
+                    onPress={() => {
+                      if (owned) return;
+                      const ok = useGameStore.getState().purchaseCosmetic(c.id, discountedPrice);
+                      if (ok) { setCelebrationItem(c); }
+                      else setGemShortfall({ cost: discountedPrice, name: c.name });
+                    }}
+                    style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={owned ? `${c.name}, owned` : `Buy ${c.name} for ${discountedPrice} gems`}
+                    accessibilityState={{ disabled: owned }}
+                  >
                     {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'borderColor' in c ? (c as FrameCosmetic).borderColor : colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
                     {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={'blinkExpression' in c ? (c as ExpressionCosmetic).blinkExpression : 'normal'} size={40} /></View>}
                     {c.type === 'banner' && <LinearGradient colors={('gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']) as unknown as readonly [string, string, ...string[]]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
@@ -353,11 +371,17 @@ function ShopTab() {
               const isLegendary = f.rarity === 'legendary';
               const isLoading = adLoadingId === f.id;
               return (
-                <Pressable key={f.id} onPress={() => handleCosmeticTap(f, 'frame')} style={[
-                  styles.cosmeticCard,
-                  { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.45 },
-                  isLegendary && styles.legendaryCard,
-                ]}>
+                <Pressable
+                  key={f.id}
+                  onPress={() => handleCosmeticTap(f, 'frame')}
+                  style={[
+                    styles.cosmeticCard,
+                    { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.45 },
+                    isLegendary && styles.legendaryCard,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={owned ? `${f.name} frame, owned` : `Unlock ${f.name} frame`}
+                >
                   {!owned && f.adEligible && <AdBadge colors={colors} />}
                   <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
                     <Blink expression={exprs[fi % exprs.length]} size={30} />
@@ -380,11 +404,17 @@ function ShopTab() {
               const isLoading = adLoadingId === b.id;
               const vert = b.gradientDirection === 'vert';
               return (
-                <Pressable key={b.id} onPress={() => handleCosmeticTap(b, 'banner')} style={[
-                  styles.cosmeticCardWide,
-                  { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.45 },
-                  isLegendary && styles.legendaryCard,
-                ]}>
+                <Pressable
+                  key={b.id}
+                  onPress={() => handleCosmeticTap(b, 'banner')}
+                  style={[
+                    styles.cosmeticCardWide,
+                    { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.45 },
+                    isLegendary && styles.legendaryCard,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={owned ? `${b.name} banner, owned` : `Unlock ${b.name} banner`}
+                >
                   {!owned && b.adEligible && <AdBadge colors={colors} />}
                   <LinearGradient
                     colors={b.gradientColors as unknown as readonly [string, string, ...string[]]}
@@ -409,11 +439,17 @@ function ShopTab() {
               const isLegendary = e.rarity === 'legendary';
               const isLoading = adLoadingId === e.id;
               return (
-                <Pressable key={e.id} onPress={() => handleCosmeticTap(e, 'expression')} style={[
-                  styles.cosmeticCard,
-                  { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.45 },
-                  isLegendary && styles.legendaryCard,
-                ]}>
+                <Pressable
+                  key={e.id}
+                  onPress={() => handleCosmeticTap(e, 'expression')}
+                  style={[
+                    styles.cosmeticCard,
+                    { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.45 },
+                    isLegendary && styles.legendaryCard,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={owned ? `${e.name} expression, owned` : `Unlock ${e.name} expression`}
+                >
                   {!owned && e.adEligible && <AdBadge colors={colors} />}
                   <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
@@ -437,6 +473,9 @@ function ShopTab() {
                 key={m.id}
                 style={[styles.modePill, { backgroundColor: isActive ? m.color : colors.card, borderWidth: isActive ? 0 : 1, borderColor: colors.border }]}
                 onPress={() => setSelectedMode(m.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${m.name} mode filter`}
+                accessibilityState={{ selected: isActive }}
               >
                 <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
               </Pressable>
@@ -508,10 +547,16 @@ function ShopTab() {
                         transform: [{ scale: pressed ? 0.97 : 1 }],
                       },
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Buy 1 ${p.name} for ${p.cost} gems`}
                   >
                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{GEM} {p.cost}</Text>
                   </Pressable>
-                  <Pressable onPress={() => handleBuyPowerUp(p, 3)}>
+                  <Pressable
+                    onPress={() => handleBuyPowerUp(p, 3)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Buy 3 ${p.name} for ${p.bundleCost} gems`}
+                  >
                     <Text style={{ fontSize: 10, fontWeight: '700', color: p.color, marginTop: 6 }}>
                       3 for {GEM} {p.bundleCost}
                     </Text>
@@ -525,7 +570,12 @@ function ShopTab() {
         {/* ── Lives ── */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
         <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
-          <Pressable style={styles.livesRow} onPress={handleIAP}>
+          <Pressable
+            style={styles.livesRow}
+            onPress={handleIAP}
+            accessibilityRole="button"
+            accessibilityLabel="Refill all 5 lives for 99 pence"
+          >
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
                 <Ionicons name="heart" size={20} color={colors.accent} />
@@ -540,7 +590,12 @@ function ShopTab() {
             </View>
           </Pressable>
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-          <Pressable style={styles.livesRow} onPress={handleIAP}>
+          <Pressable
+            style={styles.livesRow}
+            onPress={handleIAP}
+            accessibilityRole="button"
+            accessibilityLabel="Unlimited lives for 1 hour, 1 pound 99"
+          >
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
                 <Ionicons name="infinite" size={22} color={colors.gold} />
@@ -555,7 +610,12 @@ function ShopTab() {
             </View>
           </Pressable>
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-          <Pressable style={styles.livesRow} onPress={handleGemRefillLives}>
+          <Pressable
+            style={styles.livesRow}
+            onPress={handleGemRefillLives}
+            accessibilityRole="button"
+            accessibilityLabel={`Refill lives with ${LIVES_CONFIG.gemRefillCost} gems`}
+          >
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
                 <Ionicons name="heart-outline" size={18} color={colors.textLight} />
@@ -577,7 +637,13 @@ function ShopTab() {
             { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
             { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
           ].map((pack) => (
-            <Pressable key={pack.id} onPress={handleIAP} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
+            <Pressable
+              key={pack.id}
+              onPress={handleIAP}
+              style={[styles.gemPackCard, { backgroundColor: colors.card }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Buy ${pack.gems} gems for ${pack.price}`}
+            >
               {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
               <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
               <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
@@ -601,7 +667,12 @@ function ShopTab() {
               <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>Remove all interstitial and banner ads forever</Text>
             </View>
           </View>
-          <Pressable onPress={handleIAP} style={[styles.removeAdsBtn, { borderColor: colors.accent }]}>
+          <Pressable
+            onPress={handleIAP}
+            style={[styles.removeAdsBtn, { borderColor: colors.accent }]}
+            accessibilityRole="button"
+            accessibilityLabel="Buy remove ads for 4 pounds 99, one time"
+          >
             <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 {'\u2014'} one time</Text>
           </Pressable>
         </View>

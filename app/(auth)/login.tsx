@@ -137,6 +137,8 @@ function AuthScreen() {
               setSignUpSuccess(false);
               setPassword('');
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Back to sign in"
           >
             <Text style={styles.primaryButtonText}>Back to sign in</Text>
           </Pressable>
@@ -243,6 +245,9 @@ function AuthScreen() {
               style={[styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'login' ? 'Sign in' : 'Create account'}
+              accessibilityState={{ disabled: loading, busy: loading }}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
@@ -260,7 +265,12 @@ function AuthScreen() {
                 ? "Don't have an account?"
                 : 'Already have an account?'}
             </Text>
-            <Pressable onPress={toggleMode} style={{ padding: 4 }}>
+            <Pressable
+              onPress={toggleMode}
+              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'login' ? 'Switch to sign up' : 'Switch to sign in'}
+            >
               <Text style={[styles.toggleLink, { color: colors.accent }]}>
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </Text>

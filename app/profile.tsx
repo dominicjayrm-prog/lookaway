@@ -147,7 +147,12 @@ function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)} style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        ><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
@@ -157,12 +162,22 @@ function ProfileScreen() {
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(100)}>
           <View style={{ position: 'relative' }}>
             <ProfileBanner banner={banner ?? null} height={120} />
-            <Pressable onPress={() => setShowBannerPicker(true)} style={styles.bannerEditBtn}>
+            <Pressable
+              onPress={() => setShowBannerPicker(true)}
+              style={styles.bannerEditBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Change banner"
+            >
               <Ionicons name="pencil" size={12} color="#FFF" />
             </Pressable>
           </View>
           <View style={[styles.avatarSection, { marginTop: -44, paddingTop: 0 }]}>
-            <Pressable onPress={() => setShowPhotoOptions(true)} style={styles.avatarContainer}>
+            <Pressable
+              onPress={() => setShowPhotoOptions(true)}
+              style={styles.avatarContainer}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+            >
               <AvatarFrame frame={frame ?? null} size={80}>
                 {profilePic ? (
                   <Image source={{ uri: profilePic }} style={[styles.avatar, { backgroundColor: colors.surface }]} />
@@ -184,11 +199,21 @@ function ProfileScreen() {
 
             {/* Customisation pill buttons */}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <Pressable onPress={() => setShowFramePicker(true)} style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Pressable
+                onPress={() => setShowFramePicker(true)}
+                style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}
+                accessibilityRole="button"
+                accessibilityLabel="Change frame"
+              >
                 <Ionicons name="ellipse-outline" size={14} color={colors.accent} />
                 <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Frame</Text>
               </Pressable>
-              <Pressable onPress={() => setShowExprPicker(true)} style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Pressable
+                onPress={() => setShowExprPicker(true)}
+                style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}
+                accessibilityRole="button"
+                accessibilityLabel="Change expression"
+              >
                 <Ionicons name="happy-outline" size={14} color={colors.accent} />
                 <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Expression</Text>
               </Pressable>
@@ -211,7 +236,12 @@ function ProfileScreen() {
         {/* Achievements card */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(250)}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={() => router.push('/achievements')}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => router.push('/achievements')}
+              accessibilityRole="button"
+              accessibilityLabel="Open achievements"
+            >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
                   <Ionicons name="medal" size={18} color={colors.gold} />
@@ -234,7 +264,12 @@ function ProfileScreen() {
         {/* Memory Analytics card — Blanked+ feature */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(260)}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={() => router.push('/stats-space')}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => router.push('/stats-space')}
+              accessibilityRole="button"
+              accessibilityLabel="Open memory analytics"
+            >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
                   <Ionicons name="analytics" size={18} color={colors.accent} />
@@ -259,7 +294,12 @@ function ProfileScreen() {
         {/* Power-ups / Boosts card */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(250)}>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={() => setShowPowerUpViewer(true)}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => setShowPowerUpViewer(true)}
+              accessibilityRole="button"
+              accessibilityLabel="View power-ups inventory"
+            >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
                   <Ionicons name="flash" size={18} color={colors.blue} />
@@ -289,7 +329,7 @@ function ProfileScreen() {
               <View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: isDark ? 'rgba(124,108,247,0.12)' : colors.accentSoft }]}><Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.accent} /></View><View><Text style={[styles.settingsLabel, { color: colors.text }]}>Dark mode</Text><Text style={{ fontSize: 10, color: colors.textLight, marginTop: 1 }}>{isManual ? 'Manual' : 'Following system'}</Text></View></View>
               <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" />
             </View>
-            {isManual && (<><View style={[styles.divider, { backgroundColor: colors.border }]} /><Pressable style={styles.settingsRow} onPress={resetToSystem}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}><Ionicons name="sync" size={16} color={colors.textMid} /></View><Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text></View></Pressable></>)}
+            {isManual && (<><View style={[styles.divider, { backgroundColor: colors.border }]} /><Pressable style={styles.settingsRow} onPress={resetToSystem} accessibilityRole="button" accessibilityLabel="Reset theme to system default"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}><Ionicons name="sync" size={16} color={colors.textMid} /></View><Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text></View></Pressable></>)}
           </View>
         </Animated.View>
 
@@ -332,7 +372,12 @@ function ProfileScreen() {
 
         {/* Cosmetics Inventory */}
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(550)}>
-          <Pressable onPress={() => router.push('/(tabs)/shop')} style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+          <Pressable
+            onPress={() => router.push('/(tabs)/shop')}
+            style={[styles.settingsCard, { backgroundColor: colors.card }]}
+            accessibilityRole="button"
+            accessibilityLabel="Open shop"
+          >
             <View style={styles.settingsRow}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
@@ -353,7 +398,7 @@ function ProfileScreen() {
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(600)}>
           <Text style={[styles.sectionTitle, { color: colors.textMid }]}>ACCOUNT</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <Pressable style={styles.settingsRow} onPress={handleSignOut}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
+            <Pressable style={styles.settingsRow} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
           </View>
         </Animated.View>
 
@@ -362,14 +407,29 @@ function ProfileScreen() {
 
       {/* Photo Options Modal (simple) */}
       <Modal visible={showPhotoOptions} transparent animationType="fade" onRequestClose={() => setShowPhotoOptions(false)}>
-        <Pressable style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }} onPress={() => setShowPhotoOptions(false)}>
+        <Pressable
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}
+          onPress={() => setShowPhotoOptions(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss photo options"
+        >
           <View style={[styles.photoSheet, { backgroundColor: colors.card, maxWidth: Platform.OS === 'web' ? 360 : undefined, width: '85%' }]}>
-            <Pressable onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+            <Pressable
+              onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }}
+              style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Upload a profile photo"
+            >
               <Ionicons name="camera" size={18} color={colors.accent} />
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
             </Pressable>
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+              <Pressable
+                onPress={() => { setProfilePic(null); saveProfilePic(null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }}
+                style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}
+                accessibilityRole="button"
+                accessibilityLabel="Remove profile photo"
+              >
                 <Ionicons name="close-circle" size={18} color={colors.wrong} />
                 <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo</Text>
               </Pressable>

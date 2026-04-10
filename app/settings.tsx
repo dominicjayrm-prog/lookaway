@@ -71,6 +71,8 @@ function SettingsScreen() {
         <Pressable
           style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
           onPress={() => setShowPaywall(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open Blanked Plus subscription"
         >
           <LinearGradient
             colors={['#6C5CE7', '#5B4CC8']}
@@ -138,7 +140,12 @@ function SettingsScreen() {
 
         <Text style={[styles.sectionLabel, { color: colors.textMid }]}>PURCHASES</Text>
         <Card style={styles.card}>
-          <Pressable style={styles.row} onPress={() => Alert.alert('Restore', 'Purchase restoration will be available when RevenueCat is configured.')}>
+          <Pressable
+            style={styles.row}
+            onPress={() => Alert.alert('Restore', 'Purchase restoration will be available when RevenueCat is configured.')}
+            accessibilityRole="button"
+            accessibilityLabel="Restore purchases"
+          >
             <Text style={[styles.rowLabel, { color: colors.text }]}>Restore purchases</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>

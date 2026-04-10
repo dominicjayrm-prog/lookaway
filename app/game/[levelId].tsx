@@ -183,11 +183,16 @@ function GameScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => {
-          const inGame = gameState === 'MEMORISE' || gameState === 'TRANSITION' || gameState === 'QUESTION' || gameState === 'REVEAL' || gameState === 'SCENE_SCORE';
-          if (inGame) setShowQuitConfirm(true);
-          else { clearTimeouts(); resetGame(); router.back(); }
-        }}>
+        <Pressable
+          onPress={() => {
+            const inGame = gameState === 'MEMORISE' || gameState === 'TRANSITION' || gameState === 'QUESTION' || gameState === 'REVEAL' || gameState === 'SCENE_SCORE';
+            if (inGame) setShowQuitConfirm(true);
+            else { clearTimeouts(); resetGame(); router.back(); }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Quit level"
+          hitSlop={12}
+        >
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
         </Pressable>
         <Badge label={`LEVEL ${level.levelNumber}`} />
@@ -258,14 +263,29 @@ function GameScreen() {
       {showQuitConfirm && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>
           <View style={styles.quitBackdrop}>
-            <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
+            <Pressable
+              style={styles.quitBackdropTouch}
+              onPress={() => setShowQuitConfirm(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss quit dialog"
+            />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
               <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
-              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}>
+              <Pressable
+                style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]}
+                onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Leave the level and lose a life"
+              >
                 <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
               </Pressable>
-              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
+              <Pressable
+                style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]}
+                onPress={() => setShowQuitConfirm(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Keep playing"
+              >
                 <Text style={styles.quitBtnText}>Keep playing</Text>
               </Pressable>
             </View>

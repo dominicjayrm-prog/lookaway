@@ -90,6 +90,8 @@ function RecentActivityCard({ colors, router }: { colors: Record<string, string>
           const display = getActivityDisplay(event);
           return (
             <Pressable key={event.id} style={[actStyles.row, i < activities.length - 1 && { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${display.main}. ${display.sub}`}
               onPress={() => {
                 if (event.type === 'level_complete' || event.type === 'star_improved') router.push(`/world/${event.data.worldId}`);
                 else if (event.type === 'world_complete') router.push('/(tabs)/journey');
@@ -246,19 +248,37 @@ function PlayTab() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <Pressable ref={livesRef} collapsable={false} onPress={() => setInfoCard(infoCard === 'lives' ? null : 'lives')} style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}>
+          <Pressable
+            ref={livesRef}
+            collapsable={false}
+            onPress={() => setInfoCard(infoCard === 'lives' ? null : 'lives')}
+            style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}
+            accessibilityRole="button"
+            accessibilityLabel={`${lives} of 5 lives`}
+            accessibilityHint="Tap to see how lives work"
+          >
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
             ))}
           </Pressable>
           <View style={styles.topBarRight}>
-            <Pressable ref={gemsRef} collapsable={false} onPress={() => setInfoCard(infoCard === 'gems' ? null : 'gems')} style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}>
+            <Pressable
+              ref={gemsRef}
+              collapsable={false}
+              onPress={() => setInfoCard(infoCard === 'gems' ? null : 'gems')}
+              style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${gems} gems`}
+              accessibilityHint="Tap to see how gems work"
+            >
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
             </Pressable>
             <Pressable
               style={styles.profileButton}
               onPress={() => router.push('/profile')}
+              accessibilityRole="button"
+              accessibilityLabel="Open profile"
             >
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
@@ -301,6 +321,8 @@ function PlayTab() {
               if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
               router.push(`/game/${nextLevelId}`);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={`Play World ${currentWorldId} Level ${nextLevelNumber}`}
           >
             <Text style={styles.heroPlayText}>Play</Text>
           </Pressable>
@@ -325,7 +347,13 @@ function PlayTab() {
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STARS</Text>
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
-          <Pressable onPress={() => setInfoCard(infoCard === 'streak' ? null : 'streak')} style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Pressable
+            onPress={() => setInfoCard(infoCard === 'streak' ? null : 'streak')}
+            style={[styles.statCard, { backgroundColor: colors.card }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Streak: ${streakCount} days`}
+            accessibilityHint="Tap to see how streaks work"
+          >
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
@@ -338,7 +366,11 @@ function PlayTab() {
         <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
           <View style={styles.journeyHeader}>
             <Text style={[styles.journeyTitle, { color: colors.text }]}>Your Journey</Text>
-            <Pressable onPress={() => router.push('/(tabs)/journey')}>
+            <Pressable
+              onPress={() => router.push('/(tabs)/journey')}
+              accessibilityRole="button"
+              accessibilityLabel="See all worlds in Journey tab"
+            >
               <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>See all {'>'}</Text>
             </Pressable>
           </View>
