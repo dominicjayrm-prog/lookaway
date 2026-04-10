@@ -156,133 +156,7 @@ function ShopTab() {
           </Pressable>
         )}
 
-        {/* ── Power-ups ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
-
-        {/* Mode selector pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modeScroll} contentContainerStyle={styles.modeScrollContent}>
-          {MODE_FILTERS.map(m => {
-            const isActive = selectedMode === m.id;
-            return (
-              <Pressable
-                key={m.id}
-                style={[styles.modePill, { backgroundColor: isActive ? m.color : colors.card, borderWidth: isActive ? 0 : 1, borderColor: colors.border }]}
-                onPress={() => setSelectedMode(m.id)}
-              >
-                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Power-up grid */}
-        <View style={styles.powerUpGrid}>
-          {visiblePowerups.map((p) => {
-            const owned = (powerUps as Record<string, number>)[p.id] ?? 0;
-            const emoji = POWERUP_EMOJIS[p.id] ?? '\u2728';
-            const isUniversal = p.modes.includes('all');
-
-            return (
-              <View key={p.id} style={styles.powerUpCardWrapper}>
-                <View style={[styles.powerUpCard, { backgroundColor: p.bgColor }]}>
-                  {owned > 0 && (
-                    <View style={[styles.ownedBadge, { backgroundColor: p.color }]}>
-                      <Text style={styles.ownedBadgeText}>{owned}</Text>
-                    </View>
-                  )}
-                  {isUniversal && (
-                    <View style={[styles.universalBadge, { backgroundColor: colors.goldSoft }]}>
-                      <Text style={[styles.universalBadgeText, { color: colors.gold }]}>ALL MODES</Text>
-                    </View>
-                  )}
-                  <View style={[styles.powerUpIconCircle, { backgroundColor: `${p.color}18` }]}>
-                    <Text style={styles.powerUpIcon}>{emoji}</Text>
-                  </View>
-                  <Text style={[styles.powerUpName, { color: colors.text }]}>{p.name}</Text>
-                  <Text style={[styles.powerUpDesc, { color: colors.textMid }]}>{p.description}</Text>
-                  <View style={[styles.ownedPill, owned > 0 ? { backgroundColor: 'rgba(0,184,148,0.1)' } : { backgroundColor: 'transparent' }]}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: owned > 0 ? '#00B894' : colors.textLight }}>Owned: {owned}</Text>
-                  </View>
-                  <Pressable onPress={() => handleBuyPowerUp(p, 1)} style={[styles.buyBtn, { borderColor: p.color }]}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: p.color }}>{GEM} {p.cost}</Text>
-                  </Pressable>
-                  <Pressable onPress={() => handleBuyPowerUp(p, 3)}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMid, marginTop: 4 }}>3 for {GEM} {p.bundleCost}</Text>
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* ── Gem packs ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
-        <View style={styles.gemPackRow}>
-          {[
-            { id: 'gems_100', gems: 100, price: '\u00A30.99', badge: null },
-            { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
-            { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
-          ].map((pack) => (
-            <Pressable key={pack.id} onPress={handleIAP} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
-              {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
-              <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
-              <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textMid, marginBottom: 12 }}>gems</Text>
-              <View style={[styles.packBtn, { borderColor: colors.accent }]}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent }}>{pack.price}</Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* ── Lives ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
-        <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
-          <Pressable style={styles.livesRow} onPress={handleIAP}>
-            <View style={styles.livesRowLeft}>
-              <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
-                <Ionicons name="heart" size={20} color={colors.accent} />
-              </View>
-              <View>
-                <Text style={[styles.livesTextBold, { color: colors.text }]}>Refill all 5 lives</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>The quickest way to keep playing</Text>
-              </View>
-            </View>
-            <View style={[styles.cashBtn, { backgroundColor: colors.accent }]}>
-              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{'\u00A3'}0.99</Text>
-            </View>
-          </Pressable>
-          <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-          <Pressable style={styles.livesRow} onPress={handleIAP}>
-            <View style={styles.livesRowLeft}>
-              <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
-                <Ionicons name="infinite" size={22} color={colors.gold} />
-              </View>
-              <View>
-                <Text style={[styles.livesText, { color: colors.text }]}>Unlimited for 1 hour</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>Play as much as you want</Text>
-              </View>
-            </View>
-            <View style={[styles.outlineBtn, { borderColor: colors.accent }]}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{'\u00A3'}1.99</Text>
-            </View>
-          </Pressable>
-          <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
-          <Pressable style={styles.livesRow} onPress={handleGemRefillLives}>
-            <View style={styles.livesRowLeft}>
-              <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
-                <Ionicons name="heart-outline" size={18} color={colors.textLight} />
-              </View>
-              <View>
-                <Text style={[styles.livesTextFaded, { color: colors.textMid }]}>Refill with gems</Text>
-                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>Use your gem balance</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
-          </Pressable>
-        </View>
-
-        {/* ── Cosmetics ── */}
+        {/* ── Cosmetics ── (leads the shop — most visually rich) */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Cosmetics</Text>
 
         {/* Tab bar */}
@@ -396,6 +270,170 @@ function ShopTab() {
           </View>
         )}
 
+        {/* ── Power-ups ── */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
+
+        {/* Mode selector pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modeScroll} contentContainerStyle={styles.modeScrollContent}>
+          {MODE_FILTERS.map(m => {
+            const isActive = selectedMode === m.id;
+            return (
+              <Pressable
+                key={m.id}
+                style={[styles.modePill, { backgroundColor: isActive ? m.color : colors.card, borderWidth: isActive ? 0 : 1, borderColor: colors.border }]}
+                onPress={() => setSelectedMode(m.id)}
+              >
+                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* Power-up grid — premium card redesign:
+              - LinearGradient background using the power-up's colour
+              - Solid colour icon disc (not a washed-out tint)
+              - Solid colour buy button (high contrast, feels clickable)
+              - Coloured shadow + border for depth */}
+        <View style={styles.powerUpGrid}>
+          {visiblePowerups.map((p) => {
+            const owned = (powerUps as Record<string, number>)[p.id] ?? 0;
+            const emoji = POWERUP_EMOJIS[p.id] ?? '\u2728';
+            const isUniversal = p.modes.includes('all');
+
+            return (
+              <View key={p.id} style={styles.powerUpCardWrapper}>
+                <LinearGradient
+                  colors={[`${p.color}22`, `${p.color}0A`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    styles.powerUpCard,
+                    {
+                      borderColor: `${p.color}33`,
+                      shadowColor: p.color,
+                      shadowOpacity: 0.18,
+                    },
+                  ]}
+                >
+                  {owned > 0 && (
+                    <View style={[styles.ownedBadge, { backgroundColor: p.color }]}>
+                      <Text style={styles.ownedBadgeText}>{owned}</Text>
+                    </View>
+                  )}
+                  {isUniversal && (
+                    <View style={[styles.universalBadge, { backgroundColor: colors.goldSoft }]}>
+                      <Text style={[styles.universalBadgeText, { color: colors.gold }]}>ALL MODES</Text>
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.powerUpIconCircle,
+                      {
+                        backgroundColor: p.color,
+                        shadowColor: p.color,
+                        shadowOpacity: 0.4,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowRadius: 10,
+                        elevation: 4,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.powerUpIcon}>{emoji}</Text>
+                  </View>
+                  <Text style={[styles.powerUpName, { color: colors.text }]}>{p.name}</Text>
+                  <Text style={[styles.powerUpDesc, { color: colors.textMid }]}>{p.description}</Text>
+                  <Pressable
+                    onPress={() => handleBuyPowerUp(p, 1)}
+                    style={({ pressed }) => [
+                      styles.buyBtn,
+                      {
+                        backgroundColor: p.color,
+                        borderColor: p.color,
+                        opacity: pressed ? 0.88 : 1,
+                        transform: [{ scale: pressed ? 0.97 : 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{GEM} {p.cost}</Text>
+                  </Pressable>
+                  <Pressable onPress={() => handleBuyPowerUp(p, 3)}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.color, marginTop: 6 }}>
+                      3 for {GEM} {p.bundleCost}
+                    </Text>
+                  </Pressable>
+                </LinearGradient>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* ── Lives ── */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
+        <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
+          <Pressable style={styles.livesRow} onPress={handleIAP}>
+            <View style={styles.livesRowLeft}>
+              <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="heart" size={20} color={colors.accent} />
+              </View>
+              <View>
+                <Text style={[styles.livesTextBold, { color: colors.text }]}>Refill all 5 lives</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>The quickest way to keep playing</Text>
+              </View>
+            </View>
+            <View style={[styles.cashBtn, { backgroundColor: colors.accent }]}>
+              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{'\u00A3'}0.99</Text>
+            </View>
+          </Pressable>
+          <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
+          <Pressable style={styles.livesRow} onPress={handleIAP}>
+            <View style={styles.livesRowLeft}>
+              <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
+                <Ionicons name="infinite" size={22} color={colors.gold} />
+              </View>
+              <View>
+                <Text style={[styles.livesText, { color: colors.text }]}>Unlimited for 1 hour</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>Play as much as you want</Text>
+              </View>
+            </View>
+            <View style={[styles.outlineBtn, { borderColor: colors.accent }]}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{'\u00A3'}1.99</Text>
+            </View>
+          </Pressable>
+          <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
+          <Pressable style={styles.livesRow} onPress={handleGemRefillLives}>
+            <View style={styles.livesRowLeft}>
+              <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
+                <Ionicons name="heart-outline" size={18} color={colors.textLight} />
+              </View>
+              <View>
+                <Text style={[styles.livesTextFaded, { color: colors.textMid }]}>Refill with gems</Text>
+                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>Use your gem balance</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
+          </Pressable>
+        </View>
+
+        {/* ── Gem packs ── */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
+        <View style={styles.gemPackRow}>
+          {[
+            { id: 'gems_100', gems: 100, price: '\u00A30.99', badge: null },
+            { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
+            { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
+          ].map((pack) => (
+            <Pressable key={pack.id} onPress={handleIAP} style={[styles.gemPackCard, { backgroundColor: colors.card }]}>
+              {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
+              <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
+              <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
+              <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textMid, marginBottom: 12 }}>gems</Text>
+              <View style={[styles.packBtn, { borderColor: colors.accent }]}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent }}>{pack.price}</Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+
         {/* ── Remove ads ── */}
         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMid, marginTop: 8, marginBottom: 12 }}>Other</Text>
         <View style={[styles.removeAdsCard, { backgroundColor: colors.card }]}>
@@ -493,17 +531,34 @@ const styles = StyleSheet.create({
   // Power-ups
   powerUpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   powerUpCardWrapper: { width: '48%', flexGrow: 1 },
-  powerUpCard: { alignItems: 'center', padding: 16, borderRadius: 16, position: 'relative', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
+  powerUpCard: {
+    alignItems: 'center',
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    position: 'relative',
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 4,
+  },
   ownedBadge: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   ownedBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
   universalBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   universalBadgeText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
-  powerUpIconCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  powerUpIcon: { fontSize: 24 },
-  powerUpName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  powerUpDesc: { fontSize: 10, textAlign: 'center', marginBottom: 6 },
+  powerUpIconCircle: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  powerUpIcon: { fontSize: 26 },
+  powerUpName: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
+  powerUpDesc: { fontSize: 10, textAlign: 'center', marginBottom: 10, lineHeight: 14, minHeight: 28 },
   ownedPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 8 },
-  buyBtn: { borderWidth: 1.5, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 14 },
+  buyBtn: {
+    borderWidth: 0,
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 90,
+  },
 
   // Gem packs
   gemPackRow: { flexDirection: 'row', gap: 12 },
