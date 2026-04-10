@@ -14,19 +14,15 @@ import Svg, {
 
 // ─── TYPES ─────────────────────────────────────────────────
 export type BlinkExpression =
-  | 'normal'
-  | 'memorise'
-  | 'blank'
-  | 'thinking'
-  | 'correct'
-  | 'wrong'
-  | 'celebrate'
-  | 'streak'
-  | 'sad'
-  | 'sleeping'
-  | 'surprised'
-  | 'love'
-  | 'premium';
+  // Original 13
+  | 'normal' | 'memorise' | 'blank' | 'thinking' | 'correct' | 'wrong'
+  | 'celebrate' | 'streak' | 'sad' | 'sleeping' | 'surprised' | 'love'
+  | 'premium'
+  // Expanded catalogue — 15 new
+  | 'wink' | 'tongue_out'
+  | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
+  | 'devil' | 'robot' | 'dizzy'
+  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom';
 
 interface BlinkProps {
   expression?: BlinkExpression;
@@ -48,6 +44,21 @@ const C = {
   teal: '#00CEC9',
   text: '#1A1A18',
   textM: '#636E72',
+};
+
+// ── BODY COLOUR VARIANTS ────────────────────────────────────
+// Expressions that swap Blink's body colour (not just the face) map
+// to a [lightStop, darkStop] pair used as the two stops of the
+// RadialGradient in the component body. The default purple is used
+// for every other expression.
+const DEFAULT_BODY_STOPS: [string, string] = [C.accentL, C.accent];
+const BODY_STOPS: Partial<Record<BlinkExpression, [string, string]>> = {
+  frozen:         ['#B3E5FC', '#4FC3F7'],
+  golden_blink:   ['#FFD700', '#DAA520'],
+  galaxy:         ['#7B1FA2', '#311B92'],
+  rainbow:        ['#FF6B6B', '#6C5CE7'],
+  shadow:         ['#616161', '#212121'],
+  cherry_blossom: ['#FF80AB', '#C2185B'],
 };
 
 // ─── HELPERS ───────────────────────────────────────────────
@@ -359,14 +370,218 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
         {bigSmile()}
       </>
     ),
+
+    // ═══ EXPANDED CATALOGUE (15 new) ═══
+
+    wink: (
+      <>
+        {/* Left eye normal */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="white" />
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.04} r={s * 0.045} fill={C.text} />
+        <Circle cx={cx - s * 0.07} cy={cy - s * 0.06} r={s * 0.014} fill="white" />
+        {/* Right eye closed — curved path */}
+        <Path
+          d={`M${cx + s * 0.04},${cy - s * 0.05} Q${cx + s * 0.1},${cy - s * 0.11} ${cx + s * 0.16},${cy - s * 0.05}`}
+          fill="none" stroke={C.accentD} strokeWidth={sw(1, 0.022)} strokeLinecap="round"
+        />
+        {smile(0.06, 0.06)}
+      </>
+    ),
+
+    tongue_out: (
+      <>
+        {eyes()}
+        {/* Open smile curve */}
+        <Path
+          d={`M${cx - s * 0.08},${cy + s * 0.08} Q${cx},${cy + s * 0.17} ${cx + s * 0.08},${cy + s * 0.08}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1, 0.02)} strokeLinecap="round"
+        />
+        {/* Tongue */}
+        <Ellipse cx={cx} cy={cy + s * 0.16} rx={s * 0.04} ry={s * 0.028} fill={C.coral} />
+        <Ellipse cx={cx - s * 0.008} cy={cy + s * 0.15} rx={s * 0.018} ry={s * 0.01} fill="#FFB8B8" />
+      </>
+    ),
+
+    pirate: (
+      <>
+        {/* Left eye normal */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="white" />
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.04} r={s * 0.045} fill={C.text} />
+        <Circle cx={cx - s * 0.07} cy={cy - s * 0.06} r={s * 0.014} fill="white" />
+        {/* Eyepatch over right eye */}
+        <Ellipse cx={cx + s * 0.1} cy={cy - s * 0.05} rx={s * 0.11} ry={s * 0.09} fill="#3E2723" />
+        {/* Strap diagonal */}
+        <Line x1={cx - s * 0.02} y1={cy - s * 0.22} x2={cx + s * 0.32} y2={cy + s * 0.05} stroke="#3E2723" strokeWidth={sw(1.3, 0.024)} strokeLinecap="round" />
+        {smile(0.07, 0.05)}
+      </>
+    ),
+
+    cool_guy: (
+      <>
+        {/* Sunglasses — two rounded rectangles + bridge */}
+        <Rect x={cx - s * 0.22} y={cy - s * 0.12} width={s * 0.2} height={s * 0.13} rx={s * 0.025} fill="#37474F" />
+        <Rect x={cx + s * 0.02} y={cy - s * 0.12} width={s * 0.2} height={s * 0.13} rx={s * 0.025} fill="#37474F" />
+        <Line x1={cx - s * 0.02} y1={cy - s * 0.055} x2={cx + s * 0.02} y2={cy - s * 0.055} stroke="#37474F" strokeWidth={sw(1.5, 0.028)} strokeLinecap="round" />
+        {/* Reflective highlights */}
+        <Rect x={cx - s * 0.2} y={cy - s * 0.105} width={s * 0.06} height={s * 0.028} rx={s * 0.008} fill="rgba(255,255,255,0.55)" />
+        <Rect x={cx + s * 0.04} y={cy - s * 0.105} width={s * 0.06} height={s * 0.028} rx={s * 0.008} fill="rgba(255,255,255,0.55)" />
+        {smile(0.06, 0.05)}
+      </>
+    ),
+
+    ninja: (
+      <>
+        {/* Wide mask band */}
+        <Rect x={cx - bR * 0.95} y={cy - s * 0.1} width={bR * 1.9} height={s * 0.16} fill="#212121" />
+        {/* Tiny eye slits */}
+        <Circle cx={cx - s * 0.095} cy={cy - s * 0.02} r={s * 0.028} fill="white" />
+        <Circle cx={cx + s * 0.095} cy={cy - s * 0.02} r={s * 0.028} fill="white" />
+        <Circle cx={cx - s * 0.095} cy={cy - s * 0.02} r={s * 0.016} fill={C.text} />
+        <Circle cx={cx + s * 0.095} cy={cy - s * 0.02} r={s * 0.016} fill={C.text} />
+        {/* Mask knot lines on the side */}
+        <Line x1={cx - bR * 0.95} y1={cy - s * 0.04} x2={cx - bR * 1.05} y2={cy - s * 0.08} stroke="#212121" strokeWidth={sw(1, 0.02)} strokeLinecap="round" />
+        <Line x1={cx - bR * 0.95} y1={cy + s * 0.02} x2={cx - bR * 1.05} y2={cy + s * 0.06} stroke="#212121" strokeWidth={sw(1, 0.02)} strokeLinecap="round" />
+      </>
+    ),
+
+    frozen: (
+      <>
+        {/* Ice-blue pupils */}
+        {eyes({ pc: '#4FC3F7' })}
+        {smile(0.05, 0.04)}
+        {/* Floating snowflakes */}
+        <Circle cx={cx - s * 0.32} cy={cy - s * 0.22} r={s * 0.02} fill="#B3E5FC" opacity={0.7} />
+        <Circle cx={cx + s * 0.3} cy={cy - s * 0.18} r={s * 0.018} fill="#B3E5FC" opacity={0.6} />
+        <Circle cx={cx - s * 0.22} cy={cy - s * 0.34} r={s * 0.014} fill="#E1F5FE" opacity={0.6} />
+        <Circle cx={cx + s * 0.1} cy={cy - s * 0.36} r={s * 0.016} fill="#B3E5FC" opacity={0.55} />
+        <Circle cx={cx + s * 0.34} cy={cy + s * 0.02} r={s * 0.012} fill="#E1F5FE" opacity={0.5} />
+        <Circle cx={cx - s * 0.36} cy={cy + s * 0.08} r={s * 0.015} fill="#B3E5FC" opacity={0.5} />
+      </>
+    ),
+
+    angel: (
+      <>
+        {/* Halo — stroked ellipse above head */}
+        <Ellipse cx={cx} cy={cy - bR - s * 0.12} rx={s * 0.14} ry={s * 0.035} fill="none" stroke="#FFD700" strokeWidth={sw(1.2, 0.022)} />
+        {eyes({ pc: '#DAA520', pr: s * 0.048 })}
+        {bigSmile()}
+      </>
+    ),
+
+    devil: (
+      <>
+        {/* Two horns poking from top */}
+        <Polygon points={`${cx - s * 0.16},${cy - bR + s * 0.02} ${cx - s * 0.1},${cy - bR - s * 0.12} ${cx - s * 0.07},${cy - bR + s * 0.01}`} fill="#FF1744" />
+        <Polygon points={`${cx + s * 0.07},${cy - bR + s * 0.01} ${cx + s * 0.1},${cy - bR - s * 0.12} ${cx + s * 0.16},${cy - bR + s * 0.02}`} fill="#FF1744" />
+        {eyes({ pc: '#FF1744' })}
+        {/* Cheeky smirk */}
+        <Path
+          d={`M${cx - s * 0.07},${cy + s * 0.1} Q${cx},${cy + s * 0.15} ${cx + s * 0.07},${cy + s * 0.08}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1, 0.02)} strokeLinecap="round"
+        />
+      </>
+    ),
+
+    robot: (
+      <>
+        {/* Antenna */}
+        <Line x1={cx} y1={cy - bR} x2={cx} y2={cy - bR - s * 0.1} stroke="#90A4AE" strokeWidth={sw(1, 0.018)} strokeLinecap="round" />
+        <Circle cx={cx} cy={cy - bR - s * 0.11} r={s * 0.022} fill="#00E676" />
+        <Circle cx={cx} cy={cy - bR - s * 0.11} r={s * 0.035} fill="#00E676" opacity={0.3} />
+        {/* Square eyes */}
+        <Rect x={cx - s * 0.18} y={cy - s * 0.12} width={s * 0.14} height={s * 0.14} rx={s * 0.012} fill="white" />
+        <Rect x={cx + s * 0.04} y={cy - s * 0.12} width={s * 0.14} height={s * 0.14} rx={s * 0.012} fill="white" />
+        <Rect x={cx - s * 0.13} y={cy - s * 0.08} width={s * 0.05} height={s * 0.06} fill="#00E676" />
+        <Rect x={cx + s * 0.09} y={cy - s * 0.08} width={s * 0.05} height={s * 0.06} fill="#00E676" />
+        {/* Straight line mouth */}
+        <Line x1={cx - s * 0.06} y1={cy + s * 0.12} x2={cx + s * 0.06} y2={cy + s * 0.12} stroke={C.text} strokeWidth={sw(1, 0.02)} strokeLinecap="round" />
+      </>
+    ),
+
+    dizzy: (
+      <>
+        {/* Eye whites */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="white" />
+        <Ellipse cx={cx + s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="white" />
+        {/* Concentric spiral rings (outer + inner) per eye */}
+        <Circle cx={cx - s * 0.1} cy={cy - s * 0.05} r={s * 0.06} fill="none" stroke={C.accent} strokeWidth={sw(0.8, 0.014)} />
+        <Circle cx={cx - s * 0.1} cy={cy - s * 0.05} r={s * 0.028} fill="none" stroke={C.accent} strokeWidth={sw(0.8, 0.014)} />
+        <Circle cx={cx + s * 0.1} cy={cy - s * 0.05} r={s * 0.06} fill="none" stroke={C.accent} strokeWidth={sw(0.8, 0.014)} />
+        <Circle cx={cx + s * 0.1} cy={cy - s * 0.05} r={s * 0.028} fill="none" stroke={C.accent} strokeWidth={sw(0.8, 0.014)} />
+        {frown()}
+      </>
+    ),
+
+    golden_blink: (
+      <>
+        {/* Gold crown (zigzag polygon) */}
+        <Polygon
+          points={`${cx - s * 0.16},${cy - bR + s * 0.02} ${cx - s * 0.12},${cy - bR - s * 0.1} ${cx - s * 0.06},${cy - bR} ${cx},${cy - bR - s * 0.14} ${cx + s * 0.06},${cy - bR} ${cx + s * 0.12},${cy - bR - s * 0.1} ${cx + s * 0.16},${cy - bR + s * 0.02}`}
+          fill="#FFD700" stroke="#DAA520" strokeWidth={sw(0.8, 0.012)} strokeLinejoin="round"
+        />
+        {/* Gold gem inlays */}
+        <Circle cx={cx - s * 0.12} cy={cy - bR - s * 0.02} r={s * 0.014} fill="#FFF8E1" />
+        <Circle cx={cx} cy={cy - bR - s * 0.04} r={s * 0.016} fill="#FFF8E1" />
+        <Circle cx={cx + s * 0.12} cy={cy - bR - s * 0.02} r={s * 0.014} fill="#FFF8E1" />
+        {eyes({ pc: '#DAA520' })}
+        {bigSmile()}
+      </>
+    ),
+
+    galaxy: (
+      <>
+        {eyes({ pc: '#E040FB' })}
+        {smile(0.05, 0.04)}
+        {/* Tiny star dots around the body */}
+        <Circle cx={cx - s * 0.32} cy={cy - s * 0.18} r={s * 0.012} fill="white" opacity={0.9} />
+        <Circle cx={cx + s * 0.3} cy={cy - s * 0.24} r={s * 0.01} fill="white" opacity={0.8} />
+        <Circle cx={cx - s * 0.26} cy={cy + s * 0.12} r={s * 0.008} fill="white" opacity={0.7} />
+        <Circle cx={cx + s * 0.34} cy={cy + s * 0.08} r={s * 0.012} fill="white" opacity={0.85} />
+        <Circle cx={cx - s * 0.04} cy={cy - s * 0.36} r={s * 0.01} fill="white" opacity={0.8} />
+        <Circle cx={cx + s * 0.16} cy={cy - s * 0.38} r={s * 0.008} fill="white" opacity={0.7} />
+        <Circle cx={cx - s * 0.38} cy={cy + s * 0.02} r={s * 0.009} fill="white" opacity={0.6} />
+        <Circle cx={cx + s * 0.38} cy={cy - s * 0.08} r={s * 0.011} fill="white" opacity={0.75} />
+      </>
+    ),
+
+    rainbow: (
+      <>
+        {/* The body gradient IS the cosmetic — just render the default face */}
+        {eyes()}
+        {bigSmile()}
+      </>
+    ),
+
+    shadow: (
+      <>
+        {/* Translucent white pupils on dark body */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="rgba(255,255,255,0.92)" />
+        <Ellipse cx={cx + s * 0.1} cy={cy - s * 0.05} rx={s * 0.085} ry={s * 0.11} fill="rgba(255,255,255,0.92)" />
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.04} r={s * 0.045} fill="rgba(255,255,255,0.8)" />
+        <Circle cx={cx + s * 0.115} cy={cy - s * 0.04} r={s * 0.045} fill="rgba(255,255,255,0.8)" />
+        {smile(0.05, 0.04)}
+      </>
+    ),
+
+    cherry_blossom: (
+      <>
+        {eyes({ pc: C.coral })}
+        {bigSmile()}
+        {/* Small petal dots floating near Blink */}
+        <Circle cx={cx - s * 0.3} cy={cy - s * 0.24} r={s * 0.016} fill="#FCE4EC" opacity={0.8} />
+        <Circle cx={cx + s * 0.28} cy={cy - s * 0.2} r={s * 0.014} fill="#F8BBD0" opacity={0.75} />
+        <Circle cx={cx - s * 0.22} cy={cy + s * 0.16} r={s * 0.012} fill="#FCE4EC" opacity={0.7} />
+      </>
+    ),
   };
 
+  const bodyStops = BODY_STOPS[expression] ?? DEFAULT_BODY_STOPS;
   return (
     <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>
       <Defs>
         <RadialGradient id={id} cx="38%" cy="32%">
-          <Stop offset="0%" stopColor={C.accentL} />
-          <Stop offset="100%" stopColor={C.accent} />
+          <Stop offset="0%" stopColor={bodyStops[0]} />
+          <Stop offset="100%" stopColor={bodyStops[1]} />
         </RadialGradient>
       </Defs>
       {body}

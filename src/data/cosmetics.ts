@@ -7,8 +7,20 @@
 
 // ─── TYPES ─────────────────────────────────────────────────
 export type CosmeticType = 'frame' | 'banner' | 'name_color' | 'expression';
-export type BlinkExpressionId = 'normal' | 'memorise' | 'blank' | 'thinking' | 'correct' | 'wrong' | 'celebrate' | 'streak' | 'sad' | 'sleeping' | 'surprised' | 'love';
-export type UnlockMethod = 'free' | 'gems' | 'achievement' | 'subscriber' | 'seasonal';
+// Face-variant ids the Blink component knows how to render. The
+// expression cosmetic records pick from this list; the Blink SVG
+// switch-cases off the matching string.
+export type BlinkExpressionId =
+  // ── Original 13 ──
+  | 'normal' | 'memorise' | 'blank' | 'thinking' | 'correct' | 'wrong'
+  | 'celebrate' | 'streak' | 'sad' | 'sleeping' | 'surprised' | 'love'
+  | 'premium'
+  // ── Expanded catalogue (15 new) ──
+  | 'wink' | 'tongue_out'
+  | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
+  | 'devil' | 'robot' | 'dizzy'
+  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom';
+export type UnlockMethod = 'free' | 'gems' | 'achievement' | 'subscriber' | 'seasonal' | 'ad';
 
 export interface Cosmetic {
   id: string;
@@ -22,6 +34,10 @@ export interface Cosmetic {
   subscriberOnly?: boolean;
   seasonal?: string;          // e.g. "christmas_2026", "halloween_2026"
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  /** True when this item can ALSO be unlocked by watching a rewarded
+   *  video ad (only legal for common-rarity items per the spec). The
+   *  gem price, if any, still applies for players who'd rather pay. */
+  adEligible?: boolean;
 }
 
 export interface FrameCosmetic extends Cosmetic {
@@ -30,11 +46,20 @@ export interface FrameCosmetic extends Cosmetic {
   borderWidth: number;
   glowColor?: string;         // for animated glow frames
   animated?: boolean;         // subscriber-only animated frames
+  /** Whether to render tiny sparkle dots at the corners of the frame
+   *  (gold on the Halo frame, ice on the Diamond frame). */
+  sparkle?: boolean;
 }
 
 export interface BannerCosmetic extends Cosmetic {
   type: 'banner';
-  gradientColors: [string, string];
+  /** Gradient stop colours. Can be any length — 2 for the classic
+   *  two-stop banners, up to 6 for the multi-stop Holographic banner.
+   *  Passed straight into expo-linear-gradient's `colors` prop. */
+  gradientColors: string[];
+  /** Gradient direction — 'diag' = top-left→bottom-right, 'vert' =
+   *  top→bottom. Defaults to diag when omitted. */
+  gradientDirection?: 'diag' | 'vert';
   pattern?: 'none' | 'dots' | 'waves' | 'stars' | 'confetti';
 }
 
@@ -102,6 +127,22 @@ export const FRAMES: FrameCosmetic[] = [
   { id: 'frame_christmas', type: 'frame', name: 'Festive', description: 'Limited edition holiday ring', unlock: 'seasonal', seasonal: 'christmas', gemCost: 200, rarity: 'legendary', borderColor: '#FF6B6B', borderWidth: 4, glowColor: '#00B894' },
   { id: 'frame_halloween', type: 'frame', name: 'Spooky', description: 'Limited edition spooky ring', unlock: 'seasonal', seasonal: 'halloween', gemCost: 180, rarity: 'legendary', borderColor: '#E17055', borderWidth: 4, glowColor: '#2D3436' },
   { id: 'frame_valentines', type: 'frame', name: 'Sweetheart', description: 'Limited edition love glow', unlock: 'seasonal', seasonal: 'valentines', gemCost: 150, rarity: 'epic', borderColor: '#FD79A8', borderWidth: 3, glowColor: '#FDCFE8' },
+
+  // ── Expanded catalogue (10 new) ──
+  // Rares (60 gems)
+  { id: 'frame_lightning', type: 'frame', name: 'Lightning', description: 'Electric yellow glow', unlock: 'gems', gemCost: 60, rarity: 'rare', borderColor: '#FFEB3B', borderWidth: 3, glowColor: '#FFEB3B' },
+  { id: 'frame_vines', type: 'frame', name: 'Vines', description: 'Living green border', unlock: 'gems', gemCost: 60, rarity: 'rare', borderColor: '#4CAF50', borderWidth: 3 },
+  { id: 'frame_ocean_cyan', type: 'frame', name: 'Ocean', description: 'Clear cyan glow', unlock: 'gems', gemCost: 60, rarity: 'rare', borderColor: '#00BCD4', borderWidth: 3, glowColor: '#00BCD4' },
+  // Epics (100-120 gems)
+  { id: 'frame_flame', type: 'frame', name: 'Flame Ring', description: 'Burning orange aura', unlock: 'gems', gemCost: 100, rarity: 'epic', borderColor: '#FF5722', borderWidth: 3, glowColor: '#FF5722' },
+  { id: 'frame_ice_crystal', type: 'frame', name: 'Ice Crystal', description: 'Frosted blue shimmer', unlock: 'gems', gemCost: 100, rarity: 'epic', borderColor: '#4FC3F7', borderWidth: 3, glowColor: '#4FC3F7' },
+  { id: 'frame_neon_pulse', type: 'frame', name: 'Neon Pulse', description: 'Electric magenta pulse', unlock: 'gems', gemCost: 120, rarity: 'epic', borderColor: '#E040FB', borderWidth: 3, glowColor: '#E040FB' },
+  // Legendaries (250-300 gems)
+  { id: 'frame_halo', type: 'frame', name: 'Halo', description: 'Golden halo with sparkle dots', unlock: 'gems', gemCost: 250, rarity: 'legendary', borderColor: '#FFD700', borderWidth: 4, glowColor: '#FFD700', sparkle: true },
+  { id: 'frame_galaxy_ring', type: 'frame', name: 'Galaxy Ring', description: 'Deep cosmic purple', unlock: 'gems', gemCost: 250, rarity: 'legendary', borderColor: '#7B1FA2', borderWidth: 4, glowColor: '#7B1FA2' },
+  { id: 'frame_diamond_ring', type: 'frame', name: 'Diamond', description: 'Ice-blue sparkle', unlock: 'gems', gemCost: 300, rarity: 'legendary', borderColor: '#B3E5FC', borderWidth: 4, glowColor: '#B3E5FC', sparkle: true },
+  // Common (25 gems OR ad) — ad-eligible
+  { id: 'frame_dotted_pearl', type: 'frame', name: 'Dotted', description: 'Playful dotted border', unlock: 'gems', gemCost: 25, rarity: 'common', borderColor: '#B2BEC3', borderWidth: 2, adEligible: true },
 ];
 
 // ─── ALL BANNERS ───────────────────────────────────────────
@@ -127,6 +168,25 @@ export const BANNERS: BannerCosmetic[] = [
   { id: 'banner_spring', type: 'banner', name: 'Spring', description: 'Fresh green morning', unlock: 'gems', gemCost: 80, rarity: 'rare', gradientColors: ['#00B894', '#FDCB6E'] },
   { id: 'banner_galaxy', type: 'banner', name: 'Galaxy', description: 'Deep cosmic purple', unlock: 'gems', gemCost: 120, rarity: 'epic', gradientColors: ['#2D3436', '#6C5CE7'] },
   { id: 'banner_ice', type: 'banner', name: 'Ice', description: 'Frosty blue shimmer', unlock: 'gems', gemCost: 80, rarity: 'rare', gradientColors: ['#DFE6E9', '#74B9FF'] },
+
+  // ── Expanded catalogue (12 new) ──
+  // Rares (60 gems)
+  { id: 'banner_storm', type: 'banner', name: 'Storm', description: 'Thundering indigo sky', unlock: 'gems', gemCost: 60, rarity: 'rare', gradientColors: ['#1A237E', '#4A148C', '#311B92'] },
+  { id: 'banner_autumn_leaves', type: 'banner', name: 'Autumn', description: 'Falling autumn fire', unlock: 'gems', gemCost: 60, rarity: 'rare', gradientColors: ['#BF360C', '#E65100', '#F57F17'] },
+  { id: 'banner_mint_fresh', type: 'banner', name: 'Mint Fresh', description: 'Cool mint breeze', unlock: 'gems', gemCost: 60, rarity: 'rare', gradientColors: ['#00BFA5', '#1DE9B6', '#A7FFEB'] },
+  // Epics (120-150 gems)
+  { id: 'banner_lightning_storm', type: 'banner', name: 'Lightning Storm', description: 'Electric purple strike', unlock: 'gems', gemCost: 120, rarity: 'epic', gradientColors: ['#1A1A2E', '#4A148C', '#FFEB3B', '#1A1A2E'] },
+  { id: 'banner_aurora_borealis', type: 'banner', name: 'Aurora Borealis', description: 'Dancing northern lights', unlock: 'gems', gemCost: 120, rarity: 'epic', gradientColors: ['#1B5E20', '#00BCD4', '#E040FB', '#1A237E'] },
+  { id: 'banner_neon_city', type: 'banner', name: 'Neon City', description: 'Midnight neon skyline', unlock: 'gems', gemCost: 150, rarity: 'epic', gradientColors: ['#0D0D1A', '#E040FB', '#00E5FF', '#0D0D1A'] },
+  { id: 'banner_underwater', type: 'banner', name: 'Underwater', description: 'Deep ocean fade', unlock: 'gems', gemCost: 120, rarity: 'epic', gradientColors: ['#0277BD', '#00838F', '#004D40'], gradientDirection: 'vert' },
+  { id: 'banner_lava_flow', type: 'banner', name: 'Lava Flow', description: 'Molten rivers of gold', unlock: 'gems', gemCost: 120, rarity: 'epic', gradientColors: ['#BF360C', '#FF6D00', '#FFD600', '#BF360C'] },
+  // Legendaries (300-350 gems)
+  { id: 'banner_galaxy_legendary', type: 'banner', name: 'Galaxy', description: 'A swirling cosmos', unlock: 'gems', gemCost: 300, rarity: 'legendary', gradientColors: ['#0D0D2B', '#4A148C', '#E040FB', '#00BCD4', '#0D0D2B'] },
+  { id: 'banner_holographic_legendary', type: 'banner', name: 'Holographic', description: 'The ultimate flex', unlock: 'gems', gemCost: 350, rarity: 'legendary', gradientColors: ['#FF6B6B', '#FFD93D', '#00B894', '#0984E3', '#6C5CE7', '#FD79A8'] },
+  { id: 'banner_celestial', type: 'banner', name: 'Celestial', description: 'Sunrise over the void', unlock: 'gems', gemCost: 300, rarity: 'legendary', gradientColors: ['#000428', '#004e92', '#FFD700'], gradientDirection: 'vert' },
+  // Commons (25 gems OR ad) — ad-eligible
+  { id: 'banner_pastel_pink', type: 'banner', name: 'Pastel Pink', description: 'Soft and sweet', unlock: 'gems', gemCost: 25, rarity: 'common', gradientColors: ['#FCE4EC', '#F8BBD0'], adEligible: true },
+  { id: 'banner_slate', type: 'banner', name: 'Slate', description: 'Muted sophistication', unlock: 'gems', gemCost: 25, rarity: 'common', gradientColors: ['#CFD8DC', '#90A4AE'], adEligible: true },
 ];
 
 // ─── NAME COLOURS ──────────────────────────────────────────
@@ -145,15 +205,35 @@ export const EXPRESSIONS: ExpressionCosmetic[] = [
   { id: 'expr_memorise', type: 'expression', name: 'Focused', description: 'Wide-eyed concentration', unlock: 'gems', gemCost: 40, rarity: 'rare', blinkExpression: 'memorise' },
   { id: 'expr_thinking', type: 'expression', name: 'Thinker', description: 'Lost in thought', unlock: 'gems', gemCost: 40, rarity: 'rare', blinkExpression: 'thinking' },
   { id: 'expr_correct', type: 'expression', name: 'Nailed It', description: 'Green-eyed confidence', unlock: 'gems', gemCost: 50, rarity: 'rare', blinkExpression: 'correct' },
-  { id: 'expr_wrong', type: 'expression', name: 'Oops', description: 'Sweaty and sheepish', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'wrong' },
+  { id: 'expr_wrong', type: 'expression', name: 'Oops', description: 'Sweaty and sheepish', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'wrong', adEligible: true },
   { id: 'expr_celebrate', type: 'expression', name: 'Party Mode', description: 'Stars and confetti!', unlock: 'gems', gemCost: 60, rarity: 'epic', blinkExpression: 'celebrate' },
   { id: 'expr_streak', type: 'expression', name: 'On Fire', description: 'Flame-headed legend', unlock: 'gems', gemCost: 60, rarity: 'epic', blinkExpression: 'streak' },
-  { id: 'expr_sad', type: 'expression', name: 'Blue Day', description: 'Feeling down', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'sad' },
+  { id: 'expr_sad', type: 'expression', name: 'Blue Day', description: 'Feeling down', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'sad', adEligible: true },
   { id: 'expr_sleeping', type: 'expression', name: 'Sleepyhead', description: 'Zzz... peaceful dreams', unlock: 'gems', gemCost: 40, rarity: 'rare', blinkExpression: 'sleeping' },
   { id: 'expr_surprised', type: 'expression', name: 'Shocked', description: 'Eyes wide open', unlock: 'gems', gemCost: 40, rarity: 'rare', blinkExpression: 'surprised' },
   { id: 'expr_love', type: 'expression', name: 'Lovestruck', description: 'Heart eyes and blush', unlock: 'gems', gemCost: 50, rarity: 'rare', blinkExpression: 'love' },
   { id: 'expr_blank', type: 'expression', name: 'Go Blank!', description: 'The signature pose', unlock: 'gems', gemCost: 80, rarity: 'epic', blinkExpression: 'blank' },
   { id: 'expr_premium', type: 'expression', name: 'Premium', description: 'Exclusive Blanked+ star eyes', unlock: 'subscriber', subscriberOnly: true, rarity: 'legendary', blinkExpression: 'premium' },
+
+  // ── Expanded catalogue (15 new) ──
+  // Commons (30 gems or ad) — ad-eligible
+  { id: 'expr_wink', type: 'expression', name: 'Wink', description: 'Cheeky one-eyed grin', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'wink', adEligible: true },
+  { id: 'expr_tongue', type: 'expression', name: 'Tongue Out', description: 'Playful tongue out', unlock: 'gems', gemCost: 30, rarity: 'common', blinkExpression: 'tongue_out', adEligible: true },
+  // Epics (100-150 gems)
+  { id: 'expr_pirate', type: 'expression', name: 'Pirate', description: 'Eye patch and swagger', unlock: 'gems', gemCost: 120, rarity: 'epic', blinkExpression: 'pirate' },
+  { id: 'expr_cool', type: 'expression', name: 'Cool Guy', description: 'Shades on, vibe immaculate', unlock: 'gems', gemCost: 120, rarity: 'epic', blinkExpression: 'cool_guy' },
+  { id: 'expr_ninja', type: 'expression', name: 'Ninja', description: 'Silent and masked', unlock: 'gems', gemCost: 150, rarity: 'epic', blinkExpression: 'ninja' },
+  { id: 'expr_frozen', type: 'expression', name: 'Frozen', description: 'Icy blue wonder', unlock: 'gems', gemCost: 120, rarity: 'epic', blinkExpression: 'frozen' },
+  { id: 'expr_angel', type: 'expression', name: 'Angel', description: 'Halo and golden eyes', unlock: 'gems', gemCost: 150, rarity: 'epic', blinkExpression: 'angel' },
+  { id: 'expr_devil', type: 'expression', name: 'Little Devil', description: 'Horns and mischief', unlock: 'gems', gemCost: 150, rarity: 'epic', blinkExpression: 'devil' },
+  { id: 'expr_robot', type: 'expression', name: 'Robot', description: 'Beep-boop mode', unlock: 'gems', gemCost: 120, rarity: 'epic', blinkExpression: 'robot' },
+  { id: 'expr_dizzy', type: 'expression', name: 'Dizzy', description: 'Spinning spiral eyes', unlock: 'gems', gemCost: 100, rarity: 'epic', blinkExpression: 'dizzy' },
+  // Legendaries (300-350 gems)
+  { id: 'expr_golden', type: 'expression', name: 'Golden Blink', description: 'Crowned gold royalty', unlock: 'gems', gemCost: 300, rarity: 'legendary', blinkExpression: 'golden_blink' },
+  { id: 'expr_galaxy', type: 'expression', name: 'Galaxy', description: 'Cosmic purple voyager', unlock: 'gems', gemCost: 300, rarity: 'legendary', blinkExpression: 'galaxy' },
+  { id: 'expr_rainbow', type: 'expression', name: 'Rainbow', description: 'Full-spectrum body', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'rainbow' },
+  { id: 'expr_shadow', type: 'expression', name: 'Shadow', description: 'Menacingly cute', unlock: 'gems', gemCost: 300, rarity: 'legendary', blinkExpression: 'shadow' },
+  { id: 'expr_cherry', type: 'expression', name: 'Cherry Blossom', description: 'Pink petal bloom', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'cherry_blossom' },
 ];
 
 // ─── DAILY FEATURED SHOP ──────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { TabTransition } from '@/src/components/TabTransition';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { Blink } from '@/src/components/Blink';
 import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, type FrameCosmetic, type BannerCosmetic, type ExpressionCosmetic } from '@/src/data/cosmetics';
+import { showRewardedAd, getRemainingAdWatches } from '@/src/utils/adService';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { InfoCard } from '@/src/components/InfoCard';
 import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
@@ -19,6 +20,63 @@ import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 
 const GEM = '\u{1F48E}';
+
+/**
+ * Small "FREE AD" badge overlaid on the top-right of a common,
+ * ad-eligible cosmetic card. Hidden once the item is owned.
+ */
+function AdBadge({ colors }: { colors: Record<string, string> }) {
+  return (
+    <View style={[styles.adBadge, { backgroundColor: colors.correct }]}>
+      <Ionicons name="play" size={8} color="#FFFFFF" />
+      <Text style={styles.adBadgeText}>FREE AD</Text>
+    </View>
+  );
+}
+
+/**
+ * Status line rendered at the bottom of every cosmetic card. Shows:
+ *   - "OWNED" when the player already has the item
+ *   - A spinner when a rewarded ad is currently loading for this card
+ *   - "▶ Watch ad" for ad-eligible commons
+ *   - Gem cost for anything else
+ *   - A lock icon for achievement / subscriber-only items
+ */
+function CosmeticStatus({
+  item,
+  owned,
+  isLoading,
+  colors,
+}: {
+  item: { gemCost?: number; adEligible?: boolean; unlock: string };
+  owned: boolean;
+  isLoading: boolean;
+  colors: Record<string, string>;
+}) {
+  if (owned) {
+    return <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>;
+  }
+  if (isLoading) {
+    return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>LOADING…</Text>;
+  }
+  if (item.adEligible) {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
+        <Ionicons name="play" size={9} color={colors.correct} />
+        <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '800' }}>Watch ad</Text>
+      </View>
+    );
+  }
+  if (item.unlock === 'gems' && item.gemCost) {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 3 }}>
+        <Text style={{ fontSize: 10 }}>{GEM}</Text>
+        <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '800' }}>{item.gemCost}</Text>
+      </View>
+    );
+  }
+  return <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />;
+}
 
 function ShopTab() {
   const { colors } = useTheme();
@@ -35,6 +93,13 @@ function ShopTab() {
   const [showStarterPack, setShowStarterPack] = useState(false);
   const [starterPackAvailable, setStarterPackAvailable] = useState(false);
   const [starterPackTimeLeft, setStarterPackTimeLeft] = useState('');
+  const [adWatchesLeft, setAdWatchesLeft] = useState<number | null>(null);
+  const [adLoadingId, setAdLoadingId] = useState<string | null>(null);
+  // Refresh the remaining ad count on mount so the "X left today"
+  // hint stays in sync with AsyncStorage across cold starts.
+  useEffect(() => {
+    getRemainingAdWatches().then(setAdWatchesLeft).catch(() => setAdWatchesLeft(5));
+  }, []);
 
   // Check if starter pack is within its 24hr window
   useEffect(() => {
@@ -87,6 +152,73 @@ function ShopTab() {
     if (gems < cost) { setGemShortfall({ cost, name: 'this item' }); return; }
     buyPowerUp(p.id, qty, p.cost);
   };
+
+  /**
+   * Shared tap handler for cosmetic cards across the Frames / Banners /
+   * Expressions tabs. Routes the tap through three possible flows:
+   *
+   *   1. Already owned → equip it
+   *   2. Ad-eligible (common) + ads remaining → show "Watch ad?" Alert
+   *      and, on confirm, play the rewarded ad, unlock on success
+   *   3. Otherwise → show the "not available yet" info card
+   *
+   * Blanked+ subscribers bypass the rewarded ad flow entirely and get
+   * the item with a single tap (handled inside `showRewardedAd`,
+   * which returns `granted: true, bypass: 'subscriber'`).
+   */
+  const handleCosmeticTap = useCallback(async (
+    item: FrameCosmetic | BannerCosmetic | ExpressionCosmetic,
+    slot: 'frame' | 'banner' | 'expression',
+  ) => {
+    const store = useGameStore.getState();
+    const owned = store.ownedCosmetics.includes(item.id) || item.unlock === 'free';
+    if (owned) {
+      store.equipCosmetic(slot, item.id);
+      return;
+    }
+
+    // Locked + ad-eligible → offer the rewarded ad path.
+    if (item.adEligible) {
+      const remaining = await getRemainingAdWatches();
+      if (remaining === 0 && !store.isSubscribed()) {
+        Alert.alert('Daily ad limit reached', 'Come back tomorrow for more free unlocks.');
+        return;
+      }
+      Alert.alert(
+        store.isSubscribed() ? `Unlock ${item.name}?` : `Watch a 30s ad to unlock ${item.name}?`,
+        store.isSubscribed()
+          ? 'Blanked+ members skip the ad and claim commons for free.'
+          : `You\u2019ll get it for free. ${remaining} ad unlock${remaining === 1 ? '' : 's'} left today.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: store.isSubscribed() ? 'Claim free' : 'Watch ad',
+            onPress: async () => {
+              setAdLoadingId(item.id);
+              const result = await showRewardedAd();
+              setAdLoadingId(null);
+              if (result.granted) {
+                // Unlock and auto-equip — matches the purchaseCosmetic
+                // flow which shows the celebration card next.
+                store.unlockCosmetic(item.id);
+                store.equipCosmetic(slot, item.id);
+                setCelebrationItem(item as Cosmetic);
+                getRemainingAdWatches().then(setAdWatchesLeft);
+              } else if (result.reason === 'limit_reached') {
+                Alert.alert('Daily ad limit reached', 'Come back tomorrow for more free unlocks.');
+              } else {
+                Alert.alert('Ad unavailable', 'Couldn\u2019t load an ad right now. Try again in a moment.');
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    // Locked + not ad-eligible → existing fallback
+    setShowUnavailable(true);
+  }, []);
 
   const handleIAP = () => { Alert.alert('Coming soon', 'In-app purchases will be available soon!'); };
 
@@ -210,18 +342,21 @@ function ShopTab() {
             {FRAMES.filter(f => f.id !== 'frame_none').map((f, fi) => {
               const owned = f.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(f.id);
               const exprs = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'] as const;
+              const isLegendary = f.rarity === 'legendary';
+              const isLoading = adLoadingId === f.id;
               return (
-                <Pressable key={f.id} onPress={() => {
-                  if (owned) { useGameStore.getState().equipCosmetic('frame', f.id); }
-                  else { setShowUnavailable(true); }
-                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.4 }]}>
+                <Pressable key={f.id} onPress={() => handleCosmeticTap(f, 'frame')} style={[
+                  styles.cosmeticCard,
+                  { backgroundColor: colors.card, borderColor: owned ? f.borderColor : colors.border, opacity: owned ? 1 : 0.45 },
+                  isLegendary && styles.legendaryCard,
+                ]}>
+                  {!owned && f.adEligible && <AdBadge colors={colors} />}
                   <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: f.borderColor, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
                     <Blink expression={exprs[fi % exprs.length]} size={30} />
                   </View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
-                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
+                  <CosmeticStatus item={f} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
             })}
@@ -233,16 +368,25 @@ function ShopTab() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {BANNERS.filter(b => b.id !== 'banner_none').map(b => {
               const owned = b.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(b.id);
+              const isLegendary = b.rarity === 'legendary';
+              const isLoading = adLoadingId === b.id;
+              const vert = b.gradientDirection === 'vert';
               return (
-                <Pressable key={b.id} onPress={() => {
-                  if (owned) { useGameStore.getState().equipCosmetic('banner', b.id); }
-                  else { setShowUnavailable(true); }
-                }} style={[styles.cosmeticCardWide, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.4 }]}>
-                  <LinearGradient colors={b.gradientColors} style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                <Pressable key={b.id} onPress={() => handleCosmeticTap(b, 'banner')} style={[
+                  styles.cosmeticCardWide,
+                  { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border, opacity: owned ? 1 : 0.45 },
+                  isLegendary && styles.legendaryCard,
+                ]}>
+                  {!owned && b.adEligible && <AdBadge colors={colors} />}
+                  <LinearGradient
+                    colors={b.gradientColors}
+                    style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }}
+                    start={{ x: 0, y: 0 }}
+                    end={vert ? { x: 0, y: 1 } : { x: 1, y: 1 }}
+                  />
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{b.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[b.rarity], fontWeight: '600' }}>{b.rarity.toUpperCase()}</Text>
-                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
+                  <CosmeticStatus item={b} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
             })}
@@ -254,16 +398,19 @@ function ShopTab() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {EXPRESSIONS.map(e => {
               const owned = e.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(e.id);
+              const isLegendary = e.rarity === 'legendary';
+              const isLoading = adLoadingId === e.id;
               return (
-                <Pressable key={e.id} onPress={() => {
-                  if (owned) { useGameStore.getState().equipCosmetic('expression', e.id); }
-                  else { setShowUnavailable(true); }
-                }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.4 }]}>
+                <Pressable key={e.id} onPress={() => handleCosmeticTap(e, 'expression')} style={[
+                  styles.cosmeticCard,
+                  { backgroundColor: colors.card, borderColor: owned ? colors.accent : colors.border, opacity: owned ? 1 : 0.45 },
+                  isLegendary && styles.legendaryCard,
+                ]}>
+                  {!owned && e.adEligible && <AdBadge colors={colors} />}
                   <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
                   <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
-                  {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>
-                    : <Ionicons name="lock-closed" size={10} color={colors.textLight} style={{ marginTop: 3 }} />}
+                  <CosmeticStatus item={e} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
             })}
@@ -582,7 +729,29 @@ const styles = StyleSheet.create({
 
   // Remove ads
   cosmeticTabPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, borderWidth: 1 },
-  cosmeticCard: { width: '30%' as any, flexGrow: 1, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
+  cosmeticCard: { width: '30%' as any, flexGrow: 1, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const, position: 'relative' as const },
+  legendaryCard: {
+    borderColor: '#D4A012',
+    backgroundColor: 'rgba(212,160,18,0.06)',
+    shadowColor: '#D4A012',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  adBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    zIndex: 2,
+  },
+  adBadgeText: { fontSize: 8, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 },
   cosmeticCardWide: { width: '47%' as any, flexGrow: 1, padding: 10, borderRadius: 14, borderWidth: 1.5, alignItems: 'center' as const },
   removeAdsCard: { borderRadius: 20, padding: 20, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 2 },
   removeAdsContent: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
