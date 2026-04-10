@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { REWARDS, checkDailyReward, claimDailyReward, pickCosmeticReward } from '@/src/utils/dailyLoginRewards';
+import { REWARDS, checkDailyReward, advanceLoginReward, pickCosmeticReward } from '@/src/utils/dailyLoginRewards';
 import { getCosmeticById, type Cosmetic } from '@/src/data/cosmetics';
 import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
 
@@ -23,6 +23,8 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
   var buyPowerUp = useGameStore(s => s.buyPowerUp);
   var unlockCosmetic = useGameStore(s => s.unlockCosmetic);
   var ownedCosmetics = useGameStore(s => s.ownedCosmetics);
+  var loginReward = useGameStore(s => s.loginReward);
+  var claimLoginReward = useGameStore(s => s.claimLoginReward);
   var [rewardDay, setRewardDay] = useState(1);
   var [streak, setStreak] = useState(0);
   var [claimed, setClaimed] = useState(false);
@@ -36,51 +38,50 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
 
   useEffect(() => {
     if (!visible) return;
-    checkDailyReward().then(check => {
-      if (check) {
-        setRewardDay(check.currentDay);
-        setStreak(check.streak);
-      }
-    });
+    var check = checkDailyReward(loginReward);
+    setRewardDay(check.currentDay);
+    setStreak(check.streak);
     RNAnimated.parallel([
       RNAnimated.timing(backdrop, { toValue: 1, duration: 300, useNativeDriver: false }),
       RNAnimated.spring(cardScale, { toValue: 1, friction: 5, tension: 120, useNativeDriver: false }),
       RNAnimated.timing(cardOpacity, { toValue: 1, duration: 250, useNativeDriver: false }),
     ]).start();
-  }, [visible]);
+  }, [visible, loginReward]);
 
-  async function handleClaim() {
+  function handleClaim() {
     if (claimed) return;
-    try {
-      var reward = await claimDailyReward();
-      setClaimed(true);
-      setClaimedReward(reward);
+    var check = checkDailyReward(loginReward);
+    if (!check.available) return;
 
-      // Apply reward
-      if (reward.type === 'gems') {
-        addGems(reward.amount);
-      } else if (reward.type === 'powerup' && (reward as any).powerupId) {
-        buyPowerUp((reward as any).powerupId, reward.amount, 0);
-      } else if (reward.type === 'cosmetic' && (reward as any).cosmeticType) {
-        const cosmeticId = pickCosmeticReward((reward as any).cosmeticType, ownedCosmetics);
-        if (cosmeticId) {
-          unlockCosmetic(cosmeticId);
-          const item = getCosmeticById(cosmeticId);
-          if (item) setCelebrationItem(item as Cosmetic);
-        } else {
-          // All cosmetics of this type owned — give bonus gems instead
-          addGems(10);
-        }
+    var reward = { ...check.reward, streak: check.streak };
+    claimLoginReward(advanceLoginReward(loginReward));
+    setClaimed(true);
+    setClaimedReward(reward);
+
+    // Apply reward
+    if (reward.type === 'gems') {
+      addGems(reward.amount);
+    } else if ((reward as any).type === 'powerup' && (reward as any).powerupId) {
+      buyPowerUp((reward as any).powerupId, reward.amount, 0);
+    } else if (reward.type === 'cosmetic' && (reward as any).cosmeticType) {
+      const cosmeticId = pickCosmeticReward((reward as any).cosmeticType, ownedCosmetics);
+      if (cosmeticId) {
+        unlockCosmetic(cosmeticId);
+        const item = getCosmeticById(cosmeticId);
+        if (item) setCelebrationItem(item as Cosmetic);
+      } else {
+        // All cosmetics of this type owned — give bonus gems instead
+        addGems(10);
       }
+    }
 
-      // Day 7 mystery bonus
-      if (reward.day === 7) {
-        var mysteryGems = 5 + Math.floor(Math.random() * 16); // 5-20 bonus gems
-        addGems(mysteryGems);
-      }
+    // Day 7 mystery bonus
+    if (reward.day === 7) {
+      var mysteryGems = 5 + Math.floor(Math.random() * 16); // 5-20 bonus gems
+      addGems(mysteryGems);
+    }
 
-      RNAnimated.spring(claimScale, { toValue: 1, friction: 3, tension: 200, useNativeDriver: false }).start();
-    } catch {}
+    RNAnimated.spring(claimScale, { toValue: 1, friction: 3, tension: 200, useNativeDriver: false }).start();
   }
 
   function handleDismiss() {

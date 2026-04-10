@@ -1,6 +1,13 @@
 /**
  * Blanked+ Subscription Paywall — Full-screen modal.
- * Free trial toggle, stacked plan cards, shimmer CTA, staggered animations.
+ * Stacked plan cards, shimmer CTA, staggered animations.
+ *
+ * Note: We deliberately do NOT expose a "Free trial" toggle. Apple's
+ * April 2026 guidance prohibits toggles that enable/disable introductory
+ * offers on the paywall (App Review Guideline 3.1.2). Instead, eligibility
+ * is read via `trialEligible` and the CTA automatically reflects the
+ * introductory offer when the user qualifies. RevenueCat / StoreKit will
+ * apply the free trial automatically on purchase if the account is eligible.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -20,6 +27,12 @@ interface Props {
   visible: boolean;
   onDismiss: () => void;
   onSubscribe: (plan: 'monthly' | 'yearly', trial: boolean) => void;
+  /**
+   * Whether the current user is eligible for the 3-day intro offer on the
+   * yearly plan. Defaults to true; wire this to RevenueCat's
+   * `checkTrialOrIntroductoryPriceEligibility` in Phase 4.
+   */
+  trialEligible?: boolean;
 }
 
 // ── SVG Icons ─────────────────────────────────────────────────────────
@@ -121,37 +134,26 @@ function BenefitRow({ item, index }: { item: typeof BENEFITS[number]; index: num
   );
 }
 
-// ── Free Trial Toggle ─────────────────────────────────────────────────
-function TrialToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
-  const thumbPos = useRef(new RNAnimated.Value(enabled ? 1 : 0)).current;
-  useEffect(() => {
-    RNAnimated.spring(thumbPos, { toValue: enabled ? 1 : 0, friction: 7, tension: 200, useNativeDriver: false }).start();
-  }, [enabled]);
-  const thumbTranslate = thumbPos.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
-  const trackColor = thumbPos.interpolate({ inputRange: [0, 1], outputRange: ['#D0CEC8', '#00B894'] });
-
+// ── Trial Banner (replaces the banned toggle) ─────────────────────────
+// Apple disallows user-togglable intro offers on the paywall. Instead we
+// surface the trial as an always-on informational pill on the yearly card
+// whenever the user is eligible.
+function TrialBanner() {
   return (
-    <Pressable onPress={onToggle} style={[st.trialRow, { backgroundColor: enabled ? '#00B89410' : '#F7F6F3' }]}>
-      <View style={{ flex: 1 }}>
-        <Text style={[st.trialTitle, { color: '#1A1A18' }]}>Free trial</Text>
-        <Text style={[st.trialSub, { color: enabled ? '#00B894' : '#636E72' }]}>
-          {enabled ? `Try 3 days free \u2014 cancel before, pay nothing` : 'Toggle to enable 3-day free trial'}
-        </Text>
-      </View>
-      <View style={st.toggleOuter}>
-        <RNAnimated.View style={[st.toggleTrack, { backgroundColor: trackColor }]} />
-        <RNAnimated.View style={[st.toggleThumb, { transform: [{ translateX: thumbTranslate }] }]} />
-      </View>
-    </Pressable>
+    <View style={st.trialBanner}>
+      <Ionicons name="gift-outline" size={14} color="#00B894" />
+      <Text style={st.trialBannerText}>3-day free trial included — cancel anytime</Text>
+    </View>
   );
 }
 
 // ── Main Component ────────────────────────────────────────────────────
-function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
+function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = true }: Props) {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
-  const [trial, setTrial] = useState(true);
   const slideAnim = useRef(new RNAnimated.Value(SH)).current;
+  // Intro offer only applies to the yearly plan AND only if the user qualifies.
+  const showTrial = plan === 'yearly' && trialEligible;
 
   // Pulsing glow for selected plan
   const glowAnim = useRef(new RNAnimated.Value(0)).current;
@@ -181,7 +183,11 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = trial && plan === 'yearly' ? 'Start Free Trial' : plan === 'yearly' ? `Subscribe \u2014 \u00A319.99/year` : `Subscribe \u2014 \u00A32.99/month`;
+  const ctaText = showTrial
+    ? `Try 3 days free \u2014 then \u00A319.99/year`
+    : plan === 'yearly'
+      ? `Subscribe \u2014 \u00A319.99/year`
+      : `Subscribe \u2014 \u00A32.99/month`;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -214,11 +220,6 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           {/* Benefits */}
           {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} />)}
 
-          {/* Trial toggle — only for yearly */}
-          {plan === 'yearly' && (
-            <TrialToggle enabled={trial} onToggle={() => setTrial(!trial)} />
-          )}
-
           {/* Plan cards — stacked */}
           <View style={st.planSection}>
             {/* Yearly */}
@@ -228,17 +229,18 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
                 {plan === 'yearly' && <View style={st.planRadioDot} />}
               </View>
               <View style={st.planLeft}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={[st.planName, plan === 'yearly' && st.planNameActive]}>Yearly (Save £17)</Text>
                   <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
                 </View>
                 <Text style={[st.planSub, plan === 'yearly' && st.planSubActive]}>{'\u00A3'}1.66/month</Text>
+                {showTrial && <TrialBanner />}
               </View>
               <Text style={[st.planPrice, plan === 'yearly' && st.planPriceActive]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
             </Pressable>
 
             {/* Monthly */}
-            <Pressable onPress={() => { setPlan('monthly'); setTrial(false); }} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
+            <Pressable onPress={() => { setPlan('monthly'); }} style={[st.planCard, plan === 'monthly' && st.planCardActive]}>
               {plan === 'monthly' && <RNAnimated.View style={[st.planGlow, { opacity: glowOpacity }]} />}
               <View style={[st.planRadio, plan === 'monthly' && st.planRadioActive]}>
                 {plan === 'monthly' && <View style={st.planRadioDot} />}
@@ -251,11 +253,11 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           </View>
 
           {/* Shimmer CTA */}
-          <ShimmerButton text={ctaText} onPress={() => onSubscribe(plan, trial)} />
+          <ShimmerButton text={ctaText} onPress={() => onSubscribe(plan, showTrial)} />
 
           {/* Reassurance */}
           <View style={st.reassurance}>
-            {trial && plan === 'yearly' ? (
+            {showTrial ? (
               <View style={st.reassuranceRow}>
                 <Ionicons name="checkmark-circle" size={14} color="#00B894" />
                 <Text style={st.reassuranceGreen}>{`No charge for 3 days \u2014 cancel anytime`}</Text>
@@ -314,24 +316,16 @@ const st = StyleSheet.create({
   benefitTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A18' },
   benefitDesc: { fontSize: 11, color: '#636E72', marginTop: 1 },
 
-  // Trial toggle
-  trialRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: 14, borderRadius: 14,
-    marginTop: 14, marginBottom: 14,
+  // Trial banner (informational, replaces the old toggle)
+  trialBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginTop: 6, paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: '#00B8941A', borderRadius: 8, alignSelf: 'flex-start',
   },
-  trialTitle: { fontSize: 14, fontWeight: '700' },
-  trialSub: { fontSize: 11, marginTop: 2 },
-  toggleOuter: { width: 48, height: 28, position: 'relative' },
-  toggleTrack: { position: 'absolute', width: 48, height: 28, borderRadius: 14 },
-  toggleThumb: {
-    position: 'absolute', top: 2, width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15, shadowRadius: 3, elevation: 2,
-  },
+  trialBannerText: { fontSize: 11, fontWeight: '700', color: '#00B894' },
 
   // Plans
-  planSection: { gap: 8, marginBottom: 16 },
+  planSection: { gap: 8, marginTop: 14, marginBottom: 16 },
   planCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1.5, borderColor: '#E8E6E3', borderRadius: 14,

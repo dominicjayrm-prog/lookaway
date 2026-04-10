@@ -1,4 +1,5 @@
 import { supabase } from '@/src/lib/supabase';
+import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
@@ -38,6 +39,9 @@ export async function saveProgressToSupabase(userId: string, state: {
       last_play_date: state.lastPlayDate ?? null,
       completed_scores: state.completedScores ?? [],
       max_lives: state.maxLives ?? 5,
+      login_reward_day: state.loginReward?.currentDay ?? 0,
+      login_reward_last_claim: state.loginReward?.lastClaimDate || null,
+      login_reward_streak: state.loginReward?.streak ?? 0,
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -85,6 +89,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   lastPlayDate: string | null;
   completedScores: number[];
   maxLives: number;
+  loginReward: LoginRewardState;
 } | null> {
   try {
     // Load profile
@@ -133,6 +138,11 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       lastPlayDate: profile.last_play_date ?? null,
       completedScores: Array.isArray(profile.completed_scores) ? profile.completed_scores : [],
       maxLives: profile.max_lives ?? 5,
+      loginReward: {
+        currentDay: typeof profile.login_reward_day === 'number' ? profile.login_reward_day : INITIAL_LOGIN_REWARD_STATE.currentDay,
+        lastClaimDate: profile.login_reward_last_claim ?? INITIAL_LOGIN_REWARD_STATE.lastClaimDate,
+        streak: typeof profile.login_reward_streak === 'number' ? profile.login_reward_streak : INITIAL_LOGIN_REWARD_STATE.streak,
+      },
     };
   } catch (e) {
     console.warn('Progress sync error:', e);
