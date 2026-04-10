@@ -431,16 +431,44 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
 
     ninja: (
       <>
-        {/* Wide mask band */}
-        <Rect x={cx - bR * 0.95} y={cy - s * 0.1} width={bR * 1.9} height={s * 0.16} fill="#212121" />
-        {/* Tiny eye slits */}
-        <Circle cx={cx - s * 0.095} cy={cy - s * 0.02} r={s * 0.028} fill="white" />
-        <Circle cx={cx + s * 0.095} cy={cy - s * 0.02} r={s * 0.028} fill="white" />
-        <Circle cx={cx - s * 0.095} cy={cy - s * 0.02} r={s * 0.016} fill={C.text} />
-        <Circle cx={cx + s * 0.095} cy={cy - s * 0.02} r={s * 0.016} fill={C.text} />
-        {/* Mask knot lines on the side */}
-        <Line x1={cx - bR * 0.95} y1={cy - s * 0.04} x2={cx - bR * 1.05} y2={cy - s * 0.08} stroke="#212121" strokeWidth={sw(1, 0.02)} strokeLinecap="round" />
-        <Line x1={cx - bR * 0.95} y1={cy + s * 0.02} x2={cx - bR * 1.05} y2={cy + s * 0.06} stroke="#212121" strokeWidth={sw(1, 0.02)} strokeLinecap="round" />
+        {/* Shinobi mask — contoured path instead of a hard rectangle
+            so it wraps Blink's face naturally rather than sitting on
+            it like a sticker. Top curve matches the head, bottom
+            curve matches the jaw. */}
+        <Path
+          d={`M${cx - bR * 0.96},${cy - s * 0.04} Q${cx - bR * 0.99},${cy - s * 0.19} ${cx - bR * 0.82},${cy - s * 0.22} L${cx + bR * 0.82},${cy - s * 0.22} Q${cx + bR * 0.99},${cy - s * 0.19} ${cx + bR * 0.96},${cy - s * 0.04} L${cx + bR * 0.96},${cy + s * 0.08} Q${cx + bR * 0.72},${cy + s * 0.16} ${cx},${cy + s * 0.16} Q${cx - bR * 0.72},${cy + s * 0.16} ${cx - bR * 0.96},${cy + s * 0.08} Z`}
+          fill="#0F0F0F"
+        />
+        {/* Subtle highlight across the top of the mask to catch light
+            and make it read as fabric rather than a flat shape */}
+        <Path
+          d={`M${cx - bR * 0.88},${cy - s * 0.16} Q${cx},${cy - s * 0.22} ${cx + bR * 0.88},${cy - s * 0.16}`}
+          fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth={sw(0.8, 0.012)} strokeLinecap="round"
+        />
+        {/* Red headband stripe running across the forehead */}
+        <Rect x={cx - bR * 0.92} y={cy - s * 0.205} width={bR * 1.84} height={s * 0.028} fill="#C62828" />
+        {/* Knotted headband ends flicking off to the right */}
+        <Polygon
+          points={`${cx + bR * 0.9},${cy - s * 0.205} ${cx + bR * 1.08},${cy - s * 0.24} ${cx + bR * 1.02},${cy - s * 0.17}`}
+          fill="#C62828"
+        />
+        <Polygon
+          points={`${cx + bR * 0.9},${cy - s * 0.18} ${cx + bR * 1.12},${cy - s * 0.13} ${cx + bR * 0.92},${cy - s * 0.14}`}
+          fill="#B71C1C"
+        />
+        {/* Headband centre dot (small red accent) */}
+        <Circle cx={cx} cy={cy - s * 0.19} r={s * 0.014} fill="#FFEB3B" />
+        {/* Horizontal eye slits — rounded rectangles read as "squinted
+            through the mask" instead of small circles which looked
+            bug-eyed on the original */}
+        <Rect x={cx - s * 0.175} y={cy - s * 0.05} width={s * 0.14} height={s * 0.045} rx={s * 0.022} fill="#F5F5F5" />
+        <Rect x={cx + s * 0.035} y={cy - s * 0.05} width={s * 0.14} height={s * 0.045} rx={s * 0.022} fill="#F5F5F5" />
+        {/* Focused dark pupils centred in the slits */}
+        <Circle cx={cx - s * 0.105} cy={cy - s * 0.026} r={s * 0.015} fill={C.text} />
+        <Circle cx={cx + s * 0.105} cy={cy - s * 0.026} r={s * 0.015} fill={C.text} />
+        {/* Tiny highlight dots so the eyes feel alive */}
+        <Circle cx={cx - s * 0.1} cy={cy - s * 0.032} r={s * 0.005} fill="white" />
+        <Circle cx={cx + s * 0.11} cy={cy - s * 0.032} r={s * 0.005} fill="white" />
       </>
     ),
 

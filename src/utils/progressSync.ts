@@ -102,6 +102,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   maxLives: number;
   loginReward: LoginRewardState;
   username: string | null;
+  avatarUrl: string | null;
 } | null> {
   try {
     // Load profile
@@ -139,6 +140,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       bestStreak: profile.best_streak ?? 0,
       daysPlayed: profile.days_played ?? 0,
       username: profile.username ?? null,
+      avatarUrl: profile.avatar_url ?? null,
       subscriptionStatus: (profile.subscription_status === 'active' ? 'active' : 'inactive') as SubscriptionStatus,
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,

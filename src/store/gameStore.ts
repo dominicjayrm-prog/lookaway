@@ -146,6 +146,7 @@ interface SavedState {
   bestStreak?: number;
   daysPlayed?: number;
   username?: string | null;
+  avatarUrl?: string | null;
   subscriptionStatus?: SubscriptionStatus;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
@@ -198,7 +199,7 @@ function saveState(state: GameStore) {
     localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
       streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
-      username: state.username,
+      username: state.username, avatarUrl: state.avatarUrl,
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
@@ -241,6 +242,7 @@ export interface GameStore {
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
   streakCount: number; bestStreak: number; daysPlayed: number;
   username: string | null;
+  avatarUrl: string | null;
   subscriptionStatus: SubscriptionStatus;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
@@ -314,6 +316,12 @@ export interface GameStore {
   isSubscribed: () => boolean;
   /** Paywall success path: flip local status to active, push to cloud. */
   activatePlus: () => void;
+  /** Update the locally-cached avatar url after a successful upload so
+   *  every surface that reads it from the store (profile header, home
+   *  tab, etc.) refreshes immediately without waiting for the next
+   *  loadFromCloud. The real source of truth is profiles.avatar_url
+   *  on Supabase, set by avatarUpload.uploadAvatar. */
+  setAvatarUrl: (url: string | null) => void;
 
   // Hydration — re-read localStorage after mount (fixes SSR/static export)
   hydrate: () => void;
@@ -353,6 +361,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
     daysPlayed: saved.daysPlayed ?? 0,
     username: saved.username ?? null,
+    avatarUrl: saved.avatarUrl ?? null,
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
     lastPlayDate: saved.lastPlayDate ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
@@ -549,6 +558,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
     isSubscribed: () => get().subscriptionStatus === 'active',
+    setAvatarUrl: (url) => {
+      set({ avatarUrl: url });
+      setTimeout(() => saveState(get()), 0);
+    },
     activatePlus: () => {
       set({ subscriptionStatus: 'active' });
       setTimeout(() => saveState(get()), 0);
@@ -574,6 +587,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
           daysPlayed: saved.daysPlayed ?? 0,
           username: saved.username ?? null,
+          avatarUrl: saved.avatarUrl ?? null,
           subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
@@ -698,6 +712,11 @@ export const useGameStore = create<GameStore>((set, get) => {
         // Username is server-sourced (set via app/username.tsx). Cloud wins;
         // keep local only as a fallback if cloud hasn't returned one.
         username: cloud.username ?? local.username ?? null,
+        // Avatar url is server-sourced too (set via avatarUpload.ts
+        // after a Supabase Storage upload succeeds). Cloud wins so a
+        // fresh device picks up the player's uploaded photo on first
+        // login without needing localStorage.
+        avatarUrl: cloud.avatarUrl ?? local.avatarUrl ?? null,
         totalStars: mergedTotalStars,
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,

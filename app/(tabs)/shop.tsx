@@ -9,7 +9,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { Blink } from '@/src/components/Blink';
-import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, type FrameCosmetic, type BannerCosmetic, type ExpressionCosmetic } from '@/src/data/cosmetics';
+import { FRAMES, BANNERS, EXPRESSIONS, RARITY_COLORS, getDailyFeatured, isWeekend, sortByRarity, type FrameCosmetic, type BannerCosmetic, type ExpressionCosmetic } from '@/src/data/cosmetics';
 import { showRewardedAd, getRemainingAdWatches } from '@/src/utils/adService';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { InfoCard } from '@/src/components/InfoCard';
@@ -89,6 +89,7 @@ function ShopTab() {
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const dailyFeatured = getDailyFeatured(today);
+  const dailyOnSale = isWeekend(today);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showStarterPack, setShowStarterPack] = useState(false);
   const [starterPackAvailable, setStarterPackAvailable] = useState(false);
@@ -305,7 +306,9 @@ function ShopTab() {
         {/* Featured tab */}
         {cosmeticTab === 'featured' && (
           <View>
-            <Text style={{ fontSize: 11, color: colors.textLight, fontWeight: '600', marginBottom: 10 }}>Refreshes daily · 20% off</Text>
+            <Text style={{ fontSize: 11, color: colors.textLight, fontWeight: '600', marginBottom: 10 }}>
+              {dailyOnSale ? 'Weekend sale \u00B7 20% off' : 'Refreshes daily \u00B7 Weekend sale Sat & Sun'}
+            </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {dailyFeatured.map(({ cosmetic: c, originalPrice, discountedPrice }) => {
                 const owned = useGameStore.getState().ownedCosmetics.includes(c.id);
@@ -325,7 +328,7 @@ function ShopTab() {
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
                     {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text> : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                        <Text style={{ fontSize: 9, color: colors.textLight, textDecorationLine: 'line-through' }}>{originalPrice}</Text>
+                        {dailyOnSale && <Text style={{ fontSize: 9, color: colors.textLight, textDecorationLine: 'line-through' }}>{originalPrice}</Text>}
                         <Text style={{ fontSize: 11, fontWeight: '800', color: colors.accent }}>{discountedPrice}</Text>
                       </View>
                     )}
@@ -339,7 +342,7 @@ function ShopTab() {
         {/* Frames tab */}
         {cosmeticTab === 'frames' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {FRAMES.filter(f => f.id !== 'frame_none').map((f, fi) => {
+            {sortByRarity(FRAMES.filter(f => f.id !== 'frame_none')).map((f, fi) => {
               const owned = f.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(f.id);
               const exprs = ['normal', 'memorise', 'correct', 'streak', 'celebrate', 'love', 'thinking', 'surprised', 'sleeping', 'sad', 'wrong', 'blank'] as const;
               const isLegendary = f.rarity === 'legendary';
@@ -366,7 +369,7 @@ function ShopTab() {
         {/* Banners tab */}
         {cosmeticTab === 'banners' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {BANNERS.filter(b => b.id !== 'banner_none').map(b => {
+            {sortByRarity(BANNERS.filter(b => b.id !== 'banner_none')).map(b => {
               const owned = b.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(b.id);
               const isLegendary = b.rarity === 'legendary';
               const isLoading = adLoadingId === b.id;
@@ -396,7 +399,7 @@ function ShopTab() {
         {/* Expressions tab */}
         {cosmeticTab === 'expressions' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            {EXPRESSIONS.map(e => {
+            {sortByRarity(EXPRESSIONS).map(e => {
               const owned = e.unlock === 'free' || useGameStore.getState().ownedCosmetics.includes(e.id);
               const isLegendary = e.rarity === 'legendary';
               const isLoading = adLoadingId === e.id;

@@ -31,7 +31,7 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic, isSubscribed, username: storeUsername } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic, isSubscribed, username: storeUsername, avatarUrl: storeAvatarUrl, setAvatarUrl } = useGameStore();
   const hasBlankedPlus = isSubscribed();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
@@ -41,7 +41,16 @@ function ProfileScreen() {
   // so the real @username renders on first paint with no flash.
   const headerName = storeUsername ?? user?.email?.split('@')[0] ?? 'Player';
   const initials = headerName.slice(0, 2).toUpperCase();
-  const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
+  // Profile pic priority: server avatar_url (works across devices) →
+  // localStorage cached data URI (works offline / during upload).
+  const [profilePic, setProfilePic] = useState<string | null>(() => storeAvatarUrl ?? loadProfilePic());
+  // Keep the local pic in sync with the store's avatarUrl whenever
+  // cloud sync refreshes it — covers the "fresh Safari / iPhone" case
+  // where localStorage is empty but the user already has a photo
+  // uploaded on another device.
+  useEffect(() => {
+    if (storeAvatarUrl && storeAvatarUrl !== profilePic) setProfilePic(storeAvatarUrl);
+  }, [storeAvatarUrl, profilePic]);
   const frame = getFrameById(equippedFrame);
   const banner = getBannerById(equippedBanner);
   const nameColor = getNameColorById(equippedNameColor);
@@ -94,7 +103,20 @@ function ProfileScreen() {
           const uri = reader.result as string;
           setProfilePic(uri);
           saveProfilePic(uri);
-          if (user?.id) uploadAvatar(user.id, uri).catch(() => Alert.alert('Upload failed', 'Your photo was saved locally but couldn\'t sync to the cloud. It will retry next time.'));
+          if (user?.id) {
+            uploadAvatar(user.id, uri)
+              .then((publicUrl) => {
+                if (publicUrl) {
+                  // Push the cloud URL into the store so every surface
+                  // that reads avatarUrl (home greeting, friends list
+                  // lookup fallbacks, etc.) updates without waiting
+                  // for the next loadFromCloud.
+                  setAvatarUrl(publicUrl);
+                  setProfilePic(publicUrl);
+                }
+              })
+              .catch(() => Alert.alert('Upload failed', 'Your photo was saved locally but couldn\'t sync to the cloud. It will retry next time.'));
+          }
         };
         reader.readAsDataURL(file);
       };
@@ -107,10 +129,19 @@ function ProfileScreen() {
         const uri = result.assets[0].uri;
         setProfilePic(uri);
         saveProfilePic(uri);
-        if (user?.id) uploadAvatar(user.id, uri).catch(() => {});
+        if (user?.id) {
+          uploadAvatar(user.id, uri)
+            .then((publicUrl) => {
+              if (publicUrl) {
+                setAvatarUrl(publicUrl);
+                setProfilePic(publicUrl);
+              }
+            })
+            .catch(() => {});
+        }
       }
     }
-  }, [user?.id]);
+  }, [user?.id, setAvatarUrl]);
   const handleSignOut = useCallback(async () => { try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
 
   return (
@@ -338,7 +369,7 @@ function ProfileScreen() {
               <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
             </Pressable>
             {profilePic && (
-              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
+              <Pressable onPress={() => { setProfilePic(null); saveProfilePic(null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }} style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}>
                 <Ionicons name="close-circle" size={18} color={colors.wrong} />
                 <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo</Text>
               </Pressable>
