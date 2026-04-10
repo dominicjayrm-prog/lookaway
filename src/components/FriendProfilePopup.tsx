@@ -1,23 +1,53 @@
-import React from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+/**
+ * FriendProfilePopup — detailed friend card shown when the user taps a
+ * friend in their list. Showcases the friend's full customisation:
+ *
+ *   - Equipped banner as the top gradient strip
+ *   - Equipped frame + Blink with equipped expression centred on the banner
+ *   - Username painted in their equipped name color
+ *   - Stat grid: World, Stars, Memory, Achievements (X/Y)
+ *   - Head-to-head record vs the current user
+ *   - Challenge + Close + Remove friend actions
+ */
+import React, { useEffect, useState } from 'react';
+import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Blink } from '@/src/components/Blink';
+import { Blink, type BlinkExpression } from '@/src/components/Blink';
+import { AvatarFrame } from '@/src/components/AvatarFrame';
+import { ProfileBanner } from '@/src/components/ProfileBanner';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { getOnlineStatus, getLastActiveText, STATUS_COLORS } from '@/src/utils/onlineStatus';
+import {
+  getFrameById,
+  getBannerById,
+  getNameColorById,
+  getExpressionById,
+} from '@/src/data/cosmetics';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { loadPlayerProgress, countUnlockedTiers, loadAllAchievements } from '@/src/utils/achievements';
+import { getHeadToHeadRecord } from '@/src/utils/friends';
+
+interface FriendProfileInput {
+  id: string;
+  username: string;
+  avatar_color: string;
+  total_stars: number;
+  highest_world: number;
+  last_seen: string | null;
+  avatar_url?: string | null;
+  equipped_frame?: string | null;
+  equipped_expression?: string | null;
+  equipped_banner?: string | null;
+  equipped_name_color?: string | null;
+  memory_score_avg?: number | null;
+}
 
 interface FriendProfilePopupProps {
   visible: boolean;
   friend: {
     friendshipId: string;
-    profile: {
-      id: string;
-      username: string;
-      avatar_color: string;
-      total_stars: number;
-      highest_world: number;
-      last_seen: string | null;
-    };
+    profile: FriendProfileInput;
   };
   colors: Record<string, string>;
   onClose: () => void;
@@ -27,87 +57,247 @@ interface FriendProfilePopupProps {
 
 function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge, onRemove }: FriendProfilePopupProps) {
   const { profile } = friend;
+  const { user } = useAuth();
+  const myId = user?.id;
   const status = getOnlineStatus(profile.last_seen);
   const statusColor = STATUS_COLORS[status];
   const statusText = getLastActiveText(profile.last_seen);
-  const initial = profile.username.charAt(0).toUpperCase();
+
+  // Resolve cosmetics
+  const frame = profile.equipped_frame ? getFrameById(profile.equipped_frame) ?? null : null;
+  const banner = profile.equipped_banner ? getBannerById(profile.equipped_banner) ?? null : null;
+  const nameColor = profile.equipped_name_color ? getNameColorById(profile.equipped_name_color) : undefined;
+  const expressionCosmetic = profile.equipped_expression ? getExpressionById(profile.equipped_expression) : undefined;
+  const blinkExpression: BlinkExpression = expressionCosmetic?.blinkExpression ?? 'normal';
+  const nameStyleColor = nameColor && nameColor.color !== 'theme' ? nameColor.color : colors.text;
+
+  // Achievements + head-to-head fetched lazily when the popup opens.
+  const [achievements, setAchievements] = useState<{ unlocked: number; total: number } | null>(null);
+  const [record, setRecord] = useState<{ wins: number; losses: number; draws: number } | null>(null);
+
+  useEffect(() => {
+    if (!visible) {
+      setAchievements(null);
+      setRecord(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [progress, all] = await Promise.all([
+          loadPlayerProgress(profile.id),
+          loadAllAchievements(),
+        ]);
+        if (cancelled) return;
+        const unlocked = countUnlockedTiers(progress);
+        // Each achievement has up to 3 tiers (bronze/silver/gold) in this codebase.
+        const total = all.length * 3;
+        setAchievements({ unlocked, total });
+      } catch {
+        if (!cancelled) setAchievements({ unlocked: 0, total: 0 });
+      }
+    })();
+    if (myId) {
+      getHeadToHeadRecord(myId, profile.id)
+        .then((r) => { if (!cancelled) setRecord(r); })
+        .catch(() => { if (!cancelled) setRecord({ wins: 0, losses: 0, draws: 0 }); });
+    }
+    return () => { cancelled = true; };
+  }, [visible, profile.id, myId]);
+
+  // Memory score: use the stored server average if present; otherwise fall
+  // back to a dash so we don't lie.
+  const memoryScore = typeof profile.memory_score_avg === 'number' ? Math.round(profile.memory_score_avg) : null;
+  const recordText = record ? `${record.wins}-${record.losses}${record.draws > 0 ? `-${record.draws}` : ''}` : '\u2014';
+  const achievementsText = achievements ? `${achievements.unlocked}/${achievements.total}` : '\u2014';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          {/* Avatar */}
-          <View style={[styles.avatar, { backgroundColor: profile.avatar_color + '15', borderWidth: 3, borderColor: profile.avatar_color }]}>
-            <Blink expression="normal" size={56} />
-          </View>
-
-          {/* Username */}
-          <Text style={[styles.username, { color: colors.text }]}>@{profile.username}</Text>
-
-          {/* Online status */}
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusText, { color: status === 'online' ? colors.correct : colors.textMid }]}>
-              {statusText}
-            </Text>
-          </View>
-
-          {/* Stat cards */}
-          <View style={styles.statsRow}>
-            {[
-              { label: 'World', value: String(profile.highest_world) },
-              { label: 'Stars', value: String(profile.total_stars), icon: 'star' as const },
-              { label: 'Record', value: '0-0' },
-            ].map((stat) => (
-              <View key={stat.label} style={[styles.statCard, { backgroundColor: colors.surface }]}>
-                <View style={styles.statValueRow}>
-                  {stat.icon && <Ionicons name={stat.icon} size={14} color={colors.gold} style={{ marginRight: 3 }} />}
-                  <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
-                </View>
-                <Text style={[styles.statLabel, { color: colors.textMid }]}>{stat.label}</Text>
+          {/* Banner header with the avatar overlapping the bottom edge */}
+          <View style={styles.bannerWrap}>
+            <ProfileBanner banner={banner} height={108}>
+              <View style={styles.bannerInner}>
+                <Pressable
+                  onPress={onClose}
+                  hitSlop={10}
+                  style={[styles.bannerClose, { backgroundColor: 'rgba(0,0,0,0.25)' }]}
+                >
+                  <Ionicons name="close" size={16} color="#FFFFFF" />
+                </Pressable>
               </View>
-            ))}
+            </ProfileBanner>
+            <View style={styles.avatarAnchor}>
+              <AvatarFrame frame={frame} size={78}>
+                <View style={[styles.avatarInner, { backgroundColor: colors.card }]}>
+                  <Blink expression={blinkExpression} size={72} />
+                </View>
+              </AvatarFrame>
+            </View>
           </View>
 
-          {/* Challenge button */}
-          <Pressable style={[styles.challengeButton, { backgroundColor: colors.accent }]} onPress={() => onChallenge(profile.id)}>
-            <Text style={styles.challengeText}>Challenge @{profile.username}</Text>
-          </Pressable>
+          <ScrollView
+            style={{ maxHeight: 420 }}
+            contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={[styles.username, { color: nameStyleColor }]}>@{profile.username}</Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.statusText, { color: status === 'online' ? colors.correct : colors.textMid }]}>
+                {statusText}
+              </Text>
+            </View>
 
-          {/* Close button */}
-          <Pressable style={[styles.closeButton, { backgroundColor: colors.surface }]} onPress={onClose}>
-            <Text style={[styles.closeText, { color: colors.textMid }]}>Close</Text>
-          </Pressable>
+            {/* Primary stat grid — 2 rows of 3 */}
+            <View style={styles.statGrid}>
+              <StatCell label="Stars" value={String(profile.total_stars)} icon="star" iconColor={colors.gold} colors={colors} />
+              <StatCell label="World" value={String(profile.highest_world)} icon="map-outline" iconColor={colors.accent} colors={colors} />
+              <StatCell label="Memory" value={memoryScore !== null ? `${memoryScore}%` : '\u2014'} icon="pulse" iconColor={colors.blue} colors={colors} />
+            </View>
+            <View style={styles.statGrid}>
+              <StatCell label="Record" value={recordText} icon="trophy-outline" iconColor={colors.wrong} colors={colors} />
+              <StatCell label="Achievements" value={achievementsText} icon="medal" iconColor={colors.gold} colors={colors} />
+              <StatCell label="Status" value={status === 'online' ? 'Online' : 'Offline'} icon={status === 'online' ? 'ellipse' : 'ellipse-outline'} iconColor={statusColor} colors={colors} />
+            </View>
 
-          {/* Remove friend */}
-          <Pressable style={styles.removeButton} onPress={() => onRemove(friend.friendshipId)}>
-            <Text style={[styles.removeText, { color: colors.wrong }]}>Remove friend</Text>
-          </Pressable>
+            {/* Equipped cosmetics showcase */}
+            {(frame || banner || expressionCosmetic) && (
+              <View style={[styles.cosmeticStrip, { borderColor: colors.border }]}>
+                <Text style={[styles.cosmeticLabel, { color: colors.textMid }]}>EQUIPPED</Text>
+                <View style={styles.cosmeticRow}>
+                  {frame && frame.id !== 'frame_none' && (
+                    <CosmeticChip label={frame.name} colors={colors} />
+                  )}
+                  {expressionCosmetic && expressionCosmetic.id !== 'expr_normal' && (
+                    <CosmeticChip label={expressionCosmetic.name} colors={colors} />
+                  )}
+                  {banner && banner.id !== 'banner_none' && (
+                    <CosmeticChip label={banner.name} colors={colors} />
+                  )}
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Pressable style={[styles.challengeButton, { backgroundColor: colors.accent }]} onPress={() => onChallenge(profile.id)}>
+              <Ionicons name="flash" size={16} color="#FFFFFF" />
+              <Text style={styles.challengeText}>Challenge @{profile.username}</Text>
+            </Pressable>
+            <Pressable style={styles.removeButton} onPress={() => onRemove(friend.friendshipId)}>
+              <Text style={[styles.removeText, { color: colors.wrong }]}>Remove friend</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
   );
 }
 
+function StatCell({
+  label,
+  value,
+  icon,
+  iconColor,
+  colors,
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  colors: Record<string, string>;
+}) {
+  return (
+    <View style={[styles.statCell, { backgroundColor: colors.surface }]}>
+      <Ionicons name={icon} size={14} color={iconColor} />
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textMid }]}>{label}</Text>
+    </View>
+  );
+}
+
+function CosmeticChip({ label, colors }: { label: string; colors: Record<string, string> }) {
+  return (
+    <View style={[styles.chip, { backgroundColor: colors.accentSoft }]}>
+      <Text style={[styles.chipText, { color: colors.accent }]}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  card: { borderRadius: 24, padding: 28, width: '100%', maxWidth: 320, alignItems: 'center' },
-  avatar: { width: 64, height: 64, borderRadius: borderRadius.lg, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md },
-  avatarText: { fontSize: 28, fontWeight: typography.weights.bold, color: '#FFFFFF' },
-  username: { fontSize: 18, fontWeight: typography.weights.bold, marginBottom: spacing.xs },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.xs },
-  statusText: { fontSize: typography.sizes.sm, fontWeight: typography.weights.medium },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl, width: '100%' },
-  statCard: { flex: 1, borderRadius: borderRadius.md, paddingVertical: spacing.md, alignItems: 'center' },
-  statValueRow: { flexDirection: 'row', alignItems: 'center' },
-  statValue: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold },
-  statLabel: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, marginTop: 2 },
-  challengeButton: { borderRadius: 14, paddingVertical: 14, width: '100%', alignItems: 'center', marginBottom: spacing.sm },
-  challengeText: { fontSize: 16, fontWeight: typography.weights.bold, color: '#FFFFFF' },
-  closeButton: { borderRadius: 14, paddingVertical: 14, width: '100%', alignItems: 'center', marginBottom: spacing.lg },
-  closeText: { fontSize: 16, fontWeight: typography.weights.semibold },
-  removeButton: { paddingVertical: spacing.xs, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  card: { borderRadius: 24, width: '100%', maxWidth: 340, overflow: 'hidden' },
+
+  bannerWrap: { position: 'relative' },
+  bannerInner: { flex: 1, position: 'relative' },
+  bannerClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarAnchor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: -44,
+    alignItems: 'center',
+  },
+  avatarInner: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  username: { fontSize: 20, fontWeight: typography.weights.bold, marginTop: 56, textAlign: 'center' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: spacing.lg },
+  statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
+  statusText: { fontSize: 11, fontWeight: typography.weights.medium },
+
+  statGrid: { flexDirection: 'row', gap: 8, width: '100%', marginBottom: 8 },
+  statCell: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 3,
+  },
+  statValue: { fontSize: 16, fontWeight: typography.weights.bold },
+  statLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+
+  cosmeticStrip: {
+    width: '100%',
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    alignItems: 'center',
+  },
+  cosmeticLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.4, marginBottom: 8 },
+  cosmeticRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  chipText: { fontSize: 10, fontWeight: '700' },
+
+  actions: { paddingHorizontal: 20, paddingBottom: 18, paddingTop: 12, gap: 6 },
+  challengeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 14,
+    paddingVertical: 13,
+    width: '100%',
+  },
+  challengeText: { fontSize: 15, fontWeight: typography.weights.bold, color: '#FFFFFF' },
+  removeButton: { paddingVertical: spacing.xs, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 12, fontWeight: typography.weights.medium },
 });
 
