@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Platform,
+  View, Text, StyleSheet, Pressable, ScrollView, Dimensions,
   Animated as RNAnimated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -372,16 +372,6 @@ export default function StatsSpaceScreen() {
         >
           {/* Blink centrepiece */}
           <Animated.View entering={FadeIn.duration(500).delay(300)} style={styles.blinkWrapper}>
-            <View
-              style={[
-                styles.blinkGlow,
-                {
-                  backgroundColor: theme.blinkGlow,
-                  shadowColor: ACCENT,
-                  shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0,
-                },
-              ]}
-            />
             <FloatingBlink expression={blinkExpression} size={110} />
           </Animated.View>
 
@@ -634,14 +624,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  blinkGlow: {
-    position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 0 },
   },
 
   scoreWrapper: {
