@@ -777,7 +777,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         // Streak milestones: union of claimed milestones (prevent re-claiming)
         streakMilestonesClaimed: [...new Set([...local.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
         lastPlayDate: local.lastPlayDate ?? cloud.lastPlayDate,
-        completedScores: localHasProgress ? local.completedScores : cloud.completedScores,
+        // completedScores already merged above (line ~762) via mergedScores —
+        // an older version of this block also wrote it here under a now-dead
+        // `localHasProgress` flag, which silently overrode the merged value.
         maxLives: Math.max(local.maxLives, cloud.maxLives),
         loginReward: pickLoginReward(),
       });

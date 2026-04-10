@@ -34,8 +34,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
   const canvasRef = useRef<View>(null);
   const canvasPos = useRef({ x: 0, y: 0 });
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;

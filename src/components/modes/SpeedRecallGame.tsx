@@ -42,8 +42,8 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const [tapResult, setTapResult] = useState<{ tapX: number; tapY: number; actualX: number; actualY: number; dist: number; score: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;

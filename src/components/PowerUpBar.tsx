@@ -22,7 +22,7 @@ export const PowerUpBar = React.memo(function PowerUpBar({ usedThisLevel, onUseP
   const { colors } = useTheme();
   const powerUps = useGameStore((s) => s.powerUps) ?? {};
 
-  const hasAny = QUESTION_POWER_UPS.some(id => (powerUps as Record<string, number>)[id] > 0 || usedThisLevel[id]);
+  const hasAny = QUESTION_POWER_UPS.some(id => (powerUps[id] ?? 0) > 0 || usedThisLevel[id]);
 
   if (disabled) return null;
 

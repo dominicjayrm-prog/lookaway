@@ -121,7 +121,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       .eq('user_id', userId);
 
     const levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }> = {};
-    const completedScores: number[] = [];
 
     (progress ?? []).forEach((p: { level_id: string; stars: number; best_score: number; attempts: number }) => {
       levelProgress[p.level_id] = {
@@ -129,7 +128,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
         bestScore: p.best_score,
         attempts: p.attempts,
       };
-      if (p.best_score > 0) completedScores.push(p.best_score);
     });
 
     return {
@@ -145,7 +143,6 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,
       levelProgress,
-      completedScores,
       ownedCosmetics: Array.isArray(profile.owned_cosmetics) ? profile.owned_cosmetics : [],
       equippedFrame: profile.equipped_frame ?? 'frame_blink_normal',
       equippedBanner: profile.equipped_banner ?? 'banner_none',
@@ -154,6 +151,10 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       powerUps: profile.power_ups && typeof profile.power_ups === 'object' ? profile.power_ups : {},
       streakMilestonesClaimed: Array.isArray(profile.streak_milestones_claimed) ? profile.streak_milestones_claimed : [],
       lastPlayDate: profile.last_play_date ?? null,
+      // completed_scores lives directly on the profile row — it's the
+      // denormalized cache that saveProgressToSupabase writes back. We
+      // used to also recompute it from user_progress here, but that
+      // path was dead because the second key overrode the first.
       completedScores: Array.isArray(profile.completed_scores) ? profile.completed_scores : [],
       maxLives: profile.max_lives ?? 5,
       loginReward: {

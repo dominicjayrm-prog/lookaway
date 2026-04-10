@@ -1,11 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 
-let storage: Record<string, unknown> | undefined = undefined; // Use Supabase default (localStorage) on web
+// Supabase auth's storage option expects a SupportedStorage interface,
+// but the only meaningful runtime check we can do here is "did
+// AsyncStorage load?". Casting to `any` keeps native + web both working
+// without dragging in @supabase/auth-js's internal types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let storage: any = undefined;
 
 if (Platform.OS !== 'web') {
   // Only import AsyncStorage on native platforms
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     storage = require('@react-native-async-storage/async-storage').default;
   } catch {
     // AsyncStorage not available, fall back to default

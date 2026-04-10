@@ -72,7 +72,7 @@ function FriendsTab() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [toast, setToast] = useState<{ title: string; subtitle?: string; tone: ToastTone } | null>(null);
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const searchInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
 

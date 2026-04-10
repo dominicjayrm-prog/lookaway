@@ -32,7 +32,7 @@ function pickRandom<T>(arr: T[], count: number): T[] {
 function placeShapes(count: number, shapePool: string[], colorPool: { hex: string; name: string }[], minDist = 18) {
   const shapes: { type: string; color: string; colorName: string; x: number; y: number; size: number }[] = [];
   for (let i = 0; i < count; i++) {
-    let x, y, valid, attempts = 0;
+    let x = 0, y = 0, valid = false, attempts = 0;
     do {
       x = 12 + Math.random() * 76;
       y = 12 + Math.random() * 76;
@@ -88,7 +88,7 @@ export function generateSnapMatchLevel(levelData: any) {
         break;
       }
       case 'position': {
-        let nx, ny, valid;
+        let nx = 0, ny = 0, valid = false;
         do { nx = 12 + Math.random() * 76; ny = 12 + Math.random() * 76; valid = sceneB.every((s: any, i: number) => i === targetIndex || Math.sqrt((s.x - nx) ** 2 + (s.y - ny) ** 2) > 18); } while (!valid);
         sceneB[targetIndex].x = Math.round(nx * 10) / 10;
         sceneB[targetIndex].y = Math.round(ny * 10) / 10;
@@ -130,7 +130,7 @@ export function generateSequenceLevel(levelData: any) {
   const rounds = Array.from({ length: 1 }, () => {
     const shapes: any[] = [];
     for (let i = 0; i < sequenceLength; i++) {
-      let x, y, valid, attempts = 0;
+      let x = 0, y = 0, valid = false, attempts = 0;
       do {
         x = 14 + Math.random() * 72;
         y = 14 + Math.random() * 62; // Keep shapes + badges well inside canvas (max y=76%)

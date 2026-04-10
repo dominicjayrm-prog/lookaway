@@ -121,12 +121,17 @@ export async function notifyUser(
       }),
     });
 
-    // Log the notification
-    await supabase.from('notification_log').insert({
-      key: `${notifType ?? 'generic'}_${userId}_${today}_${Date.now()}`,
-      user_id: userId,
-      notification_type: notifType ?? 'generic',
-    }).catch(() => {}); // Don't fail if log insert fails
+    // Log the notification (best-effort — Postgrest's query builder
+    // returns a PromiseLike that has no `.catch`, so swallow via try).
+    try {
+      await supabase.from('notification_log').insert({
+        key: `${notifType ?? 'generic'}_${userId}_${today}_${Date.now()}`,
+        user_id: userId,
+        notification_type: notifType ?? 'generic',
+      });
+    } catch {
+      // notification_log is best-effort; never block on a logging failure
+    }
   } catch (e) {
     log.error('notifications', 'sendPushNotification failed', e);
   }

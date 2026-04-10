@@ -28,8 +28,8 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
   const [chaosProgress, setChaosProgress] = useState(1);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [roundScores, setRoundScores] = useState<number[]>([]);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const roundStartRef = useRef(0);
 
   const round = modeData?.rounds?.[roundIdx];

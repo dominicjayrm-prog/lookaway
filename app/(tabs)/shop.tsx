@@ -328,7 +328,7 @@ function ShopTab() {
                   }} style={[styles.cosmeticCard, { backgroundColor: colors.card, borderColor: owned ? colors.correct : colors.border }]}>
                     {isFrame && <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'borderColor' in c ? (c as FrameCosmetic).borderColor : colors.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}><Blink expression="normal" size={30} /></View>}
                     {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={'blinkExpression' in c ? (c as ExpressionCosmetic).blinkExpression : 'normal'} size={40} /></View>}
-                    {c.type === 'banner' && <LinearGradient colors={'gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
+                    {c.type === 'banner' && <LinearGradient colors={('gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']) as unknown as readonly [string, string, ...string[]]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{c.name}</Text>
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
                     {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text> : (
@@ -387,7 +387,7 @@ function ShopTab() {
                 ]}>
                   {!owned && b.adEligible && <AdBadge colors={colors} />}
                   <LinearGradient
-                    colors={b.gradientColors}
+                    colors={b.gradientColors as unknown as readonly [string, string, ...string[]]}
                     style={{ width: '100%', height: 32, borderRadius: 8, marginBottom: 6 }}
                     start={{ x: 0, y: 0 }}
                     end={vert ? { x: 0, y: 1 } : { x: 1, y: 1 }}
@@ -451,7 +451,7 @@ function ShopTab() {
               - Coloured shadow + border for depth */}
         <View style={styles.powerUpGrid}>
           {visiblePowerups.map((p) => {
-            const owned = (powerUps as Record<string, number>)[p.id] ?? 0;
+            const owned = powerUps[p.id as keyof typeof powerUps] ?? 0;
             const emoji = POWERUP_EMOJIS[p.id] ?? '\u2728';
             const isUniversal = p.modes.includes('all');
 

@@ -138,7 +138,7 @@ export async function pickChallengeLevels(
     const selected = pickWithSpread(pool, worlds, 5);
     return selected.map(l => l.id);
   } catch (e) {
-    log.error('challenges', 'pickChallengeLevels threw', e, { myId, friendId, difficulty });
+    log.error('challenges', 'pickChallengeLevels threw', e, { challengerId, challengedId, difficulty });
     return [];
   }
 }

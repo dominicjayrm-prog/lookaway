@@ -60,7 +60,11 @@ const ShapeComponent = React.memo(function ShapeComponent({ object, index, viewT
   const label = resolveLabel(object.type, object.label);
   const content = object.content;
   const halfSize = sizePx / 2;
-  const staticPos = hasMovement ? {} : { left: `${object.x}%`, top: `${object.y}%` };
+  // Reanimated 4's stricter types reject `{} | { left: string; top: string }`
+  // so we narrow the empty branch to a typed empty position object.
+  const staticPos: { left?: `${number}%`; top?: `${number}%` } = hasMovement
+    ? {}
+    : { left: `${object.x}%`, top: `${object.y}%` };
   return (
     <Animated.View style={[styles.objectWrapper, staticPos, { marginLeft: -halfSize, marginTop: -halfSize, zIndex: object.zIndex ?? 1, transform: [{ rotate: `${object.rotation ?? 0}deg` }] }, animatedStyle]}>
       <ShapeRenderer type={shapeType} color={resolved} size={sizePx} label={label} objectType={object.type} />

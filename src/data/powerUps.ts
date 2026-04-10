@@ -1,4 +1,4 @@
-import { bundlePrice } from '@/src/utils/scoring';
+import { bundlePrice, type PowerUpId } from '@/src/utils/scoring';
 
 export interface PowerUpDef {
   id: string;
@@ -63,8 +63,10 @@ export const ALL_POWERUP_IDS = ALL_POWERUPS.map(p => p.id);
 /** Power-ups indexed by ID for quick lookup */
 export const POWER_UPS: Record<string, PowerUpDef> = Object.fromEntries(ALL_POWERUPS.map(p => [p.id, p]));
 
-/** Classic question-phase power-up IDs */
-export const QUESTION_POWER_UPS: string[] = ['peek', 'fiftyFifty', 'skip'];
+/** Classic question-phase power-up IDs. Typed as `PowerUpId[]` so the
+ *  PowerUpBar can index typed records (`usedThisLevel[id]`,
+ *  `powerUps[id]`) without per-iteration casts. */
+export const QUESTION_POWER_UPS: PowerUpId[] = ['peek', 'fiftyFifty', 'skip'];
 
 /** Mode filter options for the shop */
 export const MODE_FILTERS = [

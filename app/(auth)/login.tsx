@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Wordmark } from '@/src/components/Wordmark';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -41,7 +42,7 @@ function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
-  const usernameTimer = useRef<ReturnType<typeof setTimeout>>();
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Debounced username availability check
   const handleUsernameChange = (text: string) => {

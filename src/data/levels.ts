@@ -1,4 +1,4 @@
-import type { Level, Scene } from '@/src/types/game';
+import type { Level, Scene, SceneObject, Question } from '@/src/types/game';
 import { supabase } from '@/src/lib/supabase';
 
 /** Convert a Supabase campaign_levels row to the game's Level format */
@@ -29,8 +29,8 @@ function dbRowToLevel(row: CampaignLevelRow): Level {
     scenes = [{
       id: `${row.id}-s1`,
       viewTime: row.view_time ?? 4,
-      objects: Array.isArray(sceneData.objects) ? sceneData.objects : [],
-      questions: Array.isArray(sceneData.questions) ? sceneData.questions : [],
+      objects: (Array.isArray(sceneData.objects) ? sceneData.objects : []) as SceneObject[],
+      questions: (Array.isArray(sceneData.questions) ? sceneData.questions : []) as Question[],
     }];
   }
   // Filter out empty scenes (no objects or no questions)

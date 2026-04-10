@@ -23,7 +23,7 @@ function ProfileBannerComponent({ banner, height = 140, children }: ProfileBanne
 
   return (
     <LinearGradient
-      colors={banner.gradientColors}
+      colors={banner.gradientColors as unknown as readonly [string, string, ...string[]]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.container, { height }]}

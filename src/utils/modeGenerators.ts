@@ -13,7 +13,7 @@ function placeShapes(count: number, minDist: number = 18) {
   const shapes: { type: string; color: string; colorName: string; x: number; y: number; size: number }[] = [];
   const colors = [...SHAPE_COLORS].sort(() => Math.random() - 0.5);
   for (let i = 0; i < count; i++) {
-    let x, y, valid, attempts = 0;
+    let x = 0, y = 0, valid = false, attempts = 0;
     do {
       x = 12 + Math.random() * 76;
       y = 12 + Math.random() * 76;
@@ -59,7 +59,7 @@ export function generateSnapMatchData() {
         break;
       }
       case 'position': {
-        let nx, ny, valid;
+        let nx = 0, ny = 0, valid = false;
         do { nx = 12 + Math.random() * 76; ny = 12 + Math.random() * 76; valid = sceneB.every((s: any, i: number) => i === targetIndex || Math.sqrt((s.x - nx) ** 2 + (s.y - ny) ** 2) > 18); } while (!valid);
         sceneB[targetIndex].x = Math.round(nx * 10) / 10;
         sceneB[targetIndex].y = Math.round(ny * 10) / 10;
@@ -100,7 +100,7 @@ export function generateSequenceData() {
   const rounds = shapeCounts.map((count, r) => {
     const shapes: any[] = [];
     for (let i = 0; i < count; i++) {
-      let x, y, valid, attempts = 0;
+      let x = 0, y = 0, valid = false, attempts = 0;
       do { x = 12 + Math.random() * 76; y = 12 + Math.random() * 76; valid = shapes.every((s: any) => Math.sqrt((s.x - x) ** 2 + (s.y - y) ** 2) > 16); attempts++; } while (!valid && attempts < 50);
       shapes.push({ type: types[i % types.length], color: colors[i % colors.length], x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, size: 30 + Math.floor(Math.random() * 8), order: i + 1 });
     }

@@ -48,7 +48,7 @@ function SideCampaignScreen() {
   const [roundScores, setRoundScores] = useState<number[]>([]);
   const [shapeScores, setShapeScores] = useState<number[]>([]);
   const [tapResult, setTapResult] = useState<{ tapX: number; tapY: number; actualX: number; actualY: number; score: number } | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 300 });
 
   const modeConfig = CHALLENGE_MODES[mode ?? ''];
@@ -85,7 +85,7 @@ function SideCampaignScreen() {
 
   // Speed recall timer progress for visual countdown
   const [srTimerProgress, setSrTimerProgress] = useState(1);
-  const srIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const srIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const startRound = useCallback(() => {
     setShapeIdx(0);
