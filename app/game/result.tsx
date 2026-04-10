@@ -16,7 +16,8 @@ import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder } from '@/src/utils/notifications';
-import { incrementWeeklyProgress } from '@/src/utils/weeklyChallenges';
+import { recordLevelCompleteForChallenges, recordLevelFailedForChallenges, type WeeklyChallenge } from '@/src/utils/weeklyChallenges';
+import { FriendRequestToast } from '@/src/components/FriendRequestToast';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
 import { AchievementToast } from '@/src/components/AchievementToast';
 import { useCelebrations } from '@/src/hooks/useCelebrations';
@@ -77,7 +78,8 @@ function AnimatedScore({ value, style }: { value: number; style: object }) {
 function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress, levelPowerUpsUsed, sessionLevelCount, bumpSessionLevelCount } = useGameStore();
+  const [challengeToast, setChallengeToast] = useState<WeeklyChallenge | null>(null);
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
   const stars = level ? getStarsForScore(score, level) : 0;
@@ -123,11 +125,28 @@ function ResultScreen() {
       if (stars > 0) addStars(stars);
       incrementStreak();
 
-      // Weekly challenge tracking
-      incrementWeeklyProgress('levels_completed');
-      if (stars > 0) incrementWeeklyProgress('stars_earned', stars);
-      if (stars === 3) incrementWeeklyProgress('perfect_levels');
-      if (score >= 90) incrementWeeklyProgress('high_score_levels');
+      // Bump the in-memory session counter BEFORE handing off to the
+      // weekly tracker, so `endurance_8` can see the updated value.
+      bumpSessionLevelCount();
+      const newSessionCount = useGameStore.getState().sessionLevelCount;
+      const correctAnswers = answers.filter((a) => a.isCorrect).length;
+
+      // Single consolidated call — updates all 15 weekly counters in
+      // one read-modify-write and returns any goals that just crossed
+      // their target so we can pop a toast.
+      recordLevelCompleteForChallenges({
+        levelId: level.id,
+        stars,
+        previousStars: existing?.stars ?? 0,
+        score,
+        correctAnswers,
+        powerUpsUsed: levelPowerUpsUsed,
+        sessionLevelCount: newSessionCount,
+      })
+        .then((newlyCompleted) => {
+          if (newlyCompleted.length > 0) setChallengeToast(newlyCompleted[0]);
+        })
+        .catch(() => {});
 
       // Activity log
       if (didImprove) {
@@ -141,6 +160,9 @@ function ResultScreen() {
       cancelStreakReminder();
     } else {
       celeb.triggerFailCelebrations(safeTimeout);
+      // Level failed — reset the no_life_loss consecutive streak on the
+      // weekly tracker so `no_life_loss_5` restarts from zero.
+      recordLevelFailedForChallenges().catch(() => {});
     }
 
     celeb.triggerNotifPrompt(safeTimeout);
@@ -219,6 +241,15 @@ function ResultScreen() {
       {celeb.achievementUnlocks.length > 0 && (
         <AchievementToast unlocks={celeb.achievementUnlocks} onDismiss={() => celeb.setAchievementUnlocks([])} onTap={() => { celeb.setAchievementUnlocks([]); router.push('/profile'); }} />
       )}
+
+      {/* Weekly challenge completion toast */}
+      <FriendRequestToast
+        visible={!!challengeToast}
+        tone="success"
+        title={`${challengeToast?.icon ?? '\u{1F3C6}'} Challenge complete!`}
+        subtitle={challengeToast ? `${challengeToast.title} \u2014 +${challengeToast.gems} gems` : undefined}
+        onDismiss={() => setChallengeToast(null)}
+      />
 
       <NotificationPrompt
         visible={celeb.showNotifPrompt}

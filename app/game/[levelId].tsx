@@ -18,7 +18,8 @@ import { fetchLevelById } from '@/src/data/levels';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
 import StreakGlow from '@/src/components/StreakGlow';
-import { setWeeklyProgressMax } from '@/src/utils/weeklyChallenges';
+// Weekly-challenge tracking moved into gameStore.revealAnswer so we no
+// longer import from weeklyChallenges here.
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
@@ -100,11 +101,12 @@ function GameScreen() {
     transitionTimeout.current = setTimeout(() => {
       revealAnswer();
       const isCorrect = currentQuestion && index === currentQuestion.correctIndex;
-      setCorrectStreak(prev => {
-        const next = isCorrect ? prev + 1 : 0;
-        if (next > 0) setWeeklyProgressMax('correct_streak', next);
-        return next;
-      });
+      // Local streak state powers the in-level StreakGlow visual only.
+      // Weekly challenge tracking of the best correct streak is
+      // handled inside gameStore.revealAnswer via
+      // recordQuestionAnsweredForChallenges, which also tracks fast
+      // correct streaks for the speed_accuracy_10 skill challenge.
+      setCorrectStreak(prev => (isCorrect ? prev + 1 : 0));
       if (!isWeb) {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

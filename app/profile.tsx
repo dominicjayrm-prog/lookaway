@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { supabase } from '@/src/lib/supabase';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achievement, type PlayerAchievement } from '@/src/utils/achievements';
@@ -32,26 +31,15 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic, isSubscribed } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic, isSubscribed, username: storeUsername } = useGameStore();
   const hasBlankedPlus = isSubscribed();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const email = user?.email || 'Guest';
-  const [profileUsername, setProfileUsername] = useState<string | null>(null);
-  useEffect(() => {
-    if (!user?.id) return;
-    supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.username) setProfileUsername(data.username);
-      });
-  }, [user?.id]);
-  // Header handle — prefer the chosen username, fall back to email prefix so
-  // we never render an empty line while the lookup is in-flight.
-  const headerName = profileUsername ?? user?.email?.split('@')[0] ?? 'Player';
+  // Header handle — pulled from the game store which hydrates
+  // synchronously from localStorage on mount (see gameStore.ts hydrate),
+  // so the real @username renders on first paint with no flash.
+  const headerName = storeUsername ?? user?.email?.split('@')[0] ?? 'Player';
   const initials = headerName.slice(0, 2).toUpperCase();
   const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
   const frame = getFrameById(equippedFrame);

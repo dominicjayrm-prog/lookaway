@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { supabase } from '@/src/lib/supabase';
+import { useGameStore } from '@/src/store';
 import { searchUsers, sendFriendRequest, acceptFriendRequest, declineFriendRequest, removeFriend, getFriendRequests, getFriends, getActiveChallenges, getRecentResults, updateOnlineStatus, addFriendById } from '@/src/utils/friends';
 import type { FriendProfile, FriendRequest, Friend, Challenge } from '@/src/utils/friends';
 import { FriendProfilePopup } from '@/src/components/FriendProfilePopup';
@@ -20,6 +20,7 @@ import { FriendQRSheet } from '@/src/components/FriendQRSheet';
 import { FriendQRScanner } from '@/src/components/FriendQRScanner';
 import { FriendRequestToast, type ToastTone } from '@/src/components/FriendRequestToast';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
+import { readFriendsCache, writeFriendsCache } from '@/src/utils/friendsCache';
 import * as Haptics from 'expo-haptics';
 
 function Avatar({ username, color, size = 36, avatarUrl }: { username: string; color: string; size?: number; avatarUrl?: string | null }) {
@@ -96,14 +97,20 @@ function FriendsTab() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const userId = user?.id;
-  const [username, setUsername] = useState<string | null>(null);
+  // Read the last-known friends blob from localStorage SYNCHRONOUSLY on
+  // first render so the tab doesn't flash the empty state while the
+  // real Supabase query is in flight. `loadData()` refreshes in the
+  // background — users see stable layout across tab switches.
+  const initialCache = useRef(readFriendsCache(userId)).current;
+  const storeUsername = useGameStore(s => s.username);
+  const [username, setUsername] = useState<string | null>(storeUsername ?? null);
   const [searchText, setSearchText] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
-  const [requests, setRequests] = useState<FriendRequest[]>([]);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [results, setResults] = useState<Challenge[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>(initialCache.requests);
+  const [friends, setFriends] = useState<Friend[]>(initialCache.friends);
+  const [challenges, setChallenges] = useState<Challenge[]>(initialCache.challenges);
+  const [results, setResults] = useState<Challenge[]>(initialCache.results);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [showMyQR, setShowMyQR] = useState(false);
@@ -113,12 +120,16 @@ function FriendsTab() {
   const searchInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => { if (!userId) return; supabase.from('profiles').select('username').eq('id', userId).single().then(({ data }) => { if (data?.username) setUsername(data.username); }); }, [userId]);
+  // Keep the header username in sync with the store's authoritative
+  // value — hydrates instantly, then updates after cloud sync.
+  useEffect(() => { if (storeUsername) setUsername(storeUsername); }, [storeUsername]);
 
   const loadData = useCallback(async () => {
     if (!userId) return;
     const [req, fr, ch, res] = await Promise.all([getFriendRequests(userId), getFriends(userId), getActiveChallenges(userId), getRecentResults(userId, 3)]);
     setRequests(req); setFriends(fr); setChallenges(ch); setResults(res); updateOnlineStatus(userId);
+    // Persist the fresh blob so the next mount can hydrate without a flash.
+    writeFriendsCache(userId, { friends: fr, requests: req, challenges: ch, results: res });
   }, [userId]);
 
   useEffect(() => { loadData(); }, [loadData]);
