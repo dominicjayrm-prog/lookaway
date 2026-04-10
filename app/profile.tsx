@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
+import { supabase } from '@/src/lib/supabase';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { loadAllAchievements, loadPlayerProgress, countUnlockedTiers, type Achievement, type PlayerAchievement } from '@/src/utils/achievements';
@@ -35,9 +36,23 @@ function ProfileScreen() {
   const hasBlankedPlus = isSubscribed();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
-  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const email = user?.email || 'Guest';
-  const initials = displayName.slice(0, 2).toUpperCase();
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.username) setProfileUsername(data.username);
+      });
+  }, [user?.id]);
+  // Header handle — prefer the chosen username, fall back to email prefix so
+  // we never render an empty line while the lookup is in-flight.
+  const headerName = profileUsername ?? user?.email?.split('@')[0] ?? 'Player';
+  const initials = headerName.slice(0, 2).toUpperCase();
   const [profilePic, setProfilePic] = useState<string | null>(loadProfilePic);
   const frame = getFrameById(equippedFrame);
   const banner = getBannerById(equippedBanner);
@@ -140,7 +155,7 @@ function ProfileScreen() {
                 <Ionicons name="camera" size={14} color={colors.accent} />
               </View>
             </Pressable>
-            <Text style={[styles.displayName, nameStyle]}>{displayName}</Text>
+            <Text style={[styles.displayName, nameStyle]}>@{headerName}</Text>
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30', shadowColor: division.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
