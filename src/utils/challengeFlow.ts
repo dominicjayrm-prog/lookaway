@@ -33,6 +33,62 @@ function filterByDifficulty<T extends { id: string }>(levels: T[], difficulty: C
 }
 
 /**
+ * Pick N levels from `pool` with a minimum guaranteed count per world.
+ * Ensures a set like Easy (w1+w2) always ends up 2-3 or 3-2 instead of
+ * landing 5-0 or 4-1 by chance, which makes the challenge feel
+ * deliberately authored rather than a lazy random grab.
+ *
+ * Falls back gracefully: if a world has fewer levels available than
+ * the per-world minimum, it takes what's there and tops up from the
+ * other world(s).
+ */
+function pickWithSpread<T extends { id: string }>(
+  pool: T[],
+  worlds: number[],
+  count: number,
+): T[] {
+  // Bucket the pool by world using the existing `w{N}-l...` prefix.
+  const byWorld = new Map<number, T[]>();
+  for (const w of worlds) byWorld.set(w, []);
+  for (const item of pool) {
+    for (const w of worlds) {
+      if (item.id.startsWith(`w${w}-l`)) {
+        byWorld.get(w)!.push(item);
+        break;
+      }
+    }
+  }
+
+  // Shuffle each bucket independently so the minimum-per-world picks
+  // are still varied across challenges.
+  for (const list of byWorld.values()) {
+    list.sort(() => Math.random() - 0.5);
+  }
+
+  const minPerWorld = Math.floor(count / worlds.length);
+
+  // First pass: take the guaranteed minimum from each world.
+  const selected: T[] = [];
+  const leftover: T[] = [];
+  for (const w of worlds) {
+    const list = byWorld.get(w)!;
+    const take = Math.min(minPerWorld, list.length);
+    selected.push(...list.slice(0, take));
+    leftover.push(...list.slice(take));
+  }
+
+  // Second pass: fill the remaining slots from the combined leftover
+  // pool. This is where the 2-3 vs 3-2 split is decided — it's random
+  // across the two worlds' remaining items rather than always biased
+  // to the same side.
+  leftover.sort(() => Math.random() - 0.5);
+  const needed = count - selected.length;
+  if (needed > 0) selected.push(...leftover.slice(0, needed));
+
+  return selected;
+}
+
+/**
  * Pick 5 random level ids scoped to the requested difficulty tier,
  * preferring levels both players have already completed. Returns the
  * chosen ids WITHOUT inserting a challenge row. The caller inserts
@@ -72,8 +128,14 @@ export async function pickChallengeLevels(
       ? bothCompleted
       : (tierLevels.length > 0 ? tierLevels : allLevels);
 
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, Math.min(5, shuffled.length)).map(l => l.id);
+    // `pickWithSpread` forces the 5-level set to include at least two
+    // from each world in the difficulty tier, falling back to more
+    // from the available world(s) when the pool is short. For the
+    // all-levels emergency fallback there's only one "world range"
+    // to spread across, so the spread is a no-op there.
+    const worlds = DIFFICULTY_WORLDS[difficulty];
+    const selected = pickWithSpread(pool, worlds, 5);
+    return selected.map(l => l.id);
   } catch (e) {
     console.warn('pickChallengeLevels failed:', e);
     return [];
