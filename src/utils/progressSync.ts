@@ -46,6 +46,10 @@ export async function saveProgressToSupabase(userId: string, state: {
       best_streak: state.bestStreak ?? 0,
       days_played: state.daysPlayed ?? 0,
       subscription_status: state.subscriptionStatus ?? 'inactive',
+      // username is NOT written from here — it's set by app/username.tsx
+      // at signup and we only READ it into the store via loadFromCloud.
+      // Writing a nullable value here would risk clobbering the real
+      // username on any early save before cloud hydration completes.
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -97,6 +101,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   completedScores: number[];
   maxLives: number;
   loginReward: LoginRewardState;
+  username: string | null;
 } | null> {
   try {
     // Load profile
@@ -133,6 +138,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       streakCount: profile.streak_count ?? 0,
       bestStreak: profile.best_streak ?? 0,
       daysPlayed: profile.days_played ?? 0,
+      username: profile.username ?? null,
       subscriptionStatus: (profile.subscription_status === 'active' ? 'active' : 'inactive') as SubscriptionStatus,
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,

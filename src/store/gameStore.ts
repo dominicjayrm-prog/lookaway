@@ -145,6 +145,7 @@ interface SavedState {
   streakCount?: number;
   bestStreak?: number;
   daysPlayed?: number;
+  username?: string | null;
   subscriptionStatus?: SubscriptionStatus;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
@@ -197,6 +198,7 @@ function saveState(state: GameStore) {
     localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
       streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
+      username: state.username,
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
@@ -238,6 +240,7 @@ export interface GameStore {
   _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
   streakCount: number; bestStreak: number; daysPlayed: number;
+  username: string | null;
   subscriptionStatus: SubscriptionStatus;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
@@ -324,6 +327,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     streakCount: saved.streakCount ?? 0,
     bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
     daysPlayed: saved.daysPlayed ?? 0,
+    username: saved.username ?? null,
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
     lastPlayDate: saved.lastPlayDate ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
@@ -523,6 +527,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           streakCount: saved.streakCount ?? 0,
           bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
           daysPlayed: saved.daysPlayed ?? 0,
+          username: saved.username ?? null,
           subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
@@ -612,8 +617,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!cloudIsActive) {
         mergedCosmetics = mergedCosmetics.filter((id) => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       }
-      const resolveEquipped = (id: string, fallback: string) =>
-        !cloudIsActive && SUBSCRIBER_COSMETIC_IDS.includes(id) ? fallback : id;
+      // Resolve the "what should this equipped slot be?" question:
+      //   - If the incoming id is nullish (never synced, fresh account)
+      //     OR is a subscriber cosmetic on a non-subscriber → fall back.
+      //   - Otherwise use whatever was passed in. This prevents null from
+      //     leaking into the store and getting persisted to Supabase,
+      //     which historically left the equipped_* columns stuck at null
+      //     and made friends see a default Blink instead of the real
+      //     customisation.
+      const resolveEquipped = (id: string | null | undefined, fallback: string): string => {
+        if (!id) return fallback;
+        if (!cloudIsActive && SUBSCRIBER_COSMETIC_IDS.includes(id)) return fallback;
+        return id;
+      };
 
       // Login reward: pick whichever record was claimed most recently so the
       // player's streak and position in the 7-day cycle follow them across
@@ -633,6 +649,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakCount: Math.max(cloud.streakCount, local.streakCount),
         bestStreak: Math.max(cloud.bestStreak ?? 0, local.bestStreak ?? 0, cloud.streakCount, local.streakCount),
         daysPlayed: Math.max(cloud.daysPlayed ?? 0, local.daysPlayed ?? 0),
+        // Username is server-sourced (set via app/username.tsx). Cloud wins;
+        // keep local only as a fallback if cloud hasn't returned one.
+        username: cloud.username ?? local.username ?? null,
         totalStars: mergedTotalStars,
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,
