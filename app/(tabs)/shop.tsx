@@ -67,8 +67,11 @@ function ShopTab() {
 
   const handleSubscribe = (plan: 'monthly' | 'yearly', trial: boolean = false) => {
     setShowPaywall(false);
-    // Unlock premium cosmetics (no auto-equip — player keeps their own customisation)
+    // Flip subscription status + unlock premium cosmetics. `activatePlus`
+    // pushes the new status to Supabase immediately so the next
+    // `loadFromCloud` on any device propagates it.
     const store = useGameStore.getState();
+    store.activatePlus();
     store.unlockCosmetic('frame_premium_gold');
     store.unlockCosmetic('expr_premium');
     store.unlockCosmetic('banner_premium_gold');

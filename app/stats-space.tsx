@@ -314,8 +314,9 @@ export default function StatsSpaceScreen() {
     setShowPaywall(false);
     const s = useGameStore.getState();
     // Mirrors the placeholder flow used elsewhere (shop.tsx) until RevenueCat
-    // takes over: unlock the subscriber cosmetics so isSubscribed() flips
-    // true, and grant the welcome gems on paid signup.
+    // takes over. `activatePlus` is what flips isSubscribed() true and
+    // pushes the new status to Supabase immediately.
+    s.activatePlus();
     s.unlockCosmetic('frame_premium_gold');
     s.unlockCosmetic('expr_premium');
     s.unlockCosmetic('banner_premium_gold');

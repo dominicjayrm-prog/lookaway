@@ -1,5 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
+import type { SubscriptionStatus } from '@/src/store/gameStore';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
@@ -44,6 +45,7 @@ export async function saveProgressToSupabase(userId: string, state: {
       login_reward_streak: state.loginReward?.streak ?? 0,
       best_streak: state.bestStreak ?? 0,
       days_played: state.daysPlayed ?? 0,
+      subscription_status: state.subscriptionStatus ?? 'inactive',
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -79,6 +81,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   streakCount: number;
   bestStreak: number;
   daysPlayed: number;
+  subscriptionStatus: SubscriptionStatus;
   totalStars: number;
   highestWorld: number;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -130,6 +133,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       streakCount: profile.streak_count ?? 0,
       bestStreak: profile.best_streak ?? 0,
       daysPlayed: profile.days_played ?? 0,
+      subscriptionStatus: (profile.subscription_status === 'active' ? 'active' : 'inactive') as SubscriptionStatus,
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,
       levelProgress,

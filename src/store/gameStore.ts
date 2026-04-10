@@ -84,6 +84,14 @@ export const SUBSCRIBER_COSMETIC_IDS = [
   'name_purple', 'name_gold', 'name_coral', 'name_ocean', 'name_mint',
 ];
 
+/**
+ * Authoritative subscription status. The local value is mirrored on the
+ * `subscription_status` column in the `profiles` table and cloud is the
+ * source of truth during `loadFromCloud` — that's how cancellations
+ * propagate between devices.
+ */
+export type SubscriptionStatus = 'active' | 'inactive';
+
 const DEFAULT_POWERUPS: PowerUpInventory = {
   extra_life: 0,
   slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0,
@@ -137,6 +145,7 @@ interface SavedState {
   streakCount?: number;
   bestStreak?: number;
   daysPlayed?: number;
+  subscriptionStatus?: SubscriptionStatus;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
   totalStars?: number;
@@ -188,6 +197,7 @@ function saveState(state: GameStore) {
     localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
       streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
+      subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
@@ -228,6 +238,7 @@ export interface GameStore {
   _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
   streakCount: number; bestStreak: number; daysPlayed: number;
+  subscriptionStatus: SubscriptionStatus;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
@@ -276,10 +287,12 @@ export interface GameStore {
   getNextUnplayedLevelId: () => string;
   getMemoryScore: () => number;
   getCompletedLevelCount: () => number;
-  /** Returns true if the player currently owns any Blanked+ subscriber cosmetic.
-   *  This is the pre-RevenueCat signal; once RevenueCat is wired up this will
-   *  read entitlements directly. */
+  /** Returns true when `subscriptionStatus === 'active'`. Cloud is the
+   *  source of truth — `loadFromCloud` rewrites the local value on every
+   *  sign-in and foreground resume. */
   isSubscribed: () => boolean;
+  /** Paywall success path: flip local status to active, push to cloud. */
+  activatePlus: () => void;
 
   // Hydration — re-read localStorage after mount (fixes SSR/static export)
   hydrate: () => void;
@@ -311,6 +324,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     streakCount: saved.streakCount ?? 0,
     bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
     daysPlayed: saved.daysPlayed ?? 0,
+    subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
     lastPlayDate: saved.lastPlayDate ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
@@ -484,9 +498,15 @@ export const useGameStore = create<GameStore>((set, get) => {
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
-    isSubscribed: () => {
-      const { ownedCosmetics } = get();
-      return ownedCosmetics.some((id) => SUBSCRIBER_COSMETIC_IDS.includes(id));
+    isSubscribed: () => get().subscriptionStatus === 'active',
+    activatePlus: () => {
+      set({ subscriptionStatus: 'active' });
+      setTimeout(() => saveState(get()), 0);
+      // Push immediately rather than waiting for the 2s debounce so a
+      // subsequent foreground resume / loadFromCloud can't race the sync
+      // and mistakenly strip the unlock we just granted.
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Activate sync failed:', e));
     },
 
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
@@ -503,6 +523,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           streakCount: saved.streakCount ?? 0,
           bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
           daysPlayed: saved.daysPlayed ?? 0,
+          subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
           totalStars: saved.totalStars ?? 0,
@@ -525,10 +546,14 @@ export const useGameStore = create<GameStore>((set, get) => {
     saveState: () => saveState(get()),
     setAuthUserId: (id: string) => set({ _authUserId: id }),
     revokeSubscription: () => {
-      // Remove subscriber-only cosmetics and reset equipped items to defaults
+      // Flip status to inactive, strip subscriber-only cosmetics, and reset
+      // any equipped subscriber cosmetics back to defaults. Called by
+      // `loadFromCloud` when the cloud reports inactive (cross-device
+      // cancellation), and future RevenueCat entitlement listeners.
       const { ownedCosmetics, equippedFrame, equippedBanner, equippedNameColor, equippedExpression } = get();
       const cleaned = ownedCosmetics.filter(id => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       set({
+        subscriptionStatus: 'inactive',
         ownedCosmetics: cleaned,
         equippedFrame: SUBSCRIBER_COSMETIC_IDS.includes(equippedFrame) ? 'frame_blink_normal' : equippedFrame,
         equippedBanner: SUBSCRIBER_COSMETIC_IDS.includes(equippedBanner) ? 'banner_none' : equippedBanner,
@@ -570,10 +595,25 @@ export const useGameStore = create<GameStore>((set, get) => {
       const mergedTotalStars = Object.values(mergedProgress).reduce((sum, p) => sum + p.stars, 0);
       const mergedScores = Object.values(mergedProgress).filter(p => p.bestScore > 0).map(p => p.bestScore);
 
-      // For gems/lives: if local has real progress, trust local (it's more current).
-      // Only use cloud values if local is fresh/empty (new device).
-      // Merge cosmetics — keep union of both local and cloud (never lose a purchase)
-      const mergedCosmetics = [...new Set([...local.ownedCosmetics, ...cloud.ownedCosmetics])];
+      // ── Subscription: cloud is the source of truth ──
+      // Cancellation propagates across devices here. If cloud says inactive
+      // we drop local subscriber cosmetics and reset equipped items to
+      // defaults — matching the same cleanup as `revokeSubscription`.
+      // (The one exception is that `activatePlus` syncs immediately, so a
+      //  freshly-bought local 'active' will be on the cloud before the next
+      //  foreground resume fires loadFromCloud.)
+      const cloudSubStatus: SubscriptionStatus = cloud.subscriptionStatus ?? 'inactive';
+      const cloudIsActive = cloudSubStatus === 'active';
+
+      // Merge cosmetics — keep union of both local and cloud (never lose a
+      // purchase) UNLESS cloud says the user isn't a subscriber, in which
+      // case subscriber-only cosmetics get stripped from the merge.
+      let mergedCosmetics = [...new Set([...local.ownedCosmetics, ...cloud.ownedCosmetics])];
+      if (!cloudIsActive) {
+        mergedCosmetics = mergedCosmetics.filter((id) => !SUBSCRIBER_COSMETIC_IDS.includes(id));
+      }
+      const resolveEquipped = (id: string, fallback: string) =>
+        !cloudIsActive && SUBSCRIBER_COSMETIC_IDS.includes(id) ? fallback : id;
 
       // Login reward: pick whichever record was claimed most recently so the
       // player's streak and position in the 7-day cycle follow them across
@@ -597,11 +637,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,
         completedScores: mergedScores,
+        subscriptionStatus: cloudSubStatus,
         ownedCosmetics: mergedCosmetics,
-        equippedFrame: localHasProgress ? local.equippedFrame : cloud.equippedFrame,
-        equippedBanner: localHasProgress ? local.equippedBanner : cloud.equippedBanner,
-        equippedNameColor: localHasProgress ? local.equippedNameColor : cloud.equippedNameColor,
-        equippedExpression: localHasProgress ? local.equippedExpression : cloud.equippedExpression,
+        equippedFrame: resolveEquipped(localHasProgress ? local.equippedFrame : cloud.equippedFrame, 'frame_blink_normal'),
+        equippedBanner: resolveEquipped(localHasProgress ? local.equippedBanner : cloud.equippedBanner, 'banner_none'),
+        equippedNameColor: resolveEquipped(localHasProgress ? local.equippedNameColor : cloud.equippedNameColor, 'name_default'),
+        equippedExpression: resolveEquipped(localHasProgress ? local.equippedExpression : cloud.equippedExpression, 'expr_normal'),
         // Power-ups: keep the max of each type from local and cloud
         powerUps: (() => {
           const merged = { ...local.powerUps };

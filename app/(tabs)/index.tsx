@@ -381,7 +381,7 @@ function PlayTab() {
       <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={(plan: string, trial: boolean) => {
         setShowPaywall(false);
         const store = useGameStore.getState();
-        // Always unlock premium cosmetics
+        store.activatePlus();
         store.unlockCosmetic('frame_premium_gold');
         store.unlockCosmetic('expr_premium');
         store.unlockCosmetic('banner_premium_gold');
