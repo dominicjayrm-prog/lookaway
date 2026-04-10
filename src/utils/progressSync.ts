@@ -42,6 +42,8 @@ export async function saveProgressToSupabase(userId: string, state: {
       login_reward_day: state.loginReward?.currentDay ?? 0,
       login_reward_last_claim: state.loginReward?.lastClaimDate || null,
       login_reward_streak: state.loginReward?.streak ?? 0,
+      best_streak: state.bestStreak ?? 0,
+      days_played: state.daysPlayed ?? 0,
     }, { onConflict: 'id' });
 
     // Upsert level progress
@@ -75,6 +77,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   lives: number;
   livesLastLostAt: number | null;
   streakCount: number;
+  bestStreak: number;
+  daysPlayed: number;
   totalStars: number;
   highestWorld: number;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -124,6 +128,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       lives: profile.lives ?? 5,
       livesLastLostAt: profile.lives_last_lost_at ? new Date(profile.lives_last_lost_at).getTime() : null,
       streakCount: profile.streak_count ?? 0,
+      bestStreak: profile.best_streak ?? 0,
+      daysPlayed: profile.days_played ?? 0,
       totalStars: profile.total_stars ?? 0,
       highestWorld: profile.highest_world ?? 1,
       levelProgress,

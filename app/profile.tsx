@@ -31,7 +31,8 @@ function ProfileScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colors, isDark, isManual, toggleTheme, resetToSystem } = useTheme();
-  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic } = useGameStore();
+  const { totalStars, streakCount, getCompletedLevelCount, getMemoryScore, equippedFrame, equippedBanner, equippedNameColor, ownedCosmetics, equippedExpression: eqExpr, equipCosmetic, isSubscribed } = useGameStore();
+  const hasBlankedPlus = isSubscribed();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
@@ -190,6 +191,31 @@ function ProfileScreen() {
                 <View style={[styles.achCountBadge, { backgroundColor: unlockedCount > 0 ? colors.goldSoft : colors.surface }]}>
                   <Text style={[styles.achCountText, { color: unlockedCount > 0 ? colors.gold : colors.textLight }]}>{unlockedCount}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+              </View>
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        {/* Memory Analytics card — Blanked+ feature */}
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(260)}>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable style={styles.settingsRow} onPress={() => router.push('/stats-space')}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="analytics" size={18} color={colors.accent} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Memory Analytics</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>Your brain profile & stats</Text>
+                </View>
+              </View>
+              <View style={styles.settingsRowRight}>
+                {!hasBlankedPlus && (
+                  <View style={[styles.achCountBadge, { backgroundColor: colors.accentSoft }]}>
+                    <Text style={[styles.achCountText, { color: colors.accent, letterSpacing: 0.6 }]}>BLANKED+</Text>
+                  </View>
+                )}
                 <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
               </View>
             </Pressable>

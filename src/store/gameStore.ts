@@ -71,6 +71,19 @@ export interface PowerUpInventory {
   cc_reveal_one: number;
 }
 
+/**
+ * Cosmetics that are only granted to Blanked+ subscribers. Ownership of any
+ * one of these is the current signal for active subscription (pre-RevenueCat).
+ * Once RevenueCat is wired up, `isSubscribed()` in the store should read the
+ * entitlement directly instead.
+ */
+export const SUBSCRIBER_COSMETIC_IDS = [
+  'frame_prismatic', 'frame_diamond', 'frame_premium_gold',
+  'banner_aurora', 'banner_holographic', 'banner_premium_gold',
+  'expr_premium',
+  'name_purple', 'name_gold', 'name_coral', 'name_ocean', 'name_mint',
+];
+
 const DEFAULT_POWERUPS: PowerUpInventory = {
   extra_life: 0,
   slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0,
@@ -122,6 +135,8 @@ interface SavedState {
   maxLives?: number;
   livesLastLostAt?: number | null;
   streakCount?: number;
+  bestStreak?: number;
+  daysPlayed?: number;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
   totalStars?: number;
@@ -172,7 +187,8 @@ function saveState(state: GameStore) {
     if (typeof window === 'undefined') return;
     localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
-      streakCount: state.streakCount, streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
+      streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
+      streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
@@ -211,7 +227,8 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 export interface GameStore {
   _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
-  streakCount: number; streakMilestonesClaimed: number[]; lastPlayDate: string | null;
+  streakCount: number; bestStreak: number; daysPlayed: number;
+  streakMilestonesClaimed: number[]; lastPlayDate: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -259,6 +276,10 @@ export interface GameStore {
   getNextUnplayedLevelId: () => string;
   getMemoryScore: () => number;
   getCompletedLevelCount: () => number;
+  /** Returns true if the player currently owns any Blanked+ subscriber cosmetic.
+   *  This is the pre-RevenueCat signal; once RevenueCat is wired up this will
+   *  read entitlements directly. */
+  isSubscribed: () => boolean;
 
   // Hydration — re-read localStorage after mount (fixes SSR/static export)
   hydrate: () => void;
@@ -288,6 +309,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     maxLives: saved.maxLives ?? LIVES_CONFIG.maxLives,
     livesLastLostAt: saved.livesLastLostAt ?? null,
     streakCount: saved.streakCount ?? 0,
+    bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
+    daysPlayed: saved.daysPlayed ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
@@ -363,11 +386,16 @@ export const useGameStore = create<GameStore>((set, get) => {
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
     incrementStreak: () => {
       const today = new Date().toISOString().split('T')[0];
-      const { lastPlayDate, streakCount } = get();
+      const { lastPlayDate, streakCount, bestStreak, daysPlayed } = get();
       if (lastPlayDate === today) return; // Already played today
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const newStreak = lastPlayDate === yesterday ? streakCount + 1 : 1; // Continue or restart
-      set({ streakCount: newStreak, lastPlayDate: today });
+      set({
+        streakCount: newStreak,
+        bestStreak: Math.max(bestStreak, newStreak),
+        daysPlayed: daysPlayed + 1, // This branch only runs on a new calendar day
+        lastPlayDate: today,
+      });
       setTimeout(() => saveState(get()), 0);
     },
     resetStreak: () => { set({ streakCount: 0, lastPlayDate: null }); setTimeout(() => saveState(get()), 0); },
@@ -456,6 +484,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
+    isSubscribed: () => {
+      const { ownedCosmetics } = get();
+      return ownedCosmetics.some((id) => SUBSCRIBER_COSMETIC_IDS.includes(id));
+    },
 
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
     hydrate: () => {
@@ -469,6 +501,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           maxLives: saved.maxLives ?? LIVES_CONFIG.maxLives,
           livesLastLostAt: saved.livesLastLostAt ?? null,
           streakCount: saved.streakCount ?? 0,
+          bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
+          daysPlayed: saved.daysPlayed ?? 0,
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
           totalStars: saved.totalStars ?? 0,
@@ -492,15 +526,14 @@ export const useGameStore = create<GameStore>((set, get) => {
     setAuthUserId: (id: string) => set({ _authUserId: id }),
     revokeSubscription: () => {
       // Remove subscriber-only cosmetics and reset equipped items to defaults
-      const SUBSCRIBER_IDS = ['frame_prismatic', 'frame_diamond', 'frame_premium_gold', 'banner_aurora', 'banner_holographic', 'banner_premium_gold', 'expr_premium', 'name_purple', 'name_gold', 'name_coral', 'name_ocean', 'name_mint'];
       const { ownedCosmetics, equippedFrame, equippedBanner, equippedNameColor, equippedExpression } = get();
-      const cleaned = ownedCosmetics.filter(id => !SUBSCRIBER_IDS.includes(id));
+      const cleaned = ownedCosmetics.filter(id => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       set({
         ownedCosmetics: cleaned,
-        equippedFrame: SUBSCRIBER_IDS.includes(equippedFrame) ? 'frame_blink_normal' : equippedFrame,
-        equippedBanner: SUBSCRIBER_IDS.includes(equippedBanner) ? 'banner_none' : equippedBanner,
-        equippedNameColor: SUBSCRIBER_IDS.includes(equippedNameColor) ? 'name_default' : equippedNameColor,
-        equippedExpression: SUBSCRIBER_IDS.includes(equippedExpression) ? 'expr_normal' : equippedExpression,
+        equippedFrame: SUBSCRIBER_COSMETIC_IDS.includes(equippedFrame) ? 'frame_blink_normal' : equippedFrame,
+        equippedBanner: SUBSCRIBER_COSMETIC_IDS.includes(equippedBanner) ? 'banner_none' : equippedBanner,
+        equippedNameColor: SUBSCRIBER_COSMETIC_IDS.includes(equippedNameColor) ? 'name_default' : equippedNameColor,
+        equippedExpression: SUBSCRIBER_COSMETIC_IDS.includes(equippedExpression) ? 'expr_normal' : equippedExpression,
       });
       setTimeout(() => saveState(get()), 0);
     },
@@ -558,6 +591,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         lives: localHasProgress ? local.lives : cloud.lives,
         livesLastLostAt: localHasProgress ? local.livesLastLostAt : cloud.livesLastLostAt,
         streakCount: Math.max(cloud.streakCount, local.streakCount),
+        bestStreak: Math.max(cloud.bestStreak ?? 0, local.bestStreak ?? 0, cloud.streakCount, local.streakCount),
+        daysPlayed: Math.max(cloud.daysPlayed ?? 0, local.daysPlayed ?? 0),
         totalStars: mergedTotalStars,
         highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
         levelProgress: mergedProgress,
