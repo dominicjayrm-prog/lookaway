@@ -129,7 +129,7 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl } = useGameStore();
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
   // Parse world/level from ID format "w1-l3"
@@ -155,8 +155,12 @@ function PlayTab() {
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
-  let profilePic: string | null = null;
-  try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
+  // Profile pic priority: cloud avatar_url (cross-device) → localStorage
+  // cached data URI (offline / during upload).
+  let profilePic: string | null = storeAvatarUrl ?? null;
+  if (!profilePic) {
+    try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
+  }
 
   // Tutorial overlay
   const [showTutorial, setShowTutorial] = useState(false);

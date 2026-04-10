@@ -258,6 +258,40 @@ export interface DailyFeaturedItem {
   cosmetic: Cosmetic;
   originalPrice: number;
   discountedPrice: number;
+  /** True when the "20% off" sale is active today (weekends only). */
+  onSale: boolean;
+}
+
+/** Check if a YYYY-MM-DD date string falls on a Saturday or Sunday UTC.
+ *  Used by `getDailyFeatured` to gate the 20% discount. */
+export function isWeekend(dateStr: string): boolean {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const day = d.getUTCDay();
+  return day === 0 || day === 6;
+}
+
+// Daily-shop rarity weights. Higher = more likely to appear. Commons
+// and rares show up most often (good for free-player value + shop
+// "activity"), epics are uncommon, legendaries are rare (~4% per
+// category slot). This gives the shop a Candy-Crush-ish pacing
+// where legendary rotations feel like an event.
+const DAILY_RARITY_WEIGHTS: Record<string, number> = {
+  common: 10,
+  rare: 6,
+  epic: 2,
+  legendary: 1,
+};
+
+function weightedPick<T extends { rarity: string }>(items: T[], rng: () => number): T | null {
+  if (items.length === 0) return null;
+  const weights = items.map(i => DAILY_RARITY_WEIGHTS[i.rarity] ?? 1);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = rng() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
 }
 
 export function getDailyFeatured(dateStr: string): DailyFeaturedItem[] {
@@ -266,19 +300,26 @@ export function getDailyFeatured(dateStr: string): DailyFeaturedItem[] {
   const gemBanners = BANNERS.filter(b => b.unlock === 'gems' && b.gemCost);
   const gemExprs = EXPRESSIONS.filter(e => e.unlock === 'gems' && e.gemCost);
 
+  // Rarity-weighted picks: commons/rares dominate, legendaries are rare.
   const picks: Cosmetic[] = [];
-  // 1 frame, 1 banner, 1 expression, 1 wildcard
-  if (gemFrames.length > 0) picks.push(shuffleWith(gemFrames, rng)[0]);
-  if (gemBanners.length > 0) picks.push(shuffleWith(gemBanners, rng)[0]);
-  if (gemExprs.length > 0) picks.push(shuffleWith(gemExprs, rng)[0]);
-  // Wildcard from all remaining
-  const all = [...gemFrames, ...gemBanners, ...gemExprs].filter(c => !picks.find(p => p.id === c.id));
-  if (all.length > 0) picks.push(shuffleWith(all, rng)[0]);
+  const frame = weightedPick(gemFrames, rng);
+  const banner = weightedPick(gemBanners, rng);
+  const expr = weightedPick(gemExprs, rng);
+  if (frame) picks.push(frame);
+  if (banner) picks.push(banner);
+  if (expr) picks.push(expr);
+  // Wildcard slot — still weighted by rarity and excludes items
+  // already picked above so we never double up.
+  const remaining: Cosmetic[] = [...gemFrames, ...gemBanners, ...gemExprs].filter(c => !picks.find(p => p.id === c.id));
+  const wild = weightedPick(remaining, rng);
+  if (wild) picks.push(wild);
 
+  const onSale = isWeekend(dateStr);
   return picks.map(c => ({
     cosmetic: c,
     originalPrice: c.gemCost!,
-    discountedPrice: Math.round(c.gemCost! * 0.8),
+    discountedPrice: onSale ? Math.round(c.gemCost! * 0.8) : c.gemCost!,
+    onSale,
   }));
 }
 
@@ -327,3 +368,20 @@ export const RARITY_COLORS: Record<string, string> = {
   epic: '#6C5CE7',
   legendary: '#D4A012',
 };
+
+/** Display order for rarity tiers — used by the shop to render
+ *  common → rare → epic → legendary instead of whatever order the
+ *  item happens to appear in the source file. */
+export const RARITY_ORDER: Record<string, number> = {
+  common: 0,
+  rare: 1,
+  epic: 2,
+  legendary: 3,
+};
+
+/** Sort a list of cosmetics in-place by rarity ascending (common
+ *  first), keeping items of the same rarity in their original
+ *  relative order. Returns a new array — doesn't mutate the input. */
+export function sortByRarity<T extends { rarity: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99));
+}
