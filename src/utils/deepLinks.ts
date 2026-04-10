@@ -1,4 +1,4 @@
-import { supabase } from '@/src/lib/supabase';
+import { addFriendById } from '@/src/utils/friends';
 
 const PENDING_INVITE_KEY = 'blanked_pending_invite';
 
@@ -11,32 +11,23 @@ export function storePendingInvite(inviterId: string): void {
   } catch {}
 }
 
-/** Process any pending invite after signup — auto-sends friend request */
+/**
+ * Process any pending invite after signup — auto-sends a friend request
+ * from the inviter (the user who shared the link) TO the new user so that
+ * when they open their friends tab they see the pending request waiting.
+ *
+ * Historically this duplicated the friendship existence check + insert
+ * logic; now it just delegates to `addFriendById` so the pre-checks for
+ * self / already-friends / pending are shared with the QR scanner flow.
+ */
 export async function processPendingInvite(myUserId: string): Promise<void> {
   try {
     if (typeof localStorage === 'undefined') return;
     const inviterId = localStorage.getItem(PENDING_INVITE_KEY);
-    if (!inviterId || inviterId === myUserId) return;
-
-    // Check not already friends
-    const { data: existing } = await supabase
-      .from('friendships')
-      .select('id')
-      .or(`and(requester_id.eq.${inviterId},addressee_id.eq.${myUserId}),and(requester_id.eq.${myUserId},addressee_id.eq.${inviterId})`)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      localStorage.removeItem(PENDING_INVITE_KEY);
-      return;
-    }
-
-    // Send friend request from inviter to new user
-    await supabase.from('friendships').insert({
-      requester_id: inviterId,
-      addressee_id: myUserId,
-      status: 'pending',
-    });
-
+    if (!inviterId) return;
+    // Argument order matters: inviter is the REQUESTER (they're the one
+    // sending the request), new user is the addressee.
+    await addFriendById(inviterId, myUserId);
     localStorage.removeItem(PENDING_INVITE_KEY);
   } catch (e) {
     console.warn('Process pending invite failed:', e);
