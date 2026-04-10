@@ -14,6 +14,9 @@ export interface FriendProfile {
   avatar_url?: string | null;
   equipped_frame?: string | null;
   equipped_expression?: string | null;
+  equipped_banner?: string | null;
+  equipped_name_color?: string | null;
+  memory_score_avg?: number | null;
 }
 
 export interface FriendRequest {
@@ -45,7 +48,7 @@ export interface Challenge {
 export async function searchUsers(query: string, currentUserId: string): Promise<FriendProfile[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression')
+    .select('id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg')
     .ilike('username', `${query}%`)
     .neq('id', currentUserId)
     .limit(5);
@@ -132,13 +135,13 @@ export async function removeFriend(friendshipId: string): Promise<boolean> {
 // \u2500\u2500\u2500 Friend lists \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
-  const { data, error } = await supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
   if (error) { console.warn('getFriendRequests error:', error.message); return []; }
   return (data ?? []).map((row: Record<string, unknown>) => ({ id: row.id as string, requester: row.requester as FriendProfile, created_at: row.created_at as string }));
 }
 
 export async function getFriends(userId: string): Promise<Friend[]> {
-  const { data, error } = await supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+  const { data, error } = await supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
   if (error) { console.warn('getFriends error:', error.message); return []; }
   return (data ?? []).map((row: Record<string, unknown>) => { const isRequester = row.requester_id === userId; return { friendshipId: row.id as string, profile: (isRequester ? row.addressee : row.requester) as FriendProfile }; });
 }
@@ -146,13 +149,13 @@ export async function getFriends(userId: string): Promise<Friend[]> {
 // \u2500\u2500\u2500 Challenges \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export async function getActiveChallenges(userId: string): Promise<Challenge[]> {
-  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
   if (error) { console.warn('getActiveChallenges error:', error.message); return []; }
   return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
 }
 
 export async function getRecentResults(userId: string, limit: number): Promise<Challenge[]> {
-  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
   if (error) { console.warn('getRecentResults error:', error.message); return []; }
   return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
 }
