@@ -117,17 +117,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           {/* Banner header with the avatar overlapping the bottom edge */}
           <View style={styles.bannerWrap}>
-            <ProfileBanner banner={banner} height={108}>
-              <View style={styles.bannerInner}>
-                <Pressable
-                  onPress={onClose}
-                  hitSlop={10}
-                  style={[styles.bannerClose, { backgroundColor: 'rgba(0,0,0,0.25)' }]}
-                >
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
-                </Pressable>
-              </View>
-            </ProfileBanner>
+            <ProfileBanner banner={banner} height={108} />
             <View style={styles.avatarAnchor}>
               <AvatarFrame frame={frame} size={78}>
                 <View style={[styles.avatarInner, { backgroundColor: colors.card }]}>
@@ -136,6 +126,27 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
               </AvatarFrame>
             </View>
           </View>
+
+          {/* Close button — anchored to the card, not the banner, so it
+              has a visible backing plate even when the player is wearing
+              the default (transparent) banner. Tints to white-on-dark on
+              a real banner, dark-on-surface on an empty one. */}
+          <Pressable
+            onPress={onClose}
+            hitSlop={10}
+            style={[
+              styles.closeBtn,
+              banner && banner.id !== 'banner_none'
+                ? { backgroundColor: 'rgba(0,0,0,0.3)' }
+                : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+            ]}
+          >
+            <Ionicons
+              name="close"
+              size={16}
+              color={banner && banner.id !== 'banner_none' ? '#FFFFFF' : colors.textMid}
+            />
+          </Pressable>
 
           <ScrollView
             style={{ maxHeight: 420 }}
@@ -232,16 +243,16 @@ const styles = StyleSheet.create({
   card: { borderRadius: 24, width: '100%', maxWidth: 340, overflow: 'hidden' },
 
   bannerWrap: { position: 'relative' },
-  bannerInner: { flex: 1, position: 'relative' },
-  bannerClose: {
+  closeBtn: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   avatarAnchor: {
     position: 'absolute',

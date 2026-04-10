@@ -394,6 +394,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (ownedCosmetics.includes(id) || gems < gemCost) return false;
       set({ gems: gems - gemCost, ownedCosmetics: [...ownedCosmetics, id] });
       setTimeout(() => saveState(get()), 0);
+      // Immediate Supabase push so the new cosmetic survives a hard
+      // close before the 2s debounce fires, and so friends can see
+      // the player wearing it as soon as they equip it.
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Purchase sync failed:', e));
       return true;
     },
     unlockCosmetic: (id) => {
@@ -401,6 +406,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (ownedCosmetics.includes(id)) return;
       set({ ownedCosmetics: [...ownedCosmetics, id] });
       setTimeout(() => saveState(get()), 0);
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Unlock sync failed:', e));
     },
     equipCosmetic: (type, id) => {
       if (type === 'frame') set({ equippedFrame: id });
@@ -408,6 +415,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       else if (type === 'name_color') set({ equippedNameColor: id });
       else if (type === 'expression') set({ equippedExpression: id });
       setTimeout(() => saveState(get()), 0);
+      // Also push immediately to Supabase, bypassing the 2s debounce.
+      // Without this, friends wouldn't see the new cosmetic on their
+      // profile popup until the player happens to trigger another
+      // save (level complete, gem gain, etc). Equipping is rare
+      // enough that the extra write per tap is fine.
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => console.warn('Equip sync failed:', e));
     },
 
     addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
