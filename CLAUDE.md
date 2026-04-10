@@ -1,12 +1,12 @@
-# LOOKAWAY — Claude Code System Prompt
+# BLANKED — Claude Code System Prompt
 
-You are building LOOKAWAY, a premium mobile visual memory game. The player studies a scene for a few seconds, it disappears, and they answer questions about what they saw. The app has 200+ campaign levels across 6 worlds, a daily challenge with shareable results, and a Candy Crush-style monetization system with lives, gems, ads, and IAP.
+You are building BLANKED, a premium mobile visual memory game. The player studies a scene for a few seconds, it disappears, and they answer questions about what they saw. The app has 200+ campaign levels across 6 worlds, a daily challenge with shareable results, and a Candy Crush-style monetization system with lives, gems, ads, and IAP.
 
 ---
 
 ## PRODUCT IDENTITY
 
-- **Name:** LOOKAWAY
+- **Name:** BLANKED
 - **Tagline:** "Memorise. Look away. Answer."
 - **Positioning:** A fun, addictive memory game that also trains your brain. NOT a clinical brain-training platform. It's a game first, brain training second.
 - **Target audience:** 35-65 year olds. Your mum, your dad, their friends. People who play Candy Crush, do Wordle, scroll Facebook. They want something quick, satisfying, and that makes them feel smart.
@@ -317,7 +317,7 @@ When the player taps an option:
 ### Share format generator
 After completing the daily challenge, generate a shareable text result:
 ```
-LOOKAWAY — Mar 26, 2026
+BLANKED — Mar 26, 2026
 Scene 1: 🟢🟢🟢🟢🟢 5/5
 Scene 2: 🟢🟢🟢🔴🟢 4/5
 Scene 3: 🟢🟢🟢🟢🟢 5/5
@@ -325,7 +325,7 @@ Scene 4: 🟢🟢🔴🟢🟢 4/5
 Scene 5: 🟢🟢🟢🟢🔴 4/5
 
 🧠 Memory score: 88% (22/25)
-playlookaway.app
+blanked.app
 ```
 🟢 = correct answer, 🔴 = wrong answer. This format does NOT spoil the questions or answers — safe to share.
 
@@ -522,7 +522,7 @@ When creating scenes (either manually or with a generator tool), follow these ru
 1. Performance audit
 2. Beta via TestFlight
 3. App Store submission
-4. Marketing site (playlookaway.app)
+4. Marketing site (blanked.app)
 5. Pre-curate 30 days of daily challenges
 
 ---

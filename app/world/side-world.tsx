@@ -12,6 +12,10 @@ import { CAMPAIGNS } from '@/src/data/campaigns';
 import { generatePath, getGeneratedMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
 
 var MAP_W = Math.min(Dimensions.get('window').width, 430);
+// START/FINISH pill wrapper is a fixed-width View centred under the level
+// node, so the text aligns with the node regardless of pill width.
+var MARKER_ANCHOR_WIDTH = 160;
+var MARKER_ANCHOR_HALF = MARKER_ANCHOR_WIDTH / 2;
 var PREFIXES: Record<string, string> = { speed_recall: 'sr', snap_match: 'sm', sequence: 'seq', counting_blitz: 'cb', colour_chain: 'cc' };
 
 function StarSvg({ size = 11, filled = false, color = '#D4A012' }: { size?: number; filled?: boolean; color?: string }) {
@@ -199,9 +203,35 @@ function SideWorldMap() {
           );
         })}
 
-        <View style={[st.markerPill, { top: (path[0]?.y ?? 2050) + 60, left: mapWidth / 2 - 30 }]}><Text style={[st.markerText, { color: worldColor }]}>START</Text></View>
-        <View style={[st.markerPill, { top: (path[path.length - 1]?.y ?? 250) - 50, left: mapWidth / 2 - 45 }]}>
-          <Text style={[st.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>{completedUpTo >= totalLevels ? 'COMPLETE!' : worldNum < totalWorlds ? `WORLD ${worldNum + 1} AWAITS` : 'THE SUMMIT'}</Text>
+        {/* START marker — anchored under level 1, not the map centre */}
+        <View
+          style={[
+            st.markerAnchor,
+            {
+              top: (path[0]?.y ?? 2050) + 60,
+              left: ((path[0]?.x ?? 50) / 100) * mapWidth - MARKER_ANCHOR_HALF,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={st.markerPill}>
+            <Text style={[st.markerText, { color: worldColor }]}>START</Text>
+          </View>
+        </View>
+        {/* FINISH marker — anchored under the final level */}
+        <View
+          style={[
+            st.markerAnchor,
+            {
+              top: (path[path.length - 1]?.y ?? 250) - 50,
+              left: ((path[path.length - 1]?.x ?? 50) / 100) * mapWidth - MARKER_ANCHOR_HALF,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <View style={st.markerPill}>
+            <Text style={[st.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>{completedUpTo >= totalLevels ? 'COMPLETE!' : worldNum < totalWorlds ? `WORLD ${worldNum + 1} AWAITS` : 'THE SUMMIT'}</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -264,7 +294,8 @@ var st = StyleSheet.create({
   playLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
   checkpointBadge: { position: 'absolute', top: -22, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
   checkpointText: { fontSize: 8, fontWeight: '700', letterSpacing: 1 },
-  markerPill: { position: 'absolute', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.8)' },
+  markerAnchor: { position: 'absolute', width: 160, alignItems: 'center' },
+  markerPill: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.8)' },
   markerText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5 },
   bottomBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)' },
   bottomInfo: { flex: 1 },

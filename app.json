@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.blanked.app",
-      "associatedDomains": ["applinks:playlookaway.app"]
+      "associatedDomains": ["applinks:blanked.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +28,7 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "data": [{ "scheme": "https", "host": "playlookaway.app", "pathPrefix": "/invite" }],
+          "data": [{ "scheme": "https", "host": "blanked.app", "pathPrefix": "/invite" }],
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
