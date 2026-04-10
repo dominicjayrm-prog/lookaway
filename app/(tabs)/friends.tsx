@@ -16,6 +16,8 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import LeaderboardSection from '@/src/components/LeaderboardSection';
 import ReferralCard from '@/src/components/ReferralCard';
 import { Blink } from '@/src/components/Blink';
+import { FriendQRSheet } from '@/src/components/FriendQRSheet';
+import { FriendQRScanner } from '@/src/components/FriendQRScanner';
 
 function Avatar({ username, color, size = 36, avatarUrl }: { username: string; color: string; size?: number; avatarUrl?: string | null }) {
   return (
@@ -48,6 +50,8 @@ function FriendsTab() {
   const [results, setResults] = useState<Challenge[]>([]);
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [showMyQR, setShowMyQR] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
   const searchInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -151,11 +155,15 @@ function FriendsTab() {
         {/* Quick actions */}
         <View style={[styles.inviteCard, { backgroundColor: colors.card, marginTop: 8 }]}>
           <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => { scrollRef.current?.scrollTo({ y: 0, animated: true }); setTimeout(() => searchInputRef.current?.focus(), 300); }}><Ionicons name="search-outline" size={20} color={colors.accent} /><Text style={[styles.inviteRowText, { color: colors.text }]}>Add by username</Text><Ionicons name="chevron-forward" size={18} color={colors.textLight} /></Pressable>
+          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => setShowQRScanner(true)}><Ionicons name="scan-outline" size={20} color={colors.accent} /><Text style={[styles.inviteRowText, { color: colors.text }]}>Scan QR code</Text><Ionicons name="chevron-forward" size={18} color={colors.textLight} /></Pressable>
+          <Pressable style={[styles.inviteRow, { borderBottomColor: colors.border }]} onPress={() => setShowMyQR(true)}><Ionicons name="qr-code-outline" size={20} color={colors.blue} /><Text style={[styles.inviteRowText, { color: colors.text }]}>Show my QR code</Text><Ionicons name="chevron-forward" size={18} color={colors.textLight} /></Pressable>
           <Pressable style={styles.inviteRow} onPress={handleShare}><Ionicons name="share-outline" size={20} color={colors.correct} /><Text style={[styles.inviteRowText, { color: colors.text }]}>Share invite link</Text><Ionicons name="chevron-forward" size={18} color={colors.textLight} /></Pressable>
         </View>
       </ScrollView>
 
       {selectedFriend && (<FriendProfilePopup visible={true} friend={selectedFriend} colors={colors} onClose={() => setSelectedFriend(null)} onChallenge={handleChallenge} onRemove={handleRemoveFriend} />)}
+      <FriendQRSheet visible={showMyQR} onDismiss={() => setShowMyQR(false)} />
+      <FriendQRScanner visible={showQRScanner} onDismiss={() => setShowQRScanner(false)} onFriendAdded={loadData} />
     </SafeAreaView>
     </TabTransition>
   );

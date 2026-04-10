@@ -63,6 +63,50 @@ export async function sendFriendRequest(requesterId: string, addresseeId: string
   return true;
 }
 
+/**
+ * Result of a one-shot "add this user by ID" attempt. Used by the QR
+ * scanner and the deep-link invite handler so both flows surface the same
+ * set of states to the user.
+ */
+export type AddFriendResult =
+  | 'sent'              // Friend request was just inserted
+  | 'already_friends'   // Pair already has an accepted friendship
+  | 'request_pending'   // A pending request already exists (either direction)
+  | 'self'              // Target is the current user
+  | 'error';            // Network / RLS / unknown failure
+
+/**
+ * High-level "add this user as a friend" that consolidates the
+ * pre-checks (self, already friends, pending) and the INSERT.
+ *
+ * Before this existed, `processPendingInvite()` in `deepLinks.ts` and the
+ * various paywall/search flows all open-coded this logic. Any new flow
+ * (QR scan, NFC, etc.) should use this helper instead of talking to
+ * `supabase.from('friendships')` directly.
+ */
+export async function addFriendById(myId: string, targetId: string): Promise<AddFriendResult> {
+  if (!myId || !targetId) return 'error';
+  if (myId === targetId) return 'self';
+  try {
+    const { data: existing, error: existingError } = await supabase
+      .from('friendships')
+      .select('id, status')
+      .or(`and(requester_id.eq.${myId},addressee_id.eq.${targetId}),and(requester_id.eq.${targetId},addressee_id.eq.${myId})`)
+      .limit(1);
+    if (existingError) { console.warn('addFriendById check error:', existingError.message); return 'error'; }
+    if (existing && existing.length > 0) {
+      const row = existing[0] as { status: string };
+      if (row.status === 'accepted') return 'already_friends';
+      return 'request_pending';
+    }
+    const ok = await sendFriendRequest(myId, targetId);
+    return ok ? 'sent' : 'error';
+  } catch (e) {
+    console.warn('addFriendById error:', e);
+    return 'error';
+  }
+}
+
 export async function acceptFriendRequest(friendshipId: string, myUserId?: string): Promise<boolean> {
   const { error } = await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId);
   if (error) { console.warn('acceptFriendRequest error:', error.message); return false; }
