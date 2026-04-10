@@ -14,21 +14,20 @@ import {
   type WeeklyChallengeState,
   type WeeklyGoal,
 } from '@/src/utils/weeklyChallenges';
-import {
-  TargetIcon, StarIcon, CrownIcon, BrainIcon, FireIcon,
-  CalendarIcon, BoltIcon, SwordsIcon, FlexIcon, GlobeIcon, GemIcon,
-} from '@/src/components/AppIcons';
 
 function WeeklyChallengesCard() {
   const { colors } = useTheme();
   const addGems = useGameStore(s => s.addGems);
+  const levelProgress = useGameStore(s => s.levelProgress);
   const [state, setState] = useState<WeeklyChallengeState | null>(null);
   const [resetTimer, setResetTimer] = useState('');
 
   const load = useCallback(async () => {
-    const s = await getWeeklyChallenges();
+    // Pass levelProgress so the selector can determine unlocked modes
+    // when generating this week's challenges on a fresh rollover.
+    const s = await getWeeklyChallenges(levelProgress);
     setState(s);
-  }, []);
+  }, [levelProgress]);
 
   useEffect(() => {
     load();
@@ -110,45 +109,40 @@ interface GoalRowProps {
   isLast: boolean;
 }
 
-/** Map goal tracking keys to SVG icons */
-function GoalSvgIcon({ trackingKey, size = 18 }: { trackingKey: string; size?: number }) {
-  switch (trackingKey) {
-    case 'levels_completed': return <TargetIcon size={size} color="#0984E3" />;
-    case 'stars_earned': return <StarIcon size={size} color="#D4A012" />;
-    case 'perfect_levels': return <CrownIcon size={size} color="#D4A012" />;
-    case 'correct_streak': return <FireIcon size={size} color="#FF6B6B" />;
-    case 'daily_played': return <CalendarIcon size={size} color="#0984E3" />;
-    case 'powerups_used': return <BoltIcon size={size} color="#F9CA24" />;
-    case 'friends_challenged': return <SwordsIcon size={size} color="#E17055" />;
-    case 'high_score_levels': return <FlexIcon size={size} color="#E17055" />;
-    case 'modes_played': return <GlobeIcon size={size} color="#0984E3" />;
-    default: return <TargetIcon size={size} color="#6C5CE7" />;
-  }
+/** Map a WeeklyGoal category to its accent colour. Used to tint the
+ *  progress bar + the reward pill so the three difficulty tiers are
+ *  visually distinct at a glance. */
+function categoryColor(category: string | undefined, colors: Record<string, string>): string {
+  if (category === 'engagement') return colors.blue;
+  if (category === 'consistency') return colors.accent;
+  if (category === 'skill') return colors.gold;
+  return colors.accent;
 }
 
 function GoalRow({ goal, progress, claimed, colors, onClaim, isLast }: GoalRowProps) {
   const clamped = Math.min(progress, goal.target);
   const pct = goal.target > 0 ? (clamped / goal.target) * 100 : 0;
   const isComplete = clamped >= goal.target;
+  const tint = categoryColor(goal.category, colors);
 
   return (
     <View style={[st.goalRow, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-      <View style={st.goalIconWrap}>
-        <GoalSvgIcon trackingKey={goal.trackingKey} size={20} />
+      <View style={[st.goalIconWrap, { backgroundColor: tint + '15' }]}>
+        <Text style={st.goalEmoji}>{goal.icon}</Text>
       </View>
       <View style={st.goalContent}>
         <View style={st.goalTitleRow}>
-          <Text style={[st.goalTitle, { color: colors.text }]} numberOfLines={1}>{goal.description}</Text>
-          <View style={st.rewardPill}>
-            <Ionicons name="diamond" size={10} color={colors.gold} />
-            <Text style={[st.rewardText, { color: colors.gold }]}>{goal.reward}</Text>
+          <Text style={[st.goalTitle, { color: colors.text }]} numberOfLines={1}>{goal.title}</Text>
+          <View style={[st.rewardPill, { backgroundColor: tint + '15' }]}>
+            <Ionicons name="diamond" size={10} color={tint} />
+            <Text style={[st.rewardText, { color: tint }]}>{goal.gems}</Text>
           </View>
         </View>
-        {/* Progress bar */}
+        {/* Progress bar — category-tinted */}
         <View style={[st.progressTrack, { backgroundColor: colors.surface }]}>
           <View style={[st.progressFill, {
             width: `${pct}%`,
-            backgroundColor: isComplete ? colors.correct : colors.accent,
+            backgroundColor: isComplete ? colors.correct : tint,
           }]} />
         </View>
         <View style={st.goalBottomRow}>
@@ -211,12 +205,28 @@ const st = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  goalIconWrap: { width: 28, alignItems: 'center', marginTop: 2 },
+  goalIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  goalEmoji: { fontSize: 18 },
   goalContent: { flex: 1 },
   goalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  goalTitle: { fontSize: 13, fontWeight: '600', flex: 1 },
-  rewardPill: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 8 },
-  rewardText: { fontSize: 11, fontWeight: '700' },
+  goalTitle: { fontSize: 13, fontWeight: '700', flex: 1 },
+  rewardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  rewardText: { fontSize: 11, fontWeight: '800' },
 
   progressTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },

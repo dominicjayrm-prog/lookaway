@@ -249,6 +249,24 @@ export interface GameStore {
   completedScores: number[];
   currentLevel: Level | null; gameState: GameState; currentSceneIndex: number; currentQuestionIndex: number;
   answers: Answer[]; selectedOption: number | null; revealedCorrect: number | null; score: number;
+  // ── Transient gameplay counters used by the weekly challenge system ──
+  /** Power-ups used DURING the current level. Reset in `startLevel`,
+   *  bumped by `usePowerUp`. Read by result.tsx when recording a level
+   *  completion so challenges like flawless_3 / no_powerups_10 can
+   *  distinguish "used zero" from "used at least one". */
+  levelPowerUpsUsed: number;
+  /** Timestamp (ms) the current question was presented. Set whenever we
+   *  transition to QUESTION state. Used to compute response time on
+   *  `revealAnswer` for the speed_accuracy_10 weekly challenge. */
+  currentQuestionStartedAt: number;
+  /** How many levels the player has completed this session. Reset when
+   *  the app is backgrounded for > SESSION_RESET_MS or when the user
+   *  manually closes the app. Read by the weekly tracker for
+   *  endurance_8. */
+  sessionLevelCount: number;
+  /** Wall-clock of the last time the session counter was touched; used
+   *  to decide whether to reset it on app foreground. */
+  sessionLastTouchedAt: number;
   _hydrated: boolean;
 
   // Cosmetics
@@ -312,6 +330,13 @@ export interface GameStore {
   nextScene: () => void;
   completeLevel: () => void;
   resetGame: () => void;
+  /** Increment the "levels cleared this continuous session" counter
+   *  used by the endurance_8 weekly challenge. Called from result.tsx
+   *  on a successful level complete. */
+  bumpSessionLevelCount: () => void;
+  /** Reset the session counter — called from the root layout when the
+   *  app returns to foreground after being backgrounded for too long. */
+  resetSessionLevelCount: () => void;
 }
 
 export const LIFE_REGEN_MS = LIVES_CONFIG.regenTimeMinutes * 60 * 1000;
@@ -344,6 +369,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     selectedOption: null,
     revealedCorrect: null,
     score: 0,
+    levelPowerUpsUsed: 0,
+    currentQuestionStartedAt: Date.now(),
+    sessionLevelCount: 0,
+    sessionLastTouchedAt: Date.now(),
     _authUserId: null,
     _hydrated: false,
 
@@ -451,6 +480,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (count <= 0) return false;
       set((s) => ({
         powerUps: { ...s.powerUps, [id]: (s.powerUps[id as keyof PowerUpInventory] ?? 0) - 1 },
+        // Bump the per-level counter so we can tell "used zero" from
+        // "used at least one" when recording weekly challenge progress.
+        levelPowerUpsUsed: s.levelPowerUpsUsed + 1,
       }));
       setTimeout(() => saveState(get()), 0);
       logEconomyEvent(getUserId(), ECONOMY_EVENTS.POWERUP_USED, -1, { powerUp: id, levelId: get().currentLevel?.id });
@@ -679,13 +711,90 @@ export const useGameStore = create<GameStore>((set, get) => {
       });
       setTimeout(() => saveState(get()), 0);
     },
-    startLevel: (level) => set({ currentLevel: level, gameState: 'MEMORISE' as GameState, currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
-    setGameState: (gameState) => set({ gameState }),
+    startLevel: (level) => {
+      // Reset transient gameplay counters. The session counter is NOT
+      // reset here — it accumulates across levels until the app is
+      // backgrounded for long enough (handled elsewhere).
+      set({
+        currentLevel: level,
+        gameState: 'MEMORISE' as GameState,
+        currentSceneIndex: 0,
+        currentQuestionIndex: 0,
+        answers: [],
+        selectedOption: null,
+        revealedCorrect: null,
+        score: 0,
+        levelPowerUpsUsed: 0,
+        currentQuestionStartedAt: Date.now(),
+      });
+    },
+    setGameState: (gameState) => {
+      // When the gameplay state machine transitions into QUESTION we
+      // stamp the start time so the weekly challenge tracker can tell
+      // whether an answer came in under 2 seconds.
+      if (gameState === 'QUESTION') {
+        set({ gameState, currentQuestionStartedAt: Date.now() });
+      } else {
+        set({ gameState });
+      }
+    },
     selectOption: (index) => set({ selectedOption: index }),
-    revealAnswer: () => { const { currentLevel, currentSceneIndex, currentQuestionIndex, selectedOption, answers } = get(); if (!currentLevel) return; const scene = currentLevel.scenes[currentSceneIndex]; if (!scene || currentQuestionIndex >= scene.questions.length) return; const q = scene.questions[currentQuestionIndex]; set({ revealedCorrect: q.correctIndex, answers: [...answers, { questionId: q.id, selectedIndex: selectedOption, correctIndex: q.correctIndex, isCorrect: selectedOption !== null && selectedOption === q.correctIndex }], gameState: 'REVEAL' }); },
-    nextQuestion: () => { const { currentLevel, currentSceneIndex, currentQuestionIndex } = get(); if (!currentLevel) return; const scene = currentLevel.scenes[currentSceneIndex]; if (!scene) return; const nq = currentQuestionIndex + 1; if (nq < scene.questions.length) { set({ currentQuestionIndex: nq, selectedOption: null, revealedCorrect: null, gameState: 'QUESTION' }); } else { const ns = currentSceneIndex + 1; if (ns < currentLevel.scenes.length) set({ gameState: 'SCENE_SCORE', selectedOption: null, revealedCorrect: null }); else get().completeLevel(); } },
-    nextScene: () => { const { currentSceneIndex } = get(); set({ currentSceneIndex: currentSceneIndex + 1, currentQuestionIndex: 0, selectedOption: null, revealedCorrect: null, gameState: 'MEMORISE' }); },
+    revealAnswer: () => {
+      const { currentLevel, currentSceneIndex, currentQuestionIndex, selectedOption, answers, currentQuestionStartedAt } = get();
+      if (!currentLevel) return;
+      const scene = currentLevel.scenes[currentSceneIndex];
+      if (!scene || currentQuestionIndex >= scene.questions.length) return;
+      const q = scene.questions[currentQuestionIndex];
+      const isCorrect = selectedOption !== null && selectedOption === q.correctIndex;
+      const responseTimeMs = Date.now() - currentQuestionStartedAt;
+      set({
+        revealedCorrect: q.correctIndex,
+        answers: [...answers, { questionId: q.id, selectedIndex: selectedOption, correctIndex: q.correctIndex, isCorrect }],
+        gameState: 'REVEAL',
+      });
+      // Fire-and-forget weekly challenge tracking. Any completion toast
+      // is surfaced by the result screen when the level finishes.
+      import('@/src/utils/weeklyChallenges')
+        .then((m) => m.recordQuestionAnsweredForChallenges(isCorrect, responseTimeMs))
+        .catch(() => {});
+    },
+    nextQuestion: () => {
+      const { currentLevel, currentSceneIndex, currentQuestionIndex } = get();
+      if (!currentLevel) return;
+      const scene = currentLevel.scenes[currentSceneIndex];
+      if (!scene) return;
+      const nq = currentQuestionIndex + 1;
+      if (nq < scene.questions.length) {
+        set({ currentQuestionIndex: nq, selectedOption: null, revealedCorrect: null, gameState: 'QUESTION', currentQuestionStartedAt: Date.now() });
+      } else {
+        const ns = currentSceneIndex + 1;
+        if (ns < currentLevel.scenes.length) set({ gameState: 'SCENE_SCORE', selectedOption: null, revealedCorrect: null });
+        else get().completeLevel();
+      }
+    },
+    nextScene: () => {
+      const { currentSceneIndex } = get();
+      set({ currentSceneIndex: currentSceneIndex + 1, currentQuestionIndex: 0, selectedOption: null, revealedCorrect: null, gameState: 'MEMORISE' });
+    },
     completeLevel: () => { const { answers, currentLevel } = get(); if (!currentLevel) return; const t = answers.length; const c = answers.filter((a) => a.isCorrect).length; const pct = t > 0 ? Math.round((c / t) * 100) : 0; set({ score: pct, gameState: pct >= currentLevel.requiredScore ? 'COMPLETE' : 'FAILED' }); },
-    resetGame: () => set({ currentLevel: null, gameState: 'READY', currentSceneIndex: 0, currentQuestionIndex: 0, answers: [], selectedOption: null, revealedCorrect: null, score: 0 }),
+    resetGame: () => set({
+      currentLevel: null,
+      gameState: 'READY',
+      currentSceneIndex: 0,
+      currentQuestionIndex: 0,
+      answers: [],
+      selectedOption: null,
+      revealedCorrect: null,
+      score: 0,
+      levelPowerUpsUsed: 0,
+    }),
+    bumpSessionLevelCount: () => set((s) => ({
+      sessionLevelCount: s.sessionLevelCount + 1,
+      sessionLastTouchedAt: Date.now(),
+    })),
+    resetSessionLevelCount: () => set({
+      sessionLevelCount: 0,
+      sessionLastTouchedAt: Date.now(),
+    }),
   };
 });
