@@ -234,6 +234,21 @@ export async function notifyChallengeReceived(
   );
 }
 
+/** Notify a challenger that the addressee declined their challenge.
+ *  The friends tab surfaces this as an in-app toast/popup using the
+ *  notification row — there's no push needed for a decline. */
+export async function notifyChallengeDeclined(
+  challengerId: string,
+  declinerUsername: string,
+): Promise<void> {
+  await notifyUser(
+    challengerId,
+    `${declinerUsername} declined your challenge`,
+    'Maybe another time!',
+    { type: 'friend_challenge_declined', declinerUsername },
+  );
+}
+
 /** Notify the challenger when their opponent completes the challenge */
 export async function notifyChallengeResult(
   challengerId: string,
