@@ -18,6 +18,7 @@ import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
+import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 
 const GEM = '\u{1F48E}';
 
@@ -633,9 +634,9 @@ function ShopTab() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
         <View style={styles.gemPackRow}>
           {[
-            { id: 'gems_100', gems: 100, price: '\u00A30.99', badge: null },
-            { id: 'gems_500', gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
-            { id: 'gems_1200', gems: 1200, price: '\u00A37.99', badge: null },
+            { id: IAP_PRODUCT_IDS.GEMS_100, gems: 100, price: '\u00A30.99', badge: null },
+            { id: IAP_PRODUCT_IDS.GEMS_500, gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
+            { id: IAP_PRODUCT_IDS.GEMS_1200, gems: 1200, price: '\u00A37.99', badge: null },
           ].map((pack) => (
             <Pressable
               key={pack.id}
