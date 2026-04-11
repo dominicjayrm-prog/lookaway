@@ -20,6 +20,19 @@ import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 
+/**
+ * Dev-only escape hatch for capturing the starter pack popup as an
+ * App Store Connect IAP review screenshot. When true, the popup opens
+ * automatically as soon as the shop tab mounts — no need to actually
+ * complete World 1 or wait for the 24h window.
+ *
+ * ⚠️  SET BACK TO `false` BEFORE SHIPPING. Leaving this on would
+ * surface the popup to every real user on every shop tab open,
+ * which would be incredibly annoying and make the starter pack feel
+ * spammy. This flag exists purely for one-off asset capture.
+ */
+const FORCE_STARTER_PACK_SCREENSHOT = true;
+
 const GEM = '\u{1F48E}';
 
 /**
@@ -106,6 +119,15 @@ function ShopTab() {
   // hint stays in sync with AsyncStorage across cold starts.
   useEffect(() => {
     getRemainingAdWatches().then(setAdWatchesLeft).catch(() => setAdWatchesLeft(5));
+  }, []);
+
+  // DEV ONLY — force the starter pack popup open for screenshot
+  // capture. Gated behind FORCE_STARTER_PACK_SCREENSHOT at the top
+  // of the file. MUST be flipped back to false before shipping.
+  useEffect(() => {
+    if (FORCE_STARTER_PACK_SCREENSHOT) {
+      setShowStarterPack(true);
+    }
   }, []);
 
   // Check if starter pack is within its 24hr window
