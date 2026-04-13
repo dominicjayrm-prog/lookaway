@@ -135,7 +135,7 @@ function ResultScreen() {
       setImproved(didImprove);
       const earned = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
-      if (earned > 0) setTimeout(() => sounds.play('gemClink'), 1400);
+      // Gem sound deferred to home/map screen for smoother feel
       if (stars > 0) addStars(stars);
       incrementStreak();
 
@@ -245,9 +245,9 @@ function ResultScreen() {
 
   // ── Navigation handlers ──
   const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
-  const handleNextWorld = () => { resetGame(); if (nextWorldId) router.replace(`/world/${nextWorldId}`); };
-  const handleBackToMap = () => { resetGame(); router.replace(`/world/${worldId}`); };
-  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else router.replace(`/world/${worldId}`); };
+  const handleNextWorld = () => { resetGame(); router.dismissAll(); router.push(`/world/${nextWorldId}`); };
+  const handleBackToMap = () => { resetGame(); router.dismissAll(); router.push(`/world/${worldId}`); };
+  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else { router.dismissAll(); router.push(`/world/${worldId}`); } };
 
   let gemText: string | null = null;
   if (passed && gemsEarned > 0) {

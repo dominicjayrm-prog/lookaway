@@ -4,19 +4,20 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 
 interface MobileContainerProps {
   children: React.ReactNode;
+  onLayout?: () => void;
 }
 
-const MobileContainerComponent: React.FC<MobileContainerProps> = ({ children }) => {
+const MobileContainerComponent: React.FC<MobileContainerProps> = ({ children, onLayout }) => {
   const { colors } = useTheme();
 
   if (Platform.OS === 'web') {
     return (
-      <View style={[styles.webOuter, { backgroundColor: colors.surface }]}>
+      <View style={[styles.webOuter, { backgroundColor: colors.surface }]} onLayout={onLayout}>
         <View style={[styles.webInner, { backgroundColor: colors.bg }]}>{children}</View>
       </View>
     );
   }
-  return <View style={[styles.native, { backgroundColor: colors.bg }]}>{children}</View>;
+  return <View style={[styles.native, { backgroundColor: colors.bg }]} onLayout={onLayout}>{children}</View>;
 };
 
 const styles = StyleSheet.create({
