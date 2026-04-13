@@ -10,6 +10,7 @@ import {
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { borderRadius, spacing } from '@/src/theme/spacing';
+import { sounds } from '@/src/lib/sounds';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -42,6 +43,7 @@ export const Button = React.memo(function Button({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch {}
     }
+    sounds.play('tap');
     onPress();
   }, [onPress]);
 

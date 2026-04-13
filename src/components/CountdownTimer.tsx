@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { sounds } from '@/src/lib/sounds';
 
 interface CountdownTimerProps {
   duration: number; // total seconds
@@ -58,6 +59,14 @@ export const CountdownTimer = React.memo(function CountdownTimer({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, []);
 
+  const triggerWarningSound = useCallback(() => {
+    sounds.play('timerWarning');
+  }, []);
+
+  const triggerTickSound = useCallback(() => {
+    sounds.play('timerTick');
+  }, []);
+
   const triggerComplete = useCallback(() => {
     onComplete();
   }, [onComplete]);
@@ -68,9 +77,11 @@ export const CountdownTimer = React.memo(function CountdownTimer({
       if (previous !== null) {
         if (previous > 0.4 && current <= 0.4) {
           runOnJS(triggerHaptic)();
+          runOnJS(triggerWarningSound)();
         }
         if (previous > 0.15 && current <= 0.15) {
           runOnJS(triggerHaptic)();
+          runOnJS(triggerTickSound)();
         }
         if (previous > 0 && current <= 0) {
           runOnJS(triggerComplete)();

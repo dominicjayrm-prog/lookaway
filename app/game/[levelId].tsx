@@ -25,6 +25,7 @@ import StreakGlow from '@/src/components/StreakGlow';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { colors } from '@/src/theme/colors';
 import { typography } from '@/src/theme/typography';
+import { sounds } from '@/src/lib/sounds';
 import { spacing } from '@/src/theme/spacing';
 import type { Level } from '@/src/types/game';
 
@@ -144,7 +145,7 @@ function GameScreen() {
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
   const handleStart = useCallback(() => { if (level) startLevel(level); }, [level, startLevel]);
-  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 1200); }, [setGameState, clearTimeouts]);
+  const handleMemoriseComplete = useCallback(() => { sounds.play('whoosh'); setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 1200); }, [setGameState, clearTimeouts]);
 
   const handleSelectOption = useCallback((index: number) => {
     if (selectedOption !== null) return;
@@ -159,6 +160,7 @@ function GameScreen() {
       // recordQuestionAnsweredForChallenges, which also tracks fast
       // correct streaks for the speed_accuracy_10 skill challenge.
       setCorrectStreak(prev => (isCorrect ? prev + 1 : 0));
+      sounds.play(isCorrect ? 'correct' : 'wrong');
       if (!isWeb) {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -181,6 +183,7 @@ function GameScreen() {
     setUsedPowerUps(p => ({ ...p, slowTime: true }));
     setTimerBonus(3);
     setActivePowerUp('slowTime');
+    sounds.play('powerUp');
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp]);
 
@@ -193,6 +196,7 @@ function GameScreen() {
       setUsedPowerUps(p => ({ ...p, peek: true }));
       setShowPeekScene(true);
       setActivePowerUp('peek');
+      sounds.play('powerUp');
       if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       peekTimeout.current = setTimeout(() => setShowPeekScene(false), 2000);
     } else if (id === 'fiftyFifty' && currentQuestion) {
@@ -202,6 +206,7 @@ function GameScreen() {
       const wrong = currentQuestion.options.map((_, i) => i).filter(i => i !== currentQuestion.correctIndex);
       const shuffled = [...wrong].sort(() => Math.random() - 0.5);
       setHiddenOptions(shuffled.slice(0, 2));
+      sounds.play('powerUp');
       if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (id === 'skip' && currentQuestion) {
       usePowerUp('skip');

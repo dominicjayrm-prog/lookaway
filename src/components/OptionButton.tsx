@@ -10,6 +10,7 @@ import Animated, {
 import { Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { sounds } from '@/src/lib/sounds';
 import { typography } from '@/src/theme/typography';
 import { borderRadius, spacing } from '@/src/theme/spacing';
 
@@ -95,6 +96,7 @@ export const OptionButton = React.memo(function OptionButton({
 
   const handlePress = useCallback(() => {
     if (state === 'default') {
+      sounds.play('tap');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onPress();
