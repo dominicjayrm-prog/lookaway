@@ -1,6 +1,6 @@
 /**
  * SoundManager — singleton that preloads all app sounds on init and
- * exposes simple play() calls for each. Uses expo-av's Audio module.
+ * exposes simple play() calls for each. Uses expo-audio (SDK 55+).
  *
  * Web safety: all require() calls are wrapped in try-catch because
  * metro's web bundler sometimes fails to resolve .mp3 assets. If
@@ -10,7 +10,8 @@
  *
  * Native: works immediately, no restrictions.
  */
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 
 type SoundName =
   | 'tap'
@@ -46,7 +47,7 @@ function getSoundAssets(): Partial<Record<SoundName, any>> {
 }
 
 class SoundManager {
-  private loaded: Partial<Record<SoundName, Audio.Sound>> = {};
+  private loaded: Partial<Record<SoundName, AudioPlayer>> = {};
   private assets: Partial<Record<SoundName, any>> = {};
   private enabled = true;
   private initialised = false;
@@ -58,9 +59,9 @@ class SoundManager {
     this.assets = getSoundAssets();
 
     try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: false,
-        staysActiveInBackground: false,
+      await setAudioModeAsync({
+        playsInSilentMode: false,
+        shouldPlayInBackground: false,
         shouldDuckAndroid: true,
       });
     } catch {}
@@ -70,8 +71,9 @@ class SoundManager {
     await Promise.all(
       entries.map(async ([name, asset]) => {
         try {
-          const { sound } = await Audio.Sound.createAsync(asset, { volume: 0.6 });
-          this.loaded[name] = sound;
+          const player = createAudioPlayer(asset);
+          player.volume = 0.6;
+          this.loaded[name] = player;
         } catch {
           // Preload failed (common on web) — play() will try on-demand
         }
@@ -83,22 +85,23 @@ class SoundManager {
   play(name: SoundName): void {
     if (!this.enabled) return;
 
-    const sound = this.loaded[name];
-    if (sound) {
+    const player = this.loaded[name];
+    if (player) {
       // Preloaded — rewind + play
-      sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => {});
+      player.seekTo(0).then(() => player.play()).catch(() => {});
       return;
     }
 
     // Preload missed — try one-shot load + play as fallback
     const asset = this.assets[name];
     if (!asset) return;
-    Audio.Sound.createAsync(asset, { volume: 0.6, shouldPlay: true })
-      .then(({ sound: s }) => {
-        // Cache for next time
-        this.loaded[name] = s;
-      })
-      .catch(() => {});
+    try {
+      const p = createAudioPlayer(asset);
+      p.volume = 0.6;
+      p.play();
+      // Cache for next time
+      this.loaded[name] = p;
+    } catch {}
   }
 
   /** Enable/disable all sounds (user settings toggle). */
@@ -108,9 +111,9 @@ class SoundManager {
 
   /** Clean up on app teardown. */
   async unload(): Promise<void> {
-    await Promise.all(
-      Object.values(this.loaded).map((s) => s?.unloadAsync().catch(() => {})),
-    );
+    for (const player of Object.values(this.loaded)) {
+      try { player?.remove(); } catch {}
+    }
     this.loaded = {};
     this.initialised = false;
   }
