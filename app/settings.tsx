@@ -9,6 +9,8 @@ import { Button } from '@/src/components/Button';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import {
@@ -168,6 +170,77 @@ function SettingsScreen() {
             <Text style={[styles.rowLabel, { color: colors.text }]}>Version</Text>
             <Text style={[styles.rowValue, { color: colors.textMid }]}>1.0.0</Text>
           </View>
+        </Card>
+
+        {/* Delete account - required by Apple guideline 5.1.1(v) */}
+        <Text style={[styles.sectionLabel, { color: colors.textMid, marginTop: 24 }]}>DANGER ZONE</Text>
+        <Card style={{ ...styles.card, borderColor: colors.wrong + '20', borderWidth: 1 } as any}>
+          <Pressable
+            style={styles.row}
+            onPress={() => {
+              Alert.alert(
+                'Delete your account?',
+                'This will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete permanently',
+                    style: 'destructive',
+                    onPress: () => {
+                      // Second confirmation for safety
+                      Alert.alert(
+                        'Are you absolutely sure?',
+                        'All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Yes, delete everything',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                const userId = user?.id;
+                                if (!userId) return;
+
+                                // Delete all user data from Supabase tables
+                                await supabase.from('user_progress').delete().eq('user_id', userId);
+                                await supabase.from('friend_challenges').delete().or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`);
+                                await supabase.from('friendships').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+                                await supabase.from('economy_events').delete().eq('user_id', userId);
+                                await supabase.from('daily_results').delete().eq('user_id', userId);
+                                await supabase.from('profiles').delete().eq('id', userId);
+
+                                // Clear all local storage
+                                try {
+                                  if (typeof localStorage !== 'undefined') {
+                                    localStorage.clear();
+                                  }
+                                } catch {}
+
+                                // Sign out (which also clears the Supabase session)
+                                await supabase.auth.signOut();
+
+                                log.breadcrumb('auth', 'account deleted', { userId });
+                                router.replace('/(auth)/login');
+                              } catch (e) {
+                                log.error('settings', 'account deletion failed', e);
+                                Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
+                              }
+                            },
+                          },
+                        ],
+                      );
+                    },
+                  },
+                ],
+              );
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.wrong} style={{ marginRight: 8 }} />
+            <Text style={[styles.rowLabel, { color: colors.wrong, flex: 1 }]}>Delete account</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.wrong + '60'} />
+          </Pressable>
         </Card>
       </ScrollView>
 
