@@ -23,6 +23,7 @@ import { AchievementToast } from '@/src/components/AchievementToast';
 import { useCelebrations } from '@/src/hooks/useCelebrations';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+import { maybeShowInterstitial } from '@/src/utils/adService';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -158,6 +159,13 @@ function ResultScreen() {
 
       celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout, worldId);
       cancelStreakReminder();
+
+      // Interstitial ad after every 3rd completed level. Delayed so
+      // it doesn't stomp on the star animation + gem reward. The
+      // counter inside maybeShowInterstitial tracks how many levels
+      // have passed since the last ad; it respects adsRemoved and
+      // subscriber status internally.
+      safeTimeout(() => { maybeShowInterstitial(); }, 2500);
     } else {
       celeb.triggerFailCelebrations(safeTimeout);
       // Level failed — reset the no_life_loss consecutive streak on the

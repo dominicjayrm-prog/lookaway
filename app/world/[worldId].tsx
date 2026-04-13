@@ -10,6 +10,7 @@ import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL_COUNTS, getMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
 import { fetchWorldLevels } from '@/src/data/levels';
 import type { Level } from '@/src/types/game';
+import { BannerAdView } from '@/src/components/BannerAdView';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -305,6 +306,9 @@ function WorldMapScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Banner ad — above the bottom bar, per CLAUDE.md placement rules */}
+      <BannerAdView />
 
       {/* ── BOTTOM BAR ── */}
       <RNAnimated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.bg, opacity: bottomAnim, transform: [{ translateY: bottomAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }]}>

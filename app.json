@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.blanked.app",
       "usesAppleSignIn": true,
-      "associatedDomains": ["applinks:blanked.app"],
+      "associatedDomains": [
+        "applinks:blanked.app"
+      ],
       "infoPlist": {
         "NSCameraUsageDescription": "Scan a friend's QR code to add them to your friends list instantly."
       }
@@ -33,7 +35,14 @@
           "cameraPermission": "Scan a friend's QR code to add them to your friends list instantly."
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingUsageDescription": "This identifier will be used to show you personalised ads."
+        }
+      ]
     ]
   }
 }
