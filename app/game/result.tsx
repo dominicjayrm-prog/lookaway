@@ -27,7 +27,7 @@ import { maybeShowInterstitial } from '@/src/utils/adService';
 import { ModeUnlockCelebration } from '@/src/components/ModeUnlockCelebration';
 import { checkModeUnlock } from '@/src/data/modeUnlocks';
 import { getMilestonesForLevel, type MilestoneReward } from '@/src/data/milestoneRewards';
-import { MilestoneUnlockToast } from '@/src/components/MilestoneUnlockToast';
+import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -373,10 +373,11 @@ function ResultScreen() {
       />
       {celeb.showMilestone && <LevelMilestone levelCount={Object.keys(levelProgress).length} onDone={() => celeb.setShowMilestone(false)} />}
       <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
-      <MilestoneUnlockToast
+      <MilestoneGiftCelebration
         visible={!!milestoneToast}
+        itemId={milestoneToast?.itemId ?? ''}
         itemName={milestoneToast?.itemName ?? ''}
-        rarity={milestoneToast ? 'rare' : 'common'}
+        rarity={'rare'}
         category={milestoneToast?.category ?? 'expression'}
         onDismiss={() => setMilestoneToast(null)}
       />

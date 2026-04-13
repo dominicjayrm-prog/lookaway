@@ -626,11 +626,11 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
       <>
         {eyes({ pc: '#FFD600', pr: s * 0.05 })}
         {bigSmile()}
-        {/* Lightning bolts */}
-        <Path d={`M${cx - s * 0.28},${cy - s * 0.2} L${cx - s * 0.24},${cy - s * 0.1} L${cx - s * 0.3},${cy - s * 0.1} L${cx - s * 0.24},${cy + s * 0.02}`} fill="none" stroke="#FFD600" strokeWidth={sw(1.2, 0.02)} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d={`M${cx + s * 0.24},${cy - s * 0.22} L${cx + s * 0.28},${cy - s * 0.12} L${cx + s * 0.22},${cy - s * 0.12} L${cx + s * 0.28},${cy}`} fill="none" stroke="#FFD600" strokeWidth={sw(1.2, 0.02)} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d={`M${cx - s * 0.04},${cy - s * 0.36} L${cx},${cy - s * 0.28} L${cx - s * 0.05},${cy - s * 0.28} L${cx + s * 0.02},${cy - s * 0.2}`} fill="none" stroke="#FFD600" strokeWidth={sw(1, 0.018)} strokeLinecap="round" strokeLinejoin="round" />
-        <Circle cx={cx} cy={cy - s * 0.38} r={s * 0.03} fill="#FFD600" opacity={0.15} />
+        {/* Small zigzag lightning sparks on both sides of head */}
+        <Path d={`M${cx - s * 0.26},${cy - s * 0.18} l${s * 0.03},${s * 0.04} l${-s * 0.025},${s * 0.03} l${s * 0.03},${s * 0.04}`} fill="none" stroke="#FFD600" strokeWidth={sw(1.5, 0.022)} strokeLinecap="round" strokeLinejoin="round" />
+        <Path d={`M${cx + s * 0.23},${cy - s * 0.2} l${s * 0.03},${s * 0.04} l${-s * 0.025},${s * 0.03} l${s * 0.03},${s * 0.04}`} fill="none" stroke="#FFD600" strokeWidth={sw(1.5, 0.022)} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Top spark */}
+        <Path d={`M${cx - s * 0.02},${cy - s * 0.34} l${s * 0.02},${s * 0.03} l${-s * 0.015},${s * 0.02} l${s * 0.02},${s * 0.03}`} fill="none" stroke="#FFD600" strokeWidth={sw(1.2, 0.018)} strokeLinecap="round" strokeLinejoin="round" />
       </>
     ),
 
@@ -714,9 +714,6 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
           width={s * 0.045} height={s * 0.018} rx={s * 0.005}
           fill="rgba(255,255,255,0.18)"
         />
-        {/* Gold pupils behind the semi-transparent dark lenses */}
-        <Circle cx={cx - s * 0.11} cy={cy - s * 0.045} r={s * 0.022} fill={C.gold} />
-        <Circle cx={cx + s * 0.11} cy={cy - s * 0.045} r={s * 0.022} fill={C.gold} />
         {/* Confident smile — slightly wider than default */}
         <Path
           d={`M${cx - s * 0.07},${cy + s * 0.1} Q${cx},${cy + s * 0.16} ${cx + s * 0.07},${cy + s * 0.1}`}

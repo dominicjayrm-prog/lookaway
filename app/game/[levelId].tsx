@@ -163,12 +163,12 @@ function GameScreen() {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800);
+      revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 800);
     }, 300);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 800); }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 800); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   const handleNextScene = useCallback(() => { setHiddenOptions([]); nextScene(); }, [nextScene]);
