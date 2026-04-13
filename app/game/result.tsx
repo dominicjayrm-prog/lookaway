@@ -24,6 +24,8 @@ import { useCelebrations } from '@/src/hooks/useCelebrations';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { maybeShowInterstitial } from '@/src/utils/adService';
+import { ModeUnlockCelebration } from '@/src/components/ModeUnlockCelebration';
+import { checkModeUnlock } from '@/src/data/modeUnlocks';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -94,6 +96,7 @@ function ResultScreen() {
   const [processed, setProcessed] = useState(false);
 
   const celeb = useCelebrations();
+  const [modeUnlockId, setModeUnlockId] = useState<string | null>(null);
 
   const parsed = level ? parseLevelId(level.id) : null;
   const worldId = parsed?.worldId ?? 1;
@@ -159,6 +162,35 @@ function ResultScreen() {
 
       celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout, worldId);
       cancelStreakReminder();
+
+      // Mode unlock check — fires when completing a qualifying world.
+      // Classic levels use 'classic' as the mode identifier.
+      if (isLastLevelOfWorld && !isReplay) {
+        // Currently unlocked modes = all side campaign keys the player
+        // has accessed (tracked via AsyncStorage in the Journey tab).
+        // For now, use a simple check: if the mode data file exists in
+        // the level cache for a mode, it's been unlocked.
+        // TODO: migrate to a proper unlocked_modes field in gameStore.
+        const alreadyUnlocked: string[] = [];
+        try {
+          const stored = typeof localStorage !== 'undefined'
+            ? localStorage.getItem('blanked_unlocked_modes')
+            : null;
+          if (stored) alreadyUnlocked.push(...JSON.parse(stored));
+        } catch {}
+        const newMode = checkModeUnlock('classic', worldId, alreadyUnlocked);
+        if (newMode) {
+          // Persist the unlock so it doesn't re-trigger
+          try {
+            const updated = [...alreadyUnlocked, newMode];
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('blanked_unlocked_modes', JSON.stringify(updated));
+            }
+          } catch {}
+          // Show the celebration after other celebrations have had time
+          safeTimeout(() => setModeUnlockId(newMode), 3500);
+        }
+      }
 
       // Interstitial ad — fires after every 5th completed level OR
       // on world completion, with guardrails: first 5 levels are
@@ -323,6 +355,13 @@ function ResultScreen() {
       />
       {celeb.showMilestone && <LevelMilestone levelCount={Object.keys(levelProgress).length} onDone={() => celeb.setShowMilestone(false)} />}
       <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
+      {modeUnlockId && (
+        <ModeUnlockCelebration
+          visible={!!modeUnlockId}
+          modeId={modeUnlockId}
+          onDismiss={() => setModeUnlockId(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
