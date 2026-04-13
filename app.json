@@ -35,7 +35,22 @@
           "cameraPermission": "Scan a friend's QR code to add them to your friends list instantly."
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-9228812020612351~2660968331",
+          "userTrackingUsageDescription": "This identifier will be used to show you personalised ads."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ]
   }
 }
