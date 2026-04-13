@@ -1070,3 +1070,61 @@ export function getMastermindLevel(levelNum: number): MastermindLevel | null {
   if (levelNum === 999) return DUMMY_3_STAGE;
   return LEVELS[levelNum] ?? null;
 }
+
+/**
+ * Convert a Mastermind level into the standard Level format used by
+ * the existing [levelId].tsx game screen. This lets W6 levels reuse
+ * ALL existing infrastructure: timer, power-ups, X button, question
+ * card styling, result screen, gameStore integration.
+ *
+ * The conversion creates a single Scene whose viewTime is the total
+ * stage viewing time. The objects come from Stage 1 (the initial
+ * state the player sees first). Questions are adapted from the
+ * Mastermind format to the standard Question format.
+ *
+ * Multi-stage display (cycling through stages during MEMORISE) is
+ * handled by [levelId].tsx detecting w6 levels and rendering the
+ * stage indicator + stage cycling locally.
+ */
+export function mastermindToStandardLevel(levelNum: number): import('@/src/types/game').Level | null {
+  const mm = getMastermindLevel(levelNum);
+  if (!mm) return null;
+
+  // Total viewing time = all stages + transition gaps
+  const totalViewTime = mm.stageCount * mm.secondsPerStage + (mm.stageCount - 1) * 0.5;
+
+  // Convert Stage 1 shapes to SceneObjects
+  const objects: import('@/src/types/game').SceneObject[] = mm.stages[0]?.shapes.map((s) => ({
+    id: s.id,
+    type: s.type,
+    color: s.colour,
+    x: s.position.x,
+    y: s.position.y,
+    size: 32,
+  })) ?? [];
+
+  // Convert questions to standard format
+  const questions: import('@/src/types/game').Question[] = mm.questions.map((q, i) => ({
+    id: `w6-l${levelNum}-q${i + 1}`,
+    text: q.targetStage ? `[Stage ${q.targetStage}] ${q.text}` : q.text,
+    options: (q.options.length === 4 ? q.options : [...q.options, '', '', '', ''].slice(0, 4)) as [string, string, string, string],
+    correctIndex: q.correctIndex as 0 | 1 | 2 | 3,
+    category: 'detail' as const,
+    timeLimit: 8,
+  }));
+
+  return {
+    id: `w6-l${levelNum}`,
+    worldId: 6,
+    levelNumber: levelNum,
+    title: `Mastermind ${levelNum}`,
+    scenes: [{
+      id: `w6-l${levelNum}-s1`,
+      viewTime: totalViewTime,
+      objects,
+      questions,
+    }],
+    requiredScore: 60,
+    parScore: 100,
+  };
+}

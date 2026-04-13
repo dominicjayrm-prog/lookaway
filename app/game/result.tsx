@@ -26,6 +26,8 @@ import { spacing } from '@/src/theme/spacing';
 import { maybeShowInterstitial } from '@/src/utils/adService';
 import { ModeUnlockCelebration } from '@/src/components/ModeUnlockCelebration';
 import { checkModeUnlock } from '@/src/data/modeUnlocks';
+import { getMilestonesForLevel, type MilestoneReward } from '@/src/data/milestoneRewards';
+import { MilestoneUnlockToast } from '@/src/components/MilestoneUnlockToast';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -97,6 +99,7 @@ function ResultScreen() {
 
   const celeb = useCelebrations();
   const [modeUnlockId, setModeUnlockId] = useState<string | null>(null);
+  const [milestoneToast, setMilestoneToast] = useState<MilestoneReward | null>(null);
 
   const parsed = level ? parseLevelId(level.id) : null;
   const worldId = parsed?.worldId ?? 1;
@@ -128,6 +131,21 @@ function ResultScreen() {
       setGemsEarned(earned);
       if (stars > 0) addStars(stars);
       incrementStreak();
+
+      // Milestone cosmetic check — fires for Classic mode levels
+      if (!isReplay) {
+        const milestones = getMilestonesForLevel(worldId, levelNum);
+        const store = useGameStore.getState();
+        for (const ms of milestones) {
+          if (!store.ownedCosmetics.includes(ms.itemId)) {
+            // Don't toast for Mastermind legendary — it has its own celebration
+            if (ms.itemId === 'expr_mastermind') continue;
+            store.unlockCosmetic(ms.itemId);
+            safeTimeout(() => setMilestoneToast(ms), 2000);
+            break; // One toast at a time
+          }
+        }
+      }
 
       // Bump the in-memory session counter BEFORE handing off to the
       // weekly tracker, so `endurance_8` can see the updated value.
@@ -355,6 +373,13 @@ function ResultScreen() {
       />
       {celeb.showMilestone && <LevelMilestone levelCount={Object.keys(levelProgress).length} onDone={() => celeb.setShowMilestone(false)} />}
       <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
+      <MilestoneUnlockToast
+        visible={!!milestoneToast}
+        itemName={milestoneToast?.itemName ?? ''}
+        rarity={milestoneToast ? 'rare' : 'common'}
+        category={milestoneToast?.category ?? 'expression'}
+        onDismiss={() => setMilestoneToast(null)}
+      />
       {modeUnlockId && (
         <ModeUnlockCelebration
           visible={!!modeUnlockId}

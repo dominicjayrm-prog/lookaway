@@ -11,6 +11,8 @@ import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL
 import { fetchWorldLevels } from '@/src/data/levels';
 import type { Level } from '@/src/types/game';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getMilestonesForWorld, type MilestoneReward } from '@/src/data/milestoneRewards';
+import { GiftIcon } from '@/src/components/GiftIcon';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -110,6 +112,8 @@ function WorldMapScreen() {
   }, [levelProgress, worldId, totalLevels]);
 
   const [popup, setPopup] = useState<number | null>(null);
+  const worldMilestones = useMemo(() => getMilestonesForWorld(worldId), [worldId]);
+  const ownedCosmetics = useGameStore((s) => s.ownedCosmetics);
   const [levelTitles, setLevelTitles] = useState<Record<number, string>>({});
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -294,6 +298,23 @@ function WorldMapScreen() {
               )}
               {/* PLAY label for current */}
               {state === 'current' && <Text style={[styles.playLabel, { color: worldColor }]}>PLAY</Text>}
+              {/* Gift icon for milestone levels */}
+              {(() => {
+                const milestone = worldMilestones.find((m) => m.level === levelNum);
+                if (!milestone) return null;
+                const earned = ownedCosmetics.includes(milestone.itemId);
+                return (
+                  <View style={styles.giftIconWrap}>
+                    {earned ? (
+                      <View style={styles.giftEarned}>
+                        <Text style={{ fontSize: 8, color: '#00B894', fontWeight: '800' }}>{'\u2713'}</Text>
+                      </View>
+                    ) : (
+                      <GiftIcon size={16} />
+                    )}
+                  </View>
+                );
+              })()}
             </Pressable>
             </RNAnimated.View>
           );
@@ -542,6 +563,8 @@ const styles = StyleSheet.create({
   lockedNum: { fontSize: 14, fontWeight: '700', color: '#B2BEC3' },
   starsRow: { flexDirection: 'row', gap: 2, marginTop: 3 },
   playLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
+  giftIconWrap: { position: 'absolute', right: -6, top: -4 },
+  giftEarned: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(0,184,148,0.15)', alignItems: 'center', justifyContent: 'center' },
   // Checkpoint
   checkpointBadge: { position: 'absolute', top: -22, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
   checkpointText: { fontSize: 8, fontWeight: '700', letterSpacing: 1 },
