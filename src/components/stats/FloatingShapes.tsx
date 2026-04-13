@@ -3,11 +3,11 @@
  * Memory Analytics screen with subtle atmospheric motion.
  *
  * Performance notes:
- *   - A single shared `clock` value drives all 40 shapes.
- *   - Each shape's `useAnimatedStyle` reads `clock.value` and computes its
+ *  - A single shared `clock` value drives all 40 shapes.
+ *  - Each shape's `useAnimatedStyle` reads `clock.value` and computes its
  *     drift on the UI thread, so the whole field runs at 60fps without
  *     crossing the JS bridge every frame.
- *   - Shapes are generated once (memoised on `seed`) so their phases,
+ *  - Shapes are generated once (memoised on `seed`) so their phases,
  *     colours and positions are stable across re-renders.
  */
 import React, { useMemo, useEffect } from 'react';

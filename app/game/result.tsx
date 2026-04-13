@@ -262,7 +262,7 @@ function ResultScreen() {
             <Text style={[st.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
             <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>90%+ = 3 stars · 70%+ = 2 stars · 50%+ = pass</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
-            {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>Already completed {'\u2014'} improve your stars to earn more gems!</Text>}
+            {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>Already completed, improve your stars to earn more gems!</Text>}
             {isLastLevelOfWorld && (
               <View style={st.worldCompleteBanner}>
                 <Text style={st.worldCompleteEmoji}>{PARTY}</Text>
@@ -311,7 +311,7 @@ function ResultScreen() {
         visible={!!challengeToast}
         tone="success"
         title={`${challengeToast?.icon ?? '\u{1F3C6}'} Challenge complete!`}
-        subtitle={challengeToast ? `${challengeToast.title} \u2014 +${challengeToast.gems} gems` : undefined}
+        subtitle={challengeToast ? `${challengeToast.title} - +${challengeToast.gems} gems` : undefined}
         onDismiss={() => setChallengeToast(null)}
       />
 

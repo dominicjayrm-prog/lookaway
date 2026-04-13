@@ -1,10 +1,10 @@
 /**
  * FriendQRSheet — full-screen modal that shows the player's own QR code
  * so a nearby friend can scan it. Reads:
- *   - userId from `useAuth()`
- *   - equipped Blink expression from the game store (so the mascot in
+ *  - userId from `useAuth()`
+ *  - equipped Blink expression from the game store (so the mascot in
  *     the centre of the QR reflects the player's customisation)
- *   - username from the `profiles` table (displayed under the QR)
+ *  - username from the `profiles` table (displayed under the QR)
  *
  * Slide-up animation matches the SubscriptionPaywall modal pattern so
  * the feel is consistent with the rest of the app.
@@ -85,7 +85,7 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
     if (!userId) return;
     try {
       await Share.share({
-        message: `Add me on Blanked — ${buildInviteUrl(userId)}`,
+        message: `Add me on Blanked! ${buildInviteUrl(userId)}`,
       });
     } catch {}
   };

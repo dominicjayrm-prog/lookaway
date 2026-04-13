@@ -4,9 +4,9 @@
  * The spec calls for per-question response time and per-question-type accuracy,
  * neither of which the game currently stores. Until that tracking exists, we
  * approximate each stat from what IS available in the store:
- *   - levelProgress (per-level stars, bestScore, attempts)
- *   - completedScores (rolling list of the last ~500 level scores)
- *   - bestStreak, daysPlayed, totalStars, highestWorld
+ *  - levelProgress (per-level stars, bestScore, attempts)
+ *  - completedScores (rolling list of the last ~500 level scores)
+ *  - bestStreak, daysPlayed, totalStars, highestWorld
  *
  * Level IDs follow these prefixes (see `app/world/side-world.tsx`):
  *   Classic        → `w{1..6}-l{N}`

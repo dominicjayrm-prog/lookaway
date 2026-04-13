@@ -28,7 +28,7 @@ export const MODE_UNLOCK_DATA: Record<string, ModeUnlockInfo> = {
     color: '#FF6B6B',
     letter: 'S',
     tagline: 'A new way to train',
-    description: 'Remember exact positions, then tap where each shape was. Think fast \u2014 the clock is ticking.',
+    description: 'Remember exact positions, then tap where each shape was. Think fast - the clock is ticking.',
     trains: ['Position memory', 'Reaction speed', 'Spatial precision'],
     stat: 'Players who add Speed Recall improve 23% faster',
     worlds: 3,

@@ -193,7 +193,7 @@ function ProfileScreen() {
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30', shadowColor: division.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
-              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` — ${toNext} to next` : ''}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` - ${toNext} to next` : ''}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
 
@@ -310,7 +310,7 @@ function ProfileScreen() {
                     {(() => {
                       const p = useGameStore.getState().powerUps;
                       const total = (p.slowTime ?? 0) + (p.peek ?? 0) + (p.fiftyFifty ?? 0) + (p.skip ?? 0) + (p.extra_life ?? 0);
-                      return total > 0 ? `${total} boost${total !== 1 ? 's' : ''} available` : 'None — buy in the shop';
+                      return total > 0 ? `${total} boost${total !== 1 ? 's' : ''} available` : 'None, buy in the shop';
                     })()}
                   </Text>
                 </View>

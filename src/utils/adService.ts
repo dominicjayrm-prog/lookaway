@@ -2,8 +2,8 @@
  * Ad service — real AdMob integration via react-native-google-mobile-ads.
  *
  * Two ad types (banners removed by design):
- *   - Rewarded: opt-in, user watches → gets a reward (life, cosmetic)
- *   - Interstitial: every 5 levels + world completion, with guardrails
+ *  - Rewarded: opt-in, user watches → gets a reward (life, cosmetic)
+ *  - Interstitial: every 5 levels + world completion, with guardrails
  *
  * All ad calls no-op on web so the Vercel preview keeps working.
  */

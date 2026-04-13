@@ -2,8 +2,8 @@
  * useFriendsBadgeCount — polls Supabase for the number of unseen items
  * the Friends tab wants to advertise on the bottom tab bar:
  *
- *   - Pending friend requests where the current user is the addressee
- *   - Incoming challenge invitations that haven't been played yet
+ *  - Pending friend requests where the current user is the addressee
+ *  - Incoming challenge invitations that haven't been played yet
  *     (friend_challenges where challenged_id = me AND status = 'pending')
  *
  * Returns the combined count. Re-polls every 30 seconds and whenever the

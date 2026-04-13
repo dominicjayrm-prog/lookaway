@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Platform } from '
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { RARITY_COLORS, type Cosmetic } from '@/src/data/cosmetics';
+import { RARITY_COLORS, sortByRarity, type Cosmetic } from '@/src/data/cosmetics';
 
 interface CosmeticPickerProps {
   visible: boolean;
@@ -34,6 +34,9 @@ function CosmeticPickerComponent({
   const { colors } = useTheme();
   const router = useRouter();
   const totalCount = ownedItems.length + lockedItems.length;
+  // Sort by rarity: common (top-left) → legendary (bottom-right)
+  const sortedOwned = sortByRarity(ownedItems);
+  const sortedLocked = sortByRarity(lockedItems);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
@@ -50,7 +53,7 @@ function CosmeticPickerComponent({
               <>
                 <Text style={[st.sectionLabel, { color: colors.textMid }]}>OWNED</Text>
                 <View style={st.grid}>
-                  {ownedItems.map(item => {
+                  {sortedOwned.map(item => {
                     const equipped = item.id === equippedId;
                     return (
                       <Pressable
@@ -74,7 +77,7 @@ function CosmeticPickerComponent({
               <>
                 <Text style={[st.sectionLabel, { color: colors.textLight, marginTop: 16 }]}>LOCKED</Text>
                 <View style={st.grid}>
-                  {lockedItems.map(item => (
+                  {sortedLocked.map(item => (
                     <View key={item.id} style={[st.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.4 }]}>
                       <View style={{ position: 'relative' }}>
                         {renderPreview(item)}
