@@ -21,6 +21,7 @@ import { MastermindSceneCard } from '@/src/components/MastermindSceneCard';
 import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
 import { useMastermindStages } from '@/src/hooks/useMastermindStages';
 import { spacing, borderRadius } from '@/src/theme/spacing';
+import { MastermindBlinkUnlock } from '@/src/components/MastermindBlinkUnlock';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
@@ -39,6 +40,7 @@ export default function MastermindGameScreen() {
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [totalAnswered, setTotalAnswered] = useState(0);
+  const [showLegendaryUnlock, setShowLegendaryUnlock] = useState(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Load level data
@@ -91,6 +93,19 @@ export default function MastermindGameScreen() {
         // Record in game store
         const store = useGameStore.getState();
         store.recordLevelComplete(`w6-l${levelNum}`, stars, pct);
+
+        // Check if all 40 levels are now complete → legendary unlock
+        if (levelNum === 40) {
+          let allDone = true;
+          for (let i = 1; i <= 40; i++) {
+            if (!store.levelProgress[`w6-l${i}`]) { allDone = false; break; }
+          }
+          if (allDone && !store.ownedCosmetics.includes('expr_mastermind')) {
+            store.unlockCosmetic('expr_mastermind');
+            setShowLegendaryUnlock(true);
+            return; // Don't navigate yet — the celebration handles it
+          }
+        }
 
         router.replace({
           pathname: '/game/result',
@@ -235,11 +250,20 @@ export default function MastermindGameScreen() {
 
   // Fallback
   return (
-    <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]}>
-      <View style={st.centered}>
-        <ActivityIndicator size="large" color={GOLD} />
-      </View>
-    </SafeAreaView>
+    <>
+      <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]}>
+        <View style={st.centered}>
+          <ActivityIndicator size="large" color={GOLD} />
+        </View>
+      </SafeAreaView>
+      <MastermindBlinkUnlock
+        visible={showLegendaryUnlock}
+        onDismiss={() => {
+          setShowLegendaryUnlock(false);
+          router.replace({ pathname: '/game/result', params: { levelId: `w6-l${levelNum}` } });
+        }}
+      />
+    </>
   );
 }
 
