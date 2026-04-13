@@ -20,7 +20,8 @@ export type BlinkExpressionId =
   | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
   | 'devil' | 'robot' | 'dizzy'
   | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom'
-  // ── Legendary earn-only ──
+  // ── Milestone earn-only ──
+  | 'sharp_eye' | 'lightning_mind' | 'detective' | 'motion_master'
   | 'mastermind_boss';
 export type UnlockMethod = 'free' | 'gems' | 'achievement' | 'subscriber' | 'seasonal' | 'ad' | 'earn';
 
@@ -40,6 +41,10 @@ export interface Cosmetic {
    *  video ad (only legal for common-rarity items per the spec). The
    *  gem price, if any, still applies for players who'd rather pay. */
   adEligible?: boolean;
+  /** For earn-only milestone cosmetics: machine-readable condition. */
+  earnCondition?: string;
+  /** For earn-only milestone cosmetics: human-readable description. */
+  earnDescription?: string;
 }
 
 export interface FrameCosmetic extends Cosmetic {
@@ -145,6 +150,11 @@ export const FRAMES: FrameCosmetic[] = [
   { id: 'frame_diamond_ring', type: 'frame', name: 'Diamond', description: 'Ice-blue sparkle', unlock: 'gems', gemCost: 300, rarity: 'legendary', borderColor: '#B3E5FC', borderWidth: 4, glowColor: '#B3E5FC', sparkle: true },
   // Common (25 gems OR ad) — ad-eligible
   { id: 'frame_dotted_pearl', type: 'frame', name: 'Dotted', description: 'Playful dotted border', unlock: 'gems', gemCost: 25, rarity: 'common', borderColor: '#B2BEC3', borderWidth: 2, adEligible: true },
+  // ── Milestone earn-only frames ──
+  { id: 'frame_starter', type: 'frame', name: 'Starter', description: 'Your first earned frame', unlock: 'earn', rarity: 'common', borderColor: '#00CEC9', borderWidth: 2, earnCondition: 'classic_w1_l10', earnDescription: 'Reach Level 10 in Shape Basics' },
+  { id: 'frame_speedster', type: 'frame', name: 'Speedster', description: 'Fast thinker\'s frame', unlock: 'earn', rarity: 'rare', borderColor: '#FF9F43', borderWidth: 3, glowColor: '#FF9F43', earnCondition: 'classic_w3_l18', earnDescription: 'Reach Level 18 in Numbers & Letters' },
+  { id: 'frame_eagle_eye', type: 'frame', name: 'Eagle Eye', description: 'Nothing escapes your gaze', unlock: 'earn', rarity: 'epic', borderColor: '#2ECC71', borderWidth: 3, glowColor: '#2ECC71', earnCondition: 'classic_w4_complete', earnDescription: 'Complete World 4: Moving Objects' },
+  { id: 'frame_temporal', type: 'frame', name: 'Temporal', description: 'Master of time and memory', unlock: 'earn', rarity: 'epic', borderColor: '#D4A012', borderWidth: 3, glowColor: '#D4A012', earnCondition: 'classic_w6_l20', earnDescription: 'Reach Level 20 in Deep Memory' },
 ];
 
 // ─── ALL BANNERS ───────────────────────────────────────────
@@ -189,6 +199,10 @@ export const BANNERS: BannerCosmetic[] = [
   // Commons (25 gems OR ad) — ad-eligible
   { id: 'banner_pastel_pink', type: 'banner', name: 'Pastel Pink', description: 'Soft and sweet', unlock: 'gems', gemCost: 25, rarity: 'common', gradientColors: ['#FCE4EC', '#F8BBD0'], adEligible: true },
   { id: 'banner_slate', type: 'banner', name: 'Slate', description: 'Muted sophistication', unlock: 'gems', gemCost: 25, rarity: 'common', gradientColors: ['#CFD8DC', '#90A4AE'], adEligible: true },
+  // ── Milestone earn-only banners ──
+  { id: 'banner_first_steps', type: 'banner', name: 'First Steps', description: 'Your journey begins', unlock: 'earn', rarity: 'rare', gradientColors: ['#00CEC9', '#B2DFDB', '#FFFFFF'], earnCondition: 'classic_w1_complete', earnDescription: 'Complete World 1: Shape Basics' },
+  { id: 'banner_colour_pro', type: 'banner', name: 'Colour Pro', description: 'A rainbow of mastery', unlock: 'earn', rarity: 'rare', gradientColors: ['#FF6B6B', '#D4A012', '#00B894', '#0984E3', '#6C5CE7'], earnCondition: 'classic_w2_complete', earnDescription: 'Complete World 2: Colour & Position' },
+  { id: 'banner_focused', type: 'banner', name: 'Focused', description: 'Deep concentration vibes', unlock: 'earn', rarity: 'rare', gradientColors: ['#1A237E', '#6C5CE7', '#4A148C'], earnCondition: 'classic_w5_l20', earnDescription: 'Reach Level 20 in Photographic' },
 ];
 
 // ─── NAME COLOURS ──────────────────────────────────────────
@@ -236,8 +250,12 @@ export const EXPRESSIONS: ExpressionCosmetic[] = [
   { id: 'expr_rainbow', type: 'expression', name: 'Rainbow', description: 'Full-spectrum body', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'rainbow' },
   { id: 'expr_shadow', type: 'expression', name: 'Shadow', description: 'Menacingly cute', unlock: 'gems', gemCost: 300, rarity: 'legendary', blinkExpression: 'shadow' },
   { id: 'expr_cherry', type: 'expression', name: 'Cherry Blossom', description: 'Pink petal bloom', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'cherry_blossom' },
-  // Earn-only legendary — complete all 40 levels of Classic World 6
-  { id: 'expr_mastermind', type: 'expression', name: 'Mastermind', description: 'Gold sunglasses. You earned them.', unlock: 'earn', rarity: 'legendary', blinkExpression: 'mastermind_boss' },
+  // ── Milestone earn-only expressions ──
+  { id: 'expr_sharp_eye', type: 'expression', name: 'Sharp Eye', description: 'One eye squinting, brow raised — you see everything', unlock: 'earn', rarity: 'common', blinkExpression: 'sharp_eye', earnCondition: 'classic_w2_l15', earnDescription: 'Reach Level 15 in Colour & Position' },
+  { id: 'expr_detective', type: 'expression', name: 'Detective', description: 'Magnifying glass eye — no detail escapes you', unlock: 'earn', rarity: 'rare', blinkExpression: 'detective', earnCondition: 'classic_w4_l18', earnDescription: 'Reach Level 18 in Hidden Details' },
+  { id: 'expr_lightning_mind', type: 'expression', name: 'Lightning Mind', description: 'Electric yellow eyes and lightning bolts', unlock: 'earn', rarity: 'epic', blinkExpression: 'lightning_mind', earnCondition: 'classic_w3_complete', earnDescription: 'Complete World 3: Numbers & Letters' },
+  { id: 'expr_motion_master', type: 'expression', name: 'Motion Master', description: 'Speed trails blur behind focused blue eyes', unlock: 'earn', rarity: 'epic', blinkExpression: 'motion_master', earnCondition: 'classic_w5_complete', earnDescription: 'Complete World 5: Photographic' },
+  { id: 'expr_mastermind', type: 'expression', name: 'Mastermind', description: 'Gold sunglasses. You earned them.', unlock: 'earn', rarity: 'legendary', blinkExpression: 'mastermind_boss', earnCondition: 'classic_w6_complete', earnDescription: 'Complete World 6: Deep Memory' },
 ];
 
 // ─── DAILY FEATURED SHOP ──────────────────────────────────
