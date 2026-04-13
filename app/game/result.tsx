@@ -160,12 +160,18 @@ function ResultScreen() {
       celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout, worldId);
       cancelStreakReminder();
 
-      // Interstitial ad after every 3rd completed level. Delayed so
-      // it doesn't stomp on the star animation + gem reward. The
-      // counter inside maybeShowInterstitial tracks how many levels
-      // have passed since the last ad; it respects adsRemoved and
-      // subscriber status internally.
-      safeTimeout(() => { maybeShowInterstitial(); }, 2500);
+      // Interstitial ad — fires after every 5th completed level OR
+      // on world completion, with guardrails: first 5 levels are
+      // ad-free, max 3 per session, never on daily, never on fail.
+      // Delayed 2.5s so it doesn't stomp the star animation.
+      const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
+      safeTimeout(() => {
+        maybeShowInterstitial({
+          isWorldCompletion: isLastLevelOfWorld,
+          totalLevelsEverCompleted: totalCompleted,
+          isDailyChallenge: false,
+        });
+      }, 2500);
     } else {
       celeb.triggerFailCelebrations(safeTimeout);
       // Level failed — reset the no_life_loss consecutive streak on the

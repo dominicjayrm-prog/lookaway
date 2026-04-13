@@ -21,7 +21,6 @@ import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type Po
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
 import { log } from '@/src/lib/logger';
-import { BannerAdView } from '@/src/components/BannerAdView';
 
 const GEM = '\u{1F48E}';
 
@@ -723,9 +722,6 @@ function ShopTab() {
           </Pressable>
         </View>
       </ScrollView>
-
-      {/* Banner ad — bottom of shop, per CLAUDE.md ad placement rules */}
-      <BannerAdView />
 
       {/* Blanked+ paywall */}
       <SubscriptionPaywall

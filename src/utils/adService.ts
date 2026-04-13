@@ -1,31 +1,25 @@
 /**
  * Ad service — real AdMob integration via react-native-google-mobile-ads.
  *
- * Three ad types:
- *   - Rewarded: opt-in, user watches → gets a reward (gems, cosmetic, life)
- *   - Interstitial: shown after every 3rd level, never mid-gameplay
- *   - Banner: persistent strip at the bottom of level map + shop
+ * Two ad types (banners removed by design):
+ *   - Rewarded: opt-in, user watches → gets a reward (life, cosmetic)
+ *   - Interstitial: every 5 levels + world completion, with guardrails
  *
- * All ad calls no-op on web (Platform.OS === 'web') so the Vercel
- * preview keeps working. On native, the SDK lazy-loads via require()
- * so the web bundle never resolves the native module.
- *
- * The `adsRemoved` flag in gameStore disables interstitials + banners.
- * Rewarded ads are always available (opt-in is the user's choice, and
- * removing them would remove a free path to rewards).
- *
- * Blanked+ subscribers bypass the rewarded ad flow entirely — they
- * get the reward without watching.
+ * All ad calls no-op on web so the Vercel preview keeps working.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { useGameStore } from '@/src/store';
-import { AD_UNIT_IDS, ADS_SUPPORTED, INTERSTITIAL_EVERY_N_LEVELS } from '@/src/data/adConfig';
+import {
+  AD_UNIT_IDS,
+  ADS_SUPPORTED,
+  INTERSTITIAL_EVERY_N_LEVELS,
+  INTERSTITIAL_GRACE_LEVELS,
+  INTERSTITIAL_SESSION_CAP,
+} from '@/src/data/adConfig';
 import { log } from '@/src/lib/logger';
 
-// ─── Lazy native imports ───────────────────────────────────────────
-// Same pattern as purchases.ts — load via require() behind a
-// platform guard so the web bundle never tries to resolve native code.
+// ─── Lazy native import ────────────────────────────────────────────
 
 let _AdMob: any = null;
 
@@ -93,10 +87,6 @@ export async function getRemainingAdWatches(): Promise<number> {
 
 // ─── Rewarded ads ──────────────────────────────────────────────────
 
-/**
- * Show a rewarded ad. Returns `{ granted: true }` when the user
- * earns the reward (watched to completion or bypassed as subscriber).
- */
 export async function showRewardedAd(): Promise<AdResult> {
   // Subscribers + ads-removed users bypass entirely.
   try {
@@ -105,16 +95,14 @@ export async function showRewardedAd(): Promise<AdResult> {
     if (state.adsRemoved) return { granted: true, bypass: 'ads_removed' };
   } catch {}
 
-  // Daily limit check
   const counter = await loadCounter();
   if (counter.count >= DAILY_LIMIT) {
     return { granted: false, reason: 'limit_reached' };
   }
 
-  // Web / unsupported platform — fall back to granting (better UX
-  // than blocking the reward entirely on a platform that can't show ads)
   const AdMob = getAdMob();
   if (!AdMob) {
+    // Web / unsupported — grant the reward anyway (better than blocking)
     await saveCounter({ date: counter.date, count: counter.count + 1 });
     return { granted: true };
   }
@@ -126,19 +114,15 @@ export async function showRewardedAd(): Promise<AdResult> {
     return await new Promise<AdResult>((resolve) => {
       let earned = false;
 
-      // Earned the reward (watched long enough)
       const earnedUnsub = rewarded.addAdEventListener(
         RewardedAdEventType.EARNED_REWARD,
         () => { earned = true; },
       );
 
-      // Ad closed — resolve based on whether EARNED_REWARD fired
       const closedUnsub = rewarded.addAdEventListener(
         AdEventType.CLOSED,
         async () => {
-          earnedUnsub();
-          closedUnsub();
-          errorUnsub();
+          earnedUnsub(); closedUnsub(); errorUnsub();
           if (earned) {
             await saveCounter({ date: counter.date, count: counter.count + 1 });
             log.breadcrumb('ads', 'rewarded ad completed');
@@ -150,25 +134,18 @@ export async function showRewardedAd(): Promise<AdResult> {
         },
       );
 
-      // Ad failed to load or show
       const errorUnsub = rewarded.addAdEventListener(
         AdEventType.ERROR,
         (error: any) => {
-          earnedUnsub();
-          closedUnsub();
-          errorUnsub();
+          earnedUnsub(); closedUnsub(); errorUnsub();
           log.warn('ads', 'rewarded ad error', { error: String(error) });
           resolve({ granted: false, reason: 'unavailable' });
         },
       );
 
-      // Load → show when ready
       const loadedUnsub = rewarded.addAdEventListener(
         AdEventType.LOADED,
-        () => {
-          loadedUnsub();
-          rewarded.show();
-        },
+        () => { loadedUnsub(); rewarded.show(); },
       );
 
       rewarded.load();
@@ -179,33 +156,76 @@ export async function showRewardedAd(): Promise<AdResult> {
   }
 }
 
-// ─── Interstitial ads ──────────────────────────────────────────────
+// ─── Interstitial ads (with full guardrail system) ─────────────────
 
-/** Track how many levels have been completed this session for the
- *  interstitial cadence. Stored in-memory only — resets on app restart. */
-let _levelsCompletedSinceLastAd = 0;
+/** Levels completed since the last interstitial. In-memory only. */
+let _levelsSinceLastAd = 0;
 
-/** Call after every level completion. If it's time for an interstitial,
- *  shows one and returns true. Otherwise returns false. Respects
- *  adsRemoved and subscriber status. */
-export async function maybeShowInterstitial(): Promise<boolean> {
-  _levelsCompletedSinceLastAd += 1;
+/** Interstitials shown this session. Capped at INTERSTITIAL_SESSION_CAP. */
+let _sessionAdCount = 0;
 
-  // Not time yet
-  if (_levelsCompletedSinceLastAd < INTERSTITIAL_EVERY_N_LEVELS) return false;
+/**
+ * Call after every successful level completion. Checks all guardrails
+ * and shows an interstitial if conditions are met.
+ *
+ * @param isWorldCompletion  Pass true when the level was the last in
+ *                           its world — always triggers an ad (if
+ *                           guardrails allow) regardless of the
+ *                           5-level counter.
+ * @param totalLevelsEverCompleted  The player's all-time completed
+ *                                  level count. Used for the
+ *                                  onboarding grace period.
+ * @param isDailyChallenge  Pass true for daily challenge levels —
+ *                          interstitials are never shown on these.
+ */
+export async function maybeShowInterstitial(opts: {
+  isWorldCompletion?: boolean;
+  totalLevelsEverCompleted?: number;
+  isDailyChallenge?: boolean;
+} = {}): Promise<boolean> {
+  const {
+    isWorldCompletion = false,
+    totalLevelsEverCompleted = 999,
+    isDailyChallenge = false,
+  } = opts;
 
-  // Subscriber or ads removed — skip silently
+  _levelsSinceLastAd += 1;
+
+  // ── Guardrail 1: never on daily challenge ──
+  if (isDailyChallenge) return false;
+
+  // ── Guardrail 2: subscriber or ads removed ──
   try {
     const state = useGameStore.getState();
     if (state.isSubscribed() || state.adsRemoved) {
-      _levelsCompletedSinceLastAd = 0;
+      _levelsSinceLastAd = 0;
       return false;
     }
   } catch {}
 
+  // ── Guardrail 3: onboarding grace period ──
+  // First N levels ever played are ad-free so new users get hooked
+  // before seeing any monetisation friction.
+  if (totalLevelsEverCompleted <= INTERSTITIAL_GRACE_LEVELS) {
+    return false;
+  }
+
+  // ── Guardrail 4: session cap ──
+  // Prevents power users from getting hammered during long sessions.
+  if (_sessionAdCount >= INTERSTITIAL_SESSION_CAP) {
+    return false;
+  }
+
+  // ── Guardrail 5: cadence check ──
+  // World completion always qualifies (natural narrative break).
+  // Otherwise, check the 5-level counter.
+  const isTime = isWorldCompletion || _levelsSinceLastAd >= INTERSTITIAL_EVERY_N_LEVELS;
+  if (!isTime) return false;
+
+  // ── All guardrails passed — show the ad ──
   const AdMob = getAdMob();
   if (!AdMob) {
-    _levelsCompletedSinceLastAd = 0;
+    _levelsSinceLastAd = 0;
     return false;
   }
 
@@ -216,43 +236,41 @@ export async function maybeShowInterstitial(): Promise<boolean> {
     await new Promise<void>((resolve) => {
       const closedUnsub = interstitial.addAdEventListener(
         AdEventType.CLOSED,
-        () => {
-          closedUnsub();
-          errorUnsub();
-          resolve();
-        },
+        () => { closedUnsub(); errorUnsub(); resolve(); },
       );
       const errorUnsub = interstitial.addAdEventListener(
         AdEventType.ERROR,
         (error: any) => {
-          closedUnsub();
-          errorUnsub();
+          closedUnsub(); errorUnsub();
           log.warn('ads', 'interstitial error', { error: String(error) });
           resolve();
         },
       );
       const loadedUnsub = interstitial.addAdEventListener(
         AdEventType.LOADED,
-        () => {
-          loadedUnsub();
-          interstitial.show();
-        },
+        () => { loadedUnsub(); interstitial.show(); },
       );
       interstitial.load();
     });
 
-    _levelsCompletedSinceLastAd = 0;
-    log.breadcrumb('ads', 'interstitial shown');
+    _levelsSinceLastAd = 0;
+    _sessionAdCount += 1;
+    log.breadcrumb('ads', 'interstitial shown', {
+      sessionCount: _sessionAdCount,
+      isWorldCompletion,
+      totalLevelsEverCompleted,
+    });
     return true;
   } catch (e) {
     log.error('ads', 'maybeShowInterstitial threw', e);
-    _levelsCompletedSinceLastAd = 0;
+    _levelsSinceLastAd = 0;
     return false;
   }
 }
 
-/** Reset the interstitial counter — call if you want the next
- *  sequence to start fresh (e.g. after a long background pause). */
-export function resetInterstitialCounter(): void {
-  _levelsCompletedSinceLastAd = 0;
+/** Reset session state — call when the app returns from a long
+ *  background pause (> 5 min) or on fresh launch. */
+export function resetInterstitialSession(): void {
+  _levelsSinceLastAd = 0;
+  _sessionAdCount = 0;
 }
