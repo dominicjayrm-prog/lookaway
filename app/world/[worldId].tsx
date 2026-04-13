@@ -10,6 +10,7 @@ import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { WORLD_PATHS, WORLD_COLORS, WORLD_LIGHT_COLORS, WORLD_NAMES, WORLD_LEVEL_COUNTS, getMapHeight, buildPathD, getCheckpoint } from '@/src/data/worldPaths';
 import { fetchWorldLevels } from '@/src/data/levels';
 import type { Level } from '@/src/types/game';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -60,6 +61,27 @@ function WorldMapScreen() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [mapWidth, setMapWidth] = useState(DEFAULT_MAP_W);
+
+  // ── Mastermind intro gate ──
+  // World 6 gets a dramatic one-time intro screen. After the player
+  // taps "Enter Mastermind", an AsyncStorage flag is set and they
+  // never see it again.
+  const [introChecked, setIntroChecked] = useState(worldId !== 6);
+  useEffect(() => {
+    if (worldId !== 6) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem('mastermind_intro_seen');
+        if (!seen && !cancelled) {
+          router.replace('/world/mastermind-intro');
+          return;
+        }
+      } catch {}
+      if (!cancelled) setIntroChecked(true);
+    })();
+    return () => { cancelled = true; };
+  }, [worldId, router]);
 
   const worldColor = WORLD_COLORS[worldId] ?? '#00B894';
   const worldLightColor = WORLD_LIGHT_COLORS[worldId] ?? 'rgba(0,184,148,0.12)';
@@ -166,6 +188,12 @@ function WorldMapScreen() {
 
   // Get level title for bottom bar
   const currentLevelTitle = levelTitles[currentLevel] ?? `Level ${currentLevel}`;
+
+  // Don't render the map until the intro gate has been checked
+  // (only relevant for World 6 — all others skip immediately).
+  if (!introChecked) {
+    return <View style={[styles.root, { backgroundColor: colors.bg }]} />;
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>

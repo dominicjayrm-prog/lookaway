@@ -19,8 +19,10 @@ export type BlinkExpressionId =
   | 'wink' | 'tongue_out'
   | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
   | 'devil' | 'robot' | 'dizzy'
-  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom';
-export type UnlockMethod = 'free' | 'gems' | 'achievement' | 'subscriber' | 'seasonal' | 'ad';
+  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom'
+  // ── Legendary earn-only ──
+  | 'mastermind_boss';
+export type UnlockMethod = 'free' | 'gems' | 'achievement' | 'subscriber' | 'seasonal' | 'ad' | 'earn';
 
 export interface Cosmetic {
   id: string;
@@ -234,6 +236,8 @@ export const EXPRESSIONS: ExpressionCosmetic[] = [
   { id: 'expr_rainbow', type: 'expression', name: 'Rainbow', description: 'Full-spectrum body', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'rainbow' },
   { id: 'expr_shadow', type: 'expression', name: 'Shadow', description: 'Menacingly cute', unlock: 'gems', gemCost: 300, rarity: 'legendary', blinkExpression: 'shadow' },
   { id: 'expr_cherry', type: 'expression', name: 'Cherry Blossom', description: 'Pink petal bloom', unlock: 'gems', gemCost: 350, rarity: 'legendary', blinkExpression: 'cherry_blossom' },
+  // Earn-only legendary — complete all 40 levels of Classic World 6
+  { id: 'expr_mastermind', type: 'expression', name: 'Mastermind', description: 'Gold sunglasses. You earned them.', unlock: 'earn', rarity: 'legendary', blinkExpression: 'mastermind_boss' },
 ];
 
 // ─── DAILY FEATURED SHOP ──────────────────────────────────
