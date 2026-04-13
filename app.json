@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F7F6F3"
+      "backgroundColor": "#6C5CE7"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,23 +20,6 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Scan a friend's QR code to add them to your friends list instantly."
       }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#F7F6F3",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "package": "com.blanked.app",
-      "permissions": ["android.permission.CAMERA"],
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "data": [{ "scheme": "https", "host": "blanked.app", "pathPrefix": "/invite" }],
-          "category": ["BROWSABLE", "DEFAULT"]
-        }
-      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
