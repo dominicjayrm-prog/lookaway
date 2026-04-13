@@ -23,6 +23,7 @@ import { AchievementToast } from '@/src/components/AchievementToast';
 import { useCelebrations } from '@/src/hooks/useCelebrations';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+import { maybeShowInterstitial } from '@/src/utils/adService';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -158,6 +159,19 @@ function ResultScreen() {
 
       celeb.triggerPassCelebrations(isReplay, isLastLevelOfWorld, addGems, safeTimeout, worldId);
       cancelStreakReminder();
+
+      // Interstitial ad — fires after every 5th completed level OR
+      // on world completion, with guardrails: first 5 levels are
+      // ad-free, max 3 per session, never on daily, never on fail.
+      // Delayed 2.5s so it doesn't stomp the star animation.
+      const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
+      safeTimeout(() => {
+        maybeShowInterstitial({
+          isWorldCompletion: isLastLevelOfWorld,
+          totalLevelsEverCompleted: totalCompleted,
+          isDailyChallenge: false,
+        });
+      }, 2500);
     } else {
       celeb.triggerFailCelebrations(safeTimeout);
       // Level failed — reset the no_life_loss consecutive streak on the
