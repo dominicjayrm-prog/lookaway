@@ -255,8 +255,7 @@ function ShopTab() {
       store.refillLives();
       Alert.alert('Lives refilled!', 'All 5 lives are back.');
     } else if (productId === IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H) {
-      // TODO: implement 1-hour unlimited lives timer in gameStore
-      store.refillLives();
+      store.activateUnlimitedLives();
       Alert.alert('Unlimited lives!', 'Play as much as you want for the next hour.');
     } else if (productId === IAP_PRODUCT_IDS.STARTER_PACK) {
       store.addGems(200);
@@ -268,7 +267,7 @@ function ShopTab() {
       setShowStarterPack(false);
       Alert.alert('Starter Pack unlocked!', '200 gems, 3 boosts, and unlimited play for 1 hour.');
     } else if (productId === IAP_PRODUCT_IDS.REMOVE_ADS) {
-      // TODO: set adsRemoved flag in gameStore when ad system is wired
+      store.setAdsRemoved();
       Alert.alert('Ads removed!', 'No more interstitial or banner ads. Enjoy!');
     }
     log.breadcrumb('purchases', 'reward granted', { productId });

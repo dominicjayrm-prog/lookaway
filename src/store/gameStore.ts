@@ -143,6 +143,8 @@ interface SavedState {
   lives?: number;
   maxLives?: number;
   livesLastLostAt?: number | null;
+  adsRemoved?: boolean;
+  unlimitedLivesUntil?: number | null;
   streakCount?: number;
   bestStreak?: number;
   daysPlayed?: number;
@@ -204,6 +206,7 @@ function saveState(state: GameStore) {
     if (typeof window === 'undefined') return;
     localStorage.setItem('blanked-progress', JSON.stringify({
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
+      adsRemoved: state.adsRemoved, unlimitedLivesUntil: state.unlimitedLivesUntil,
       streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
       username: state.username, avatarUrl: state.avatarUrl,
       subscriptionStatus: state.subscriptionStatus,
@@ -252,6 +255,14 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 export interface GameStore {
   _authUserId: string | null; // Real Supabase auth user ID, set by CloudSyncLoader
   gems: number; lives: number; maxLives: number; livesLastLostAt: number | null;
+  /** True after the user buys the "Remove Ads" non-consumable IAP.
+   *  Checked by the ad service before showing interstitials / banners.
+   *  Synced to Supabase via the profiles column. */
+  adsRemoved: boolean;
+  /** Epoch ms when the "Unlimited Lives 1 Hour" boost expires.
+   *  While Date.now() < this value, loseLife() is a no-op and the
+   *  lives display shows ∞. 0 or null means inactive. */
+  unlimitedLivesUntil: number | null;
   streakCount: number; bestStreak: number; daysPlayed: number;
   username: string | null;
   avatarUrl: string | null;
@@ -345,6 +356,12 @@ export interface GameStore {
   saveState: () => void;
   setAuthUserId: (id: string) => void;
   revokeSubscription: () => void;
+  /** Mark ads as permanently removed (Remove Ads IAP). */
+  setAdsRemoved: () => void;
+  /** Start the 1-hour unlimited lives boost. */
+  activateUnlimitedLives: () => void;
+  /** True while the unlimited lives boost is active. */
+  hasUnlimitedLives: () => boolean;
 
   // Gameplay
   startLevel: (l: Level) => void;
@@ -374,6 +391,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     lives: saved.lives ?? LIVES_CONFIG.maxLives,
     maxLives: saved.maxLives ?? LIVES_CONFIG.maxLives,
     livesLastLostAt: saved.livesLastLostAt ?? null,
+    adsRemoved: saved.adsRemoved ?? false,
+    unlimitedLivesUntil: saved.unlimitedLivesUntil ?? null,
     streakCount: saved.streakCount ?? 0,
     bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
     daysPlayed: saved.daysPlayed ?? 0,
@@ -454,6 +473,11 @@ export const useGameStore = create<GameStore>((set, get) => {
     addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
     loseLife: () => {
+      // Don't deduct a life if the unlimited-lives boost is active
+      // OR the user has an active Blanked+ subscription (unlimited lives).
+      const { unlimitedLivesUntil, subscriptionStatus } = get();
+      if (subscriptionStatus === 'active') return;
+      if (unlimitedLivesUntil && Date.now() < unlimitedLivesUntil) return;
       set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() }));
       setTimeout(() => saveState(get()), 0);
       logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_LOST, -1, { levelId: get().currentLevel?.id });
@@ -601,6 +625,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           lives: saved.lives ?? LIVES_CONFIG.maxLives,
           maxLives: saved.maxLives ?? LIVES_CONFIG.maxLives,
           livesLastLostAt: saved.livesLastLostAt ?? null,
+          adsRemoved: saved.adsRemoved ?? false,
+          unlimitedLivesUntil: saved.unlimitedLivesUntil ?? null,
           streakCount: saved.streakCount ?? 0,
           bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
           daysPlayed: saved.daysPlayed ?? 0,
@@ -645,6 +671,22 @@ export const useGameStore = create<GameStore>((set, get) => {
         equippedExpression: SUBSCRIBER_COSMETIC_IDS.includes(equippedExpression) ? 'expr_normal' : equippedExpression,
       });
       setTimeout(() => saveState(get()), 0);
+    },
+
+    setAdsRemoved: () => {
+      set({ adsRemoved: true });
+      setTimeout(() => saveState(get()), 0);
+    },
+    activateUnlimitedLives: () => {
+      const until = Date.now() + 60 * 60 * 1000; // 1 hour from now
+      set({ unlimitedLivesUntil: until, lives: get().maxLives, livesLastLostAt: null });
+      setTimeout(() => saveState(get()), 0);
+    },
+    hasUnlimitedLives: () => {
+      const { unlimitedLivesUntil, subscriptionStatus } = get();
+      if (subscriptionStatus === 'active') return true;
+      if (unlimitedLivesUntil && Date.now() < unlimitedLivesUntil) return true;
+      return false;
     },
 
     // Cloud sync
