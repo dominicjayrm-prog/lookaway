@@ -38,6 +38,18 @@ function ChevronSvg({ size = 16, color = '#B2BEC3' }: { size?: number; color?: s
 }
 
 // ── Progress Ring ─────────────────────────────────────────────────────
+
+/** Brain benefit pills — shows what cognitive skills each mode trains.
+ *  Keyed by campaign id so it updates when the player switches modes. */
+const MODE_BENEFITS: Record<string, string[]> = {
+  classic:       ['Visual memory', 'Colour recognition', 'Spatial awareness'],
+  speed_recall:  ['Position memory', 'Reaction speed', 'Spatial precision'],
+  snap_match:    ['Change detection', 'Attention to detail', 'Visual scanning'],
+  sequence:      ['Sequential memory', 'Pattern retention', 'Order recall'],
+  counting_blitz: ['Focus under pressure', 'Selective attention', 'Counting accuracy'],
+  colour_chain:  ['Colour memory', 'Grid navigation', 'Systematic recall'],
+};
+
 function ProgressRing({ percentage, color, trackColor = '#ECEAE8', size = 26 }: { percentage: number; color: string; trackColor?: string; size?: number }) {
   const r = (size - 3) / 2;
   const circumference = 2 * Math.PI * r;
@@ -340,6 +352,18 @@ function JourneyTab() {
           )
         )}
 
+        {/* ── Brain benefit pills ── */}
+        {!selected.locked && (
+          <View style={st.benefitsRow}>
+            <Text style={st.benefitsEmoji}>{'\uD83E\uDDE0'}</Text>
+            {(MODE_BENEFITS[selected.id] ?? MODE_BENEFITS.classic).map((label) => (
+              <View key={label} style={[st.benefitPill, { backgroundColor: modeColor + '08' }]}>
+                <Text style={[st.benefitText, { color: modeColor }]}>{label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* ── Worlds List ── */}
         {!selected.locked && (
           <>
@@ -492,6 +516,10 @@ const st = StyleSheet.create({
   starCount: { fontSize: 14, fontWeight: '700' },
   scrollContent: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
   sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 20, marginBottom: 10 },
+  benefitsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, marginBottom: 12 },
+  benefitsEmoji: { fontSize: 12, marginRight: 2 },
+  benefitPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  benefitText: { fontSize: 9, fontWeight: '600' },
 
   // Pills
   pillContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
