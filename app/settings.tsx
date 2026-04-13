@@ -21,6 +21,7 @@ import {
 } from '@/src/utils/notifications';
 import { restorePurchases } from '@/src/lib/purchases';
 import { useGameStore } from '@/src/store';
+import { sounds } from '@/src/lib/sounds';
 
 const NOTIFICATION_ITEMS: { key: NotificationPreferenceKey; icon: string; label: string }[] = [
   { key: 'streak_reminder', icon: '\uD83D\uDD25', label: 'Streak reminders' },
@@ -39,6 +40,7 @@ function SettingsScreen() {
   const [prefs, setPrefs] = useState<Record<string, boolean>>({ ...DEFAULT_NOTIFICATION_PREFERENCES });
   const [masterToggle, setMasterToggle] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -100,7 +102,11 @@ function SettingsScreen() {
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: colors.text }]}>Sound effects</Text>
-            <Switch value={true} trackColor={{ true: colors.accent, false: colors.surface }} />
+            <Switch
+              value={soundEnabled}
+              onValueChange={(v) => { setSoundEnabled(v); sounds.setEnabled(v); }}
+              trackColor={{ true: colors.accent, false: colors.surface }}
+            />
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.row}>
