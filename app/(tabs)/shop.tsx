@@ -94,6 +94,7 @@ function ShopTab() {
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
   const [celebrationItem, setCelebrationItem] = useState<Cosmetic | null>(null);
   const [showUnavailable, setShowUnavailable] = useState(false);
+  const [earnOnlyInfo, setEarnOnlyInfo] = useState<{ name: string; description: string } | null>(null);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const dailyFeatured = getDailyFeatured(today);
@@ -224,6 +225,12 @@ function ShopTab() {
           },
         ],
       );
+      return;
+    }
+
+    // Locked + earn-only → show specific earn description
+    if (item.unlock === 'earn' && item.earnDescription) {
+      setEarnOnlyInfo({ name: item.name, description: item.earnDescription });
       return;
     }
 
@@ -743,6 +750,15 @@ function ShopTab() {
         tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
         onClose={() => setShowUnavailable(false)}
+      />
+      <InfoCard
+        visible={!!earnOnlyInfo}
+        icon={<Ionicons name="gift-outline" size={20} color="#D4A012" />}
+        title={earnOnlyInfo?.name ?? 'Milestone Reward'}
+        description={`This cosmetic can only be unlocked by completing: ${earnOnlyInfo?.description ?? 'a gameplay milestone'}`}
+        tip="Head to the Journey tab and keep playing to earn it!"
+        accentColor="#D4A012"
+        onClose={() => setEarnOnlyInfo(null)}
       />
 
       {/* Premium celebration */}
