@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.blanked.app",
       "usesAppleSignIn": true,
+      "deploymentTarget": "15.1",
       "associatedDomains": [
         "applinks:blanked.app"
       ],
