@@ -15,7 +15,9 @@ import {
 } from 'react-native';
 import Svg, { Rect, Circle } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { RARITY_COLORS } from '@/src/data/cosmetics';
+import { RARITY_COLORS, getExpressionById, getFrameById, getBannerById } from '@/src/data/cosmetics';
+import { Blink } from './Blink';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { height: SH } = Dimensions.get('window');
 const GOLD = '#D4A012';
@@ -89,13 +91,54 @@ function GiftLid({ size = 80 }: { size?: number }) {
 
 interface Props {
   visible: boolean;
+  itemId: string;
   itemName: string;
   rarity: string;
   category: string;
   onDismiss: () => void;
 }
 
-export function MilestoneGiftCelebration({ visible, itemName, rarity, category, onDismiss }: Props) {
+/** Renders a visual preview of the cosmetic based on its type. */
+function CosmeticPreview({ itemId, category, size = 80 }: { itemId: string; category: string; size?: number }) {
+  if (category === 'expression') {
+    const expr = getExpressionById(itemId);
+    const blinkExpr = expr?.blinkExpression ?? 'normal';
+    return (
+      <View style={{ width: size + 16, height: size + 16, borderRadius: (size + 16) / 2, backgroundColor: 'rgba(108,92,231,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+        <Blink expression={blinkExpr} size={size} />
+      </View>
+    );
+  }
+  if (category === 'frame') {
+    const frame = getFrameById(itemId);
+    const borderColor = frame?.borderColor ?? '#6C5CE7';
+    return (
+      <View style={{
+        width: size, height: size, borderRadius: size / 2,
+        borderWidth: 3, borderColor,
+        backgroundColor: 'rgba(108,92,231,0.06)',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Blink expression="normal" size={size - 16} />
+      </View>
+    );
+  }
+  if (category === 'banner') {
+    const banner = getBannerById(itemId);
+    const gradientColors = banner?.gradientColors ?? ['#6C5CE7', '#A29BFE'];
+    return (
+      <LinearGradient
+        colors={gradientColors as unknown as readonly [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ width: size * 1.8, height: size * 0.5, borderRadius: 12 }}
+      />
+    );
+  }
+  return null;
+}
+
+export function MilestoneGiftCelebration({ visible, itemId, itemName, rarity, category, onDismiss }: Props) {
   const { colors, isDark } = useTheme();
 
   // Phase 1: gift box
@@ -201,11 +244,10 @@ export function MilestoneGiftCelebration({ visible, itemName, rarity, category, 
               <GiftLid size={80} />
             </RNAnimated.View>
 
-            {/* Cosmetic name peeking out */}
+            {/* Cosmetic preview peeking out after lid pops */}
             {showPeek && (
               <RNAnimated.View style={[st.peekWrap, { opacity: peekOpacity }]}>
-                <Text style={[st.peekName, { color: rarityColor }]}>{itemName}</Text>
-                <View style={[st.peekGlow, { backgroundColor: GOLD + '15' }]} />
+                <CosmeticPreview itemId={itemId} category={category} size={56} />
               </RNAnimated.View>
             )}
 
@@ -223,6 +265,11 @@ export function MilestoneGiftCelebration({ visible, itemName, rarity, category, 
           }]}>
             <View style={[st.claimedBadge, { backgroundColor: GOLD + '15' }]}>
               <Text style={st.claimedText}>{'\uD83C\uDF81'} CLAIMED!</Text>
+            </View>
+
+            {/* Visual preview of the cosmetic */}
+            <View style={st.previewWrap}>
+              <CosmeticPreview itemId={itemId} category={category} size={90} />
             </View>
 
             <Text style={[st.itemName, { color: colors.text }]}>{itemName}</Text>
@@ -271,6 +318,7 @@ const st = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15, shadowRadius: 32, elevation: 16,
   },
+  previewWrap: { marginBottom: 16, alignItems: 'center' },
   claimedBadge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 10, marginBottom: 16 },
   claimedText: { fontSize: 12, fontWeight: '800', color: GOLD, letterSpacing: 1.2 },
   itemName: { fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' },

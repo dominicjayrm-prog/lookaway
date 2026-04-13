@@ -324,7 +324,7 @@ function WorldMapScreen() {
                         <Text style={{ fontSize: 8, color: '#00B894', fontWeight: '800' }}>{'\u2713'}</Text>
                       </View>
                     ) : (
-                      <GiftIcon size={16} />
+                      <GiftIcon size={24} />
                     )}
                   </Pressable>
                 );
@@ -402,6 +402,7 @@ function WorldMapScreen() {
       />
       <MilestoneGiftCelebration
         visible={!!milestoneGift}
+        itemId={milestoneGift?.itemId ?? ''}
         itemName={milestoneGift?.itemName ?? ''}
         rarity={'rare'}
         category={milestoneGift?.category ?? 'expression'}
@@ -584,8 +585,8 @@ const styles = StyleSheet.create({
   lockedNum: { fontSize: 14, fontWeight: '700', color: '#B2BEC3' },
   starsRow: { flexDirection: 'row', gap: 2, marginTop: 3 },
   playLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
-  giftIconWrap: { position: 'absolute', right: -6, top: -4 },
-  giftEarned: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(0,184,148,0.15)', alignItems: 'center', justifyContent: 'center' },
+  giftIconWrap: { position: 'absolute', right: -14, top: -8 },
+  giftEarned: { width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(0,184,148,0.15)', alignItems: 'center', justifyContent: 'center' },
   // Checkpoint
   checkpointBadge: { position: 'absolute', top: -22, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
   checkpointText: { fontSize: 8, fontWeight: '700', letterSpacing: 1 },

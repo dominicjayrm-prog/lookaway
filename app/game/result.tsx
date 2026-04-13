@@ -375,6 +375,7 @@ function ResultScreen() {
       <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
       <MilestoneGiftCelebration
         visible={!!milestoneToast}
+        itemId={milestoneToast?.itemId ?? ''}
         itemName={milestoneToast?.itemName ?? ''}
         rarity={'rare'}
         category={milestoneToast?.category ?? 'expression'}
