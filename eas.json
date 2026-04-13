@@ -1,0 +1,37 @@
+{
+  "cli": {
+    "version": ">= 3.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://xbhewtoryhtguvlmodfi.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiaGV3dG9yeWh0Z3V2bG1vZGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzcxOTEsImV4cCI6MjA5MDIxMzE5MX0.iO_FQq1a5TZnmf0y8TdTXUwjWlTv6RkhvbvSC3zKcQc"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://xbhewtoryhtguvlmodfi.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiaGV3dG9yeWh0Z3V2bG1vZGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzcxOTEsImV4cCI6MjA5MDIxMzE5MX0.iO_FQq1a5TZnmf0y8TdTXUwjWlTv6RkhvbvSC3zKcQc"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://xbhewtoryhtguvlmodfi.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiaGV3dG9yeWh0Z3V2bG1vZGZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzcxOTEsImV4cCI6MjA5MDIxMzE5MX0.iO_FQq1a5TZnmf0y8TdTXUwjWlTv6RkhvbvSC3zKcQc"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "timelockappz@gmail.com",
+        "ascAppId": "6744227912",
+        "appleTeamId": "P3QXBN4WHT"
+      }
+    }
+  }
+}
