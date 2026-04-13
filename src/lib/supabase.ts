@@ -27,7 +27,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Use a dummy URL when env vars are missing so createClient doesn't throw
+// and crash the app at module load time. The client will be non-functional
+// but the app will at least start and show the auth screen.
+const safeUrl = supabaseUrl || 'https://placeholder.supabase.co';
+const safeKey = supabaseAnonKey || 'placeholder';
+
+export const supabase = createClient(safeUrl, safeKey, {
   auth: {
     ...(storage ? { storage } : {}),
     autoRefreshToken: true,
