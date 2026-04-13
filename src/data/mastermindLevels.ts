@@ -346,6 +346,300 @@ const LEVELS: Record<number, MastermindLevel> = {
       { text: 'What colour is the square?', options: ['Pink', 'Purple', 'Orange', 'Green'], correctIndex: 2 },
     ],
   },
+
+  11: {
+    level: 11, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FF6B6B', position: { x: 22, y: 25 } },
+        { id: 's2', type: 'triangle', colour: '#0984E3', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'star', colour: '#D4A012', position: { x: 22, y: 72 } },
+        { id: 's4', type: 'square', colour: '#6C5CE7', position: { x: 78, y: 72 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FD79A8', position: { x: 22, y: 25 } },
+        { id: 's2', type: 'triangle', colour: '#0984E3', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'star', colour: '#D4A012', position: { x: 22, y: 72 } },
+        { id: 's4', type: 'square', colour: '#6C5CE7', position: { x: 78, y: 72 } },
+      ] },
+    ],
+    questions: [
+      { text: 'What colour was the circle in Stage 1?', options: ['Red', 'Pink', 'Blue', 'Gold'], correctIndex: 0, targetStage: 1 },
+      { text: 'What colour is the circle in Stage 2?', options: ['Red', 'Pink', 'Blue', 'Gold'], correctIndex: 1, targetStage: 2 },
+      { text: 'Which shape changed?', options: ['Triangle', 'Star', 'Circle', 'Square'], correctIndex: 2 },
+      { text: 'What colour is the star?', options: ['Purple', 'Blue', 'Red', 'Gold'], correctIndex: 3 },
+      { text: 'Where is the triangle?', options: ['Top-left', 'Top-right', 'Bottom-left', 'Bottom-right'], correctIndex: 1 },
+    ],
+  },
+
+  12: {
+    level: 12, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'diamond', colour: '#00B894', position: { x: 50, y: 22 } },
+        { id: 's2', type: 'circle', colour: '#FF9F43', position: { x: 20, y: 50 } },
+        { id: 's3', type: 'square', colour: '#0984E3', position: { x: 80, y: 50 } },
+        { id: 's4', type: 'triangle', colour: '#FF6B6B', position: { x: 50, y: 78 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'diamond', colour: '#00CEC9', position: { x: 50, y: 22 } },
+        { id: 's2', type: 'circle', colour: '#FF9F43', position: { x: 20, y: 50 } },
+        { id: 's3', type: 'square', colour: '#0984E3', position: { x: 80, y: 50 } },
+        { id: 's4', type: 'triangle', colour: '#FF6B6B', position: { x: 50, y: 78 } },
+      ] },
+    ],
+    questions: [
+      { text: 'What colour was the diamond in Stage 1?', options: ['Green', 'Teal', 'Blue', 'Orange'], correctIndex: 0, targetStage: 1 },
+      { text: 'The diamond changed to what colour?', options: ['Green', 'Teal', 'Blue', 'Orange'], correctIndex: 1, targetStage: 2 },
+      { text: 'Where is the diamond?', options: ['Top', 'Left', 'Right', 'Bottom'], correctIndex: 0 },
+      { text: 'What colour is the triangle?', options: ['Orange', 'Blue', 'Red', 'Green'], correctIndex: 2 },
+      { text: 'Did any shape move position?', options: ['Yes', 'No'], correctIndex: 1 },
+    ],
+  },
+
+  13: {
+    level: 13, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'star', colour: '#6C5CE7', position: { x: 25, y: 28 } },
+        { id: 's2', type: 'circle', colour: '#FF6B6B', position: { x: 75, y: 28 } },
+        { id: 's3', type: 'diamond', colour: '#00B894', position: { x: 25, y: 72 } },
+        { id: 's4', type: 'square', colour: '#D4A012', position: { x: 75, y: 72 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'star', colour: '#0984E3', position: { x: 25, y: 28 } },
+        { id: 's2', type: 'circle', colour: '#FF6B6B', position: { x: 25, y: 72 } },
+        { id: 's3', type: 'diamond', colour: '#00B894', position: { x: 75, y: 28 } },
+        { id: 's4', type: 'square', colour: '#D4A012', position: { x: 75, y: 72 } },
+      ] },
+    ],
+    questions: [
+      { text: 'The star changed from what colour?', options: ['Purple', 'Blue', 'Red', 'Green'], correctIndex: 0, targetStage: 1 },
+      { text: 'Which two shapes swapped positions?', options: ['Star & Square', 'Circle & Diamond', 'Star & Diamond', 'Circle & Square'], correctIndex: 1 },
+      { text: 'Where is the circle in Stage 2?', options: ['Top-left', 'Top-right', 'Bottom-left', 'Bottom-right'], correctIndex: 2, targetStage: 2 },
+      { text: 'How many changes happened?', options: ['1', '2', '3', '0'], correctIndex: 1 },
+      { text: 'What colour is the square?', options: ['Purple', 'Red', 'Green', 'Gold'], correctIndex: 3 },
+    ],
+  },
+
+  14: {
+    level: 14, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'triangle', colour: '#FD79A8', position: { x: 20, y: 30 } },
+        { id: 's2', type: 'star', colour: '#00CEC9', position: { x: 50, y: 30 } },
+        { id: 's3', type: 'circle', colour: '#FF9F43', position: { x: 80, y: 30 } },
+        { id: 's4', type: 'diamond', colour: '#6C5CE7', position: { x: 50, y: 72 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'triangle', colour: '#FD79A8', position: { x: 20, y: 30 } },
+        { id: 's2', type: 'star', colour: '#00CEC9', position: { x: 50, y: 72 } },
+        { id: 's3', type: 'circle', colour: '#D4A012', position: { x: 80, y: 30 } },
+        { id: 's4', type: 'diamond', colour: '#6C5CE7', position: { x: 50, y: 30 } },
+      ] },
+    ],
+    questions: [
+      { text: 'The circle changed from what colour?', options: ['Orange', 'Gold', 'Teal', 'Pink'], correctIndex: 0, targetStage: 1 },
+      { text: 'What colour is the circle in Stage 2?', options: ['Orange', 'Gold', 'Teal', 'Pink'], correctIndex: 1, targetStage: 2 },
+      { text: 'Which shapes swapped?', options: ['Star & Diamond', 'Triangle & Circle', 'Star & Triangle', 'None'], correctIndex: 0 },
+      { text: 'Where is the star in Stage 2?', options: ['Top', 'Bottom', 'Left', 'Right'], correctIndex: 1, targetStage: 2 },
+      { text: 'What shape is pink?', options: ['Star', 'Circle', 'Triangle', 'Diamond'], correctIndex: 2 },
+    ],
+  },
+
+  15: {
+    level: 15, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'square', colour: '#0984E3', position: { x: 22, y: 25 } },
+        { id: 's2', type: 'circle', colour: '#00B894', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'star', colour: '#FF6B6B', position: { x: 22, y: 75 } },
+        { id: 's4', type: 'triangle', colour: '#D4A012', position: { x: 78, y: 75 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'square', colour: '#0984E3', position: { x: 22, y: 25 } },
+        { id: 's2', type: 'circle', colour: '#00B894', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'star', colour: '#FF6B6B', position: { x: 22, y: 75 } },
+        { id: 's4', type: 'triangle', colour: '#D4A012', position: { x: 78, y: 75 } },
+        { id: 's5', type: 'diamond', colour: '#6C5CE7', position: { x: 50, y: 50 } },
+      ] },
+    ],
+    questions: [
+      { text: 'Which shape was NOT in Stage 1?', options: ['Square', 'Diamond', 'Star', 'Circle'], correctIndex: 1 },
+      { text: 'What colour is the new shape?', options: ['Blue', 'Green', 'Red', 'Purple'], correctIndex: 3, targetStage: 2 },
+      { text: 'Where did the new shape appear?', options: ['Top-left', 'Centre', 'Bottom-right', 'Top-right'], correctIndex: 1, targetStage: 2 },
+      { text: 'How many shapes in Stage 1?', options: ['3', '4', '5', '6'], correctIndex: 1, targetStage: 1 },
+      { text: 'What shape is gold?', options: ['Star', 'Triangle', 'Diamond', 'Circle'], correctIndex: 1 },
+    ],
+  },
+
+  16: {
+    level: 16, stageCount: 2, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FF9F43', position: { x: 20, y: 28 } },
+        { id: 's2', type: 'diamond', colour: '#FD79A8', position: { x: 50, y: 28 } },
+        { id: 's3', type: 'triangle', colour: '#00CEC9', position: { x: 80, y: 28 } },
+        { id: 's4', type: 'star', colour: '#6C5CE7', position: { x: 35, y: 72 } },
+        { id: 's5', type: 'square', colour: '#0984E3', position: { x: 65, y: 72 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FF9F43', position: { x: 20, y: 28 } },
+        { id: 's2', type: 'diamond', colour: '#FD79A8', position: { x: 50, y: 28 } },
+        { id: 's3', type: 'triangle', colour: '#00CEC9', position: { x: 80, y: 28 } },
+        { id: 's4', type: 'star', colour: '#6C5CE7', position: { x: 35, y: 72 } },
+      ] },
+    ],
+    questions: [
+      { text: 'Which shape disappeared in Stage 2?', options: ['Circle', 'Star', 'Square', 'Triangle'], correctIndex: 2 },
+      { text: 'What colour was the removed shape?', options: ['Orange', 'Pink', 'Blue', 'Purple'], correctIndex: 2 },
+      { text: 'How many shapes in Stage 2?', options: ['3', '4', '5', '6'], correctIndex: 1, targetStage: 2 },
+      { text: 'What shape is teal?', options: ['Circle', 'Diamond', 'Triangle', 'Star'], correctIndex: 2 },
+      { text: 'Are all Stage 1 shapes still in Stage 2?', options: ['Yes', 'No'], correctIndex: 1 },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // LEVELS 17-28: THREE STAGES INTRODUCED
+  // 5 shapes, 3 stages, 2 changes per transition, 3 seconds
+  // ═══════════════════════════════════════════════════════════════
+
+  17: {
+    level: 17, stageCount: 3, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FF6B6B', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'square', colour: '#0984E3', position: { x: 80, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#00B894', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 20, y: 78 } },
+        { id: 's5', type: 'diamond', colour: '#6C5CE7', position: { x: 80, y: 78 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#00CEC9', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'square', colour: '#0984E3', position: { x: 80, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#00B894', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 20, y: 78 } },
+        { id: 's5', type: 'diamond', colour: '#6C5CE7', position: { x: 80, y: 78 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#00CEC9', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'square', colour: '#0984E3', position: { x: 80, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#FF6B6B', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 20, y: 78 } },
+        { id: 's5', type: 'diamond', colour: '#6C5CE7', position: { x: 80, y: 78 } },
+      ] },
+    ],
+    questions: [
+      { text: 'What colour was the circle in Stage 1?', options: ['Red', 'Teal', 'Blue', 'Green'], correctIndex: 0, targetStage: 1 },
+      { text: 'What colour is the triangle in Stage 3?', options: ['Green', 'Red', 'Blue', 'Gold'], correctIndex: 1, targetStage: 3 },
+      { text: 'The circle changed colour in which transition?', options: ['Stage 1→2', 'Stage 2→3', 'Both', 'Neither'], correctIndex: 0 },
+      { text: 'Was the star the same colour in all stages?', options: ['Yes', 'No'], correctIndex: 0 },
+      { text: 'How many total colour changes occurred?', options: ['1', '2', '3', '0'], correctIndex: 1 },
+    ],
+  },
+
+  18: {
+    level: 18, stageCount: 3, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'diamond', colour: '#FD79A8', position: { x: 25, y: 25 } },
+        { id: 's2', type: 'star', colour: '#FF9F43', position: { x: 75, y: 25 } },
+        { id: 's3', type: 'circle', colour: '#0984E3', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'square', colour: '#00B894', position: { x: 25, y: 75 } },
+        { id: 's5', type: 'triangle', colour: '#D4A012', position: { x: 75, y: 75 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'diamond', colour: '#FD79A8', position: { x: 75, y: 25 } },
+        { id: 's2', type: 'star', colour: '#FF9F43', position: { x: 25, y: 25 } },
+        { id: 's3', type: 'circle', colour: '#0984E3', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'square', colour: '#00B894', position: { x: 25, y: 75 } },
+        { id: 's5', type: 'triangle', colour: '#D4A012', position: { x: 75, y: 75 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'diamond', colour: '#FD79A8', position: { x: 75, y: 25 } },
+        { id: 's2', type: 'star', colour: '#FF9F43', position: { x: 25, y: 25 } },
+        { id: 's3', type: 'circle', colour: '#6C5CE7', position: { x: 50, y: 50 } },
+        { id: 's4', type: 'square', colour: '#00B894', position: { x: 25, y: 75 } },
+        { id: 's5', type: 'triangle', colour: '#D4A012', position: { x: 75, y: 75 } },
+      ] },
+    ],
+    questions: [
+      { text: 'Where was the diamond in Stage 1?', options: ['Top-left', 'Top-right', 'Bottom-left', 'Centre'], correctIndex: 0, targetStage: 1 },
+      { text: 'Which shapes swapped in Stage 1→2?', options: ['Diamond & Star', 'Circle & Triangle', 'Square & Star', 'None'], correctIndex: 0 },
+      { text: 'What colour is the circle in Stage 3?', options: ['Blue', 'Purple', 'Pink', 'Green'], correctIndex: 1, targetStage: 3 },
+      { text: 'Did the triangle change in any stage?', options: ['Yes', 'No'], correctIndex: 1 },
+      { text: 'The circle changed colour in which transition?', options: ['Stage 1→2', 'Stage 2→3', 'Both', 'Neither'], correctIndex: 1 },
+    ],
+  },
+
+  19: {
+    level: 19, stageCount: 3, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'square', colour: '#FF6B6B', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'circle', colour: '#6C5CE7', position: { x: 50, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#00CEC9', position: { x: 80, y: 22 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 35, y: 65 } },
+        { id: 's5', type: 'diamond', colour: '#0984E3', position: { x: 65, y: 65 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'square', colour: '#FF6B6B', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'circle', colour: '#6C5CE7', position: { x: 50, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#00CEC9', position: { x: 80, y: 22 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 35, y: 65 } },
+        { id: 's5', type: 'diamond', colour: '#0984E3', position: { x: 65, y: 65 } },
+        { id: 's6', type: 'circle', colour: '#FD79A8', position: { x: 50, y: 85 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'square', colour: '#FF6B6B', position: { x: 20, y: 22 } },
+        { id: 's2', type: 'circle', colour: '#6C5CE7', position: { x: 50, y: 22 } },
+        { id: 's3', type: 'triangle', colour: '#00CEC9', position: { x: 80, y: 22 } },
+        { id: 's4', type: 'star', colour: '#D4A012', position: { x: 35, y: 65 } },
+        { id: 's6', type: 'circle', colour: '#FD79A8', position: { x: 50, y: 85 } },
+      ] },
+    ],
+    questions: [
+      { text: 'What shape was added in Stage 2?', options: ['Square', 'Circle', 'Star', 'Triangle'], correctIndex: 1, targetStage: 2 },
+      { text: 'What shape was removed in Stage 3?', options: ['Star', 'Diamond', 'Circle', 'Square'], correctIndex: 1, targetStage: 3 },
+      { text: 'Was the pink circle in Stage 1?', options: ['Yes', 'No'], correctIndex: 1, targetStage: 1 },
+      { text: 'How many shapes in Stage 3?', options: ['4', '5', '6', '3'], correctIndex: 1, targetStage: 3 },
+      { text: 'What colour is the star?', options: ['Red', 'Teal', 'Gold', 'Blue'], correctIndex: 2 },
+    ],
+  },
+
+  20: {
+    level: 20, stageCount: 3, secondsPerStage: 3,
+    stages: [
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#0984E3', position: { x: 22, y: 25 } },
+        { id: 's2', type: 'triangle', colour: '#FF6B6B', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'diamond', colour: '#D4A012', position: { x: 22, y: 55 } },
+        { id: 's4', type: 'star', colour: '#00B894', position: { x: 78, y: 55 } },
+        { id: 's5', type: 'square', colour: '#6C5CE7', position: { x: 50, y: 80 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#0984E3', position: { x: 78, y: 55 } },
+        { id: 's2', type: 'triangle', colour: '#FF6B6B', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'diamond', colour: '#D4A012', position: { x: 22, y: 55 } },
+        { id: 's4', type: 'star', colour: '#00B894', position: { x: 22, y: 25 } },
+        { id: 's5', type: 'square', colour: '#6C5CE7', position: { x: 50, y: 80 } },
+      ] },
+      { shapes: [
+        { id: 's1', type: 'circle', colour: '#FF9F43', position: { x: 78, y: 55 } },
+        { id: 's2', type: 'triangle', colour: '#FF6B6B', position: { x: 78, y: 25 } },
+        { id: 's3', type: 'diamond', colour: '#D4A012', position: { x: 22, y: 55 } },
+        { id: 's4', type: 'star', colour: '#00B894', position: { x: 22, y: 25 } },
+        { id: 's5', type: 'square', colour: '#00CEC9', position: { x: 50, y: 80 } },
+      ] },
+    ],
+    questions: [
+      { text: 'Where was the circle in Stage 1?', options: ['Top-left', 'Top-right', 'Bottom-left', 'Bottom-right'], correctIndex: 0, targetStage: 1 },
+      { text: 'Which shapes swapped in Stage 1→2?', options: ['Circle & Star', 'Triangle & Diamond', 'Circle & Square', 'None'], correctIndex: 0 },
+      { text: 'What colour is the circle in Stage 3?', options: ['Blue', 'Orange', 'Green', 'Purple'], correctIndex: 1, targetStage: 3 },
+      { text: 'What colour is the square in Stage 3?', options: ['Purple', 'Teal', 'Gold', 'Red'], correctIndex: 1, targetStage: 3 },
+      { text: 'Did the triangle change at all?', options: ['Yes', 'No'], correctIndex: 1 },
+    ],
+  },
 };
 
 /** Get a Mastermind level by number. Returns null if not found.
