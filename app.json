@@ -16,6 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.blanked.app",
       "usesAppleSignIn": true,
+      "deploymentTarget": "15.1",
       "associatedDomains": [
         "applinks:blanked.app"
       ],
@@ -41,6 +42,15 @@
         {
           "iosAppId": "ca-app-pub-9228812020612351~2660968331",
           "userTrackingUsageDescription": "This identifier will be used to show you personalised ads."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "deploymentTarget": "15.1"
+          }
         }
       ]
     ]
