@@ -10,10 +10,16 @@ import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
 import { updateOnlineStatus } from '@/src/utils/friends';
 import { expireOldChallenges } from '@/src/utils/challengeFlow';
+import { sounds } from '@/src/lib/sounds';
 
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
   useEffect(() => { hydrate(); }, [hydrate]);
+  return null;
+}
+
+function SoundLoader() {
+  useEffect(() => { sounds.init(); }, []);
   return null;
 }
 
@@ -214,6 +220,7 @@ function RootLayout() {
       <AuthProvider>
         <MobileContainer>
           <StoreHydrator />
+          <SoundLoader />
           <LevelCacheLoader />
           <DeepLinkHandler />
           <LifeRegenChecker />

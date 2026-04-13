@@ -21,6 +21,7 @@ import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type Po
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
 import { log } from '@/src/lib/logger';
+import { sounds } from '@/src/lib/sounds';
 
 const GEM = '\u{1F48E}';
 
@@ -257,6 +258,7 @@ function ShopTab() {
     if (gemReward > 0) {
       // Gem pack
       store.addGems(gemReward);
+      sounds.play('gemClink');
       Alert.alert('Gems added!', `${gemReward} gems have been added to your balance.`);
     } else if (productId === IAP_PRODUCT_IDS.LIVES_REFILL) {
       store.refillLives();

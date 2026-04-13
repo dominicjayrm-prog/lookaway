@@ -27,6 +27,7 @@ import { maybeShowInterstitial } from '@/src/utils/adService';
 import { ModeUnlockCelebration } from '@/src/components/ModeUnlockCelebration';
 import { checkModeUnlock } from '@/src/data/modeUnlocks';
 import { getMilestonesForLevel, type MilestoneReward } from '@/src/data/milestoneRewards';
+import { sounds } from '@/src/lib/sounds';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
 
 const GEM = String.fromCodePoint(0x1f48e);
@@ -122,6 +123,11 @@ function ResultScreen() {
     };
 
     if (passed) {
+      sounds.play('levelComplete');
+      // Play star pops staggered after a brief delay
+      if (stars >= 1) setTimeout(() => sounds.play('starPop'), 600);
+      if (stars >= 2) setTimeout(() => sounds.play('starPop'), 900);
+      if (stars >= 3) setTimeout(() => sounds.play('starPop'), 1200);
       const existing = levelProgress[level.id];
       const isReplay = !!existing && existing.stars > 0;
       const didImprove = isReplay && stars > existing.stars;
@@ -129,6 +135,7 @@ function ResultScreen() {
       setImproved(didImprove);
       const earned = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
+      if (earned > 0) setTimeout(() => sounds.play('gemClink'), 1400);
       if (stars > 0) addStars(stars);
       incrementStreak();
 
@@ -184,6 +191,7 @@ function ResultScreen() {
       // Mode unlock check — fires when completing a qualifying world.
       // Classic levels use 'classic' as the mode identifier.
       if (isLastLevelOfWorld && !isReplay) {
+        setTimeout(() => sounds.play('celebration'), 1500);
         // Currently unlocked modes = all side campaign keys the player
         // has accessed (tracked via AsyncStorage in the Journey tab).
         // For now, use a simple check: if the mode data file exists in
@@ -223,6 +231,7 @@ function ResultScreen() {
         });
       }, 2500);
     } else {
+      sounds.play('levelFail');
       celeb.triggerFailCelebrations(safeTimeout);
       // Level failed — reset the no_life_loss consecutive streak on the
       // weekly tracker so `no_life_loss_5` restarts from zero.
