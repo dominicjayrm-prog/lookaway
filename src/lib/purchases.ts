@@ -3,12 +3,12 @@
  *
  * Every IAP interaction in the app routes through this module. It
  * handles:
- *   - Lazy native import (no-ops on web so the Vercel preview works)
- *   - Singleton configuration with the public SDK key
- *   - User identification (maps Supabase user → RevenueCat app user)
- *   - Typed helpers for each purchase scenario (gems, lives, subs)
- *   - Restore flow
- *   - Subscription status polling for cross-device cancellation sync
+ *  - Lazy native import (no-ops on web so the Vercel preview works)
+ *  - Singleton configuration with the public SDK key
+ *  - User identification (maps Supabase user → RevenueCat app user)
+ *  - Typed helpers for each purchase scenario (gems, lives, subs)
+ *  - Restore flow
+ *  - Subscription status polling for cross-device cancellation sync
  *
  * Web callers get graceful no-ops — every function returns a safe
  * default rather than crashing. This is intentional: the shop UI

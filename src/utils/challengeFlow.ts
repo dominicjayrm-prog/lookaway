@@ -19,9 +19,9 @@ const DIFFICULTY_WORLDS: Record<ChallengeDifficulty, number[]> = {
 };
 
 export const DIFFICULTY_META: Record<ChallengeDifficulty, { label: string; description: string; color: string }> = {
-  easy:   { label: 'Easy',   description: 'Worlds 1 & 2 — shape and colour basics',   color: '#00B894' },
-  medium: { label: 'Medium', description: 'Worlds 3 & 4 — numbers and moving objects', color: '#F9A825' },
-  hard:   { label: 'Hard',   description: 'Worlds 5 & 6 — photographic and mastermind', color: '#FF6B6B' },
+  easy:   { label: 'Easy',   description: 'Worlds 1 & 2, shape and colour basics',   color: '#00B894' },
+  medium: { label: 'Medium', description: 'Worlds 3 & 4, numbers and moving objects', color: '#F9A825' },
+  hard:   { label: 'Hard',   description: 'Worlds 5 & 6, photographic and mastermind', color: '#FF6B6B' },
 };
 
 function levelBelongsToWorld(levelId: string, world: number): boolean {

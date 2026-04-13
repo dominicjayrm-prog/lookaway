@@ -14,9 +14,9 @@
  * (Apple can take up to 24h for new products to show in sandbox).
  *
  * Used by:
- *   - app/(tabs)/shop.tsx           Gem packs, lives, remove ads, starter pack
- *   - src/components/SubscriptionPaywall.tsx   Blanked+ monthly/yearly
- *   - src/lib/purchases.ts (phase 5)           RevenueCat purchase calls
+ *  - app/(tabs)/shop.tsx           Gem packs, lives, remove ads, starter pack
+ *  - src/components/SubscriptionPaywall.tsx   Blanked+ monthly/yearly
+ *  - src/lib/purchases.ts (phase 5)           RevenueCat purchase calls
  */
 export const IAP_PRODUCT_IDS = {
   // ── Consumables ────────────────────────────────────────────────

@@ -3,12 +3,12 @@
  * unlocks a new game mode by completing a qualifying world.
  *
  * Animations:
- *   - Dark overlay fades in (0.4s)
- *   - Card springs in from scale 0.9 → 1.0 (0.5s, spring with overshoot)
- *   - 20 confetti particles rain from top (varied colours/sizes/speeds)
- *   - Brain benefit pills stagger in at 0.7s
- *   - Science stat fades in at 0.9s
- *   - World/level count fades in at 1.1s
+ *  - Dark overlay fades in (0.4s)
+ *  - Card springs in from scale 0.9 → 1.0 (0.5s, spring with overshoot)
+ *  - 20 confetti particles rain from top (varied colours/sizes/speeds)
+ *  - Brain benefit pills stagger in at 0.7s
+ *  - Science stat fades in at 0.9s
+ *  - World/level count fades in at 1.1s
  *
  * No Blink mascot on this modal — the mode letter icon is the hero.
  */

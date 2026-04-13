@@ -53,7 +53,7 @@ const STEPS = [
   },
   {
     title: 'Questions target specific stages',
-    desc: 'Every detail matters \u2014 you\'ll be asked about any stage.',
+    desc: 'Every detail matters - you\'ll be asked about any stage.',
   },
   {
     title: 'Memory + timing = Mastermind',
@@ -123,7 +123,7 @@ export default function MastermindIntroScreen() {
           {/* Message card */}
           <View style={[st.messageCard, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
             <Text style={[st.messageText, { color: t.textMid }]}>
-              You&apos;ve conquered 5 worlds. But Mastermind plays by different rules — scenes change across multiple stages. Remember{' '}
+              You&apos;ve conquered 5 worlds. But Mastermind plays by different rules, scenes change across multiple stages. Remember{' '}
               <Text style={{ fontWeight: '700', color: GOLD }}>when</Text> you saw it, not just what.
             </Text>
           </View>

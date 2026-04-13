@@ -139,7 +139,7 @@ function FriendsTab() {
         setSentRequests((prev) => new Set(prev).add(addresseeId));
         setToast({
           title: `Request to @${addresseeUsername} is pending`,
-          subtitle: 'Hold tight — they haven\u2019t responded yet',
+          subtitle: 'Hold tight, they haven\u2019t responded yet',
           tone: 'info',
         });
       } else if (outcome === 'self') {

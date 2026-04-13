@@ -5,9 +5,9 @@
  * instead of a price.
  *
  * Used by:
- *   - Shop tabs (display locked/earned state)
- *   - World map (gift icons on milestone levels)
- *   - Level completion flow (unlock triggers)
+ *  - Shop tabs (display locked/earned state)
+ *  - World map (gift icons on milestone levels)
+ *  - Level completion flow (unlock triggers)
  */
 
 export interface MilestoneReward {

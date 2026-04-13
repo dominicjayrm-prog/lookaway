@@ -257,10 +257,10 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
   const ctaText = showTrial
-    ? `Try 3 days free \u2014 then \u00A319.99/year`
+    ? `Try 3 days free - then \u00A319.99/year`
     : plan === 'yearly'
-      ? `Subscribe \u2014 \u00A319.99/year`
-      : `Subscribe \u2014 \u00A32.99/month`;
+      ? `Subscribe - \u00A319.99/year`
+      : `Subscribe - \u00A32.99/month`;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -348,7 +348,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
             {showTrial ? (
               <View style={st.reassuranceRow}>
                 <Ionicons name="checkmark-circle" size={14} color="#00B894" />
-                <Text style={st.reassuranceGreen}>{`No charge for 3 days \u2014 cancel anytime`}</Text>
+                <Text style={st.reassuranceGreen}>{`No charge for 3 days - cancel anytime`}</Text>
               </View>
             ) : (
               <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>Cancel anytime in Settings</Text>

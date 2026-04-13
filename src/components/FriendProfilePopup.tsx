@@ -2,12 +2,12 @@
  * FriendProfilePopup — detailed friend card shown when the user taps a
  * friend in their list. Showcases the friend's full customisation:
  *
- *   - Equipped banner as the top gradient strip
- *   - Equipped frame + Blink with equipped expression centred on the banner
- *   - Username painted in their equipped name color
- *   - Stat grid: World, Stars, Memory, Achievements (X/Y)
- *   - Head-to-head record vs the current user
- *   - Challenge + Close + Remove friend actions
+ *  - Equipped banner as the top gradient strip
+ *  - Equipped frame + Blink with equipped expression centred on the banner
+ *  - Username painted in their equipped name color
+ *  - Stat grid: World, Stars, Memory, Achievements (X/Y)
+ *  - Head-to-head record vs the current user
+ *  - Challenge + Close + Remove friend actions
  */
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
@@ -108,8 +108,8 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   // Memory score: use the stored server average if present; otherwise fall
   // back to a dash so we don't lie.
   const memoryScore = typeof profile.memory_score_avg === 'number' ? Math.round(profile.memory_score_avg) : null;
-  const recordText = record ? `${record.wins}-${record.losses}${record.draws > 0 ? `-${record.draws}` : ''}` : '\u2014';
-  const achievementsText = achievements ? `${achievements.unlocked}/${achievements.total}` : '\u2014';
+  const recordText = record ? `${record.wins}-${record.losses}${record.draws > 0 ? `-${record.draws}` : ''}` : ' -';
+  const achievementsText = achievements ? `${achievements.unlocked}/${achievements.total}` : ' -';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -165,7 +165,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
             <View style={styles.statGrid}>
               <StatCell label="Stars" value={String(profile.total_stars)} icon="star" iconColor={colors.gold} colors={colors} />
               <StatCell label="World" value={String(profile.highest_world)} icon="map-outline" iconColor={colors.accent} colors={colors} />
-              <StatCell label="Memory" value={memoryScore !== null ? `${memoryScore}%` : '\u2014'} icon="pulse" iconColor={colors.blue} colors={colors} />
+              <StatCell label="Memory" value={memoryScore !== null ? `${memoryScore}%` : ' -'} icon="pulse" iconColor={colors.blue} colors={colors} />
             </View>
             <View style={styles.statGrid}>
               <StatCell label="Record" value={recordText} icon="trophy-outline" iconColor={colors.wrong} colors={colors} />

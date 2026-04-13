@@ -4,11 +4,11 @@
  * Every Monday 00:00 UTC three challenges are selected (one from each
  * category: engagement / consistency / skill) from a pool of 17. The
  * selection:
- *   - Excludes challenges seen in the last 4 weeks (falls back to the
+ *  - Excludes challenges seen in the last 4 weeks (falls back to the
  *     full pool only when the fresh subset is empty).
- *   - Filters engagement challenges by `requiresMinModes` so players
+ *  - Filters engagement challenges by `requiresMinModes` so players
  *     who haven't unlocked enough modes never see impossible goals.
- *   - Rejects conflicting pairs (e.g. correct_streak_5 and
+ *  - Rejects conflicting pairs (e.g. correct_streak_5 and
  *     correct_streak_20 together) and re-rolls the consistency slot.
  *
  * Persistence lives in AsyncStorage (matches the pattern the old
@@ -128,7 +128,7 @@ const CONSISTENCY_POOL: ChallengeTemplate[] = [
   {
     id: 'no_powerups_10',
     title: 'Complete 10 levels without power-ups',
-    description: 'Finish 10 levels using zero power-ups \u2014 pure memory',
+    description: 'Finish 10 levels using zero power-ups - pure memory',
     icon: '\u{1F4AA}',
     target: 10,
     trackingKey: 'levels_no_powerups_this_week',
@@ -187,7 +187,7 @@ const SKILL_POOL: ChallengeTemplate[] = [
   {
     id: 'correct_streak_20',
     title: 'Answer 20 in a row',
-    description: 'The ultimate memory streak \u2014 one wrong answer resets it',
+    description: 'The ultimate memory streak - one wrong answer resets it',
     icon: '\u{1F9E0}',
     target: 20,
     trackingKey: 'best_correct_streak_this_week',

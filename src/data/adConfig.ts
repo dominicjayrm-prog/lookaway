@@ -4,23 +4,23 @@
  * Placement strategy (brainstormed with the user):
  *
  *   INTERSTITIALS — "every 5 + world completion + guardrails"
- *     - After every 5th completed level
- *     - After completing a world (always, resets the 5-level counter)
- *     - First 5 levels ever played are ad-free (onboarding grace)
- *     - Max 3 interstitials per session (resets on app restart / bg)
- *     - Never on fail, never on daily challenge
- *     - adsRemoved / subscribers skip silently
+ *    - After every 5th completed level
+ *    - After completing a world (always, resets the 5-level counter)
+ *    - First 5 levels ever played are ad-free (onboarding grace)
+ *    - Max 3 interstitials per session (resets on app restart / bg)
+ *    - Never on fail, never on daily challenge
+ *    - adsRemoved / subscribers skip silently
  *
  *   REWARDED — always opt-in
- *     - Watch ad for 1 free life (Out of Lives modal)
- *     - Watch ad to unlock a common cosmetic (shop tab)
- *     - Available even with adsRemoved (user's choice to watch)
- *     - Subscribers bypass (reward granted without watching)
- *     - Daily 5-watch limit
+ *    - Watch ad for 1 free life (Out of Lives modal)
+ *    - Watch ad to unlock a common cosmetic (shop tab)
+ *    - Available even with adsRemoved (user's choice to watch)
+ *    - Subscribers bypass (reward granted without watching)
+ *    - Daily 5-watch limit
  *
  *   BANNERS — removed by design decision
- *     - "They look ugly asf" — user's words
- *     - Monetisation is strong enough via IAP + subs + interstitials
+ *    - "They look ugly asf" — user's words
+ *    - Monetisation is strong enough via IAP + subs + interstitials
  *
  * To swap ad unit IDs: update the PRODUCTION_IDS below. The App ID
  * lives in app.json → plugins → react-native-google-mobile-ads →

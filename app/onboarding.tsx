@@ -284,7 +284,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
           {filledDays >= 7 && (
             <ScaleIn delay={0} active={true}>
               <View style={s.streakBanner}>
-                <Text style={s.streakText}>{'🔥 7-day streak \u2014 you did it!'}</Text>
+                <Text style={s.streakText}>{'🔥 7-day streak - you did it!'}</Text>
               </View>
             </ScaleIn>
           )}

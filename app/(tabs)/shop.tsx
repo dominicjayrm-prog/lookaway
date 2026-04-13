@@ -39,11 +39,11 @@ function AdBadge({ colors }: { colors: Record<string, string> }) {
 
 /**
  * Status line rendered at the bottom of every cosmetic card. Shows:
- *   - "OWNED" when the player already has the item
- *   - A spinner when a rewarded ad is currently loading for this card
- *   - "▶ Watch ad" for ad-eligible commons
- *   - Gem cost for anything else
- *   - A lock icon for achievement / subscriber-only items
+ *  - "OWNED" when the player already has the item
+ *  - A spinner when a rewarded ad is currently loading for this card
+ *  - "▶ Watch ad" for ad-eligible commons
+ *  - Gem cost for anything else
+ *  - A lock icon for achievement / subscriber-only items
  */
 function CosmeticStatus({
   item,
@@ -536,10 +536,10 @@ function ShopTab() {
         </ScrollView>
 
         {/* Power-up grid — premium card redesign:
-              - LinearGradient background using the power-up's colour
-              - Solid colour icon disc (not a washed-out tint)
-              - Solid colour buy button (high contrast, feels clickable)
-              - Coloured shadow + border for depth */}
+             - LinearGradient background using the power-up's colour
+             - Solid colour icon disc (not a washed-out tint)
+             - Solid colour buy button (high contrast, feels clickable)
+             - Coloured shadow + border for depth */}
         <View style={styles.powerUpGrid}>
           {visiblePowerups.map((p) => {
             const owned = powerUps[p.id as keyof typeof powerUps] ?? 0;
@@ -716,7 +716,7 @@ function ShopTab() {
             </View>
             <View style={{ flex: 1, marginLeft: 14 }}>
               <Text style={[styles.removeAdsTitle, { color: colors.text }]}>Remove ads</Text>
-              <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>Remove all interstitial and banner ads forever</Text>
+              <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>Remove all ads from the app forever</Text>
             </View>
           </View>
           <Pressable
@@ -725,7 +725,7 @@ function ShopTab() {
             accessibilityRole="button"
             accessibilityLabel="Buy remove ads for 4 pounds 99, one time"
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 {'\u2014'} one time</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 - one time</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -746,7 +746,7 @@ function ShopTab() {
         visible={showUnavailable}
         icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
         title="Not Available Yet"
-        description="This item isn't in today's shop. Check back tomorrow — the featured items rotate daily with 20% off!"
+        description="This item isn't in today's shop. Check back tomorrow - the featured items rotate daily with 20% off!"
         tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
         onClose={() => setShowUnavailable(false)}
@@ -772,7 +772,7 @@ function ShopTab() {
         visible={gemShortfall !== null}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" style={{ opacity: 0.4 }} />}
         title="Not Enough Gems"
-        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems — every level gives 1-3 gems based on your stars.` : ''}
+        description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems, every level gives 1-3 gems based on your stars.` : ''}
         tip="Play levels to earn gems, or check gem packs below"
         accentColor="#6C5CE7"
         onClose={() => setGemShortfall(null)}

@@ -752,9 +752,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         mergedCosmetics = mergedCosmetics.filter((id) => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       }
       // Resolve the "what should this equipped slot be?" question:
-      //   - If the incoming id is nullish (never synced, fresh account)
+      //  - If the incoming id is nullish (never synced, fresh account)
       //     OR is a subscriber cosmetic on a non-subscriber → fall back.
-      //   - Otherwise use whatever was passed in. This prevents null from
+      //  - Otherwise use whatever was passed in. This prevents null from
       //     leaking into the store and getting persisted to Supabase,
       //     which historically left the equipped_* columns stuck at null
       //     and made friends see a default Blink instead of the real

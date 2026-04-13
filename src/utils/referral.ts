@@ -115,8 +115,8 @@ export async function processReferral(newUserId: string): Promise<number> {
 export async function shareReferralLink(code: string, username?: string): Promise<void> {
   const name = username ? `@${username}` : 'Your friend';
   const message = Platform.select({
-    ios: `${name} thinks you'd love Blanked — the visual memory game.\n\nUse code ${code} when you sign up and you'll both get 50 free gems! ${'\u{1F48E}'}\n\nplayblanked.app`,
-    default: `${name} thinks you'd love Blanked — the visual memory game. Use code ${code} when you sign up and you'll both get 50 free gems! playblanked.app`,
+    ios: `${name} thinks you'd love Blanked, the visual memory game.\n\nUse code ${code} when you sign up and you'll both get 50 free gems! ${'\u{1F48E}'}\n\nplayblanked.app`,
+    default: `${name} thinks you'd love Blanked, the visual memory game. Use code ${code} when you sign up and you'll both get 50 free gems! playblanked.app`,
   }) ?? '';
 
   try {

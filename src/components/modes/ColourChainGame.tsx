@@ -49,7 +49,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     setTileStates(init);
   }, [recallIdx, gridCols, gridRows]);
 
-  // Memorise phase \u2014 3 second timer
+  // Memorise phase - 3 second timer
   useEffect(() => {
     if (phase !== 'memorise') return;
     const startTime = Date.now();
