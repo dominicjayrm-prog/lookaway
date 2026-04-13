@@ -82,7 +82,7 @@ export const WORLD_COLORS: Record<number, string> = {
   3: '#6C5CE7',
   4: '#F9A825',
   5: '#FF6B6B',
-  6: '#1A1A18',
+  6: '#D4A012',
 };
 
 export const WORLD_LIGHT_COLORS: Record<number, string> = {
@@ -91,7 +91,7 @@ export const WORLD_LIGHT_COLORS: Record<number, string> = {
   3: 'rgba(108,92,231,0.12)',
   4: 'rgba(249,168,37,0.12)',
   5: 'rgba(255,107,107,0.12)',
-  6: 'rgba(26,26,24,0.08)',
+  6: 'rgba(212,160,18,0.12)',
 };
 
 export const WORLD_NAMES: Record<number, string> = {

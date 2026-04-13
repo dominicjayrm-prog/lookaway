@@ -22,7 +22,9 @@ export type BlinkExpression =
   | 'wink' | 'tongue_out'
   | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
   | 'devil' | 'robot' | 'dizzy'
-  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom';
+  | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom'
+  // Legendary — earned by completing Classic World 6 (Mastermind)
+  | 'mastermind_boss';
 
 interface BlinkProps {
   expression?: BlinkExpression;
@@ -599,6 +601,62 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
         <Circle cx={cx - s * 0.3} cy={cy - s * 0.24} r={s * 0.016} fill="#FCE4EC" opacity={0.8} />
         <Circle cx={cx + s * 0.28} cy={cy - s * 0.2} r={s * 0.014} fill="#F8BBD0" opacity={0.75} />
         <Circle cx={cx - s * 0.22} cy={cy + s * 0.16} r={s * 0.012} fill="#FCE4EC" opacity={0.7} />
+      </>
+    ),
+
+    // ═══ LEGENDARY: MASTERMIND BOSS ═══
+    // Gold-framed dark sunglasses with visible gold pupils behind
+    // semi-transparent lenses. Confident wider smile. Earned by
+    // completing all 40 levels of Classic World 6 (Mastermind).
+    mastermind_boss: (
+      <>
+        {/* Gold-framed dark sunglasses — two rounded rects with gold stroke */}
+        <Rect
+          x={cx - s * 0.22} y={cy - s * 0.12}
+          width={s * 0.2} height={s * 0.14} rx={s * 0.03}
+          fill="rgba(26,26,24,0.85)" stroke={C.gold} strokeWidth={sw(1.2, 0.02)}
+        />
+        <Rect
+          x={cx + s * 0.02} y={cy - s * 0.12}
+          width={s * 0.2} height={s * 0.14} rx={s * 0.03}
+          fill="rgba(26,26,24,0.85)" stroke={C.gold} strokeWidth={sw(1.2, 0.02)}
+        />
+        {/* Bridge between lenses */}
+        <Line
+          x1={cx - s * 0.02} y1={cy - s * 0.05}
+          x2={cx + s * 0.02} y2={cy - s * 0.05}
+          stroke={C.gold} strokeWidth={sw(1.5, 0.025)} strokeLinecap="round"
+        />
+        {/* Temple arms extending from outer edges */}
+        <Line
+          x1={cx - s * 0.22} y1={cy - s * 0.07}
+          x2={cx - s * 0.3} y2={cy - s * 0.1}
+          stroke={C.gold} strokeWidth={sw(1, 0.018)} strokeLinecap="round"
+        />
+        <Line
+          x1={cx + s * 0.22} y1={cy - s * 0.07}
+          x2={cx + s * 0.3} y2={cy - s * 0.1}
+          stroke={C.gold} strokeWidth={sw(1, 0.018)} strokeLinecap="round"
+        />
+        {/* Reflective glare rectangles on each lens */}
+        <Rect
+          x={cx - s * 0.2} y={cy - s * 0.1}
+          width={s * 0.06} height={s * 0.025} rx={s * 0.006}
+          fill="rgba(255,255,255,0.15)"
+        />
+        <Rect
+          x={cx + s * 0.04} y={cy - s * 0.1}
+          width={s * 0.06} height={s * 0.025} rx={s * 0.006}
+          fill="rgba(255,255,255,0.15)"
+        />
+        {/* Gold pupils visible behind the semi-transparent dark lenses */}
+        <Circle cx={cx - s * 0.12} cy={cy - s * 0.04} r={s * 0.03} fill={C.gold} />
+        <Circle cx={cx + s * 0.12} cy={cy - s * 0.04} r={s * 0.03} fill={C.gold} />
+        {/* Confident wider smile */}
+        <Path
+          d={`M${cx - s * 0.08},${cy + s * 0.1} Q${cx},${cy + s * 0.18} ${cx + s * 0.08},${cy + s * 0.1}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1, 0.02)} strokeLinecap="round"
+        />
       </>
     ),
   };
