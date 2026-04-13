@@ -19,6 +19,8 @@ import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
+import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
+import { log } from '@/src/lib/logger';
 
 const GEM = '\u{1F48E}';
 
@@ -137,20 +139,22 @@ function ShopTab() {
 
   const visiblePowerups = getPowerupsForMode(selectedMode);
 
-  const handleSubscribe = (plan: 'monthly' | 'yearly', trial: boolean = false) => {
+  const handleSubscribe = async (plan: 'monthly' | 'yearly', trial: boolean = false) => {
     setShowPaywall(false);
-    // Flip subscription status + unlock premium cosmetics. `activatePlus`
-    // pushes the new status to Supabase immediately so the next
-    // `loadFromCloud` on any device propagates it.
+    const { result, isActive } = await purchaseSubscription(plan);
+    if (result === 'cancelled') return;
+    if (result === 'error') {
+      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      return;
+    }
+    // Purchase succeeded — activate locally + sync to Supabase.
     const store = useGameStore.getState();
     store.activatePlus();
     store.unlockCosmetic('frame_premium_gold');
     store.unlockCosmetic('expr_premium');
     store.unlockCosmetic('banner_premium_gold');
-    // Only give gems on paid subscription, not free trial
     if (!trial) store.addGems(300);
     setShowPremiumCelebration(true);
-    // RevenueCat integration point — actual purchase will happen here
   };
 
 
@@ -227,7 +231,47 @@ function ShopTab() {
     setShowUnavailable(true);
   }, []);
 
-  const handleIAP = () => { Alert.alert('Coming soon', 'In-app purchases will be available soon!'); };
+  /**
+   * Real IAP handler. Routes through RevenueCat's purchaseProduct for
+   * consumables / non-consumables. Each product type triggers a
+   * different post-purchase reward in the game store.
+   */
+  const handleIAP = async (productId: string) => {
+    const result = await purchaseProduct(productId);
+    if (result === 'cancelled') return;
+    if (result === 'error') {
+      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      return;
+    }
+
+    // ── Grant the reward based on which product was purchased ──
+    const store = useGameStore.getState();
+    const gemReward = gemsForProduct(productId);
+    if (gemReward > 0) {
+      // Gem pack
+      store.addGems(gemReward);
+      Alert.alert('Gems added!', `${gemReward} gems have been added to your balance.`);
+    } else if (productId === IAP_PRODUCT_IDS.LIVES_REFILL) {
+      store.refillLives();
+      Alert.alert('Lives refilled!', 'All 5 lives are back.');
+    } else if (productId === IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H) {
+      store.activateUnlimitedLives();
+      Alert.alert('Unlimited lives!', 'Play as much as you want for the next hour.');
+    } else if (productId === IAP_PRODUCT_IDS.STARTER_PACK) {
+      store.addGems(200);
+      store.buyPowerUp('slowTime', 3, 0);
+      store.buyPowerUp('peek', 3, 0);
+      store.buyPowerUp('fiftyFifty', 3, 0);
+      store.refillLives();
+      try { await AsyncStorage.setItem('starter_pack_purchased', 'true'); } catch {}
+      setShowStarterPack(false);
+      Alert.alert('Starter Pack unlocked!', '200 gems, 3 boosts, and unlimited play for 1 hour.');
+    } else if (productId === IAP_PRODUCT_IDS.REMOVE_ADS) {
+      store.setAdsRemoved();
+      Alert.alert('Ads removed!', 'No more interstitial or banner ads. Enjoy!');
+    }
+    log.breadcrumb('purchases', 'reward granted', { productId });
+  };
 
   const handleGemRefillLives = () => {
     if (gems < LIVES_CONFIG.gemRefillCost) { setGemShortfall({ cost: LIVES_CONFIG.gemRefillCost, name: 'lives refill' }); return; }
@@ -573,7 +617,7 @@ function ShopTab() {
         <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
           <Pressable
             style={styles.livesRow}
-            onPress={handleIAP}
+            onPress={() => handleIAP(IAP_PRODUCT_IDS.LIVES_REFILL)}
             accessibilityRole="button"
             accessibilityLabel="Refill all 5 lives for 99 pence"
           >
@@ -593,7 +637,7 @@ function ShopTab() {
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
           <Pressable
             style={styles.livesRow}
-            onPress={handleIAP}
+            onPress={() => handleIAP(IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H)}
             accessibilityRole="button"
             accessibilityLabel="Unlimited lives for 1 hour, 1 pound 99"
           >
@@ -640,7 +684,7 @@ function ShopTab() {
           ].map((pack) => (
             <Pressable
               key={pack.id}
-              onPress={handleIAP}
+              onPress={() => handleIAP(pack.id)}
               style={[styles.gemPackCard, { backgroundColor: colors.card }]}
               accessibilityRole="button"
               accessibilityLabel={`Buy ${pack.gems} gems for ${pack.price}`}
@@ -669,7 +713,7 @@ function ShopTab() {
             </View>
           </View>
           <Pressable
-            onPress={handleIAP}
+            onPress={() => handleIAP(IAP_PRODUCT_IDS.REMOVE_ADS)}
             style={[styles.removeAdsBtn, { borderColor: colors.accent }]}
             accessibilityRole="button"
             accessibilityLabel="Buy remove ads for 4 pounds 99, one time"
@@ -688,11 +732,7 @@ function ShopTab() {
       <StarterPackPopup
         visible={showStarterPack}
         onDismiss={() => setShowStarterPack(false)}
-        onPurchase={() => {
-          setShowStarterPack(false);
-          setStarterPackAvailable(false);
-          Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.');
-        }}
+        onPurchase={() => handleIAP(IAP_PRODUCT_IDS.STARTER_PACK)}
       />
       {/* Item unavailable info card */}
       <InfoCard

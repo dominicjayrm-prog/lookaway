@@ -21,17 +21,6 @@ interface Props {
 }
 
 // ── SVG Icons (inline, no emojis) ─────────────────────────────────────
-function GiftSvg({ size = 28 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={10} width={18} height={12} rx={2} stroke="#FF6B6B" strokeWidth={1.8} />
-      <Rect x={2} y={7} width={20} height={5} rx={1.5} stroke="#FF6B6B" strokeWidth={1.8} />
-      <Line x1={12} y1={7} x2={12} y2={22} stroke="#FF6B6B" strokeWidth={1.5} />
-      <Path d="M12 7c0 0-2-4-5-4s-3 2-1 3 6 1 6 1" stroke="#FF6B6B" strokeWidth={1.5} strokeLinecap="round" />
-      <Path d="M12 7c0 0 2-4 5-4s3 2 1 3-6 1-6 1" stroke="#FF6B6B" strokeWidth={1.5} strokeLinecap="round" />
-    </Svg>
-  );
-}
 function GemSvg({ size = 18, color = '#6C5CE7' }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -163,10 +152,13 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
             <Ionicons name="close" size={16} color="#B2BEC3" />
           </Pressable>
 
-          {/* Bouncing gift + Blink */}
-          <RNAnimated.View style={[st.giftWrap, { transform: [{ translateY: floatAnim }], flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-            <AnimatedBlink expression="surprised" size={44} />
-            <GiftSvg size={28} />
+          {/* Hero mascot. The original design squeezed a 44px Blink AND
+              a 28px gift icon into a 60px container with row layout,
+              which overflowed and clipped the top of the Blink. Dropping
+              the gift icon + giving the Blink its own breathing room
+              makes for a cleaner hero beat: one character, one message. */}
+          <RNAnimated.View style={[st.giftWrap, { transform: [{ translateY: floatAnim }] }]}>
+            <AnimatedBlink expression="surprised" size={72} />
           </RNAnimated.View>
 
           {/* Title */}
@@ -249,8 +241,11 @@ const st = StyleSheet.create({
   },
 
   giftWrap: {
-    width: 60, height: 60, borderRadius: 18,
-    backgroundColor: '#FF6B6B10', alignItems: 'center', justifyContent: 'center',
+    // Intentionally unsized so the child Blink dictates dimensions and
+    // never gets clipped by a too-small parent. The bouncy translateY
+    // animation still works because transform doesn't depend on an
+    // explicit width/height.
+    alignItems: 'center', justifyContent: 'center',
     marginBottom: 10,
   },
 

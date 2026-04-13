@@ -87,9 +87,10 @@ export async function getRemainingAdWatches(): Promise<number> {
  * granted:false, reason:'dismissed').
  */
 export async function showRewardedAd(): Promise<AdResult> {
-  // Subscribers skip the whole flow.
+  // Subscribers OR users who bought "Remove Ads" skip the whole flow.
   try {
-    if (useGameStore.getState().isSubscribed()) {
+    const state = useGameStore.getState();
+    if (state.isSubscribed() || state.adsRemoved) {
       return { granted: true, bypass: 'subscriber' };
     }
   } catch {}

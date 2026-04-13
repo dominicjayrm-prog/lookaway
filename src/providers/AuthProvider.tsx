@@ -5,6 +5,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
+import { initPurchases, identifyUser, logOutPurchases } from '@/src/lib/purchases';
 
 /** Key we use to hand Apple's suggested display name across the
  *  router boundary between the login screen and the username picker.
@@ -67,12 +68,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Configure RevenueCat as early as possible — before we even know
+    // who the user is. RevenueCat creates an anonymous user internally
+    // until we call identifyUser() on sign-in.
+    initPurchases();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
-      // Attach the user id to every subsequent log call so we can
-      // correlate breadcrumbs to the specific player who hit the issue.
       log.setUser(session?.user?.id ?? null);
+      // Map the Supabase user to RevenueCat so purchase history
+      // follows the account across devices.
+      if (session?.user?.id) identifyUser(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -80,6 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         log.setUser(session?.user?.id ?? null);
         log.breadcrumb('auth', `state changed: ${_event}`, { userId: session?.user?.id });
+        // Re-identify on sign-in, log out on sign-out so the next
+        // session starts anonymous until a new sign-in happens.
+        if (session?.user?.id) {
+          identifyUser(session.user.id);
+        } else if (_event === 'SIGNED_OUT') {
+          logOutPurchases();
+        }
       },
     );
 

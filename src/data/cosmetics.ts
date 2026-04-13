@@ -314,6 +314,10 @@ export function getDailyFeatured(dateStr: string): DailyFeaturedItem[] {
   const wild = weightedPick(remaining, rng);
   if (wild) picks.push(wild);
 
+  // Sort common → legendary so the rarest item naturally falls to the
+  // last grid position (the wide "hero" card at the bottom of the row).
+  picks.sort((a, b) => (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99));
+
   const onSale = isWeekend(dateStr);
   return picks.map(c => ({
     cosmetic: c,
