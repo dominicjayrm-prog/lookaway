@@ -34,6 +34,16 @@ const AnimatedOrView = isWeb ? View : Animated.View;
 function GameScreen() {
   const { levelId } = useLocalSearchParams<{ levelId: string }>();
   const router = useRouter();
+
+  // ── Mastermind redirect ──
+  // World 6 levels use a dedicated gameplay screen with multi-stage
+  // memorisation. Intercept w6-lN IDs and redirect immediately.
+  useEffect(() => {
+    if (levelId?.startsWith('w6-l')) {
+      const num = levelId.replace('w6-l', '');
+      router.replace({ pathname: '/game/mastermind', params: { levelNum: num } });
+    }
+  }, [levelId, router]);
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const peekTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
