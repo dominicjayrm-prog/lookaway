@@ -17,6 +17,8 @@ import {
   saveNotificationPreferences,
   type NotificationPreferenceKey,
 } from '@/src/utils/notifications';
+import { restorePurchases } from '@/src/lib/purchases';
+import { useGameStore } from '@/src/store';
 
 const NOTIFICATION_ITEMS: { key: NotificationPreferenceKey; icon: string; label: string }[] = [
   { key: 'streak_reminder', icon: '\uD83D\uDD25', label: 'Streak reminders' },
@@ -142,7 +144,17 @@ function SettingsScreen() {
         <Card style={styles.card}>
           <Pressable
             style={styles.row}
-            onPress={() => Alert.alert('Restore', 'Purchase restoration will be available when RevenueCat is configured.')}
+            onPress={async () => {
+              const status = await restorePurchases();
+              if (status.plus) {
+                useGameStore.getState().activatePlus();
+                Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
+              } else if (status.noAds) {
+                Alert.alert('Restored', 'Your ad-free purchase has been restored.');
+              } else {
+                Alert.alert('Nothing to restore', 'No previous purchases were found for this account.');
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel="Restore purchases"
           >
