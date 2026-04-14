@@ -44,6 +44,9 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       days_played: state.daysPlayed ?? 0,
       streak_shields: state.streakShields ?? 0,
       recovery_window_start: state.recoveryWindowStart ?? null,
+      // tutorial_seen is written separately when the player completes the
+      // spotlight tour (one-shot from app/(tabs)/index.tsx) — we do NOT
+      // upsert it here because every save would re-write the same flag.
       subscription_status: state.subscriptionStatus ?? 'inactive',
       // username is NOT written from here — it's set by app/username.tsx
       // at signup and we only READ it into the store via loadFromCloud.

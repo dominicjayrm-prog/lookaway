@@ -25,6 +25,7 @@ import { InfoCard } from '@/src/components/InfoCard';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { getNextMilestone } from '@/src/data/streakMilestones';
+import { supabase } from '@/src/lib/supabase';
 import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
 import {
   computeAppOpenOutcome,
@@ -279,7 +280,28 @@ function PlayTab() {
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem('blanked_tutorial_seen').catch(() => null).then(seen => {
+    // Tutorial-seen check: AsyncStorage first for instant decisions, then
+    // fall back to the server flag so a fresh device install for a
+    // returning player skips the spotlight tour.
+    (async () => {
+      let seen: string | null = null;
+      try {
+        seen = await AsyncStorage.getItem('blanked_tutorial_seen');
+      } catch {}
+      if (!seen && user?.id) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('tutorial_seen')
+            .eq('id', user.id)
+            .single();
+          if (data?.tutorial_seen) {
+            seen = '1';
+            // Mirror locally so we skip the network call next launch
+            try { await AsyncStorage.setItem('blanked_tutorial_seen', '1'); } catch {}
+          }
+        } catch {}
+      }
       if (cancelled) return;
       if (!seen) {
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
@@ -295,9 +317,9 @@ function PlayTab() {
         const check = checkDailyReward(latest);
         if (check.available) setShowDailyReward(true);
       }, 1200);
-    });
+    })();
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!showTutorial) return;
@@ -338,8 +360,13 @@ function PlayTab() {
 
   const completeTutorial = useCallback(async () => {
     setShowTutorial(false);
-    await AsyncStorage.setItem('blanked_tutorial_seen', 'true');
-  }, []);
+    // Local cache so this device skips the network on next open
+    try { await AsyncStorage.setItem('blanked_tutorial_seen', 'true'); } catch {}
+    // Server flag so a fresh install on a new device also skips it
+    if (user?.id) {
+      supabase.from('profiles').update({ tutorial_seen: true }).eq('id', user.id).then(() => {});
+    }
+  }, [user?.id]);
 
   return (
     <TabTransition>

@@ -149,3 +149,73 @@ export async function claimDueStreakRewards(
     return [];
   }
 }
+
+/** Claim ONE milestone explicitly (tapped from the rewards screen).
+ *  Used when the player wants to redeem a reached-but-unclaimed reward
+ *  manually instead of waiting for the auto-claim on next level complete.
+ *
+ *  Validates server-side that the milestone is unclaimed AND the player's
+ *  streak qualifies before granting. Returns the milestone definition
+ *  (with claimedAt) on success, null on any failure (already claimed,
+ *  not reached, network error). */
+export async function claimSingleMilestone(
+  userId: string,
+  milestoneDay: number,
+  currentStreak: number,
+): Promise<ClaimedMilestone | null> {
+  if (!userId) return null;
+  const def = STREAK_MILESTONES.find((m) => m.day === milestoneDay);
+  if (!def) return null;
+  if (currentStreak < def.day) return null; // Not reached — defensive
+
+  try {
+    // Read row to verify it's still unclaimed (race protection — another
+    // device may have claimed it via the auto-claim path).
+    const { data: row } = await supabase
+      .from('streak_rewards')
+      .select('claimed')
+      .eq('user_id', userId)
+      .eq('milestone_day', milestoneDay)
+      .single();
+    if (!row || row.claimed) return null;
+
+    const claimedAt = new Date().toISOString();
+    const { error: updErr } = await supabase
+      .from('streak_rewards')
+      .update({ claimed: true, claimed_at: claimedAt })
+      .eq('user_id', userId)
+      .eq('milestone_day', milestoneDay)
+      .eq('claimed', false); // Conditional update — can't double-grant
+    if (updErr) throw updErr;
+
+    // Grant the reward on the profile
+    const { data: profile, error: pErr } = await supabase
+      .from('profiles')
+      .select('gems, streak_shields')
+      .eq('id', userId)
+      .single();
+    if (pErr || !profile) {
+      log.warn('streak', 'claimSingleMilestone profile fetch failed', { userId });
+      return null;
+    }
+    await supabase
+      .from('profiles')
+      .update({
+        gems: (profile.gems ?? 0) + def.gems,
+        streak_shields: (profile.streak_shields ?? 0) + def.shields,
+      })
+      .eq('id', userId);
+
+    if (def.gems > 0) {
+      logEconomyEvent(userId, ECONOMY_EVENTS.GEM_EARN_STREAK, def.gems, {
+        milestoneDays: [milestoneDay],
+        shieldsEarned: def.shields,
+        manual: true,
+      });
+    }
+    return { ...def, claimedAt };
+  } catch (e) {
+    log.error('streak', 'claimSingleMilestone failed', e, { userId, milestoneDay });
+    return null;
+  }
+}
