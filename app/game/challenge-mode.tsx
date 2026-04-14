@@ -18,6 +18,7 @@ import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
 import ColourChainGame from '@/src/components/modes/ColourChainGame';
 import SpeedRecallGame from '@/src/components/modes/SpeedRecallGame';
+import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'error';
 
@@ -43,6 +44,7 @@ function ChallengeModeScreen() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [modeData, setModeData] = useState<any>(null);
   const [dbChallengeId, setDbChallengeId] = useState<string | null>(challengeId ?? null);
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [roundIdx, setRoundIdx] = useState(0);
   const [shapeIdx, setShapeIdx] = useState(0);
   const [roundScores, setRoundScores] = useState<number[]>([]);
@@ -178,16 +180,9 @@ function ChallengeModeScreen() {
               router.back();
               return;
             }
-            Alert.alert(
-              'Leave challenge?',
-              action === 'create'
-                ? 'Your progress will be lost and no challenge will be sent to your friend.'
-                : 'Your progress will be lost. You can come back later as long as the challenge is still pending.',
-              [
-                { text: 'Keep playing', style: 'cancel' },
-                { text: 'Leave', style: 'destructive', onPress: () => router.back() },
-              ],
-            );
+            // Styled modal instead of iOS Alert so premium users see
+            // the same "Are you sure?" copy they get on campaign.
+            setShowQuitConfirm(true);
           }}
           style={s.closeBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -214,6 +209,16 @@ function ChallengeModeScreen() {
       {phase === 'round_done' && !isExternalMode && (<View style={s.centered}><Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text><Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1]}/500</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}><Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text></Pressable></View>)}
 
       {phase === 'complete' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>Challenge Complete!</Text><Text style={[s.bigScore, { color: colors.text }]}>{getScorePercentage(mode ?? 'speed_recall', totalScore)}%</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{totalScore} / {(modeData?.rounds?.length ?? 5) * 500} points</Text>{action === 'create' && <Text style={[s.sentText, { color: colors.correct }]}>Challenge sent! Waiting for your friend.</Text>}<Pressable style={[s.btn, { backgroundColor: mColor, marginTop: 20 }]} onPress={() => router.replace('/(tabs)/friends')}><Text style={s.btnText}>Back to friends</Text></Pressable></View>)}
+
+      <QuitConfirmModal
+        visible={showQuitConfirm}
+        costsLife={false}
+        nonPremiumBody={action === 'create'
+          ? "Your progress will be lost and no challenge will be sent to your friend."
+          : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
+        onLeave={() => { setShowQuitConfirm(false); router.back(); }}
+        onKeepPlaying={() => setShowQuitConfirm(false)}
+      />
     </SafeAreaView>
   );
 }

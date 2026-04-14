@@ -105,6 +105,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
       setMemoriseProgress(Math.max(0, 1 - elapsed / totalSec));
       if (elapsed >= totalSec) {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        sounds.play('whoosh');
         setPhase('transition');
         timerRef.current = setTimeout(() => setPhase('recall'), 500);
       }
@@ -120,6 +121,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     setLastCorrect(isCorrect);
     setScores(prev => [...prev, isCorrect ? 100 : 0]);
     setPhase('feedback');
+    sounds.play(isCorrect ? 'correct' : 'wrong');
 
     if (isCorrect) {
       const newStates = { ...tileStates, [tileIdx]: 'correct' as TileState };

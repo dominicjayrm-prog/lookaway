@@ -9,6 +9,7 @@ import { PowerUpBar } from '@/src/components/PowerUpBar';
 import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
+import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
 import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -208,38 +209,26 @@ function ChallengeGameScreen() {
     }
   }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty]);
 
-  /** Shared "leave this challenge?" guard. Shows a confirmation Alert
-   *  because half-finished challenges shouldn't be discarded by a
-   *  stray tap on the back button. Safe to call from both the
-   *  challenger path (no DB row yet) and the challenged path (row
-   *  exists; leaving just navigates away — the addressee can still
-   *  play later because the pending row remains). */
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+
+  /** Shared "leave this challenge?" guard. Pops the styled quit modal
+   *  so premium users see the same polite copy they get on every
+   *  other mode. No-ops in loading/ready/complete because there's
+   *  nothing to warn about. */
   const handleAbandon = useCallback(() => {
-    // Phase-based short-circuit: if we haven't started or are already
-    // done, just navigate away without nagging the user.
     if (phase === 'loading' || phase === 'error' || phase === 'ready' || phase === 'complete') {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       router.back();
       return;
     }
-    Alert.alert(
-      'Leave challenge?',
-      isChallenger
-        ? 'Your progress will be lost and no challenge will be sent to your friend.'
-        : 'Your progress will be lost. You can come back later as long as the challenge is still pending.',
-      [
-        { text: 'Keep playing', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            router.back();
-          },
-        },
-      ],
-    );
-  }, [router, phase, isChallenger]);
+    setShowQuitConfirm(true);
+  }, [phase, router]);
+
+  const confirmLeave = useCallback(() => {
+    setShowQuitConfirm(false);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    router.back();
+  }, [router]);
 
   // Score calculation for complete phase
   const totalCorrect = answers.filter(a => a.correct).length;
@@ -360,6 +349,20 @@ function ChallengeGameScreen() {
           when a power-up activates. */}
       <BuyPowerUpPopup powerUpId={pu.buyPopupId} onClose={() => pu.setBuyPopupId(null)} onBought={pu.handleBuyPopupPurchased} />
       <PowerUpFlash type={pu.activePowerUp} onDone={pu.clearActivePowerUp} />
+
+      {/* Quit confirmation — leaving a challenge doesn't cost a life
+          (progress is just abandoned) so costsLife={false}. The
+          non-premium body text varies based on whether you're the
+          challenger or the challenged. */}
+      <QuitConfirmModal
+        visible={showQuitConfirm}
+        costsLife={false}
+        nonPremiumBody={isChallenger
+          ? "Your progress will be lost and no challenge will be sent to your friend."
+          : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
+        onLeave={confirmLeave}
+        onKeepPlaying={() => setShowQuitConfirm(false)}
+      />
     </SafeAreaView>
   );
 }

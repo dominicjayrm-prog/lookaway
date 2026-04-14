@@ -46,6 +46,7 @@ function SpeedGameScreen() {
 
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, addGems, addStars, incrementStreak, score } = useGameStore();
   const loseLife = useGameStore((s) => s.loseLife);
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   const currentScene = speedLevel.scenes[currentSceneIndex];
@@ -212,9 +213,11 @@ function SpeedGameScreen() {
             <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
-              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
-              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}>
-                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>
+                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+              </Text>
+              <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); if (!isSubscribed) loseLife(); resetGame(); router.back(); }}>
+                <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={styles.quitBtnText}>Keep playing</Text>

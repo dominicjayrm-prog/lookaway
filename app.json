@@ -13,15 +13,16 @@
       "backgroundColor": "#6C5CE7"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.blanked.app",
       "buildNumber": "8",
       "usesAppleSignIn": true,
       "associatedDomains": [
-        "applinks:blanked.app"
+        "applinks:playblanked.com"
       ],
       "infoPlist": {
-        "NSCameraUsageDescription": "Scan a friend's QR code to add them to your friends list instantly."
+        "NSCameraUsageDescription": "Scan a friend's QR code to add them to your friends list instantly.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {

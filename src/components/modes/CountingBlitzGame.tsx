@@ -110,6 +110,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
       if (scaledElapsed >= totalSec) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         setVisibleShapes([]);
+        sounds.play('whoosh');
         setPhase('question');
       }
     }, 50);
@@ -124,6 +125,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
     const score = correct ? 100 : 0;
     setRoundScores(prev => [...prev, score]);
     setPhase('feedback');
+    sounds.play(correct ? 'correct' : 'wrong');
 
     timerRef.current = setTimeout(() => {
       if (roundIdx + 1 < totalRounds) {
