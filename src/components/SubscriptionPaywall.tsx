@@ -12,14 +12,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Modal, ScrollView,
-  Dimensions, Animated as RNAnimated, Platform,
+  Dimensions, Animated as RNAnimated, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { restorePurchases } from '@/src/lib/purchases';
+import { useGameStore } from '@/src/store';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const ACCENT = '#6C5CE7';
@@ -249,9 +252,38 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
     }
   }, [visible]);
 
+  const router = useRouter();
+
   function handleDismiss() {
     RNAnimated.timing(slideAnim, { toValue: SH, duration: 250, useNativeDriver: true }).start(() => onDismiss());
   }
+
+  // Apple guideline 3.1.1 (in-app purchase): the paywall must offer a
+  // functional Restore Purchases action. Previously both "Restore"
+  // pressables just dismissed the modal — that's a hard reject.
+  async function handleRestore() {
+    try {
+      const status = await restorePurchases();
+      if (status.plus) {
+        useGameStore.getState().activatePlus();
+        handleDismiss();
+        Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
+      } else if (status.noAds) {
+        handleDismiss();
+        Alert.alert('Restored', 'Your ad-free purchase has been restored.');
+      } else {
+        Alert.alert('Nothing to restore', 'No previous purchases were found for this Apple ID.');
+      }
+    } catch {
+      Alert.alert('Could not restore', 'Please try again later or contact support.');
+    }
+  }
+
+  // Legal links need real handlers for Apple 3.1.2. They open the
+  // in-app WebView viewers which host the same URLs referenced in the
+  // App Store listing.
+  function openTerms() { handleDismiss(); setTimeout(() => router.push('/terms'), 260); }
+  function openPrivacy() { handleDismiss(); setTimeout(() => router.push('/privacy'), 260); }
 
   if (!visible) return null;
 
@@ -274,7 +306,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
           end={{ x: 0.9, y: 1 }}
           style={[st.header, { paddingTop: Math.max(insets.top + 8, 24) }]}
         >
-          <Pressable style={st.restoreBtn} onPress={handleDismiss} hitSlop={12}>
+          <Pressable style={st.restoreBtn} onPress={handleRestore} hitSlop={12}>
             <Text style={st.restoreText}>Restore</Text>
           </Pressable>
           <Pressable style={st.closeBtn} onPress={handleDismiss} hitSlop={12}>
@@ -355,13 +387,21 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
             )}
           </View>
 
-          {/* Legal */}
+          {/* Auto-renewal disclosure — required by Apple guideline 3.1.2.
+              Must be near the purchase CTA and clearly state: length of
+              subscription, price per period, auto-renewal, how to cancel. */}
+          <Text style={[st.renewalDisclosure, { color: palette.legalMuted }]}>
+            Subscription auto-renews at {plan === 'yearly' ? '\u00A319.99/year' : '\u00A32.99/month'} unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.
+          </Text>
+
+          {/* Legal — functional links that route to the in-app WebView
+              viewers. Restore is wired to the purchases library. */}
           <View style={st.legalRow}>
-            <Pressable><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms</Text></Pressable>
+            <Pressable onPress={openTerms}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy</Text></Pressable>
+            <Pressable onPress={openPrivacy}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable onPress={handleDismiss}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
+            <Pressable onPress={handleRestore}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
           </View>
         </ScrollView>
       </RNAnimated.View>
@@ -457,6 +497,9 @@ const st = StyleSheet.create({
   reassuranceGrey: { fontSize: 12, color: '#636E72' },
 
   // Legal
+  // Auto-renewal disclosure sits above the Terms/Privacy/Restore row.
+  // Small but legible — Apple explicitly wants this near the CTA.
+  renewalDisclosure: { fontSize: 10, lineHeight: 14, textAlign: 'center', paddingHorizontal: 12, marginBottom: 10, marginTop: 6 },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 4 },
   legalLink: { fontSize: 10, color: '#B2BEC3' },
   legalDot: { fontSize: 10, color: '#D0CEC8' },
