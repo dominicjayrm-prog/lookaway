@@ -2,6 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useGameStore } from '@/src/store';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 function BlitzShape({ type, color, size }: { type: string; color: string; size: number }) {
   switch (type) {
@@ -35,6 +40,38 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
 
+  // ── Counting Blitz power-ups ──
+  //  - cb_slow_motion: stretch the chaos window so shapes stay 50%
+  //    longer. We do this by bumping the total duration from 5s → 7.5s
+  //    and scaling each event's `appearAt` proportionally.
+  //  - cb_colour_filter: brief "highlight pulse" on all currently
+  //    visible shapes so the player can re-count for ~1s.
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [slowMotionActive, setSlowMotionActive] = useState(false);
+  const [filterFlashActive, setFilterFlashActive] = useState(false);
+
+  const handleUsePowerUp = useCallback((id: string) => {
+    if (usedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'cb_slow_motion') {
+      setSlowMotionActive(true);
+    } else if (id === 'cb_colour_filter') {
+      setFilterFlashActive(true);
+      setTimeout(() => setFilterFlashActive(false), 1000);
+    }
+  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+
+  const handleBuyPopupBought = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    handleUsePowerUp(id);
+  }, [handleUsePowerUp]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -49,23 +86,34 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
     setSelectedOption(null);
     setChaosProgress(1);
     roundStartRef.current = Date.now();
+    // Reset per-round power-up state
+    setUsedPowerUps({});
+    setSlowMotionActive(false);
+    setFilterFlashActive(false);
 
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - roundStartRef.current) / 1000;
-      setChaosProgress(Math.max(0, 1 - elapsed / 5));
+      // Slow Motion stretches the chaos window 5s → 7.5s by applying a
+      // time-scale factor to the elapsed reading. Each event's
+      // appearAt/duration are still in original seconds; the scale
+      // means 1 real second advances only 0.67 event-seconds.
+      const scale = slowMotionActive ? (1 / 1.5) : 1;
+      const scaledElapsed = elapsed * scale;
+      const totalSec = 5; // event-time budget stays the same
+      setChaosProgress(Math.max(0, 1 - scaledElapsed / totalSec));
 
       const nowVisible = round.events.filter((e: any) =>
-        elapsed >= e.appearAt && elapsed < e.appearAt + e.duration
+        scaledElapsed >= e.appearAt && scaledElapsed < e.appearAt + e.duration
       );
       setVisibleShapes(nowVisible);
 
-      if (elapsed >= 5) {
+      if (scaledElapsed >= totalSec) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         setVisibleShapes([]);
         setPhase('question');
       }
     }, 50);
-  }, [round]);
+  }, [round, slowMotionActive]);
 
   useEffect(() => { if (round) startChaos(); }, [roundIdx, round]);
 
@@ -123,14 +171,19 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
                     position: 'absolute',
                     left: `${sh.x}%`,
                     top: `${sh.y}%`,
-                    transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }, { scale }],
-                    opacity,
+                    transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }, { scale: filterFlashActive ? scale * 1.15 : scale }],
+                    opacity: filterFlashActive ? 1 : opacity,
                   }}
                 >
                   <BlitzShape type={sh.shapeType} color={sh.color} size={sh.size} />
                 </View>
               );
             })}
+            {/* Colour Filter flash — subtle translucent overlay makes
+                every visible shape pop for ~1s. */}
+            {filterFlashActive && (
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.12)' }]} pointerEvents="none" />
+            )}
           </View>
         </>
       )}
@@ -198,6 +251,14 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
           <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
         ))}
       </View>
+
+      {/* Counting Blitz power-ups — during chaos only (the answer
+          phase is a simple MCQ where power-ups don't apply). */}
+      {phase === 'chaos' && (
+        <ModePowerUpBar mode="counting_blitz" used={usedPowerUps} onUse={handleUsePowerUp} onBuyOut={(id) => setBuyPopupId(id as PowerUpId)} />
+      )}
+
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupBought} />
     </View>
   );
 }

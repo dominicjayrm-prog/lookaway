@@ -9,6 +9,11 @@ import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
 import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
+import { PowerUpBar } from '@/src/components/PowerUpBar';
+import { SlowTimeButton } from '@/src/components/SlowTimeButton';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import PowerUpFlash from '@/src/components/PowerUpFlash';
+import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
@@ -16,6 +21,7 @@ import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
 import { getTodayDateString } from '@/src/utils/dateHelpers';
 import { colors } from '@/src/theme/colors';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { sounds } from '@/src/lib/sounds';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import type { Level, Scene } from '@/src/types/game';
@@ -42,14 +48,6 @@ function SpeedGameScreen() {
   const loseLife = useGameStore((s) => s.loseLife);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
-  useEffect(() => { resetGame(); }, []);
-  useEffect(() => {
-    if (gameState === 'MEMORISE' || gameState === 'QUESTION' || gameState === 'REVEAL' || gameState === 'TRANSITION') {
-      const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 100) / 10), 100);
-      return () => clearInterval(id);
-    }
-  }, [gameState, startTime]);
-
   const currentScene = speedLevel.scenes[currentSceneIndex];
   const currentQuestion = currentScene?.questions[currentQuestionIndex];
 
@@ -59,8 +57,19 @@ function SpeedGameScreen() {
   }, []);
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
-  const handleStart = useCallback(() => { startLevel(speedLevel); }, [speedLevel, startLevel]);
-  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 500); }, [setGameState, clearTimeouts]);
+  // handleSelectOption uses pu.clearHiddenOptions (from useClassicPowerUps
+  // below), so we split it in two: a ref that holds the real function
+  // once the hook has initialised, and a callback that dispatches through
+  // that ref. This breaks the circular dependency — pu.onSkip needs
+  // handleSelectOption, but handleSelectOption needs pu to clear hidden
+  // options after a fiftyFifty.
+  const selectOptionRef = useRef<(index: number) => void>(() => {});
+  const dispatchSelect = useCallback((index: number) => selectOptionRef.current(index), []);
+
+  const pu = useClassicPowerUps({
+    onSkip: dispatchSelect,
+    currentQuestion,
+  });
 
   const handleSelectOption = useCallback((index: number) => {
     if (selectedOption !== null) return;
@@ -73,13 +82,27 @@ function SpeedGameScreen() {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      revealTimeout.current = setTimeout(() => { nextQuestion(); }, 300);
+      revealTimeout.current = setTimeout(() => { pu.clearHiddenOptions(); nextQuestion(); }, 300);
     }, 200);
-  }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
+  }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts, pu]);
+
+  // Keep the ref in sync so Skip always routes to the latest closure.
+  useEffect(() => { selectOptionRef.current = handleSelectOption; }, [handleSelectOption]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { nextQuestion(); }, 300); }
-  }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { pu.clearHiddenOptions(); nextQuestion(); }, 300); }
+  }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts, pu]);
+
+  useEffect(() => { resetGame(); pu.resetPowerUps(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    if (gameState === 'MEMORISE' || gameState === 'QUESTION' || gameState === 'REVEAL' || gameState === 'TRANSITION') {
+      const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 100) / 10), 100);
+      return () => clearInterval(id);
+    }
+  }, [gameState, startTime]);
+
+  const handleStart = useCallback(() => { startLevel(speedLevel); }, [speedLevel, startLevel]);
+  const handleMemoriseComplete = useCallback(() => { setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 500); }, [setGameState, clearTimeouts]);
 
   useEffect(() => {
     if (gameState === 'SCENE_SCORE') { nextScene(); }
@@ -156,15 +179,21 @@ function SpeedGameScreen() {
 
       {gameState === 'MEMORISE' && currentScene && (
         <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
-          <CountdownTimer duration={currentScene.viewTime} running={true} onComplete={handleMemoriseComplete} style={styles.timer} />
+          <CountdownTimer duration={currentScene.viewTime + pu.timerBonus} running={!pu.buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <SceneRenderer objects={currentScene.objects} visible={true} />
+          <SlowTimeButton used={pu.usedPowerUps.slowTime} onUse={pu.handleSlowTime} />
         </Animated.View>
       )}
       {gameState === 'TRANSITION' && (<Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
       {gameState === 'QUESTION' && currentQuestion && (
         <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
-          <CountdownTimer duration={currentQuestion.timeLimit} running={true} onComplete={handleQuestionTimeout} style={styles.timer} />
-          <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentSceneIndex + 1} totalQuestions={10} />
+          <CountdownTimer duration={currentQuestion.timeLimit} running={!pu.showPeekScene && !pu.buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
+          {pu.showPeekScene && currentScene ? (
+            <SceneRenderer objects={currentScene.objects} visible={true} />
+          ) : (
+            <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={currentSceneIndex + 1} totalQuestions={10} hiddenOptions={pu.hiddenOptions} />
+          )}
+          <PowerUpBar usedThisLevel={pu.usedPowerUps} onUsePowerUp={pu.handleQuestionPowerUp} />
         </Animated.View>
       )}
       {gameState === 'REVEAL' && currentQuestion && (
@@ -172,6 +201,10 @@ function SpeedGameScreen() {
           <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={revealedCorrect} onSelect={() => {}} questionNumber={currentSceneIndex + 1} totalQuestions={10} />
         </View>
       )}
+
+      {/* Buy-power-up popup pauses the game timers via buyPopupId */}
+      <BuyPowerUpPopup powerUpId={pu.buyPopupId} onClose={() => pu.setBuyPopupId(null)} onBought={pu.handleBuyPopupPurchased} />
+      <PowerUpFlash type={pu.activePowerUp} onDone={pu.clearActivePowerUp} />
 
       {showQuitConfirm && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowQuitConfirm(false)}>

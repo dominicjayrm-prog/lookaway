@@ -47,7 +47,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
                     <Text style={[styles.tierLabel, { color: isUnlocked ? tierColor : colors.textMid, fontWeight: isUnlocked ? '700' : '500' }]}>
                       {tier.tier.charAt(0).toUpperCase() + tier.tier.slice(1)}
                     </Text>
-                    {isUnlocked && <Text style={[styles.checkMark, { color: tierColor }]}>\u2713</Text>}
+                    {isUnlocked && <Text style={[styles.checkMark, { color: tierColor }]}>{'\u2713'}</Text>}
                   </View>
                   <Text style={[styles.tierDesc, { color: isUnlocked ? colors.text : colors.textMid }]}>{tier.description}</Text>
 
