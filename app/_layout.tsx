@@ -91,12 +91,56 @@ function CloudSyncLoader() {
   const syncToCloud = useGameStore((s) => s.syncToCloud);
   const saveState = useGameStore((s) => s.saveState);
   const setAuthUserId = useGameStore((s) => s.setAuthUserId);
+  const resetForNewUser = useGameStore((s) => s.resetForNewUser);
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
+  // Track the last user ID we synced for so we can detect account
+  // switches on the same device. Without this, logging in as a new
+  // user on a device where another user already played inherits their
+  // gems / streak / world / stars via the max-merge in loadFromCloud.
+  const lastUserIdRef = useRef<string | null>(null);
 
   // Load from cloud on login + update online status + expire old challenges
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      // Sign-out path: user cleared. If we had a previous user, wipe
+      // local state so the next sign-in doesn't leak the old account.
+      if (lastUserIdRef.current) {
+        resetForNewUser();
+        lastUserIdRef.current = null;
+      }
+      return;
+    }
+
+    // Account switch on the same device (e.g. signed out of account A
+    // and into account B) — reset first so the loadFromCloud that
+    // follows doesn't max-merge A's higher values into B's fresh row.
+    //
+    // Two paths:
+    //   1. Same-session switch: lastUserIdRef is the previous user.id
+    //   2. Cold start on a device where the previous user's progress
+    //      is still in localStorage — we stamp _authUserId inside the
+    //      blob, so we can compare here and reset before we even
+    //      kick off loadFromCloud.
+    const prevUserId = lastUserIdRef.current;
+    let storedUserId: string | null = null;
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('blanked-progress');
+        if (raw) {
+          const parsed = JSON.parse(raw) as { _authUserId?: string | null };
+          storedUserId = parsed._authUserId ?? null;
+        }
+      }
+    } catch {}
+
+    const switchedInSession = prevUserId && prevUserId !== user.id;
+    const coldStartMismatch = !prevUserId && storedUserId && storedUserId !== user.id;
+    if (switchedInSession || coldStartMismatch) {
+      resetForNewUser();
+    }
+    lastUserIdRef.current = user.id;
+
     setAuthUserId(user.id); // Store real auth ID for cloud sync
     loadFromCloud(user.id);
     updateOnlineStatus(user.id);
@@ -107,7 +151,7 @@ function CloudSyncLoader() {
     // Update online status every 60 seconds (for 3-tier: online/recent/offline)
     const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
-  }, [user?.id, loadFromCloud]);
+  }, [user?.id, loadFromCloud, resetForNewUser, setAuthUserId]);
 
   // Sync on foreground (pull latest from other devices) + save on background
   useEffect(() => {

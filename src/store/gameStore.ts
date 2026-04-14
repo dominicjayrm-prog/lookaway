@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Level, GameState } from '@/src/types/game';
 import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
@@ -7,6 +8,28 @@ import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/d
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
+
+/**
+ * Every AsyncStorage key that belongs to ONE user and must be wiped
+ * when a different user signs in on the same device. Device-level
+ * prefs (theme, sound, haptics, device user-id, level cache) are
+ * intentionally excluded — those are per-device, not per-account.
+ */
+const USER_SCOPED_STORAGE_KEYS = [
+  'blanked-progress',
+  'blanked_activity',
+  'blanked_weekly_challenges_v2',
+  'blanked_event_progress',
+  'blanked_tutorial_seen',
+  'blanked_referred_by_code',
+  'blanked_referral_processed',
+  'blanked_referral_code',
+  'blanked_notifications_asked',
+  'blanked_notifications_declined_count',
+  'starter_pack_purchased',
+  'starter_pack_offered_at',
+  'mastermind_intro_seen',
+];
 
 /** In-memory fallback for platforms where localStorage is unavailable */
 let _memoryUserId: string | null = null;
@@ -222,6 +245,11 @@ function saveState(state: GameStore) {
       equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor, equippedExpression: state.equippedExpression,
       loginReward: state.loginReward,
       localUpdatedAt: stampedAt,
+      // Stamp the authUserId this blob belongs to. On cold start
+      // CloudSyncLoader compares this against the incoming auth
+      // session and wipes local state if they don't match — stops a
+      // new user from inheriting the previous user's blob.
+      _authUserId: state._authUserId,
     }));
   } catch (e) {
     log.error('storage', 'saveState failed', e);
@@ -381,6 +409,13 @@ export interface GameStore {
   hydrate: () => void;
   saveState: () => void;
   setAuthUserId: (id: string) => void;
+  /** Wipe every progress-related field back to defaults and clear the
+   *  shared AsyncStorage key. Called when a DIFFERENT auth user signs
+   *  in on the same device (previously the new account would inherit
+   *  the old account's gems/stars/world/streak via stale local state)
+   *  and on explicit sign-out. Does NOT touch _hydrated so the UI
+   *  doesn't flicker into a "still loading" state. */
+  resetForNewUser: () => void;
   revokeSubscription: () => void;
   /** Mark ads as permanently removed (Remove Ads IAP). */
   setAdsRemoved: () => void;
@@ -748,6 +783,81 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     saveState: () => saveState(get()),
     setAuthUserId: (id: string) => set({ _authUserId: id }),
+    resetForNewUser: () => {
+      // Nuke every user-scoped AsyncStorage key so the new account
+      // doesn't inherit the previous user's tutorial-seen flag,
+      // activity feed, weekly-challenge progress, seasonal event
+      // progress, referral code, starter-pack state, etc. Fire and
+      // forget — AsyncStorage.multiRemove is async but we don't
+      // need to await because the in-memory Zustand state is what
+      // drives the UI and we update that synchronously below.
+      try {
+        AsyncStorage.multiRemove(USER_SCOPED_STORAGE_KEYS).catch(() => {});
+      } catch {}
+      // Web fallback — localStorage is synchronous and separate from
+      // AsyncStorage on RNWeb-less platforms, so remove explicitly.
+      try {
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          for (const k of USER_SCOPED_STORAGE_KEYS) localStorage.removeItem(k);
+        }
+      } catch {}
+      // Kill any pending debounced sync so we don't push the old
+      // user's snapshot to the new user's row milliseconds after
+      // this reset fires.
+      clearTimeout((saveState as { _syncTimer?: ReturnType<typeof setTimeout> })._syncTimer);
+
+      set({
+        // Economy
+        gems: 0,
+        lives: 5,
+        maxLives: 5,
+        livesLastLostAt: null,
+        adsRemoved: false,
+        unlimitedLivesUntil: null,
+        // Streak
+        streakCount: 0,
+        bestStreak: 0,
+        daysPlayed: 0,
+        streakShields: 0,
+        streakMilestonesClaimed: [],
+        lastPlayDate: null,
+        // Progress
+        totalStars: 0,
+        highestWorld: 1,
+        levelProgress: {},
+        completedScores: [],
+        powerUps: { ...DEFAULT_POWERUPS },
+        // Cosmetics — new user owns nothing; defaults equipped
+        ownedCosmetics: [],
+        equippedFrame: 'frame_blink_normal',
+        equippedBanner: 'banner_none',
+        equippedNameColor: 'name_default',
+        equippedExpression: 'expr_normal',
+        // Profile
+        username: '',
+        avatarUrl: null,
+        // Subscription — cloud will re-hydrate if the new user is
+        // actually on an active plan via RevenueCat.
+        subscriptionStatus: 'inactive',
+        // Daily login reward
+        loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
+        // In-flight gameplay state — reset so a level started under
+        // the old user doesn't bleed into the new session.
+        currentLevel: null,
+        gameState: 'READY' as GameState,
+        currentSceneIndex: 0,
+        currentQuestionIndex: 0,
+        answers: [] as Answer[],
+        selectedOption: null,
+        revealedCorrect: null,
+        score: 0,
+        levelPowerUpsUsed: 0,
+        sessionLevelCount: 0,
+        streakRewardQueue: [],
+        recoveryWindowStart: null,
+        localUpdatedAt: 0,
+      });
+    },
     revokeSubscription: () => {
       // Flip status to inactive, strip subscriber-only cosmetics, and reset
       // any equipped subscriber cosmetics back to defaults. Called by
