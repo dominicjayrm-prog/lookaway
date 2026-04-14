@@ -14,6 +14,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
+import { resetAllStreakRewards } from '@/src/utils/streakRewards';
 
 /** 1-hour recovery window, in ms. After this elapses the streak resets. */
 export const RECOVERY_WINDOW_MS = 60 * 60 * 1000;
@@ -219,13 +220,18 @@ export async function recoverWithShield(
   }
 }
 
-/** Let the streak reset to zero (explicit dismissal). Clears window too. */
+/** Let the streak reset to zero (explicit dismissal). Clears window too and
+ *  flips every streak_rewards row back to unclaimed so the player can
+ *  re-earn the rewards as they climb from 1 again. */
 export async function letStreakReset(userId: string): Promise<void> {
   try {
     await supabase
       .from('profiles')
       .update({ streak_count: 0, recovery_window_start: null, streak_last_date: null })
       .eq('id', userId);
+    // Re-claimable rewards: flip all milestone rows back to unclaimed so
+    // the player can re-earn them on their next streak climb.
+    await resetAllStreakRewards(userId);
   } catch (e) {
     log.warn('streak', 'letStreakReset failed', { error: String(e), userId });
   }

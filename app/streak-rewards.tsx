@@ -4,10 +4,15 @@
  *   • Hero: Blink (streak expression) + count + "next reward" pill
  *   • This-week calendar with played/today/future states
  *   • Streak Shields card with current count
- *   • Vertical milestone timeline (claimed / next / future states)
+ *   • Vertical milestone timeline. Four states per node:
+ *       - claimed (green check)
+ *       - reachable + unclaimed (gold gift, "TAP TO CLAIM" badge, pulsing)
+ *       - next unreached (coral with progress bar)
+ *       - future (dimmed 45%)
  *
- * Data: Supabase-backed claims via getStreakRewards(). Best streak read
- * from the local store (synced from profiles.best_streak).
+ * Tap a reachable node → claim animation: scale bounce + gold flash on
+ * the card, gem/shield icons fly up + fade out, then the global toast
+ * (mounted in _layout.tsx) plays the standard reward celebration.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Animated as RNAnimated, Platform } from 'react-native';
@@ -20,7 +25,7 @@ import { useGameStore } from '@/src/store';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { STREAK_MILESTONES, type StreakMilestone } from '@/src/data/streakMilestones';
-import { getStreakRewards, type StreakRewardRow } from '@/src/utils/streakRewards';
+import { getStreakRewards, claimSingleMilestone, type StreakRewardRow } from '@/src/utils/streakRewards';
 
 const FIRE = '\uD83D\uDD25';
 const SHIELD = '\uD83D\uDEE1\uFE0F';
@@ -38,21 +43,65 @@ export default function StreakRewardsScreen() {
   const lastPlayDate = useGameStore((s) => s.lastPlayDate);
 
   const [rows, setRows] = useState<StreakRewardRow[]>([]);
+  // Re-fetch trigger — bumped after a successful claim so the row state
+  // re-loads from Supabase and the timeline reflects the new claimed flag.
+  const [reloadTick, setReloadTick] = useState(0);
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     getStreakRewards(user.id).then((r) => { if (!cancelled) setRows(r); });
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.id, reloadTick]);
 
   // Build a `claimed` lookup the milestone nodes use to decide their state
   const claimedByDay = new Map<number, boolean>();
   for (const r of rows) claimedByDay.set(r.milestone_day, r.claimed);
 
-  // Find the next milestone — first unclaimed in spec order
+  // Reachable but unclaimed = streak qualifies AND row hasn't been flipped
+  const reachableUnclaimed = STREAK_MILESTONES.filter(
+    (m) => streakCount >= m.day && claimedByDay.get(m.day) !== true,
+  );
+  // "Next" milestone is the first one the player HASN'T REACHED yet (the
+  // future goal) — distinct from "reachable + unclaimed" which is a
+  // claimable reward sitting there waiting.
   const nextMilestone: StreakMilestone | null =
-    STREAK_MILESTONES.find((m) => !claimedByDay.get(m.day)) ?? null;
+    STREAK_MILESTONES.find((m) => streakCount < m.day) ?? null;
   const daysToNext = nextMilestone ? Math.max(0, nextMilestone.day - streakCount) : 0;
+
+  // Push a claimed milestone to the global toast queue + bump reload so the
+  // local row mirror refreshes from Supabase. Also mirrors the local
+  // streakShields counter immediately for instant feedback in the shield
+  // status card on this screen.
+  const pushStreakRewards = useGameStore((s) => s.pushStreakRewards);
+  const handleClaimComplete = (m: StreakMilestone, claimedAt: string) => {
+    pushStreakRewards([{ ...m, claimedAt }]);
+    if (m.shields > 0) {
+      useGameStore.setState((s) => ({ streakShields: s.streakShields + m.shields }));
+    }
+    if (m.gems > 0) {
+      // Mirror gems locally so the AnimatedGemCount on home/shop animates
+      // when the player navigates back. Cloud already has the new value.
+      useGameStore.setState((s) => ({ gems: s.gems + m.gems }));
+    }
+    useGameStore.setState((s) => ({
+      streakMilestonesClaimed: Array.from(new Set([...s.streakMilestonesClaimed, m.day])),
+    }));
+    setReloadTick((n) => n + 1);
+  };
+
+  // Claim all reachable in sequence with a small stagger so each one
+  // gets its own toast appearance. Claimed serially to avoid race.
+  const [claimingAll, setClaimingAll] = useState(false);
+  const claimAll = async () => {
+    if (!user?.id || claimingAll) return;
+    setClaimingAll(true);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    for (const m of reachableUnclaimed) {
+      const result = await claimSingleMilestone(user.id, m.day, streakCount);
+      if (result) handleClaimComplete(m, result.claimedAt);
+    }
+    setClaimingAll(false);
+  };
 
   const playedToday = lastPlayDate === new Date().toISOString().split('T')[0];
 
@@ -74,7 +123,10 @@ export default function StreakRewardsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={st.scroll}>
+      <ScrollView
+        contentContainerStyle={st.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero — Blink + count + next reward pill */}
         <FloatingBlink />
         <CountUp value={streakCount} style={[st.streakNum, { color: colors.wrong }]} />
@@ -117,19 +169,42 @@ export default function StreakRewardsScreen() {
         </View>
 
         {/* Rewards timeline */}
-        <Text style={[st.sectionLabel, { color: colors.textLight }]}>STREAK REWARDS</Text>
+        <View style={st.sectionHeader}>
+          <Text style={[st.sectionLabel, { color: colors.textLight }]}>STREAK REWARDS</Text>
+          {reachableUnclaimed.length > 1 && (
+            <Pressable
+              onPress={claimAll}
+              disabled={claimingAll}
+              style={({ pressed }) => [
+                st.claimAllBtn,
+                { backgroundColor: colors.gold, opacity: claimingAll ? 0.55 : pressed ? 0.85 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Claim all ${reachableUnclaimed.length} pending rewards`}
+            >
+              <Text style={st.claimAllText}>
+                {GIFT} Claim all {reachableUnclaimed.length}
+              </Text>
+            </Pressable>
+          )}
+        </View>
         <View style={st.timeline}>
           {STREAK_MILESTONES.map((m) => {
             const claimed = claimedByDay.get(m.day) === true;
-            const isNext = !claimed && nextMilestone?.day === m.day;
+            const reached = streakCount >= m.day;
+            const reachableUnclaim = reached && !claimed;
+            const isNext = !reached && nextMilestone?.day === m.day;
             return (
               <MilestoneNode
                 key={m.day}
                 milestone={m}
                 claimed={claimed}
+                reachableUnclaim={reachableUnclaim}
                 isNext={isNext}
                 currentStreak={streakCount}
                 colors={colors}
+                userId={user?.id ?? null}
+                onClaimed={(claimedAt) => handleClaimComplete(m, claimedAt)}
               />
             );
           })}
@@ -218,27 +293,40 @@ function WeekRow({ playedToday, colors }: { playedToday: boolean; colors: any })
 }
 
 // ─── Milestone timeline node ────────────────────────────────────────
+// Four states: claimed (green check), reachable + unclaimed (gold gift,
+// pulsing, tappable), next unreached (coral with progress bar, pulsing
+// outer ring), future (dimmed). Tapping a reachable node fires the
+// claim animation: card scale-bounce + gold flash + reward icons fly up
+// + fade out, then promoting to claimed.
 function MilestoneNode({
   milestone,
   claimed,
+  reachableUnclaim,
   isNext,
   currentStreak,
   colors,
+  userId,
+  onClaimed,
 }: {
   milestone: StreakMilestone;
   claimed: boolean;
+  reachableUnclaim: boolean;
   isNext: boolean;
   currentStreak: number;
   colors: any;
+  userId: string | null;
+  onClaimed: (claimedAt: string) => void;
 }) {
   const reached = currentStreak >= milestone.day;
   const progress = Math.min(1, currentStreak / milestone.day);
+  // Future milestones dim to 45% — past unclaimed milestones stay at full
+  // opacity to draw the eye toward the claimable rewards.
   const opacity = reached || isNext ? 1 : 0.45;
 
-  // Pulse glow on the "next" indicator
+  // Pulse glow on next OR reachable-unclaimed indicators (both want attention)
   const pulse = useRef(new RNAnimated.Value(1)).current;
   useEffect(() => {
-    if (!isNext || isWeb) return;
+    if (!(isNext || reachableUnclaim) || isWeb) return;
     const loop = () => {
       RNAnimated.sequence([
         RNAnimated.timing(pulse, { toValue: 1.15, duration: 900, useNativeDriver: true }),
@@ -246,24 +334,86 @@ function MilestoneNode({
       ]).start(loop);
     };
     loop();
-  }, [isNext, pulse]);
+  }, [isNext, reachableUnclaim, pulse]);
+
+  // Per-tap claim animation state ──────────────────────────────────────
+  // cardScale: brief 1.05 bounce + settle
+  // glow: 0 → 1 → 0 (gold border flash)
+  // burstY / burstOpacity: reward icon burst that floats upward + fades
+  const cardScale = useRef(new RNAnimated.Value(1)).current;
+  const glow = useRef(new RNAnimated.Value(0)).current;
+  const burstY = useRef(new RNAnimated.Value(0)).current;
+  const burstOpacity = useRef(new RNAnimated.Value(0)).current;
+  const [claiming, setClaiming] = useState(false);
+
+  const onTap = async () => {
+    if (!reachableUnclaim || !userId || claiming) return;
+    setClaiming(true);
+    if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+    // Fire the visual burst BEFORE the network call so it feels instant
+    burstY.setValue(0);
+    burstOpacity.setValue(1);
+    RNAnimated.parallel([
+      RNAnimated.sequence([
+        RNAnimated.spring(cardScale, { toValue: 1.05, friction: 6, tension: 200, useNativeDriver: true }),
+        RNAnimated.spring(cardScale, { toValue: 1, friction: 8, tension: 160, useNativeDriver: true }),
+      ]),
+      RNAnimated.sequence([
+        RNAnimated.timing(glow, { toValue: 1, duration: 200, useNativeDriver: true }),
+        RNAnimated.timing(glow, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]),
+      RNAnimated.timing(burstY, { toValue: -80, duration: 900, useNativeDriver: true }),
+      RNAnimated.timing(burstOpacity, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ]).start();
+
+    const result = await claimSingleMilestone(userId, milestone.day, currentStreak);
+    if (result) {
+      onClaimed(result.claimedAt);
+    } else {
+      // Server-side failure (already claimed by another device, network) —
+      // reset UI so the player isn't stuck in a fake-claimed state.
+      setClaiming(false);
+    }
+  };
+
+  // Wrap the row in Pressable only when it's tappable to avoid changing
+  // hit-test behavior for non-interactive nodes.
+  const Wrapper: any = reachableUnclaim ? Pressable : View;
+  const wrapperProps = reachableUnclaim
+    ? {
+        onPress: onTap,
+        accessibilityRole: 'button' as const,
+        accessibilityLabel: `Claim Day ${milestone.day} reward: ${milestone.gems} gems${milestone.shields > 0 ? ` and ${milestone.shields} shields` : ''}`,
+      }
+    : {};
 
   return (
-    <View style={[st.nodeRow, { opacity }]}>
+    <Wrapper {...wrapperProps} style={[st.nodeRow, { opacity }]}>
       {/* Timeline dot */}
       <RNAnimated.View
         style={[
           st.nodeDot,
           {
-            backgroundColor: claimed ? colors.correct : isNext ? colors.wrongSoft : reached ? colors.wrong : colors.surface,
-            borderColor: isNext ? colors.wrong : 'transparent',
-            borderWidth: isNext ? 2 : 0,
-            transform: isNext ? [{ scale: pulse }] : undefined,
+            backgroundColor: claimed
+              ? colors.correct
+              : reachableUnclaim
+              ? colors.gold
+              : isNext
+              ? colors.wrongSoft
+              : reached
+              ? colors.wrong
+              : colors.surface,
+            borderColor: isNext ? colors.wrong : reachableUnclaim ? colors.gold : 'transparent',
+            borderWidth: isNext || reachableUnclaim ? 2 : 0,
+            transform: (isNext || reachableUnclaim) ? [{ scale: pulse }] : undefined,
           },
         ]}
       >
         {claimed ? (
           <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+        ) : reachableUnclaim ? (
+          <Text style={st.giftEmoji}>{GIFT}</Text>
         ) : reached ? (
           <Text style={st.giftEmoji}>{GIFT}</Text>
         ) : (
@@ -271,20 +421,57 @@ function MilestoneNode({
         )}
       </RNAnimated.View>
 
-      {/* Card */}
-      <View
+      {/* Card with claim animation */}
+      <RNAnimated.View
         style={[
           st.nodeCard,
           {
-            backgroundColor: isNext ? colors.card : claimed ? colors.correctSoft : colors.card,
-            borderColor: isNext ? colors.wrong + '20' : claimed ? colors.correct + '15' : colors.border,
+            backgroundColor: claimed ? colors.correctSoft : colors.card,
+            borderColor: reachableUnclaim
+              ? colors.gold + '50'
+              : isNext
+              ? colors.wrong + '20'
+              : claimed
+              ? colors.correct + '15'
+              : colors.border,
+            transform: [{ scale: cardScale }],
           },
         ]}
       >
+        {/* Animated gold glow overlay — pulses during claim animation */}
+        <RNAnimated.View
+          pointerEvents="none"
+          style={[
+            st.cardGlow,
+            {
+              borderColor: colors.gold,
+              opacity: glow,
+            },
+          ]}
+        />
+
         <View style={st.nodeHeader}>
-          <Text style={[st.nodeDayLabel, { color: claimed ? colors.correct : isNext ? colors.wrong : colors.text }]}>
+          <Text
+            style={[
+              st.nodeDayLabel,
+              {
+                color: claimed
+                  ? colors.correct
+                  : reachableUnclaim
+                  ? colors.gold
+                  : isNext
+                  ? colors.wrong
+                  : colors.text,
+              },
+            ]}
+          >
             Day {milestone.day}
           </Text>
+          {reachableUnclaim && !claiming && (
+            <View style={[st.nodeBadge, { backgroundColor: colors.goldSoft }]}>
+              <Text style={[st.nodeBadgeText, { color: colors.gold }]}>{GIFT} TAP TO CLAIM</Text>
+            </View>
+          )}
           {isNext && (
             <View style={[st.nodeBadge, { backgroundColor: colors.wrongSoft }]}>
               <Text style={[st.nodeBadgeText, { color: colors.wrong }]}>
@@ -323,8 +510,30 @@ function MilestoneNode({
             </View>
           </View>
         )}
-      </View>
-    </View>
+
+        {/* Floating reward burst — reward icons fly up + fade out on claim */}
+        {claiming && (
+          <RNAnimated.View
+            pointerEvents="none"
+            style={[
+              st.burstWrap,
+              { opacity: burstOpacity, transform: [{ translateY: burstY }] },
+            ]}
+          >
+            <View style={[st.burstPill, { backgroundColor: colors.accent }]}>
+              <Ionicons name="diamond" size={12} color="#FFFFFF" />
+              <Text style={st.burstText}>+{milestone.gems}</Text>
+            </View>
+            {milestone.shields > 0 && (
+              <View style={[st.burstPill, { backgroundColor: colors.wrong }]}>
+                <Text style={st.burstShield}>{SHIELD}</Text>
+                <Text style={st.burstText}>+{milestone.shields}</Text>
+              </View>
+            )}
+          </RNAnimated.View>
+        )}
+      </RNAnimated.View>
+    </Wrapper>
   );
 }
 
@@ -375,6 +584,23 @@ const st = StyleSheet.create({
   shieldCount: { fontSize: 14, fontWeight: '800' },
   sectionLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, alignSelf: 'flex-start', marginTop: 8, marginBottom: 8 },
   timeline: { width: '100%', gap: 8 },
+  // Header row above the timeline — section label + Claim All button
+  sectionHeader: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 },
+  claimAllBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  claimAllText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+  // Animated gold border ring that flashes during a single claim
+  cardGlow: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 14, borderWidth: 2,
+  },
+  // Floating reward icons that fly up + fade out on claim
+  burstWrap: {
+    position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center',
+    flexDirection: 'row', justifyContent: 'center', gap: 8,
+  },
+  burstPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  burstText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  burstShield: { fontSize: 12 },
   nodeRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   nodeDot: {
     width: 28, height: 28, borderRadius: 14,
