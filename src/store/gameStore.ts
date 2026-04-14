@@ -890,7 +890,17 @@ export const useGameStore = create<GameStore>((set, get) => {
         })(),
         // Streak milestones: union of claimed milestones (prevent re-claiming)
         streakMilestonesClaimed: [...new Set([...local.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
-        lastPlayDate: local.lastPlayDate ?? cloud.lastPlayDate,
+        // lastPlayDate: take the most recent of the two. Plain string max
+        // works because the format is YYYY-MM-DD (lexicographic = chronological).
+        // This handles cross-device play (other device played later → cloud
+        // wins) while still letting "I just played here" beat stale cloud.
+        lastPlayDate: ((): string | null => {
+          const a = local.lastPlayDate;
+          const b = cloud.lastPlayDate;
+          if (!a) return b ?? null;
+          if (!b) return a;
+          return a > b ? a : b;
+        })(),
         // completedScores already merged above (line ~762) via mergedScores —
         // an older version of this block also wrote it here under a now-dead
         // `localHasProgress` flag, which silently overrode the merged value.
