@@ -6,7 +6,7 @@ import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/pr
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
-import type { ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
+import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
 
 /** In-memory fallback for platforms where localStorage is unavailable */
 let _memoryUserId: string | null = null;
@@ -533,10 +533,23 @@ export const useGameStore = create<GameStore>((set, get) => {
     addStars: (count) => { set((s) => ({ totalStars: s.totalStars + count })); setTimeout(() => saveState(get()), 0); },
     incrementStreak: () => {
       const today = new Date().toISOString().split('T')[0];
-      const { lastPlayDate, streakCount, bestStreak, daysPlayed } = get();
+      const { lastPlayDate, streakCount, bestStreak, daysPlayed, _authUserId } = get();
       if (lastPlayDate === today) return; // Already played today
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-      const newStreak = lastPlayDate === yesterday ? streakCount + 1 : 1; // Continue or restart
+      const continuing = lastPlayDate === yesterday;
+      const newStreak = continuing ? streakCount + 1 : 1;
+      // Detect a BROKEN streak (prev run was ≥1 and gap > 1 day). The
+      // player's rebuilding from scratch so every milestone row goes back
+      // to unclaimed — re-climbing earns the rewards a second time.
+      if (!continuing && streakCount > 0) {
+        if (_authUserId) {
+          resetAllStreakRewards(_authUserId);
+        }
+        // Local mirror of claimed days — clear so the home card's "next
+        // reward" teaser and the rewards-screen timeline don't think
+        // Day 3/7/… are already claimed until cloud catches up.
+        set({ streakMilestonesClaimed: [] });
+      }
       set({
         streakCount: newStreak,
         bestStreak: Math.max(bestStreak, newStreak),
@@ -574,8 +587,20 @@ export const useGameStore = create<GameStore>((set, get) => {
       setTimeout(() => saveState(get()), 0);
     },
     resetStreakLocal: () => {
-      set({ streakCount: 0, lastPlayDate: null, recoveryWindowStart: null });
+      const uid = get()._authUserId;
+      set({
+        streakCount: 0,
+        lastPlayDate: null,
+        recoveryWindowStart: null,
+        // Clear local claimed mirror so the rewards timeline stops showing
+        // "CLAIMED" badges on milestones until cloud catches up
+        streakMilestonesClaimed: [],
+      });
       setTimeout(() => saveState(get()), 0);
+      // Flip every streak_rewards row back to unclaimed so the player can
+      // re-earn rewards on their next climb. Fire-and-forget — the local
+      // mirror is already cleared for instant UI feedback.
+      if (uid) resetAllStreakRewards(uid);
     },
     checkLifeRegen: () => {
       const { lives, maxLives, livesLastLostAt } = get();

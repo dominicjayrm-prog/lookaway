@@ -50,6 +50,23 @@ export async function seedStreakMilestonesIfMissing(userId: string): Promise<voi
   }
 }
 
+/** Reset every milestone row back to unclaimed for a user. Fired when the
+ *  streak breaks (explicit reset, window expiry, or implicit reset in
+ *  incrementStreak when the gap exceeds 1 day). This is what makes the
+ *  rewards re-claimable — a player who hits day 100 then loses it and
+ *  climbs back earns the rewards again. */
+export async function resetAllStreakRewards(userId: string): Promise<void> {
+  if (!userId) return;
+  try {
+    await supabase
+      .from('streak_rewards')
+      .update({ claimed: false, claimed_at: null })
+      .eq('user_id', userId);
+  } catch (e) {
+    log.warn('streak', 'resetAllStreakRewards failed', { error: String(e), userId });
+  }
+}
+
 /** Pull the full list of milestone rows for a user (used by the rewards
  *  screen for timeline rendering). Returns empty array on error. */
 export async function getStreakRewards(userId: string): Promise<StreakRewardRow[]> {

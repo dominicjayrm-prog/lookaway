@@ -123,7 +123,10 @@ export default function StreakRewardsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={st.scroll}>
+      <ScrollView
+        contentContainerStyle={st.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Hero — Blink + count + next reward pill */}
         <FloatingBlink />
         <CountUp value={streakCount} style={[st.streakNum, { color: colors.wrong }]} />

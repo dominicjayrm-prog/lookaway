@@ -149,7 +149,58 @@ function ProfileScreen() {
 
   // Delete account — Apple guideline 5.1.1(v) requires in-app account deletion.
   // Two confirmation dialogs because this is irreversible.
+  /** Actually performs the delete — extracted so both the native Alert.alert
+   *  chain AND the web window.confirm path can reuse it. Deletes every
+   *  row keyed off user_id across our tables, clears local storage,
+   *  signs out, then routes to login. */
+  const performAccountDeletion = useCallback(async () => {
+    const userId = user?.id;
+    if (!userId) return;
+    try {
+      // Friend-side tables come first because their FKs reference
+      // profiles — if profiles is deleted first with CASCADE it's fine,
+      // but without cascade some rows would orphan. This order works
+      // regardless of cascade configuration.
+      await supabase.from('user_progress').delete().eq('user_id', userId);
+      await supabase.from('friend_challenges').delete().or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`);
+      await supabase.from('friendships').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+      await supabase.from('economy_events').delete().eq('user_id', userId);
+      await supabase.from('daily_results').delete().eq('user_id', userId);
+      await supabase.from('streak_rewards').delete().eq('user_id', userId);
+      // Profile last — streak_rewards CASCADE would handle it but explicit
+      // is safer if RLS on the cascade side ever changes.
+      await supabase.from('profiles').delete().eq('id', userId);
+      try { if (typeof localStorage !== 'undefined') localStorage.clear(); } catch {}
+      await supabase.auth.signOut();
+      log.breadcrumb('auth', 'account deleted', { userId });
+      router.replace('/(auth)/login');
+    } catch (e) {
+      log.error('profile', 'account deletion failed', e);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert('Could not delete your account. Please try again or contact support.');
+      } else {
+        Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
+      }
+    }
+  }, [user?.id, router]);
+
   const handleDeleteAccount = useCallback(() => {
+    // Alert.alert's multi-step chain is unreliable on web (it often no-ops
+    // or only fires the first confirm), so fall back to window.confirm
+    // there. Native iOS/Android keep the prettier Alert chain.
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const first = window.confirm(
+        'Delete your account?\n\nThis will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
+      );
+      if (!first) return;
+      const second = window.confirm(
+        'Are you absolutely sure?\n\nAll your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
+      );
+      if (!second) return;
+      performAccountDeletion();
+      return;
+    }
+
     Alert.alert(
       'Delete your account?',
       'This will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
@@ -164,36 +215,14 @@ function ProfileScreen() {
               'All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
               [
                 { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Yes, delete everything',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      const userId = user?.id;
-                      if (!userId) return;
-                      await supabase.from('user_progress').delete().eq('user_id', userId);
-                      await supabase.from('friend_challenges').delete().or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`);
-                      await supabase.from('friendships').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-                      await supabase.from('economy_events').delete().eq('user_id', userId);
-                      await supabase.from('daily_results').delete().eq('user_id', userId);
-                      await supabase.from('profiles').delete().eq('id', userId);
-                      try { if (typeof localStorage !== 'undefined') localStorage.clear(); } catch {}
-                      await supabase.auth.signOut();
-                      log.breadcrumb('auth', 'account deleted', { userId });
-                      router.replace('/(auth)/login');
-                    } catch (e) {
-                      log.error('profile', 'account deletion failed', e);
-                      Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
-                    }
-                  },
-                },
+                { text: 'Yes, delete everything', style: 'destructive', onPress: performAccountDeletion },
               ],
             );
           },
         },
       ],
     );
-  }, [user?.id, router]);
+  }, [performAccountDeletion]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
