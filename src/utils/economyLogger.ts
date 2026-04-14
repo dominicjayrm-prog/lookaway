@@ -37,6 +37,7 @@ export const ECONOMY_EVENTS = {
   GEM_EARN_AD: 'gem_earn_ad',
   GEM_SPEND_POWERUP: 'gem_spend_powerup',
   GEM_SPEND_LIVES: 'gem_spend_lives',
+  GEM_SPEND_COSMETIC: 'gem_spend_cosmetic',
   IAP_GEMS: 'iap_gems',
   IAP_LIVES: 'iap_lives',
   IAP_UNLIMITED: 'iap_unlimited',

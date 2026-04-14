@@ -19,8 +19,8 @@ export default async function EconomyPage() {
   const actualGemsInCirculation = (profiles ?? []).reduce((s, p) => s + (p.gems ?? 0), 0);
 
   const todayEvents = events.filter(e => e.created_at?.startsWith(todayStr));
-  const earnTypes = ['gem_earn_level', 'gem_earn_daily', 'gem_earn_streak'];
-  const spendTypes = ['gem_spend_powerup', 'gem_spend_lives'];
+  const earnTypes = ['gem_earn_level', 'gem_earn_daily', 'gem_earn_streak', 'gem_earn_ad', 'iap_gems'];
+  const spendTypes = ['gem_spend_powerup', 'gem_spend_lives', 'gem_spend_cosmetic'];
 
   const totalEarned = events.filter(e => earnTypes.includes(e.event_type)).reduce((s, e) => s + (e.amount ?? 0), 0);
   const totalSpent = events.filter(e => spendTypes.includes(e.event_type)).reduce((s, e) => s + Math.abs(e.amount ?? 0), 0);

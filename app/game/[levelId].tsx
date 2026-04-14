@@ -15,6 +15,8 @@ import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { useGameStore } from '@/src/store';
 import { fetchLevelById } from '@/src/data/levels';
+import { mastermindToStandardLevel, getMastermindLevel, type MastermindLevel } from '@/src/data/mastermindLevels';
+import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
 import StreakGlow from '@/src/components/StreakGlow';
@@ -44,6 +46,7 @@ function GameScreen() {
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const peekTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, score } = useGameStore();
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
 
   const [level, setLevel] = useState<Level | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,14 +59,63 @@ function GameScreen() {
   const [correctStreak, setCorrectStreak] = useState(0);
   const [activePowerUp, setActivePowerUp] = useState<'slowTime' | 'peek' | 'fiftyFifty' | 'skip' | null>(null);
 
+  // ── Mastermind multi-stage state (W6 only) ──
+  const isW6 = levelId?.startsWith('w6-l') ?? false;
+  const w6Num = isW6 ? parseInt((levelId ?? '').replace('w6-l', ''), 10) : 0;
+  const [mmLevel, setMmLevel] = useState<MastermindLevel | null>(null);
+  const [mmStageIdx, setMmStageIdx] = useState(0);
+  const mmStageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Load raw Mastermind data for stage cycling
+  useEffect(() => {
+    if (isW6 && w6Num > 0) {
+      setMmLevel(getMastermindLevel(w6Num));
+      setMmStageIdx(0);
+    } else {
+      setMmLevel(null);
+    }
+  }, [isW6, w6Num]);
+
+  // Cycle through stages during MEMORISE for W6
+  useEffect(() => {
+    if (!isW6 || !mmLevel || gameState !== 'MEMORISE') return;
+    setMmStageIdx(0);
+    let idx = 0;
+    const perStage = mmLevel.secondsPerStage * 1000;
+    const transition = 500;
+
+    const advanceStage = () => {
+      idx += 1;
+      if (idx < mmLevel.stageCount) {
+        setMmStageIdx(idx);
+        mmStageTimer.current = setTimeout(advanceStage, perStage + transition);
+      }
+      // Final stage ends → handleMemoriseComplete fires via the CountdownTimer
+    };
+
+    mmStageTimer.current = setTimeout(advanceStage, perStage + transition);
+    return () => { if (mmStageTimer.current) clearTimeout(mmStageTimer.current); };
+  }, [isW6, mmLevel, gameState]);
+
   const loseLife = useGameStore((s) => s.loseLife);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
   const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
 
-  // Fetch level data from Supabase (with local-cache + hardcoded fallbacks).
+  // Fetch level data. W6 levels use hardcoded Mastermind data;
+  // everything else fetches from Supabase.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+
+    if (levelId?.startsWith('w6-l')) {
+      const num = parseInt(levelId.replace('w6-l', ''), 10);
+      const converted = mastermindToStandardLevel(num);
+      if (!cancelled) {
+        setLevel(converted);
+        setLoading(false);
+      }
+      return;
+    }
 
     fetchLevelById(levelId ?? '').then((result) => {
       if (!cancelled) {
@@ -222,8 +274,26 @@ function GameScreen() {
       {gameState === 'MEMORISE' && currentScene && (
         <AnimatedOrView entering={enterFade} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime + timerBonus} running={!buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
-          <Text style={[styles.memoriseText, { color: tc.textMid }]}>Memorise this scene!</Text>
-          <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
+          {isW6 && mmLevel ? (
+            <>
+              <MastermindStageIndicator current={mmStageIdx + 1} total={mmLevel.stageCount} />
+              <SceneRenderer
+                objects={
+                  mmLevel.stages[mmStageIdx]?.shapes.map((s) => ({
+                    id: s.id, type: s.type, color: s.colour,
+                    x: s.position.x, y: s.position.y, size: 32,
+                  })) ?? currentScene.objects
+                }
+                visible={true}
+                viewTime={currentScene.viewTime}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={[styles.memoriseText, { color: tc.textMid }]}>Memorise this scene!</Text>
+              <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
+            </>
+          )}
           <SlowTimeButton used={usedPowerUps.slowTime} onUse={handleSlowTime} />
         </AnimatedOrView>
       )}
@@ -283,14 +353,23 @@ function GameScreen() {
             />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
-              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>
+                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+              </Text>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]}
-                onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}
+                onPress={() => {
+                  setShowQuitConfirm(false);
+                  clearTimeouts();
+                  // Blanked+ members keep their lives — only non-subscribers pay the cost of quitting.
+                  if (!isSubscribed) loseLife();
+                  resetGame();
+                  router.back();
+                }}
                 accessibilityRole="button"
-                accessibilityLabel="Leave the level and lose a life"
+                accessibilityLabel={isSubscribed ? 'Leave the level' : 'Leave the level and lose a life'}
               >
-                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+                <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]}

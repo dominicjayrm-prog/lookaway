@@ -146,6 +146,8 @@ function ResultScreen() {
         const store = useGameStore.getState();
         for (const ms of milestones) {
           if (!store.ownedCosmetics.includes(ms.itemId)) {
+            // Don't toast for Mastermind legendary — it has its own celebration
+            if (ms.itemId === 'expr_mastermind') continue;
             store.unlockCosmetic(ms.itemId);
             safeTimeout(() => setMilestoneToast(ms), 2000);
             break; // One toast at a time

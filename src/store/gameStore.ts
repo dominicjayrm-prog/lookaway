@@ -444,7 +444,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       // close before the 2s debounce fires, and so friends can see
       // the player wearing it as soon as they equip it.
       const uid = get()._authUserId;
-      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'purchase sync failed', e, { uid }));
+      if (uid) {
+        saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'purchase sync failed', e, { uid }));
+        // Track the spend in economy_events so the admin dashboard sees it.
+        if (gemCost > 0) {
+          logEconomyEvent(uid, ECONOMY_EVENTS.GEM_SPEND_COSMETIC, -gemCost, { cosmeticId: id });
+        }
+      }
       return true;
     },
     unlockCosmetic: (id) => {

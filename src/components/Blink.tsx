@@ -62,6 +62,9 @@ const BODY_STOPS: Partial<Record<BlinkExpression, [string, string]>> = {
   rainbow:        ['#FF6B6B', '#6C5CE7'],
   shadow:         ['#616161', '#212121'],
   cherry_blossom: ['#FF80AB', '#C2185B'],
+  // Royal purple — slightly deeper than default with a gold-warmed highlight
+  // so the body itself reads "premium" alongside the crown and chain.
+  mastermind_boss: ['#B8A8F0', '#3F2D8E'],
 };
 
 // ─── HELPERS ───────────────────────────────────────────────
@@ -668,56 +671,104 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
     ),
 
     // ═══ LEGENDARY: MASTERMIND BOSS ═══
-    // Gold-framed dark sunglasses with visible gold pupils behind
-    // semi-transparent lenses. Confident wider smile. Earned by
-    // completing all 40 levels of Classic World 6 (Mastermind).
+    // The crown of the cosmetic system. Earned by completing all 40
+    // levels of Mastermind. Gold five-point crown with jewels, glowing
+    // gold eyes radiating power, confident champion smirk, surrounding
+    // gold sparkle aura, and a gold chain at the neck. This is THE
+    // legendary item — should be visibly distinct from any other.
     mastermind_boss: (
       <>
-        {/* Gold-framed sunglasses — smaller, more rounded, sitting properly
-            on the face like real aviators. The target design has compact
-            lenses that don't overwhelm the face. */}
+        {/* Soft outer aura — radial gold glow behind everything */}
+        <Circle cx={cx} cy={cy - s * 0.05} r={s * 0.46} fill={C.gold} opacity={0.08} />
+
+        {/* Gold sparkle stars around the head — five-pointed, randomly placed */}
+        {[
+          { x: cx - s * 0.34, y: cy - s * 0.32, sz: s * 0.034, op: 0.95 },
+          { x: cx + s * 0.34, y: cy - s * 0.28, sz: s * 0.030, op: 0.85 },
+          { x: cx - s * 0.40, y: cy - s * 0.05, sz: s * 0.024, op: 0.75 },
+          { x: cx + s * 0.40, y: cy - s * 0.10, sz: s * 0.028, op: 0.85 },
+          { x: cx - s * 0.10, y: cy - s * 0.45, sz: s * 0.026, op: 0.75 },
+          { x: cx + s * 0.12, y: cy - s * 0.46, sz: s * 0.022, op: 0.65 },
+        ].map((sp, i) => (
+          <Polygon key={`sparkle-${i}`} points={starPts(sp.x, sp.y, sp.sz)} fill={C.gold} opacity={sp.op} />
+        ))}
+
+        {/* Gold crown — sits above Blink's head, 5 points with jewels */}
+        {/* Crown band (base) */}
         <Rect
-          x={cx - s * 0.19} y={cy - s * 0.1}
-          width={s * 0.16} height={s * 0.1} rx={s * 0.035}
-          fill="rgba(26,26,24,0.85)" stroke={C.gold} strokeWidth={sw(1, 0.016)}
+          x={cx - s * 0.22} y={cy - s * 0.30}
+          width={s * 0.44} height={s * 0.04} rx={s * 0.008}
+          fill="#F4C842" stroke="#9C7406" strokeWidth={sw(0.6, 0.01)}
         />
-        <Rect
-          x={cx + s * 0.03} y={cy - s * 0.1}
-          width={s * 0.16} height={s * 0.1} rx={s * 0.035}
-          fill="rgba(26,26,24,0.85)" stroke={C.gold} strokeWidth={sw(1, 0.016)}
-        />
-        {/* Bridge — thin gold line connecting lenses */}
-        <Line
-          x1={cx - s * 0.03} y1={cy - s * 0.055}
-          x2={cx + s * 0.03} y2={cy - s * 0.055}
-          stroke={C.gold} strokeWidth={sw(1, 0.016)} strokeLinecap="round"
-        />
-        {/* Temple arms — thinner, extending outward */}
-        <Line
-          x1={cx - s * 0.19} y1={cy - s * 0.065}
-          x2={cx - s * 0.27} y2={cy - s * 0.09}
-          stroke={C.gold} strokeWidth={sw(0.8, 0.014)} strokeLinecap="round"
-        />
-        <Line
-          x1={cx + s * 0.19} y1={cy - s * 0.065}
-          x2={cx + s * 0.27} y2={cy - s * 0.09}
-          stroke={C.gold} strokeWidth={sw(0.8, 0.014)} strokeLinecap="round"
-        />
-        {/* Subtle reflective glare on each lens */}
-        <Rect
-          x={cx - s * 0.17} y={cy - s * 0.09}
-          width={s * 0.045} height={s * 0.018} rx={s * 0.005}
-          fill="rgba(255,255,255,0.18)"
-        />
-        <Rect
-          x={cx + s * 0.05} y={cy - s * 0.09}
-          width={s * 0.045} height={s * 0.018} rx={s * 0.005}
-          fill="rgba(255,255,255,0.18)"
-        />
-        {/* Confident smile — slightly wider than default */}
+        {/* Crown spikes — three tall, two short between */}
         <Path
-          d={`M${cx - s * 0.07},${cy + s * 0.1} Q${cx},${cy + s * 0.16} ${cx + s * 0.07},${cy + s * 0.1}`}
-          fill="none" stroke={C.text} strokeWidth={sw(1, 0.018)} strokeLinecap="round"
+          d={`
+            M${cx - s * 0.22},${cy - s * 0.30}
+            L${cx - s * 0.18},${cy - s * 0.42}
+            L${cx - s * 0.13},${cy - s * 0.34}
+            L${cx - s * 0.06},${cy - s * 0.46}
+            L${cx},${cy - s * 0.36}
+            L${cx + s * 0.06},${cy - s * 0.46}
+            L${cx + s * 0.13},${cy - s * 0.34}
+            L${cx + s * 0.18},${cy - s * 0.42}
+            L${cx + s * 0.22},${cy - s * 0.30}
+            Z
+          `}
+          fill="#F4C842" stroke="#9C7406" strokeWidth={sw(0.6, 0.01)} strokeLinejoin="round"
+        />
+        {/* Highlight on the crown — diagonal sheen */}
+        <Path
+          d={`
+            M${cx - s * 0.18},${cy - s * 0.42}
+            L${cx - s * 0.06},${cy - s * 0.46}
+            L${cx + s * 0.06},${cy - s * 0.46}
+            L${cx + s * 0.18},${cy - s * 0.42}
+          `}
+          fill="none" stroke="#FFE89A" strokeWidth={sw(0.8, 0.012)} strokeLinecap="round"
+        />
+        {/* Three jewels — center red ruby, side blue/purple */}
+        <Circle cx={cx} cy={cy - s * 0.27} r={s * 0.022} fill={C.coral} stroke="#9C7406" strokeWidth={sw(0.4, 0.006)} />
+        <Circle cx={cx - s * 0.13} cy={cy - s * 0.27} r={s * 0.018} fill={C.accent} stroke="#9C7406" strokeWidth={sw(0.4, 0.006)} />
+        <Circle cx={cx + s * 0.13} cy={cy - s * 0.27} r={s * 0.018} fill={C.accent} stroke="#9C7406" strokeWidth={sw(0.4, 0.006)} />
+        {/* Tiny white speculars on jewels */}
+        <Circle cx={cx - s * 0.005} cy={cy - s * 0.275} r={s * 0.006} fill="white" opacity={0.85} />
+        <Circle cx={cx - s * 0.135} cy={cy - s * 0.275} r={s * 0.005} fill="white" opacity={0.85} />
+        <Circle cx={cx + s * 0.125} cy={cy - s * 0.275} r={s * 0.005} fill="white" opacity={0.85} />
+
+        {/* Glowing gold eyes — replace the default body eyes with a more
+            intense gold-pupil version. White eye whites + bright gold
+            pupils + bright sparkle. Slightly narrowed for confidence. */}
+        <Ellipse cx={cx - s * 0.1} cy={cy - s * 0.04} rx={s * 0.085} ry={s * 0.095} fill="white" />
+        <Ellipse cx={cx + s * 0.1} cy={cy - s * 0.04} rx={s * 0.085} ry={s * 0.095} fill="white" />
+        {/* Gold glow behind each pupil */}
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.035} r={s * 0.07} fill={C.gold} opacity={0.18} />
+        <Circle cx={cx + s * 0.115} cy={cy - s * 0.035} r={s * 0.07} fill={C.gold} opacity={0.18} />
+        {/* Gold pupils */}
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.035} r={s * 0.05} fill="#D4A012" />
+        <Circle cx={cx + s * 0.115} cy={cy - s * 0.035} r={s * 0.05} fill="#D4A012" />
+        {/* Inner darker ring for depth */}
+        <Circle cx={cx - s * 0.085} cy={cy - s * 0.035} r={s * 0.025} fill="#9C7406" />
+        <Circle cx={cx + s * 0.115} cy={cy - s * 0.035} r={s * 0.025} fill="#9C7406" />
+        {/* Bright spec highlights */}
+        <Circle cx={cx - s * 0.07} cy={cy - s * 0.055} r={s * 0.018} fill="white" />
+        <Circle cx={cx + s * 0.13} cy={cy - s * 0.055} r={s * 0.018} fill="white" />
+
+        {/* Confident champion smirk — asymmetric, one corner raised higher */}
+        <Path
+          d={`M${cx - s * 0.08},${cy + s * 0.11} Q${cx - s * 0.01},${cy + s * 0.16} ${cx + s * 0.05},${cy + s * 0.13} Q${cx + s * 0.09},${cy + s * 0.10} ${cx + s * 0.10},${cy + s * 0.06}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1.4, 0.022)} strokeLinecap="round"
+        />
+
+        {/* Gold chain at the neck — dangling small medallion */}
+        <Path
+          d={`M${cx - s * 0.18},${cy + s * 0.27} Q${cx},${cy + s * 0.34} ${cx + s * 0.18},${cy + s * 0.27}`}
+          fill="none" stroke={C.gold} strokeWidth={sw(1, 0.014)} strokeLinecap="round"
+        />
+        <Circle cx={cx} cy={cy + s * 0.34} r={s * 0.028} fill="#F4C842" stroke="#9C7406" strokeWidth={sw(0.5, 0.008)} />
+        {/* "M" mark on medallion for "Mastermind" */}
+        <Path
+          d={`M${cx - s * 0.012},${cy + s * 0.346} L${cx - s * 0.012},${cy + s * 0.328} L${cx},${cy + s * 0.342} L${cx + s * 0.012},${cy + s * 0.328} L${cx + s * 0.012},${cy + s * 0.346}`}
+          fill="none" stroke="#9C7406" strokeWidth={sw(0.7, 0.01)} strokeLinecap="round" strokeLinejoin="round"
         />
       </>
     ),

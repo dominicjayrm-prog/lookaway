@@ -15,6 +15,8 @@ import { getMilestonesForWorld, type MilestoneReward } from '@/src/data/mileston
 import { GiftIcon } from '@/src/components/GiftIcon';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
 import * as Haptics from 'expo-haptics';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { supabase } from '@/src/lib/supabase';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -63,12 +65,50 @@ function WorldMapScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const scrollRef = useRef<ScrollView>(null);
   const [mapWidth, setMapWidth] = useState(DEFAULT_MAP_W);
 
   // ── Mastermind intro gate ──
-  // All worlds (including 6) render normally — no special intro.
-  const [introChecked] = useState(true);
+  // World 6 gets a dramatic one-time intro screen. The "seen" state is
+  // checked locally (AsyncStorage) for instant decisions, then synced
+  // with the user's profile in Supabase so a fresh device install never
+  // re-shows the intro to a returning user.
+  const [introChecked, setIntroChecked] = useState(worldId !== 6);
+  useEffect(() => {
+    if (worldId !== 6) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // Check local cache first for instant response
+        const localSeen = await AsyncStorage.getItem('mastermind_intro_seen');
+        if (localSeen) {
+          if (!cancelled) setIntroChecked(true);
+          return;
+        }
+        // Local says unseen — confirm with the server in case the user
+        // saw it on another device. If the server says yes, mirror to
+        // local so we skip this network call next launch.
+        if (user?.id) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('mastermind_intro_seen')
+            .eq('id', user.id)
+            .single();
+          if (data?.mastermind_intro_seen) {
+            try { await AsyncStorage.setItem('mastermind_intro_seen', '1'); } catch {}
+            if (!cancelled) setIntroChecked(true);
+            return;
+          }
+        }
+        // Genuine first visit on any device — show the intro
+        if (!cancelled) router.replace('/world/mastermind-intro');
+      } catch {
+        if (!cancelled) setIntroChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [worldId, router, user?.id]);
 
   const worldColor = WORLD_COLORS[worldId] ?? '#00B894';
   const worldLightColor = WORLD_LIGHT_COLORS[worldId] ?? 'rgba(0,184,148,0.12)';
