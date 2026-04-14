@@ -10,6 +10,8 @@ interface NavItem { href: string; label: string; icon: string; children?: { href
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: String.fromCodePoint(0x1F4CA) },
   { href: '/analytics', label: 'Analytics', icon: String.fromCodePoint(0x1F4C8) },
+  { href: '/revenue', label: 'Revenue', icon: String.fromCodePoint(0x1F4B0) },
+  { href: '/funnel', label: 'Conversion funnel', icon: String.fromCodePoint(0x1F39B, 0xFE0F) },
   { href: '/economy', label: 'Economy', icon: String.fromCodePoint(0x1F48E) },
   { href: '/cosmetics', label: 'Cosmetics', icon: String.fromCodePoint(0x1F3A8) },
   { href: '/levels', label: 'Campaign Levels', icon: String.fromCodePoint(0x1F3AE) },
