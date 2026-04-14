@@ -476,7 +476,40 @@ function ProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(600)}>
-          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>ACCOUNT</Text>
+          {/* Legal — privacy + terms open as in-app WebView screens */}
+          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>LEGAL</Text>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/privacy'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Privacy Policy"
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color={colors.blue} />
+                </View>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>Privacy Policy</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </Pressable>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/terms'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Terms of Use"
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="document-text-outline" size={18} color={colors.accent} />
+                </View>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>Terms of Use</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </Pressable>
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>ACCOUNT</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable style={styles.settingsRow} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
           </View>
