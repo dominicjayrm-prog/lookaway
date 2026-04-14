@@ -110,16 +110,23 @@ export async function claimDueStreakRewards(
     if (totalGems > 0 || totalShields > 0) {
       // Read current values, increment, write back. Two reads/writes is
       // simpler than an RPC function and the volume is tiny (11 max ever).
-      const { data: profile } = await supabase
+      const { data: profile, error: pErr } = await supabase
         .from('profiles')
         .select('gems, streak_shields')
         .eq('id', userId)
         .single();
+      if (pErr || !profile) {
+        // Profile gone (deleted account, RLS misconfig, etc) — bail before
+        // we accidentally upsert a partial row. The streak_rewards rows
+        // are already flipped to claimed=true so a retry won't try again.
+        log.warn('streak', 'claim profile fetch failed', { error: String(pErr), userId });
+        return [];
+      }
       await supabase
         .from('profiles')
         .update({
-          gems: (profile?.gems ?? 0) + totalGems,
-          streak_shields: (profile?.streak_shields ?? 0) + totalShields,
+          gems: (profile.gems ?? 0) + totalGems,
+          streak_shields: (profile.streak_shields ?? 0) + totalShields,
         })
         .eq('id', userId);
 

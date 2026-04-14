@@ -28,6 +28,8 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
   sound = 'gemClink',
 }: AnimatedGemCountProps) {
   const prevCount = useRef(count);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
   const [displayCount, setDisplayCount] = useState(count);
 
   useEffect(() => {
@@ -51,6 +53,12 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
     if (sound) sounds.play(sound);
 
     const interval = setInterval(() => {
+      // Bail if the component unmounted mid-tick — avoids "setState on
+      // unmounted component" warnings during rapid screen transitions.
+      if (!mountedRef.current) {
+        clearInterval(interval);
+        return;
+      }
       frame++;
       const progress = frame / steps;
       // Ease-out so it settles smoothly on the final value

@@ -16,7 +16,7 @@
  * only orchestrates the UI.
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Platform, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -72,18 +72,20 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
   const applyLocal = useGameStore((s) => s.applyStreakRecoveryLocal);
   const resetLocal = useGameStore((s) => s.resetStreakLocal);
 
-  // Slide-up spring entrance. Same pattern as other modals in the app.
-  const slide = useRef(new RNAnimated.Value(600)).current;
+  // Slide-up spring entrance. Initial offset = screen height so the modal
+  // is fully off-screen on tall layouts (taller than a hardcoded 600px).
+  const screenH = Dimensions.get('window').height;
+  const slide = useRef(new RNAnimated.Value(screenH)).current;
   useEffect(() => {
     if (visible) {
       RNAnimated.spring(slide, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }).start();
     } else {
-      slide.setValue(600);
+      slide.setValue(screenH);
     }
-  }, [visible, slide]);
+  }, [visible, slide, screenH]);
 
   const animateDismiss = (after?: () => void) => {
-    RNAnimated.timing(slide, { toValue: 600, duration: 220, useNativeDriver: true }).start(() => {
+    RNAnimated.timing(slide, { toValue: screenH, duration: 220, useNativeDriver: true }).start(() => {
       onDismiss();
       after?.();
     });
@@ -94,7 +96,10 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
   const comboPrice = getShieldComboPrice(daysMissed);
   const goneForever = gemPrice < 0;
   const canAffordGems = gemPrice >= 0 && gems >= gemPrice;
-  const canAffordCombo = shields > 0 && (comboPrice === 0 || gems >= comboPrice) && comboPrice >= 0;
+  // Shields only help on 1-3 day misses (per spec) — explicit check so a
+  // future change to comboPrice's return value can't re-enable shield
+  // options for 4+ days unintentionally.
+  const canAffordCombo = shields > 0 && daysMissed <= 3 && comboPrice >= 0 && (comboPrice === 0 || gems >= comboPrice);
   const shortfall = gemPrice > 0 ? Math.max(0, gemPrice - gems) : 0;
 
   // Handlers
@@ -204,7 +209,7 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
             // ── Recoverable: option cards + dismiss link ──
             <>
               {/* Shield combo option — only shown if player has shield AND combo is valid (1-3 days) */}
-              {shields > 0 && comboPrice >= 0 && (
+              {shields > 0 && daysMissed <= 3 && comboPrice >= 0 && (
                 <OptionCard
                   iconBg={colors.correctSoft}
                   iconColor={colors.correct}
@@ -229,7 +234,7 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
                 iconBg={colors.accentSoft}
                 iconColor={colors.accent}
                 iconName="diamond"
-                title={shields > 0 && comboPrice >= 0 ? 'Or pay with gems' : 'Recover with gems'}
+                title={shields > 0 && daysMissed <= 3 && comboPrice >= 0 ? 'Or pay with gems' : 'Recover with gems'}
                 subtitle={
                   canAffordGems
                     ? `You have ${gems.toLocaleString()} gems`

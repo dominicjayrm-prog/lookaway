@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,13 +89,26 @@ function CosmeticStatus({
 function ShopTab() {
   const { colors } = useTheme();
   // Shop can be navigated to with a "need X more gems" hint from the
-  // streak recovery modal. When set, we show a banner at the top.
-  const { needGems: needGemsParam, reason: needGemsReason } = useLocalSearchParams<{ needGems?: string; reason?: string }>();
-  const needGems = needGemsParam ? parseInt(needGemsParam, 10) : 0;
-  const bannerMessage =
-    needGems > 0 && needGemsReason === 'streak_recovery'
-      ? `You need ${needGems} more gem${needGems !== 1 ? 's' : ''} to save your streak`
-      : null;
+  // streak recovery modal. We snapshot the params on first mount and
+  // CLEAR them from the URL so they don't re-trigger after the player
+  // recovers and visits the shop again later.
+  const params = useLocalSearchParams<{ needGems?: string; reason?: string }>();
+  const router = useRouter();
+  const [bannerSnapshot] = useState(() => {
+    const need = params.needGems ? parseInt(params.needGems, 10) : 0;
+    if (need > 0 && params.reason === 'streak_recovery') {
+      return `You need ${need} more gem${need !== 1 ? 's' : ''} to save your streak`;
+    }
+    return null;
+  });
+  useEffect(() => {
+    if (bannerSnapshot) {
+      // One-shot: clear params so a future tab visit doesn't re-show
+      router.setParams({ needGems: undefined, reason: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const bannerMessage = bannerSnapshot;
   // NOTE: destructuring `ownedCosmetics` here is load-bearing — without
   // it, the three cosmetic tabs read via `useGameStore.getState()` which
   // doesn't subscribe the component to changes, so buying an item (or

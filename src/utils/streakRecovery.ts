@@ -22,15 +22,18 @@ const MIN_PROTECTABLE_STREAK = 3;
 /** Above this gap, the streak is gone forever regardless of gems owned. */
 export const MAX_RECOVERABLE_DAYS_MISSED = 14;
 
-/** Count whole days between two calendar dates (both at local midnight).
- *  Returns 0 if the same day; positive if b is later; never negative. */
+/** Count whole days between two UTC calendar dates.
+ *  `lastPlayDate` is stored as `new Date().toISOString().split('T')[0]`,
+ *  which is UTC. Comparing against local-midnight `now` would break for
+ *  players who travel timezones, so this routine works entirely in UTC.
+ *  Returns 0 if the same day; positive if `now` is later; never negative. */
 export function getDaysMissed(lastPlayDate: string | null, now: Date = new Date()): number {
   if (!lastPlayDate) return 0;
-  // lastPlayDate is 'YYYY-MM-DD' (local)
-  const last = new Date(`${lastPlayDate}T00:00:00`);
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  const diffMs = today.getTime() - last.getTime();
+  // Parse lastPlayDate as UTC midnight
+  const last = new Date(`${lastPlayDate}T00:00:00Z`);
+  // Today in UTC midnight
+  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const diffMs = todayUtc.getTime() - last.getTime();
   if (diffMs <= 0) return 0;
   // Played yesterday → diff = 1 day, missed = 0. Played 2 days ago → missed = 1.
   return Math.max(0, Math.floor(diffMs / 86400000) - 1);
@@ -58,15 +61,19 @@ export function getShieldComboPrice(daysMissed: number): number {
 
 /** Set the recovery window start on the profile. Called once per missed-day
  *  situation (subsequent app opens read the existing value and measure
- *  elapsed time). */
-export async function startRecoveryWindow(userId: string, startAt: Date = new Date()): Promise<void> {
+ *  elapsed time). Returns true on success so the caller can decide whether
+ *  to mirror to local state — keeping cloud + local in lockstep. */
+export async function startRecoveryWindow(userId: string, startAt: Date = new Date()): Promise<boolean> {
   try {
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ recovery_window_start: startAt.toISOString() })
       .eq('id', userId);
+    if (error) throw error;
+    return true;
   } catch (e) {
     log.warn('streak', 'startRecoveryWindow failed', { error: String(e), userId });
+    return false;
   }
 }
 

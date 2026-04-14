@@ -36,6 +36,16 @@ export function StreakRewardToast({ queue, onDone }: Props) {
   const slide = useRef(new RNAnimated.Value(-200)).current;
   const opacity = useRef(new RNAnimated.Value(0)).current;
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 1s breather between toasts. Tracked in a ref so unmount can cancel it
+   *  — without this, the queue could wedge in a zombie state where the
+   *  parent never gets the onDone() callback. */
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
 
   const current = queue[index];
 
@@ -74,9 +84,13 @@ export function StreakRewardToast({ queue, onDone }: Props) {
       RNAnimated.timing(slide, { toValue: -200, duration: 240, useNativeDriver: true }),
       RNAnimated.timing(opacity, { toValue: 0, duration: 240, useNativeDriver: true }),
     ]).start(() => {
+      if (!mountedRef.current) return;
       // Move to next or end the queue after a 1s breather between toasts
       if (index + 1 < queue.length) {
-        setTimeout(() => setIndex((i) => i + 1), 1000);
+        advanceTimer.current = setTimeout(() => {
+          if (!mountedRef.current) return;
+          setIndex((i) => i + 1);
+        }, 1000);
       } else {
         onDone();
       }

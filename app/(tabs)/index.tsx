@@ -219,12 +219,16 @@ function PlayTab() {
 
   const recoveryDaysMissed = getDaysMissed(lastPlayDate);
 
-  // On mount + whenever lastPlayDate/streak changes, compute the outcome.
-  // Only fires the recovery flow once per auth session (guarded by ref).
-  const recoveryCheckedRef = useRef(false);
+  // Re-run the outcome whenever any input changes (cloud sync can update
+  // streakCount / lastPlayDate / streakShields / recoveryWindowStart AFTER
+  // the first mount). Dedup via a key string so we don't fire twice for
+  // the same exact state.
+  const lastCheckedKey = useRef<string | null>(null);
   useEffect(() => {
-    if (recoveryCheckedRef.current) return;
     if (!user?.id) return;
+    const checkKey = `${user.id}|${lastPlayDate ?? '_'}|${streakCount}|${streakShields}|${recoveryWindowStart ?? '_'}`;
+    if (lastCheckedKey.current === checkKey) return;
+    lastCheckedKey.current = checkKey;
     if (streakCount < 3) return; // Too-small streaks aren't protected
     const outcome = computeAppOpenOutcome({
       userId: user.id,
@@ -233,7 +237,6 @@ function PlayTab() {
       streakShields,
       recoveryWindowStart,
     });
-    recoveryCheckedRef.current = true;
 
     if (outcome.kind === 'ok') return;
     if (outcome.kind === 'shield_auto_used') {
@@ -252,9 +255,15 @@ function PlayTab() {
     // outcome.kind === 'modal' → show the recovery modal + persist window if new
     setRecoveryModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
     if (outcome.windowElapsedMs === 0) {
+      // Persist server-side FIRST so a Supabase failure leaves both sides
+      // consistent (no window). Local state mirrors only after success.
       const iso = outcome.recoveryStart.toISOString();
-      setRecoveryWindowStart(iso);
-      startRecoveryWindow(user.id, outcome.recoveryStart);
+      startRecoveryWindow(user.id, outcome.recoveryStart).then((ok) => {
+        // Only mirror to local if Supabase confirmed the write — keeps
+        // both sides in sync if the write fails (modal can re-trigger
+        // cleanly on the next app open).
+        if (ok) setRecoveryWindowStart(iso);
+      });
     }
   }, [user?.id, streakCount, streakShields, lastPlayDate, recoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, setRecoveryWindowStart]);
 
