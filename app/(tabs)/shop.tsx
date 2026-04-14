@@ -21,6 +21,7 @@ import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { log } from '@/src/lib/logger';
 import { sounds } from '@/src/lib/sounds';
 
@@ -264,10 +265,12 @@ function ShopTab() {
 
     // ── Grant the reward based on which product was purchased ──
     const store = useGameStore.getState();
+    const uid = store._authUserId;
     const gemReward = gemsForProduct(productId);
     if (gemReward > 0) {
       // Gem pack
       store.addGems(gemReward);
+      if (uid) logEconomyEvent(uid, ECONOMY_EVENTS.IAP_GEMS, gemReward, { productId });
       sounds.play('gemClink');
       Alert.alert('Gems added!', `${gemReward} gems have been added to your balance.`);
     } else if (productId === IAP_PRODUCT_IDS.LIVES_REFILL) {

@@ -15,6 +15,7 @@ import { WORLD_LEVEL_COUNTS, WORLD_NAMES, WORLD_COLORS } from '@/src/data/worldP
 import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder } from '@/src/utils/notifications';
 import { recordLevelCompleteForChallenges, recordLevelFailedForChallenges, type WeeklyChallenge } from '@/src/utils/weeklyChallenges';
 import { FriendRequestToast } from '@/src/components/FriendRequestToast';
@@ -145,8 +146,6 @@ function ResultScreen() {
         const store = useGameStore.getState();
         for (const ms of milestones) {
           if (!store.ownedCosmetics.includes(ms.itemId)) {
-            // Don't toast for Mastermind legendary — it has its own celebration
-            if (ms.itemId === 'expr_mastermind') continue;
             store.unlockCosmetic(ms.itemId);
             safeTimeout(() => setMilestoneToast(ms), 2000);
             break; // One toast at a time
@@ -227,7 +226,6 @@ function ResultScreen() {
         maybeShowInterstitial({
           isWorldCompletion: isLastLevelOfWorld,
           totalLevelsEverCompleted: totalCompleted,
-          isDailyChallenge: false,
         });
       }, 2500);
     } else {
@@ -354,8 +352,16 @@ function ResultScreen() {
           title={celeb.celebration.title}
           color={celeb.celebration.color}
           onDismiss={() => {
-            addGems(celeb.celebration!.gems);
-            logActivity('streak_milestone', { days: celeb.celebration!.days, gems: celeb.celebration!.gems, title: celeb.celebration!.title });
+            const streakGems = celeb.celebration!.gems;
+            addGems(streakGems);
+            const uid = useGameStore.getState()._authUserId;
+            if (uid && streakGems > 0) {
+              logEconomyEvent(uid, ECONOMY_EVENTS.GEM_EARN_STREAK, streakGems, {
+                days: celeb.celebration!.days,
+                title: celeb.celebration!.title,
+              });
+            }
+            logActivity('streak_milestone', { days: celeb.celebration!.days, gems: streakGems, title: celeb.celebration!.title });
             useGameStore.setState((s) => ({ streakMilestonesClaimed: [...s.streakMilestonesClaimed, celeb.celebration!.days] }));
             celeb.setCelebration(null);
           }}

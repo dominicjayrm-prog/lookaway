@@ -11,9 +11,11 @@ import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
-import { getTodayDateString } from '@/src/utils/dailyChallenge';
+import { getTodayDateString } from '@/src/utils/dateHelpers';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import type { Level, Scene } from '@/src/types/game';
@@ -27,6 +29,7 @@ function buildSpeedLevel(dateStr: string): Level {
 }
 
 function SpeedGameScreen() {
+  const { colors: tc } = useTheme();
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,7 +86,17 @@ function SpeedGameScreen() {
   }, [gameState]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE') { const stars = getStarsForScore(score, speedLevel); addGems(GEM_REWARDS[stars]); addStars(stars); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
+    if (gameState === 'COMPLETE') {
+      const stars = getStarsForScore(score, speedLevel);
+      const gems = GEM_REWARDS[stars];
+      addGems(gems);
+      const uid = useGameStore.getState()._authUserId;
+      if (uid && gems > 0) logEconomyEvent(uid, ECONOMY_EVENTS.GEM_EARN_DAILY, gems, { mode: 'speed', stars, score });
+      addStars(stars);
+      incrementStreak();
+      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/game/result');
+    }
     if (gameState === 'FAILED') { router.replace('/game/result'); }
   }, [gameState]);
 
@@ -92,7 +105,7 @@ function SpeedGameScreen() {
 
   if (gameState === 'READY') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
             <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
@@ -114,7 +127,7 @@ function SpeedGameScreen() {
 
   if (!currentScene || !currentQuestion) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.levelSubtitle}>Loading...</Text>
         </View>
@@ -123,7 +136,7 @@ function SpeedGameScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => { setShowQuitConfirm(true); }}>
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>

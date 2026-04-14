@@ -15,8 +15,6 @@ import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { useGameStore } from '@/src/store';
 import { fetchLevelById } from '@/src/data/levels';
-import { mastermindToStandardLevel, getMastermindLevel, type MastermindLevel } from '@/src/data/mastermindLevels';
-import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
 import StreakGlow from '@/src/components/StreakGlow';
@@ -24,6 +22,7 @@ import StreakGlow from '@/src/components/StreakGlow';
 // longer import from weeklyChallenges here.
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { sounds } from '@/src/lib/sounds';
 import { spacing } from '@/src/theme/spacing';
@@ -36,6 +35,10 @@ const AnimatedOrView = isWeb ? View : Animated.View;
 
 function GameScreen() {
   const { levelId } = useLocalSearchParams<{ levelId: string }>();
+  // Theme-aware overrides for the static StyleSheet below. The static styles
+  // reference the default (light) palette; these inline styles override the
+  // background + key text colours so the screen looks right in dark mode.
+  const { colors: tc } = useTheme();
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,62 +56,14 @@ function GameScreen() {
   const [correctStreak, setCorrectStreak] = useState(0);
   const [activePowerUp, setActivePowerUp] = useState<'slowTime' | 'peek' | 'fiftyFifty' | 'skip' | null>(null);
 
-  // ── Mastermind multi-stage state (W6 only) ──
-  const isW6 = levelId?.startsWith('w6-l') ?? false;
-  const w6Num = isW6 ? parseInt((levelId ?? '').replace('w6-l', ''), 10) : 0;
-  const [mmLevel, setMmLevel] = useState<MastermindLevel | null>(null);
-  const [mmStageIdx, setMmStageIdx] = useState(0);
-  const mmStageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  // Load raw Mastermind data for stage cycling
-  useEffect(() => {
-    if (isW6 && w6Num > 0) {
-      setMmLevel(getMastermindLevel(w6Num));
-      setMmStageIdx(0);
-    } else {
-      setMmLevel(null);
-    }
-  }, [isW6, w6Num]);
-
-  // Cycle through stages during MEMORISE for W6
-  useEffect(() => {
-    if (!isW6 || !mmLevel || gameState !== 'MEMORISE') return;
-    setMmStageIdx(0);
-    let idx = 0;
-    const perStage = mmLevel.secondsPerStage * 1000;
-    const transition = 500;
-
-    const advanceStage = () => {
-      idx += 1;
-      if (idx < mmLevel.stageCount) {
-        setMmStageIdx(idx);
-        mmStageTimer.current = setTimeout(advanceStage, perStage + transition);
-      }
-      // Final stage ends → handleMemoriseComplete fires via the CountdownTimer
-    };
-
-    mmStageTimer.current = setTimeout(advanceStage, perStage + transition);
-    return () => { if (mmStageTimer.current) clearTimeout(mmStageTimer.current); };
-  }, [isW6, mmLevel, gameState]);
   const loseLife = useGameStore((s) => s.loseLife);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
   const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
 
-  // Fetch level data. W6 levels use hardcoded Mastermind data;
-  // everything else fetches from Supabase.
+  // Fetch level data from Supabase (with local-cache + hardcoded fallbacks).
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-
-    if (levelId?.startsWith('w6-l')) {
-      const num = parseInt(levelId.replace('w6-l', ''), 10);
-      const converted = mastermindToStandardLevel(num);
-      if (!cancelled) {
-        setLevel(converted);
-        setLoading(false);
-      }
-      return;
-    }
 
     fetchLevelById(levelId ?? '').then((result) => {
       if (!cancelled) {
@@ -230,15 +185,15 @@ function GameScreen() {
   }, [gameState]);
 
   if (loading) {
-    return (<SafeAreaView style={styles.container}><ActivityIndicator size="large" color={colors.accent} /></SafeAreaView>);
+    return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><ActivityIndicator size="large" color={colors.accent} /></SafeAreaView>);
   }
 
   if (!level) {
-    return (<SafeAreaView style={styles.container}><Text style={styles.errorText}>Level not found</Text><Button title="Go back" onPress={() => router.back()} /></SafeAreaView>);
+    return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><Text style={[styles.errorText, { color: tc.textMid }]}>Level not found</Text><Button title="Go back" onPress={() => router.back()} /></SafeAreaView>);
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -250,7 +205,7 @@ function GameScreen() {
           accessibilityLabel="Quit level"
           hitSlop={12}
         >
-          <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
+          <Text style={[styles.closeButton, { color: tc.textMid }]}>{String.fromCharCode(10005)}</Text>
         </Pressable>
         <Badge label={`LEVEL ${level.levelNumber}`} />
         <View style={styles.headerSpacer} />
@@ -258,8 +213,8 @@ function GameScreen() {
 
       {gameState === 'READY' && (
         <AnimatedOrView entering={enterFade} style={styles.centered}>
-          <Text style={styles.levelTitle}>{level.title}</Text>
-          <Text style={styles.levelSubtitle}>{level.scenes.length} scene{level.scenes.length > 1 ? 's' : ''}</Text>
+          <Text style={[styles.levelTitle, { color: tc.text }]}>{level.title}</Text>
+          <Text style={[styles.levelSubtitle, { color: tc.textMid }]}>{level.scenes.length} scene{level.scenes.length > 1 ? 's' : ''}</Text>
           <Button title="Start" onPress={handleStart} style={styles.startButton} />
         </AnimatedOrView>
       )}
@@ -267,26 +222,8 @@ function GameScreen() {
       {gameState === 'MEMORISE' && currentScene && (
         <AnimatedOrView entering={enterFade} style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime + timerBonus} running={!buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
-          {isW6 && mmLevel ? (
-            <>
-              <MastermindStageIndicator current={mmStageIdx + 1} total={mmLevel.stageCount} />
-              <SceneRenderer
-                objects={
-                  mmLevel.stages[mmStageIdx]?.shapes.map((s) => ({
-                    id: s.id, type: s.type, color: s.colour,
-                    x: s.position.x, y: s.position.y, size: 32,
-                  })) ?? currentScene.objects
-                }
-                visible={true}
-                viewTime={currentScene.viewTime}
-              />
-            </>
-          ) : (
-            <>
-              <Text style={styles.memoriseText}>Memorise this scene!</Text>
-              <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
-            </>
-          )}
+          <Text style={[styles.memoriseText, { color: tc.textMid }]}>Memorise this scene!</Text>
+          <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
           <SlowTimeButton used={usedPowerUps.slowTime} onUse={handleSlowTime} />
         </AnimatedOrView>
       )}
@@ -295,8 +232,8 @@ function GameScreen() {
         <AnimatedOrView entering={enterFade} style={styles.centered}>
           <AnimatedBlink expression="blank" size={80} entrance="spring" />
           <View style={[styles.blankContainer, { marginTop: 16 }]}>
-            <Text style={styles.blankText}>Go blank!</Text>
-            <Text style={styles.blankSubtext}>What do you remember?</Text>
+            <Text style={[styles.blankText, { color: tc.accent }]}>Go blank!</Text>
+            <Text style={[styles.blankSubtext, { color: tc.textLight }]}>What do you remember?</Text>
           </View>
         </AnimatedOrView>
       )}
@@ -321,8 +258,8 @@ function GameScreen() {
 
       {gameState === 'SCENE_SCORE' && (
         <AnimatedOrView entering={enterFade} style={styles.centered}>
-          <Text style={styles.sceneScoreTitle}>Scene complete!</Text>
-          <Text style={styles.sceneScoreBody}>{answers.filter((a) => a.isCorrect).length} / {answers.length} correct</Text>
+          <Text style={[styles.sceneScoreTitle, { color: tc.text }]}>Scene complete!</Text>
+          <Text style={[styles.sceneScoreBody, { color: tc.textMid }]}>{answers.filter((a) => a.isCorrect).length} / {answers.length} correct</Text>
           <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />
         </AnimatedOrView>
       )}

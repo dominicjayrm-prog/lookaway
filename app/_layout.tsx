@@ -198,7 +198,6 @@ function ThemedStack() {
         <Stack.Screen name="username" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="game/[levelId]" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="game/daily" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/speed" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/spot" options={{ gestureEnabled: false }} />
         <Stack.Screen name="world/[worldId]" options={{ animation: 'slide_from_right' }} />

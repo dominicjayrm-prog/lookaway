@@ -34,6 +34,7 @@ export const ECONOMY_EVENTS = {
   GEM_EARN_LEVEL: 'gem_earn_level',
   GEM_EARN_DAILY: 'gem_earn_daily',
   GEM_EARN_STREAK: 'gem_earn_streak',
+  GEM_EARN_AD: 'gem_earn_ad',
   GEM_SPEND_POWERUP: 'gem_spend_powerup',
   GEM_SPEND_LIVES: 'gem_spend_lives',
   IAP_GEMS: 'iap_gems',

@@ -64,7 +64,6 @@ export async function showRewardedAd(): Promise<AdResult> {
 export async function maybeShowInterstitial(_opts?: {
   isWorldCompletion?: boolean;
   totalLevelsEverCompleted?: number;
-  isDailyChallenge?: boolean;
 }): Promise<boolean> {
   return false;
 }

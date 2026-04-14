@@ -144,7 +144,6 @@ export default async function EconomyPage() {
             <div>
               <p className="font-semibold text-slate-600 mb-1">Gem earnings</p>
               <p className="text-slate-400">1/2/3 per level (1/2/3 stars)</p>
-              <p className="text-slate-400">5-15 daily challenge (5 base + 5 at 80% + 5 at 100%)</p>
               <p className="text-slate-400">Streak: 5/15/30/50/100/200 gems at 3/7/14/30/60/100 days</p>
             </div>
             <div>

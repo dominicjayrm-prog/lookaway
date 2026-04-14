@@ -10,10 +10,11 @@ import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { generateSpotTheChangeChallenge } from '@/src/utils/spotTheChangeChallenge';
-import { getTodayDateString } from '@/src/utils/dailyChallenge';
+import { getTodayDateString } from '@/src/utils/dateHelpers';
 
 const isWeb = Platform.OS === 'web';
 
@@ -36,6 +37,7 @@ function reducer(s: State, a: Action): State {
 }
 
 function SpotGameScreen() {
+  const { colors: tc } = useTheme();
   const router = useRouter();
   const dateStr = getTodayDateString();
   const challenge = useMemo(() => generateSpotTheChangeChallenge(dateStr), [dateStr]);
@@ -76,7 +78,7 @@ function SpotGameScreen() {
 
   if(state.phase==='READY') {
     return (
-      <SafeAreaView style={s.container} edges={['top']}>
+      <SafeAreaView style={[s.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={s.header}>
           <Pressable onPress={()=>router.back()}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
           <Badge label="SPOT THE CHANGE" />
@@ -94,7 +96,7 @@ function SpotGameScreen() {
 
   if(state.phase==='COMPLETE') {
     return (
-      <SafeAreaView style={s.container} edges={['top']}>
+      <SafeAreaView style={[s.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
           <Text style={s.modeIcon}>{mag}</Text>
           <Text style={s.title}>Challenge Complete!</Text>
@@ -110,7 +112,7 @@ function SpotGameScreen() {
   }
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: tc.bg }]} edges={['top']}>
       <View style={s.header}>
         <Pressable onPress={()=>{
           const activePhases: Phase[] = ['SHOW_ORIGINAL','BLANK','SHOW_MODIFIED','FEEDBACK'];

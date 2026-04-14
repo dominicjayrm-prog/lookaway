@@ -11,7 +11,6 @@
 -- 2. Add notification_preferences column to profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{
   "streak_reminder": true,
-  "daily_challenge": true,
   "friend_challenge": true,
   "friend_online": true,
   "challenge_result": true,

@@ -13,7 +13,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex">
         <Sidebar />
-        <main className="flex-1 bg-gray-50 min-h-screen overflow-y-auto">
+        <main className="flex-1 bg-brand-bg min-h-screen overflow-y-auto">
           {children}
         </main>
       </body>
