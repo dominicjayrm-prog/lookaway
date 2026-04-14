@@ -16,6 +16,11 @@ import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
 import ColourChainGame from '@/src/components/modes/ColourChainGame';
 import ShapeSvg from '@/src/components/ShapeSvg';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'failed' | 'error';
 
@@ -33,6 +38,7 @@ function SideCampaignScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { addGems, loseLife, addStars } = useGameStore();
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [modeData, setModeData] = useState<any>(null);
@@ -82,32 +88,103 @@ function SideCampaignScreen() {
   // ─── SPEED RECALL (inline) ───
   const currentRound = modeData?.rounds?.[roundIdx];
   const currentShape = currentRound?.shapes?.[shapeIdx];
-  const viewingTime = (modeData?.viewingTime ?? levelData?.viewingTime ?? 3) * 1000;
+  const viewingTimeBase = (modeData?.viewingTime ?? levelData?.viewingTime ?? 3) * 1000;
 
   // Speed recall timer progress for visual countdown
   const [srTimerProgress, setSrTimerProgress] = useState(1);
   const srIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+  // ── Speed Recall power-ups (side campaign — inline path) ──
+  // Side-campaign handles speed_recall itself rather than delegating to
+  // the SpeedRecallGame component, so the power-up wiring that lives
+  // inside that component doesn't apply here. Rebuild it inline with
+  // the same three effects: slow time, ghost outline, second chance.
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [srUsedPowerUps, setSrUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [srBuyPopupId, setSrBuyPopupId] = useState<PowerUpId | null>(null);
+  const [srSlowTimeBonus, setSrSlowTimeBonus] = useState(0); // ms added to viewingTime
+  const [srGhostActive, setSrGhostActive] = useState(false);
+  const [srSecondChanceArmed, setSrSecondChanceArmed] = useState(false);
+
+  // Viewing time with slow-time bonus applied at round start.
+  const viewingTime = viewingTimeBase + srSlowTimeBonus;
+
+  const handleSrUsePowerUp = useCallback((id: string) => {
+    if (srUsedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setSrBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setSrUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'sr_slow_time') {
+      // Add 2s to the CURRENT round's viewing window. If already in
+      // `show` phase, re-arm the timer live.
+      setSrSlowTimeBonus(2000);
+    } else if (id === 'sr_ghost_outline') {
+      setSrGhostActive(true);
+    } else if (id === 'sr_second_chance') {
+      setSrSecondChanceArmed(true);
+    }
+  }, [srUsedPowerUps, powerUpCounts, usePowerUpStore]);
+
+  const handleSrBuyPopupBought = useCallback((id: PowerUpId) => {
+    setSrBuyPopupId(null);
+    handleSrUsePowerUp(id);
+  }, [handleSrUsePowerUp]);
 
   const startRound = useCallback(() => {
     setShapeIdx(0);
     setShapeScores([]);
     setTapResult(null);
     setSrTimerProgress(1);
+    // Reset per-round power-up state so each round gets fresh charges.
+    setSrUsedPowerUps({});
+    setSrSlowTimeBonus(0);
+    setSrGhostActive(false);
+    setSrSecondChanceArmed(false);
     setPhase('show');
-    // Visual countdown
+    // Visual countdown — uses viewingTimeBase (not viewingTime) because
+    // the slow-time bonus is reset above, so at round-start it's 0.
+    const totalMs = viewingTimeBase;
     const start = Date.now();
     if (srIntervalRef.current) clearInterval(srIntervalRef.current);
     srIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - start;
-      setSrTimerProgress(Math.max(0, 1 - elapsed / viewingTime));
-      if (elapsed >= viewingTime) { if (srIntervalRef.current) clearInterval(srIntervalRef.current); }
+      setSrTimerProgress(Math.max(0, 1 - elapsed / totalMs));
+      if (elapsed >= totalMs) { if (srIntervalRef.current) clearInterval(srIntervalRef.current); }
     }, 50);
     timerRef.current = setTimeout(() => {
       if (srIntervalRef.current) clearInterval(srIntervalRef.current);
       setSrTimerProgress(0);
+      sounds.play('whoosh');
       setPhase('recall');
-    }, viewingTime);
-  }, [viewingTime]);
+    }, totalMs);
+  }, [viewingTimeBase]);
+
+  // Slow Time — if tapped during `show`, extend the running timer by
+  // srSlowTimeBonus ms. Re-arm the timeout + interval with the new
+  // total so the countdown bar reflects the new deadline.
+  useEffect(() => {
+    if (srSlowTimeBonus <= 0 || phase !== 'show') return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (srIntervalRef.current) clearInterval(srIntervalRef.current);
+    const remainingMs = Math.max(0, srTimerProgress * viewingTimeBase) + srSlowTimeBonus;
+    const totalMs = viewingTimeBase + srSlowTimeBonus;
+    const startTime = Date.now() - (totalMs - remainingMs);
+    srIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setSrTimerProgress(Math.max(0, 1 - elapsed / totalMs));
+    }, 50);
+    timerRef.current = setTimeout(() => {
+      if (srIntervalRef.current) clearInterval(srIntervalRef.current);
+      setSrTimerProgress(0);
+      sounds.play('whoosh');
+      setPhase('recall');
+    }, remainingMs);
+  // Only respond to bumps in the bonus; timer/phase changes shouldn't
+  // re-trigger this effect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [srSlowTimeBonus]);
 
   const handleCanvasTap = useCallback((e: any) => {
     if (phase !== 'recall' || !currentShape || tapResult) return;
@@ -119,9 +196,19 @@ function SideCampaignScreen() {
     const dist = Math.sqrt((tapX - currentShape.x) ** 2 + (tapY - currentShape.y) ** 2);
     const score = Math.max(0, Math.round(100 - dist * 2)) || 0;
 
+    // Second Chance: tap more than 30% off the target consumes the
+    // charge instead of locking in a bad score — player taps again.
+    if (srSecondChanceArmed && dist > 30) {
+      setSrSecondChanceArmed(false);
+      sounds.play('powerUp');
+      return;
+    }
+
     setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, score });
     setShapeScores(prev => [...prev, score]);
     setPhase('feedback');
+    // Audio feedback: correct/gold/wrong based on score bands.
+    sounds.play(score >= 70 ? 'correct' : score >= 40 ? 'starPop' : 'wrong');
 
     timerRef.current = setTimeout(() => {
       setTapResult(null);
@@ -138,7 +225,7 @@ function SideCampaignScreen() {
         setPhase('round_done');
       }
     }, 1200);
-  }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize]);
+  }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize, srSecondChanceArmed]);
 
   // ─── COMPLETION HANDLER (must be before nextRound which references it) ───
   const finishLevel = useCallback(async (rawScore: number) => {
@@ -345,6 +432,10 @@ function SideCampaignScreen() {
               </View>
             ))}
           </View>
+          {/* Power-up bar during memorise phase — slow_time is the one
+              that's usually useful here; ghost_outline / second_chance
+              can also be primed before flipping to recall. */}
+          <ModePowerUpBar mode="speed_recall" used={srUsedPowerUps} onUse={handleSrUsePowerUp} onBuyOut={(id) => setSrBuyPopupId(id as PowerUpId)} />
         </View>
       )}
 
@@ -356,7 +447,25 @@ function SideCampaignScreen() {
             <Text style={[s.promptText, { color: colors.text }]}>Where was the {currentShape.colorName} {currentShape.type}?</Text>
           </View>
           <Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text>
+          {phase === 'recall' && srSecondChanceArmed && (
+            <Text style={[s.shapeProgress, { color: '#E17055', fontWeight: '700' }]}>Second Chance armed</Text>
+          )}
           <Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+            {/* Ghost Outline — dashed rings at every shape's true
+                position during recall. One-shot per round. */}
+            {phase === 'recall' && srGhostActive && currentRound.shapes.map((sh: any, i: number) => (
+              <View
+                key={`ghost-${i}`}
+                style={{
+                  position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`,
+                  width: 40, height: 40, borderRadius: 20,
+                  borderWidth: 1.5, borderColor: sh.color,
+                  borderStyle: 'dashed', opacity: 0.3,
+                  transform: [{ translateX: -20 }, { translateY: -20 }],
+                }}
+                pointerEvents="none"
+              />
+            ))}
             {tapResult && (
               <>
                 {/* Player's tap marker */}
@@ -374,6 +483,11 @@ function SideCampaignScreen() {
               </>
             )}
           </Pressable>
+          {/* Power-up bar during recall so ghost_outline / second_chance
+              can still be activated after the shapes disappear. */}
+          {phase === 'recall' && (
+            <ModePowerUpBar mode="speed_recall" used={srUsedPowerUps} onUse={handleSrUsePowerUp} onBuyOut={(id) => setSrBuyPopupId(id as PowerUpId)} />
+          )}
         </View>
       )}
 
@@ -452,9 +566,11 @@ function SideCampaignScreen() {
             <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
             <View style={[s.quitCard, { backgroundColor: colors.card }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
-              <Text style={[s.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
-              <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); loseLife(); router.back(); }}>
-                <Text style={s.btnText}>Leave (-1 life)</Text>
+              <Text style={[s.quitMessage, { color: colors.textMid }]}>
+                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+              </Text>
+              <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); if (!isSubscribed) loseLife(); router.back(); }}>
+                <Text style={s.btnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.btnText}>Keep playing</Text>
@@ -463,6 +579,9 @@ function SideCampaignScreen() {
           </View>
         </Modal>
       )}
+
+      {/* Speed recall buy-popup (shared by all SR power-ups) */}
+      <BuyPowerUpPopup powerUpId={srBuyPopupId} onClose={() => setSrBuyPopupId(null)} onBought={handleSrBuyPopupBought} />
     </SafeAreaView>
   );
 }

@@ -16,6 +16,7 @@ import { spacing } from '@/src/theme/spacing';
 import { generateSpotTheChangeChallenge } from '@/src/utils/spotTheChangeChallenge';
 import { getTodayDateString } from '@/src/utils/dateHelpers';
 import { logActivity } from '@/src/utils/activity';
+import { sounds } from '@/src/lib/sounds';
 
 const isWeb = Platform.OS === 'web';
 
@@ -46,6 +47,7 @@ function SpotGameScreen() {
   const mag = String.fromCodePoint(0x1F50D);
 
   const loseLife = useGameStore((s) => s.loseLife);
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [state, dispatch] = useReducer(reducer, { phase:'READY', roundIndex:0, results:[], tapCorrect:null, modifiedShownAt:0, cardW:300, cardH:300 });
   const round = challenge.rounds[state.roundIndex] ?? null;
@@ -53,7 +55,7 @@ function SpotGameScreen() {
   const clearTimer = useCallback(() => { if(timerRef.current){clearTimeout(timerRef.current);timerRef.current=null;} }, []);
   useEffect(() => { return clearTimer; }, [clearTimer]);
 
-  const handleOriginalComplete = useCallback(() => { dispatch({type:'SHOW_BLANK'}); clearTimer(); timerRef.current=setTimeout(()=>dispatch({type:'SHOW_MODIFIED'}),2000); }, [clearTimer]);
+  const handleOriginalComplete = useCallback(() => { sounds.play('whoosh'); dispatch({type:'SHOW_BLANK'}); clearTimer(); timerRef.current=setTimeout(()=>dispatch({type:'SHOW_MODIFIED'}),2000); }, [clearTimer]);
 
   const handleTap = useCallback((e: GestureResponderEvent) => {
     if(state.phase!=='SHOW_MODIFIED') return;
@@ -69,6 +71,7 @@ function SpotGameScreen() {
       if(correct) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
+    sounds.play(correct ? 'correct' : 'wrong');
     dispatch({type:'TAP',correct,timeMs});
     clearTimer();
     timerRef.current=setTimeout(()=>dispatch({type:'NEXT_ROUND'}),1500);
@@ -178,9 +181,11 @@ function SpotGameScreen() {
             <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
             <View style={[s.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
-              <Text style={[s.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
-              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); loseLife(); router.back(); }}>
-                <Text style={s.quitBtnText}>Leave (-1 life)</Text>
+              <Text style={[s.quitMessage, { color: colors.textMid }]}>
+                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+              </Text>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); if (!isSubscribed) loseLife(); router.back(); }}>
+                <Text style={s.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.quitBtnText}>Keep playing</Text>

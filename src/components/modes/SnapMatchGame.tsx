@@ -107,6 +107,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
+      sounds.play('whoosh');
       setPhase('blank');
       const inner = setTimeout(() => {
         setPhase('sceneB');
@@ -185,6 +186,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     setLastResult({ correct, score, description, time: elapsed });
     setRoundScores(prev => [...prev, score]);
     setPhase('feedback');
+    sounds.play(correct ? 'correct' : 'wrong');
 
     timerRef.current = setTimeout(() => {
       if (roundIdx + 1 < totalRounds) {

@@ -123,6 +123,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
+      sounds.play('whoosh');
       setPhase('recall');
     }, totalMs);
   // slowTimeBonus intentionally excluded: we read it at round start.
@@ -177,6 +178,9 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, dist: Math.round(dist) || 0, score });
     setShapeScores(prev => [...prev, score]);
     setPhase('feedback');
+    // Audio feedback banded by score — correct ding for great, gentle
+    // star-pop for gold range, wrong buzz for big misses.
+    sounds.play(score >= 70 ? 'correct' : score >= 40 ? 'starPop' : 'wrong');
 
     timerRef.current = setTimeout(() => {
       setTapResult(null);

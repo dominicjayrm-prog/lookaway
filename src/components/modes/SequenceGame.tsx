@@ -126,11 +126,13 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
     if (shapeIndex === correctShapeIndex) {
       const newTapped = [...tappedOrder, shapeIndex];
       setTappedOrder(newTapped);
+      sounds.play('correct');
 
       if (newTapped.length === shapes.length) {
         const score = shapes.length * 20 + 50;
         setRoundScores(prev => [...prev, score]);
         setPhase('round_done');
+        sounds.play('levelComplete');
       }
     } else if (safetyNetArmed) {
       // Safety Net consumes its charge and turns this into a no-op
@@ -141,6 +143,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
       setWrongIdx(shapeIndex);
       setCorrectNextIdx(correctShapeIndex);
       setPhase('wrong');
+      sounds.play('wrong');
       const score = tappedOrder.length * 20;
       setRoundScores(prev => [...prev, score]);
       timerRef.current = setTimeout(() => setPhase('round_done'), 1500);
