@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Wordmark } from '@/src/components/Wordmark';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { BlankedLogo } from '@/src/components/BlankedLogo';
@@ -42,6 +43,9 @@ function AuthScreen() {
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Consent checkbox — required before signup (either email or Apple).
+  // Login doesn't require re-consent; existing users have already agreed.
+  const [consent, setConsent] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const usernameTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -75,6 +79,11 @@ function AuthScreen() {
 
     if (mode === 'signup' && usernameStatus !== 'available') {
       setError('Please choose an available username');
+      return;
+    }
+
+    if (mode === 'signup' && !consent) {
+      setError('Please accept the Terms of Use and Privacy Policy to continue');
       return;
     }
 
@@ -117,6 +126,15 @@ function AuthScreen() {
   };
 
   const handleApplePress = async () => {
+    // Apple Sign In on the signup screen is effectively a signup flow —
+    // new account if the user hasn't used Apple before, sign-in otherwise.
+    // Require consent either way for simplicity (existing Apple users who
+    // already agreed will only hit this in the rare case they sign out
+    // and back in; a fresh tick isn't a burden).
+    if (mode === 'signup' && !consent) {
+      setError('Please accept the Terms of Use and Privacy Policy to continue');
+      return;
+    }
     setError(null);
     setLoading(true);
     const result = await signInWithApple();
@@ -198,6 +216,49 @@ function AuthScreen() {
                 ? 'Sign in to continue your journey'
                 : 'Start training your memory today'}
             </Text>
+
+            {/* Consent checkbox (signup only). Placed above the social +
+                email sign-in options so players see it BEFORE tapping
+                either path — avoids routing them through Apple's flow
+                only to bounce with an error. Tapping "Terms of Use" or
+                "Privacy Policy" opens the in-app WebView. */}
+            {mode === 'signup' && (
+              <Pressable
+                onPress={() => setConsent((v) => !v)}
+                style={styles.consentRow}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consent }}
+                accessibilityLabel="I agree to the Terms of Use and Privacy Policy"
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    {
+                      backgroundColor: consent ? colors.accent : 'transparent',
+                      borderColor: consent ? colors.accent : colors.borderStrong,
+                    },
+                  ]}
+                >
+                  {consent && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                </View>
+                <Text style={[styles.consentText, { color: colors.textMid }]}>
+                  I agree to the{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.accent }]}
+                    onPress={(e) => { e.stopPropagation?.(); router.push('/terms'); }}
+                  >
+                    Terms of Use
+                  </Text>
+                  {' '}and{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.accent }]}
+                    onPress={(e) => { e.stopPropagation?.(); router.push('/privacy'); }}
+                  >
+                    Privacy Policy
+                  </Text>
+                </Text>
+              </Pressable>
+            )}
 
             {/* Social sign-in — iOS only for now. Apple's Human Interface
                 Guidelines require the native AppleAuthenticationButton
@@ -295,9 +356,13 @@ function AuthScreen() {
             )}
 
             <Pressable
-              style={[styles.primaryButton, { backgroundColor: colors.accent }, loading && styles.buttonDisabled]}
+              style={[
+                styles.primaryButton,
+                { backgroundColor: colors.accent },
+                (loading || (mode === 'signup' && !consent)) && styles.buttonDisabled,
+              ]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={loading || (mode === 'signup' && !consent)}
               accessibilityRole="button"
               accessibilityLabel={mode === 'login' ? 'Sign in' : 'Create account'}
               accessibilityState={{ disabled: loading, busy: loading }}
@@ -372,4 +437,8 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: -spacing.md, marginBottom: spacing.lg, paddingVertical: 4 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  consentText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  consentLink: { fontWeight: '700', textDecorationLine: 'underline' },
 });
