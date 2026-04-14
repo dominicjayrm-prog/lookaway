@@ -52,7 +52,13 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowFlashBonus, setSlowFlashBonus] = useState(0); // +ms to sceneA
   const [highlightActive, setHighlightActive] = useState(false); // shimmer on change
-  const [freezeBonus, setFreezeBonus] = useState(0); // +ms to blank pause
+  // Freeze bonus is a ref so the scheduled sceneA -> blank transition
+  // picks up the current value when the timer fires, instead of the
+  // zero it was captured as at round start. Without the ref, tapping
+  // Freeze during sceneA did nothing because the inner setTimeout
+  // already held `800 + 0`.
+  const freezeBonusRef = useRef(0);
+  const [freezeActive, setFreezeActive] = useState(false); // UI flag for the "Frozen" label
 
   // Base viewing time per round + slow-flash bonus (only for this round).
   const baseViewingMs = roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500;
@@ -66,7 +72,10 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     sounds.play('powerUp');
     if (id === 'sm_slow_flash') setSlowFlashBonus(1500);
     else if (id === 'sm_highlight') setHighlightActive(true);
-    else if (id === 'sm_freeze') setFreezeBonus(3000);
+    else if (id === 'sm_freeze') {
+      freezeBonusRef.current = 3000;
+      setFreezeActive(true);
+    }
   }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
@@ -91,7 +100,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     setUsedPowerUps({});
     setSlowFlashBonus(0);
     setHighlightActive(false);
-    setFreezeBonus(0);
+    freezeBonusRef.current = 0;
+    setFreezeActive(false);
 
     const startTime = Date.now();
 
@@ -104,15 +114,19 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
 
     // Transition: sceneA -> blank -> sceneB. Freeze power-up extends
     // the blank window so the player gets breathing room.
+    // Read freezeBonusRef at the time the timeout fires (not capture
+    // at round start), so activating Freeze during sceneA actually
+    // lengthens the upcoming blank phase.
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
       sounds.play('whoosh');
       setPhase('blank');
+      const blankMs = 800 + freezeBonusRef.current;
       const inner = setTimeout(() => {
         setPhase('sceneB');
         setResponseStartTime(Date.now());
-      }, 800 + freezeBonus);
+      }, blankMs);
       timerRef.current = inner;
     }, viewingTimeMs);
   // viewingTimeMs / freezeBonus captured by design — we don't want
@@ -138,10 +152,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
       setPhase('blank');
+      const blankMs = 800 + freezeBonusRef.current;
       const inner = setTimeout(() => {
         setPhase('sceneB');
         setResponseStartTime(Date.now());
-      }, 800 + freezeBonus);
+      }, blankMs);
       timerRef.current = inner;
     }, remainingMs);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,7 +270,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
           </View>
         </>
       )}
-      {phase === 'blank' && <Text style={[s.phaseLabel, { color: colors.textMid }]}>Get ready...</Text>}
+      {phase === 'blank' && (
+        <Text style={[s.phaseLabel, { color: freezeActive ? '#00CEC9' : colors.textMid }]}>
+          {freezeActive ? '\u2744 Frozen...' : 'Get ready...'}
+        </Text>
+      )}
       {phase === 'sceneB' && (
         <>
           <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE B — Tap what changed!</Text>

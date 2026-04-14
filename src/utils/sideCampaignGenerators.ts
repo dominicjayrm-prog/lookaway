@@ -144,7 +144,7 @@ export function generateSequenceLevel(levelData: any) {
         colorName: c.name,
         x: Math.round(x * 10) / 10,
         y: Math.round(y * 10) / 10,
-        size: 30 + Math.floor(Math.random() * 8),
+        size: 52 + Math.floor(Math.random() * 10),
         order: i + 1,
       });
     }
@@ -172,7 +172,7 @@ export function generateCountingBlitzLevel(levelData: any) {
         colorName: colors[ci].name,
         x: 10 + Math.random() * 80,
         y: 10 + Math.random() * 80,
-        size: 22 + Math.random() * 14,
+        size: 44 + Math.random() * 14,
         shapeType: shapePool[Math.floor(Math.random() * shapePool.length)],
       });
       t += popInterval + Math.random() * 0.08;
@@ -181,7 +181,7 @@ export function generateCountingBlitzLevel(levelData: any) {
     if (events.length < 3) {
       for (let e = events.length; e < 3; e++) {
         const c = colors[e % colors.length];
-        events.push({ id: id++, color: c.hex, colorName: c.name, appearAt: 0.3 * e, duration: 1.5, x: 15 + Math.random() * 70, y: 15 + Math.random() * 70, size: 25, shapeType: shapePool[0] });
+        events.push({ id: id++, color: c.hex, colorName: c.name, appearAt: 0.3 * e, duration: 1.5, x: 15 + Math.random() * 70, y: 15 + Math.random() * 70, size: 48, shapeType: shapePool[0] });
       }
     }
     const counts: Record<string, number> = {};
