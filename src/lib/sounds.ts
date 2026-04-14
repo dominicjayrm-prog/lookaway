@@ -9,9 +9,18 @@
  * until the user interacts with the page.
  *
  * Native: works immediately, no restrictions.
+ *
+ * Category toggles:
+ *  - ui (tap, whoosh)
+ *  - gameplay (correct, wrong, timerTick, timerWarning, powerUp)
+ *  - rewards (starPop, gemClink, levelComplete, celebration, levelFail)
+ *
+ * The settings screen lets users flip each category independently.
+ * Preferences persist via AsyncStorage under `blanked_sound_prefs`.
  */
 import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import type { AudioPlayer } from 'expo-audio';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SoundName =
   | 'tap'
@@ -26,6 +35,33 @@ type SoundName =
   | 'celebration'
   | 'whoosh'
   | 'powerUp';
+
+export type SoundCategory = 'ui' | 'gameplay' | 'rewards';
+
+const SOUND_CATEGORIES: Record<SoundName, SoundCategory> = {
+  tap: 'ui',
+  whoosh: 'ui',
+  correct: 'gameplay',
+  wrong: 'gameplay',
+  timerTick: 'gameplay',
+  timerWarning: 'gameplay',
+  powerUp: 'gameplay',
+  starPop: 'rewards',
+  gemClink: 'rewards',
+  levelComplete: 'rewards',
+  levelFail: 'rewards',
+  celebration: 'rewards',
+};
+
+export interface SoundPreferences {
+  master: boolean;
+  ui: boolean;
+  gameplay: boolean;
+  rewards: boolean;
+}
+
+const DEFAULT_PREFS: SoundPreferences = { master: true, ui: true, gameplay: true, rewards: true };
+const PREFS_KEY = 'blanked_sound_prefs';
 
 // Lazy asset resolution — wrapped in a function so a single bad
 // require doesn't crash the entire module at import time on web.
@@ -49,7 +85,7 @@ function getSoundAssets(): Partial<Record<SoundName, any>> {
 class SoundManager {
   private loaded: Partial<Record<SoundName, AudioPlayer>> = {};
   private assets: Partial<Record<SoundName, any>> = {};
-  private enabled = true;
+  private prefs: SoundPreferences = { ...DEFAULT_PREFS };
   private initialised = false;
 
   /** Call once on app start. Preloads all sounds into memory. */
@@ -57,6 +93,12 @@ class SoundManager {
     if (this.initialised) return;
     this.initialised = true;
     this.assets = getSoundAssets();
+
+    // Restore persisted prefs
+    try {
+      const raw = await AsyncStorage.getItem(PREFS_KEY);
+      if (raw) this.prefs = { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+    } catch {}
 
     try {
       await setAudioModeAsync({
@@ -81,9 +123,12 @@ class SoundManager {
     );
   }
 
-  /** Play a sound by name. Fire-and-forget — never blocks, never throws. */
+  /** Play a sound by name. Fire-and-forget — never blocks, never throws.
+   *  Respects both master toggle AND category toggle. */
   play(name: SoundName): void {
-    if (!this.enabled) return;
+    if (!this.prefs.master) return;
+    const cat = SOUND_CATEGORIES[name];
+    if (cat && !this.prefs[cat]) return;
 
     const player = this.loaded[name];
     if (player) {
@@ -104,9 +149,26 @@ class SoundManager {
     } catch {}
   }
 
-  /** Enable/disable all sounds (user settings toggle). */
+  /** Read the current preferences (master + per-category). */
+  getPreferences(): SoundPreferences {
+    return { ...this.prefs };
+  }
+
+  /** Update one preference key and persist. */
+  setPreference<K extends keyof SoundPreferences>(key: K, value: SoundPreferences[K]): void {
+    this.prefs = { ...this.prefs, [key]: value };
+    AsyncStorage.setItem(PREFS_KEY, JSON.stringify(this.prefs)).catch(() => {});
+  }
+
+  /** Legacy single-toggle API kept for backwards compatibility with
+   *  existing Settings screen code. Maps to the `master` preference. */
   setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+    this.setPreference('master', enabled);
+  }
+
+  /** Whether sounds are currently playing (any category enabled + master). */
+  isEnabled(): boolean {
+    return this.prefs.master;
   }
 
   /** Clean up on app teardown. */
