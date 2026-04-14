@@ -39,7 +39,7 @@ export const ALL_POWERUPS: PowerUpDef[] = [
 
   // Counting Blitz
   { id: 'cb_slow_motion', name: 'Slow Motion', description: 'Shapes stay 50% longer', cost: 30, bundleCost: bundlePrice(30, 3), bundleSize: 3, icon: 'slow', color: '#0984E3', bgColor: 'rgba(9,132,227,0.06)', modes: ['counting_blitz'] },
-  { id: 'cb_colour_filter', name: 'Colour Filter', description: 'Brief flash of the asked colour', cost: 50, bundleCost: bundlePrice(50, 3), bundleSize: 3, icon: 'filter', color: '#FD79A8', bgColor: 'rgba(253,121,168,0.06)', modes: ['counting_blitz'] },
+  { id: 'cb_colour_filter', name: 'Freeze', description: 'Pause the chaos for 2s so you can count', cost: 50, bundleCost: bundlePrice(50, 3), bundleSize: 3, icon: 'snowflake', color: '#FD79A8', bgColor: 'rgba(253,121,168,0.06)', modes: ['counting_blitz'] },
 
   // Colour Chain
   { id: 'cc_slow_time', name: 'Slow Time', description: '+2s grid viewing', cost: 30, bundleCost: bundlePrice(30, 3), bundleSize: 3, icon: 'timer', color: '#0984E3', bgColor: 'rgba(9,132,227,0.06)', modes: ['colour_chain'] },

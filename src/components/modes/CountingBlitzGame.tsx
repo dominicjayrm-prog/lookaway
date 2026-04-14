@@ -51,7 +51,16 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowMotionActive, setSlowMotionActive] = useState(false);
-  const [filterFlashActive, setFilterFlashActive] = useState(false);
+  // Colour Filter redesigned: it now freezes the chaos for 2s so the
+  // player can actually count what's on screen. The previous "brief
+  // flash of the asked colour" idea never made sense because the
+  // asked colour isn't shown to the player until AFTER chaos ends.
+  // `pausedUntil` is an absolute timestamp — while Date.now() < that,
+  // the interval skips its tick so elapsed time and visible shapes
+  // both freeze. When the pause ends we shift roundStartRef forward
+  // by the paused duration so the remaining window keeps its budget.
+  const [colourFilterActive, setColourFilterActive] = useState(false);
+  const pauseEndsAtRef = useRef(0);
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
@@ -62,8 +71,10 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
     if (id === 'cb_slow_motion') {
       setSlowMotionActive(true);
     } else if (id === 'cb_colour_filter') {
-      setFilterFlashActive(true);
-      setTimeout(() => setFilterFlashActive(false), 1000);
+      // 2-second freeze starting NOW.
+      pauseEndsAtRef.current = Date.now() + 2000;
+      setColourFilterActive(true);
+      setTimeout(() => setColourFilterActive(false), 2000);
     }
   }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
 
@@ -89,10 +100,33 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
     // Reset per-round power-up state
     setUsedPowerUps({});
     setSlowMotionActive(false);
-    setFilterFlashActive(false);
+    setColourFilterActive(false);
+    pauseEndsAtRef.current = 0;
+
+    // Accumulated paused-milliseconds across all Colour Filter uses
+    // this round. Subtracting this from elapsed keeps the budget
+    // honest — a 2s pause gives the player 2s of extra counting.
+    let pausedMsTotal = 0;
+    let wasPausedLastTick = false;
+    let pauseTickStart = 0;
 
     intervalRef.current = setInterval(() => {
-      const elapsed = (Date.now() - roundStartRef.current) / 1000;
+      const now = Date.now();
+      const isPaused = now < pauseEndsAtRef.current;
+
+      // Track pause transitions so we can accumulate paused time on
+      // resume. The elapsed reading rolls back by `pausedMsTotal`.
+      if (isPaused && !wasPausedLastTick) {
+        pauseTickStart = now;
+        wasPausedLastTick = true;
+      } else if (!isPaused && wasPausedLastTick) {
+        pausedMsTotal += now - pauseTickStart;
+        wasPausedLastTick = false;
+      }
+
+      if (isPaused) return; // Skip the tick entirely — visible shapes frozen.
+
+      const elapsed = (now - roundStartRef.current - pausedMsTotal) / 1000;
       // Slow Motion stretches the chaos window 5s → 7.5s by applying a
       // time-scale factor to the elapsed reading. Each event's
       // appearAt/duration are still in original seconds; the scale
@@ -173,18 +207,24 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
                     position: 'absolute',
                     left: `${sh.x}%`,
                     top: `${sh.y}%`,
-                    transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }, { scale: filterFlashActive ? scale * 1.15 : scale }],
-                    opacity: filterFlashActive ? 1 : opacity,
+                    transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }, { scale }],
+                    opacity,
                   }}
                 >
                   <BlitzShape type={sh.shapeType} color={sh.color} size={sh.size} />
                 </View>
               );
             })}
-            {/* Colour Filter flash — subtle translucent overlay makes
-                every visible shape pop for ~1s. */}
-            {filterFlashActive && (
-              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.12)' }]} pointerEvents="none" />
+            {/* Colour Filter PAUSED overlay — all currently-visible
+                shapes stay frozen on screen for 2s so the player can
+                count them calmly. Semi-opaque white tint + "PAUSED"
+                label makes the effect unmistakable. */}
+            {colourFilterActive && (
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(108,92,231,0.08)', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
+                <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20, borderWidth: 2, borderColor: '#6C5CE7' }}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#6C5CE7', letterSpacing: 1 }}>PAUSED — COUNT NOW</Text>
+                </View>
+              </View>
             )}
           </View>
         </>

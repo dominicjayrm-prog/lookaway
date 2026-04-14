@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/src/providers/AuthProvider';
 import { loadPlayerProgress, countUnlockedTiers, loadAllAchievements } from '@/src/utils/achievements';
 import { getHeadToHeadRecord } from '@/src/utils/friends';
+import { ReportUserModal } from '@/src/components/ReportUserModal';
 
 interface FriendProfileInput {
   id: string;
@@ -62,6 +63,9 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   const status = getOnlineStatus(profile.last_seen);
   const statusColor = STATUS_COLORS[status];
   const statusText = getLastActiveText(profile.last_seen);
+  // Report modal is owned by the popup itself rather than the parent
+  // so we don't have to prop-drill yet another callback.
+  const [showReport, setShowReport] = React.useState(false);
 
   // Resolve cosmetics
   const frame = profile.equipped_frame ? getFrameById(profile.equipped_frame) ?? null : null;
@@ -200,12 +204,33 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
               <Ionicons name="flash" size={16} color="#FFFFFF" />
               <Text style={styles.challengeText}>Challenge @{profile.username}</Text>
             </Pressable>
-            <Pressable style={styles.removeButton} onPress={() => onRemove(friend.friendshipId)}>
-              <Text style={[styles.removeText, { color: colors.wrong }]}>Remove friend</Text>
-            </Pressable>
+            {/* Secondary row: Remove | Report, equal width, muted.
+                Report uses a distinct subdued flag icon + wrong colour
+                to match the modal accent so the action is clearly
+                destructive without being aggressive. */}
+            <View style={styles.secondaryRow}>
+              <Pressable style={styles.secondaryBtn} onPress={() => onRemove(friend.friendshipId)}>
+                <Ionicons name="person-remove-outline" size={14} color={colors.textMid} />
+                <Text style={[styles.secondaryText, { color: colors.textMid }]}>Remove</Text>
+              </Pressable>
+              <View style={[styles.secondaryDivider, { backgroundColor: colors.border }]} />
+              <Pressable style={styles.secondaryBtn} onPress={() => setShowReport(true)} accessibilityRole="button" accessibilityLabel={`Report @${profile.username}`}>
+                <Ionicons name="flag-outline" size={14} color={colors.wrong} />
+                <Text style={[styles.secondaryText, { color: colors.wrong }]}>Report</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
+      {/* Report modal mounted inside the popup so it overlays cleanly
+          when stacked on top of the profile card. */}
+      <ReportUserModal
+        visible={showReport}
+        reporterId={myId}
+        reportedId={profile.id}
+        reportedUsername={profile.username}
+        onClose={() => setShowReport(false)}
+      />
     </Modal>
   );
 }
@@ -312,6 +337,14 @@ const styles = StyleSheet.create({
   challengeText: { fontSize: 15, fontWeight: typography.weights.bold, color: '#FFFFFF' },
   removeButton: { paddingVertical: spacing.xs, minHeight: 32, alignItems: 'center', justifyContent: 'center' },
   removeText: { fontSize: 12, fontWeight: typography.weights.medium },
+  // Remove + Report sit as twin secondary actions separated by a
+  // thin divider. Keeps both discoverable without adding a second
+  // full-width button that would compete with the primary Challenge
+  // CTA.
+  secondaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: spacing.xs, minHeight: 32 },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingHorizontal: 6 },
+  secondaryText: { fontSize: 12, fontWeight: typography.weights.medium },
+  secondaryDivider: { width: 1, height: 14 },
 });
 
 export const FriendProfilePopup = React.memo(FriendProfilePopupInner);

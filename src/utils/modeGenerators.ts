@@ -102,7 +102,7 @@ export function generateSequenceData() {
     for (let i = 0; i < count; i++) {
       let x = 0, y = 0, valid = false, attempts = 0;
       do { x = 12 + Math.random() * 76; y = 12 + Math.random() * 76; valid = shapes.every((s: any) => Math.sqrt((s.x - x) ** 2 + (s.y - y) ** 2) > 16); attempts++; } while (!valid && attempts < 50);
-      shapes.push({ type: types[i % types.length], color: colors[i % colors.length], x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, size: 30 + Math.floor(Math.random() * 8), order: i + 1 });
+      shapes.push({ type: types[i % types.length], color: colors[i % colors.length], x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, size: 52 + Math.floor(Math.random() * 10), order: i + 1 });
     }
     return { shapes };
   });
@@ -119,7 +119,7 @@ export function generateCountingBlitzData() {
     let t = 0.2, id = 0;
     while (t < 5) {
       const ci = Math.floor(Math.random() * 3);
-      events.push({ id: `r${r}_e${id++}`, appearAt: Math.round(t * 100) / 100, duration: visibleTime, color: colors[ci].hex, colorName: colors[ci].name, x: 10 + Math.random() * 80, y: 10 + Math.random() * 80, size: 22 + Math.random() * 14, shapeType: ['circle', 'square', 'triangle'][Math.floor(Math.random() * 3)] });
+      events.push({ id: `r${r}_e${id++}`, appearAt: Math.round(t * 100) / 100, duration: visibleTime, color: colors[ci].hex, colorName: colors[ci].name, x: 10 + Math.random() * 80, y: 10 + Math.random() * 80, size: 44 + Math.random() * 14, shapeType: ['circle', 'square', 'triangle'][Math.floor(Math.random() * 3)] });
       t += spawnInterval + Math.random() * 0.08;
     }
     const counts: Record<string, number> = { red: 0, blue: 0, green: 0 };
