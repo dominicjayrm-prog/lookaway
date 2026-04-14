@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -87,6 +88,14 @@ function CosmeticStatus({
 
 function ShopTab() {
   const { colors } = useTheme();
+  // Shop can be navigated to with a "need X more gems" hint from the
+  // streak recovery modal. When set, we show a banner at the top.
+  const { needGems: needGemsParam, reason: needGemsReason } = useLocalSearchParams<{ needGems?: string; reason?: string }>();
+  const needGems = needGemsParam ? parseInt(needGemsParam, 10) : 0;
+  const bannerMessage =
+    needGems > 0 && needGemsReason === 'streak_recovery'
+      ? `You need ${needGems} more gem${needGems !== 1 ? 's' : ''} to save your streak`
+      : null;
   // NOTE: destructuring `ownedCosmetics` here is load-bearing — without
   // it, the three cosmetic tabs read via `useGameStore.getState()` which
   // doesn't subscribe the component to changes, so buying an item (or
@@ -314,6 +323,16 @@ function ShopTab() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Streak-recovery hint banner — set when the player tapped the
+            gem option in the recovery modal but didn't have enough. */}
+        {bannerMessage && (
+          <View style={[styles.recoveryBanner, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '40' }]}>
+            <Text style={{ fontSize: 16 }}>{'\u{1F525}'}</Text>
+            <Text style={[styles.recoveryBannerText, { color: colors.wrong }]} numberOfLines={2}>
+              {bannerMessage}
+            </Text>
+          </View>
+        )}
         {/* ── Blanked+ Banner ── */}
         <Pressable
           style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
@@ -804,6 +823,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
   title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.3 },
   gemDisplay: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
+  recoveryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  recoveryBannerText: { fontSize: 12, fontWeight: '700', flex: 1 },
   gemCount: { fontSize: 20, fontWeight: '800' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 24, marginBottom: 12 },

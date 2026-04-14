@@ -18,6 +18,8 @@ export type BlinkExpression =
   | 'normal' | 'memorise' | 'blank' | 'thinking' | 'correct' | 'wrong'
   | 'celebrate' | 'streak' | 'sad' | 'sleeping' | 'surprised' | 'love'
   | 'premium'
+  // Streak-recovery set (used by the recovery modal to show severity)
+  | 'worried' | 'crying'
   // Expanded catalogue — 15 new
   | 'wink' | 'tongue_out'
   | 'pirate' | 'cool_guy' | 'ninja' | 'frozen' | 'angel'
@@ -325,6 +327,57 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
         {eyes({ pc: C.textM, sy: 0.8, ly: s * 0.015, sp: false })}
         {frown(0.05)}
         {teardrop()}
+      </>
+    ),
+
+    // ═══ WORRIED — streak at risk (2-3 days missed) ═══
+    // Coral pupils (anxiety), slanted worry brows, sweat drop, wavy mouth
+    worried: (
+      <>
+        {eyes({ pc: C.coral, sy: 0.85, pr: s * 0.042, sp: false })}
+        {/* Worry brows — inner ends pulled up, outer ends down */}
+        <Line x1={cx - s * 0.17} y1={cy - s * 0.18} x2={cx - s * 0.06} y2={cy - s * 0.15}
+          stroke={C.text} strokeWidth={sw(1.2, 0.018)} strokeLinecap="round" />
+        <Line x1={cx + s * 0.06} y1={cy - s * 0.15} x2={cx + s * 0.17} y2={cy - s * 0.18}
+          stroke={C.text} strokeWidth={sw(1.2, 0.018)} strokeLinecap="round" />
+        {/* Wavy mouth — two tiny bumps instead of a clean curve */}
+        <Path
+          d={`M${cx - s * 0.06},${cy + s * 0.11} Q${cx - s * 0.03},${cy + s * 0.14} ${cx},${cy + s * 0.11} Q${cx + s * 0.03},${cy + s * 0.08} ${cx + s * 0.06},${cy + s * 0.11}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1, 0.016)} strokeLinecap="round" strokeLinejoin="round"
+        />
+        {sweatDrop()}
+      </>
+    ),
+
+    // ═══ CRYING — streak gone or deep in trouble (4+ days missed) ═══
+    // Squinting closed eyes, two tears, slanted sad brows, open grief mouth
+    crying: (
+      <>
+        {/* Squint lines instead of full eyes — inverse arcs */}
+        <Path
+          d={`M${cx - s * 0.16},${cy - s * 0.02} Q${cx - s * 0.1},${cy - s * 0.08} ${cx - s * 0.04},${cy - s * 0.02}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1.4, 0.022)} strokeLinecap="round"
+        />
+        <Path
+          d={`M${cx + s * 0.04},${cy - s * 0.02} Q${cx + s * 0.1},${cy - s * 0.08} ${cx + s * 0.16},${cy - s * 0.02}`}
+          fill="none" stroke={C.text} strokeWidth={sw(1.4, 0.022)} strokeLinecap="round"
+        />
+        {/* Inner sad brows — sharp upward slope */}
+        <Line x1={cx - s * 0.18} y1={cy - s * 0.20} x2={cx - s * 0.04} y2={cy - s * 0.13}
+          stroke={C.text} strokeWidth={sw(1.2, 0.018)} strokeLinecap="round" />
+        <Line x1={cx + s * 0.04} y1={cy - s * 0.13} x2={cx + s * 0.18} y2={cy - s * 0.20}
+          stroke={C.text} strokeWidth={sw(1.2, 0.018)} strokeLinecap="round" />
+        {/* Two teardrops — left + right */}
+        <Path
+          d={`M${cx - s * 0.1},${cy + s * 0.01} Q${cx - s * 0.12},${cy + s * 0.06} ${cx - s * 0.1},${cy + s * 0.09} Q${cx - s * 0.08},${cy + s * 0.06} ${cx - s * 0.1},${cy + s * 0.01}`}
+          fill={C.blue} opacity={0.55}
+        />
+        <Path
+          d={`M${cx + s * 0.1},${cy + s * 0.01} Q${cx + s * 0.12},${cy + s * 0.06} ${cx + s * 0.1},${cy + s * 0.09} Q${cx + s * 0.08},${cy + s * 0.06} ${cx + s * 0.1},${cy + s * 0.01}`}
+          fill={C.blue} opacity={0.55}
+        />
+        {/* Open grief mouth — oval with slight dip */}
+        <Ellipse cx={cx} cy={cy + s * 0.13} rx={s * 0.055} ry={s * 0.035} fill={C.accentD} />
       </>
     ),
 
