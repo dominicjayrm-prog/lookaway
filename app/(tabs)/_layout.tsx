@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,23 +37,24 @@ function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.tabBarInactive,
+        // textMid (#636E72) is dark gray — high contrast against the
+        // white tab bar on iOS. The previous tabBarInactive (#B2BEC3)
+        // was so faint users reported the icons as invisible.
+        tabBarInactiveTintColor: colors.textMid,
         tabBarShowLabel: false,
-        // contentStyle applies to each tab's content container — prevents
-        // a brief system-default (white) flash between tab transitions
-        // on iOS when in dark mode.
         contentStyle: { backgroundColor: colors.bg },
         tabBarStyle: {
           backgroundColor: colors.tabBar,
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: colors.tabBarBorder,
           height: 54 + bottomPadding,
           paddingBottom: bottomPadding,
           paddingTop: 8,
-          elevation: 8,
+          elevation: 12,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.06,
-          shadowRadius: 12,
+          shadowOpacity: 0.12,
+          shadowRadius: 16,
         },
       }}
     >
@@ -79,14 +80,18 @@ function TabLayout() {
                 lineHeight: 16,
                 paddingHorizontal: 4,
               },
-              tabBarIcon: ({ focused }) => (
-                <View style={focused ? [styles.activeIconContainer, { backgroundColor: colors.accentSoft }] : styles.inactiveIconContainer}>
-                  <Ionicons
-                    name={focused ? tab.iconFocused : tab.icon}
-                    size={22}
-                    color={focused ? colors.accent : colors.tabBarInactive}
-                  />
-                </View>
+              // Stock pattern — exactly matches Expo's official bottom-tabs
+              // examples. Receives `color` (active/inactive tint resolved by
+              // React Navigation) and `size` from the navigator. No wrapping
+              // View, no hardcoded color — this is the combination known to
+              // render the font-glyph icons correctly on iOS production
+              // builds.
+              tabBarIcon: ({ focused, color, size }) => (
+                <Ionicons
+                  name={focused ? tab.iconFocused : tab.icon}
+                  size={size ?? 26}
+                  color={color}
+                />
               ),
             }}
           />
@@ -98,14 +103,3 @@ function TabLayout() {
 }
 
 export default TabLayout;
-const styles = StyleSheet.create({
-  activeIconContainer: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  inactiveIconContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 5,
-  },
-});

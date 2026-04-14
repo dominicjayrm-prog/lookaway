@@ -23,7 +23,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
@@ -41,6 +41,7 @@ interface Props {
 
 export function FriendQRSheet({ visible, onDismiss }: Props) {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const userId = user?.id;
   const equippedExpression = useGameStore((s) => s.equippedExpression);
@@ -82,22 +83,30 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
     }).start(() => onDismiss());
   };
 
-  // Swipe-down to dismiss
+  // Swipe-down to dismiss.
+  // We use the *Capture variants so that the responder intercepts the
+  // gesture even when the touch starts on a child element (the QR card,
+  // share button, username text). Without capture, a Pressable inside
+  // would claim the touch first and the outer PanResponder would never
+  // see the move events — which is exactly the "swipe down does nothing"
+  // bug users reported.
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 15,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 12 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponderCapture: (_, g) => g.dy > 12 && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderMove: (_, g) => {
         if (g.dy > 0) slideAnim.setValue(g.dy);
       },
       onPanResponderRelease: (_, g) => {
-        // Lowered velocity threshold for smoother slow-swipe dismissals
         if (g.dy > 80 || g.vy > 0.2) {
           handleClose();
         } else {
           RNAnimated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 10 }).start();
         }
       },
+      onPanResponderTerminationRequest: () => false,
     }),
   ).current;
 
@@ -124,12 +133,19 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
           { backgroundColor: colors.bg, transform: [{ translateY: slideAnim }] },
         ]}
       >
-        <SafeAreaView style={st.safe} edges={['top', 'bottom']}>
-          <View style={st.header}>
+        <SafeAreaView style={st.safe} edges={['bottom']}>
+          {/* Apply top safe-area inset manually (not via SafeAreaView
+              edges) and add extra breathing room so the close button
+              sits well clear of the notch / status bar. On notchless
+              devices insets.top is 20-ish, we still want visible space
+              so we add a hard 16px gap. */}
+          <View style={[st.header, { paddingTop: insets.top + 16 }]}>
             <Pressable
               onPress={handleClose}
-              hitSlop={16}
+              hitSlop={20}
               style={[st.closeBtn, { backgroundColor: colors.surface }]}
+              accessibilityRole="button"
+              accessibilityLabel="Close QR code"
             >
               <Ionicons name="close" size={22} color={colors.textMid} />
             </Pressable>

@@ -94,7 +94,15 @@ function ScaleIn({ delay = 0, children, active = true }: { delay?: number; child
 // ═══ SCREEN 1: EMOTIONAL HOOK ═══════════════════════════════
 function Screen1({ isVisible }: { isVisible: boolean }) {
   const { colors: tc } = useTheme();
-  const pulseAnim = useRef(new RNAnimated.Value(1)).current;
+  // We only use floatAnim now — AnimatedBlink has its own breathing scale
+  // built in via the `breathing` prop. The previous setup wrapped it in
+  // an additional Animated.View with a redundant pulseAnim, which on iOS
+  // caused the native driver to rasterize the SVG at its 120px logical
+  // size and then scale it UP by ~1.10x (1.06 pulse × 1.04 breathing).
+  // That's where the "pixelated" look came from — bitmap upscaling.
+  // Now we do: one native-driver translateY (no scaling), and let the
+  // SVG render cleanly at a higher source size (160) so even the
+  // internal breathing scale doesn't exceed the rasterized resolution.
   const floatAnim = useRef(new RNAnimated.Value(0)).current;
   // Eye look-down: Blink glances down at the text after a pause
   const [lookY, setLookY] = useState(0);
@@ -119,13 +127,6 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
   }, [isVisible]);
 
   useEffect(() => {
-    const loop = () => {
-      RNAnimated.sequence([
-        RNAnimated.timing(pulseAnim, { toValue: 1.06, duration: 600, useNativeDriver: true }),
-        RNAnimated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ]).start(loop);
-    };
-    loop();
     const floatLoop = () => {
       RNAnimated.sequence([
         RNAnimated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
@@ -133,13 +134,13 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
       ]).start(floatLoop);
     };
     floatLoop();
-  }, [pulseAnim, floatAnim]);
+  }, [floatAnim]);
 
   return (
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
-        <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
-          <AnimatedBlink expression="normal" size={120} lookOffset={{ x: 0, y: lookY }} />
+        <RNAnimated.View style={{ transform: [{ translateY: floatAnim }] }}>
+          <AnimatedBlink expression="normal" size={160} lookOffset={{ x: 0, y: lookY }} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -411,16 +412,16 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
               style={[
                 s.stepCard,
                 {
-                  backgroundColor: i === step ? `${C.accent}06` : tc.card,
-                  borderColor: i === step ? `${C.accent}20` : tc.border,
+                  backgroundColor: i === step ? `${C.accent}0F` : tc.card,
+                  borderColor: i === step ? C.accent : tc.border,
                 },
               ]}
             >
               <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : tc.surface }]}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: i === step ? 'white' : tc.textLight }}>{st.num}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: i === step ? 'white' : tc.textLight }}>{st.num}</Text>
               </View>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: i === step ? C.accent : tc.text }} numberOfLines={1}>{st.title}</Text>
-              <Text style={{ fontSize: 9, color: tc.textLight, marginTop: 2, lineHeight: 12 }} numberOfLines={2}>{st.desc}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: i === step ? C.accent : tc.text, marginTop: 4 }} numberOfLines={1}>{st.title}</Text>
+              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 3, lineHeight: 14 }} numberOfLines={3}>{st.desc}</Text>
             </Pressable>
           </FadeIn>
         ))}
@@ -730,7 +731,11 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    overflow: 'hidden',
+    // Removed `overflow: 'hidden'` — it was clipping the step cards at
+    // the bottom of screen 3 because the centered content column was
+    // taller than the container on smaller phones. Each screen is
+    // already clipped per-page by the horizontal FlatList paging, so
+    // we don't need additional overflow: hidden here.
   },
   heroTitle: {
     fontSize: 28,
@@ -847,12 +852,16 @@ const s = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1.5,
+    // minHeight guarantees the card is tall enough to show the title
+    // + description text even when the parent container is constrained
+    // on smaller phones (iPhone SE etc.). Without this, flex: 1 inside
+    // a centered column with `overflow: hidden` could clip to ~30px.
+    minHeight: 96,
   },
   stepNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    marginBottom: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
