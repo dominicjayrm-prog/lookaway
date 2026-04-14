@@ -89,9 +89,16 @@ export default function LevelBrowser({ levels }: { levels: LevelRow[] }) {
         `${l.level_number}`.includes(s)
       );
     }
+    const difficultyRank: Record<string, number> = { easy: 1, medium: 2, hard: 3 };
     result.sort((a, b) => {
       if (sort === 'level_number') return (a.world_id * 1000 + a.level_number) - (b.world_id * 1000 + b.level_number);
       if (sort === 'created_at') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (sort === 'difficulty') {
+        const da = difficultyRank[a.difficulty ?? 'medium'] ?? 2;
+        const db = difficultyRank[b.difficulty ?? 'medium'] ?? 2;
+        // Tie-break by world + level so cards stay deterministic within a tier
+        return da - db || (a.world_id * 1000 + a.level_number) - (b.world_id * 1000 + b.level_number);
+      }
       return 0;
     });
     return result;

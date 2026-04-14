@@ -53,6 +53,8 @@ function ActivityIcon({ type, color }: { type: string; color: string }) {
     case 'friend_added': return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill={color} /><Path d="M4,21 Q4,14 12,14 Q20,14 20,21" fill={color} /></Svg>;
     case 'star_improved': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,4 L5,12 L9,12 L9,20 L15,20 L15,12 L19,12Z" fill={color} /></Svg>;
     case 'powerup_bought': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={color} /></Svg>;
+    // Lightning bolt — used for any side-game / challenge mode completion (SnapMatch, Speed Recall, Spot the Change, Sequence, Counting Blitz, Colour Chain)
+    case 'mode_complete': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 4,13 11,13 9,22 20,10 13,10" fill={color} /></Svg>;
     default: return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={8} fill={color} /></Svg>;
   }
 }
@@ -69,6 +71,11 @@ function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: 
     case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Added @${d.username}`, sub: `New friend · ${t}` };
     case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Improved Level ${d.levelNumber}`, sub: `${d.oldStars}→${d.newStars} stars · ${t}` };
     case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Bought power-up`, sub: `Shop · ${t}` };
+    case 'mode_complete': {
+      const modeName = (d.modeName as string) ?? 'Mode';
+      const pct = typeof d.scorePct === 'number' ? `${d.scorePct}%` : null;
+      return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Completed ${modeName}`, sub: pct ? `${pct} score · ${t}` : `Challenge mode · ${t}` };
+    }
     default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: 'Activity', sub: t };
   }
 }
@@ -180,7 +187,7 @@ function PlayTab() {
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
+    AsyncStorage.getItem('blanked_tutorial_seen').catch(() => null).then(seen => {
       if (cancelled) return;
       if (!seen) {
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);

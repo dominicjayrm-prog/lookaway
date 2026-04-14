@@ -10,6 +10,7 @@ import { log } from '@/src/lib/logger';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { CHALLENGE_MODES, getScorePercentage, getMaxScore } from '@/src/data/challengeModes';
 import { generateSideCampaignData } from '@/src/utils/sideCampaignGenerators';
+import { logActivity } from '@/src/utils/activity';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
@@ -205,6 +206,9 @@ function SideCampaignScreen() {
 
     if (pct >= 50) {
       setPhase('complete');
+      // Log to recent activity feed so the home screen surfaces it
+      const modeName = CHALLENGE_MODES[mode as keyof typeof CHALLENGE_MODES]?.name ?? mode;
+      logActivity('mode_complete', { mode, modeName, score: rawScore, scorePct: pct, stars: earnedStars, levelId });
     } else {
       loseLife();
       setPhase('failed');

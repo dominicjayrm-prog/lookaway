@@ -15,6 +15,7 @@ import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { generateSpotTheChangeChallenge } from '@/src/utils/spotTheChangeChallenge';
 import { getTodayDateString } from '@/src/utils/dateHelpers';
+import { logActivity } from '@/src/utils/activity';
 
 const isWeb = Platform.OS === 'web';
 
@@ -75,6 +76,15 @@ function SpotGameScreen() {
 
   const correctCount = state.results.filter(r=>r.correct).length;
   const avgTime = state.results.length>0 ? (state.results.reduce((a,r)=>a+r.timeMs,0)/state.results.length/1000).toFixed(1) : '0.0';
+
+  // Log to recent activity feed once per session when COMPLETE first fires
+  const loggedRef = useRef(false);
+  useEffect(() => {
+    if (state.phase === 'COMPLETE' && !loggedRef.current) {
+      loggedRef.current = true;
+      logActivity('mode_complete', { mode: 'spot_the_change', modeName: 'Spot the Change', score: correctCount, scorePct: Math.round((correctCount / 5) * 100) });
+    }
+  }, [state.phase, correctCount]);
 
   if(state.phase==='READY') {
     return (
