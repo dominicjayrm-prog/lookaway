@@ -11,8 +11,9 @@ import { Button } from '@/src/components/Button';
 import { Badge } from '@/src/components/Badge';
 import { useGameStore } from '@/src/store';
 import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
-import { getTodayDateString } from '@/src/utils/dailyChallenge';
+import { getTodayDateString } from '@/src/utils/dateHelpers';
 import { colors } from '@/src/theme/colors';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
@@ -85,7 +86,17 @@ function SpeedGameScreen() {
   }, [gameState]);
 
   useEffect(() => {
-    if (gameState === 'COMPLETE') { const stars = getStarsForScore(score, speedLevel); addGems(GEM_REWARDS[stars]); addStars(stars); incrementStreak(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); router.replace('/game/result'); }
+    if (gameState === 'COMPLETE') {
+      const stars = getStarsForScore(score, speedLevel);
+      const gems = GEM_REWARDS[stars];
+      addGems(gems);
+      const uid = useGameStore.getState()._authUserId;
+      if (uid && gems > 0) logEconomyEvent(uid, ECONOMY_EVENTS.GEM_EARN_DAILY, gems, { mode: 'speed', stars, score });
+      addStars(stars);
+      incrementStreak();
+      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/game/result');
+    }
     if (gameState === 'FAILED') { router.replace('/game/result'); }
   }, [gameState]);
 

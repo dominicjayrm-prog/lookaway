@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BlinkMini } from '@/components/BlinkMini';
 import { supabase } from '@/lib/supabase';
 import { WORLDS } from '@/data/worldConfig';
 
@@ -30,65 +31,65 @@ export default async function DashboardPage() {
   const { data: levelCounts } = await supabase.from('campaign_levels').select('world_id').eq('status', 'complete');
   const worldCounts: Record<number, number> = {};
   WORLDS.forEach(w => { worldCounts[w.id] = 0; });
-  (levelCounts ?? []).forEach((l: any) => { worldCounts[l.world_id] = (worldCounts[l.world_id] || 0) + 1; });
+  (levelCounts ?? []).forEach((l: { world_id: number }) => { worldCounts[l.world_id] = (worldCounts[l.world_id] || 0) + 1; });
 
-  // Friends & challenges
+  // Friends & player-vs-player challenges (separate from the removed daily feature)
   const { count: friendships } = await supabase.from('friendships').select('*', { count: 'exact', head: true }).eq('status', 'accepted');
-  const { count: challenges } = await supabase.from('friend_challenges').select('*', { count: 'exact', head: true });
-
-  const statCard = (label: string, value: string | number, color: string) => (
-    <div className="bg-white rounded-xl shadow-sm p-5 border-l-4" style={{ borderLeftColor: color }}>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-    </div>
-  );
+  const { count: friendMatches } = await supabase.from('friend_challenges').select('*', { count: 'exact', head: true });
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">BLANKED game overview</p>
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-2">
+        <BlinkMini size={48} />
+        <div>
+          <h1 className="text-3xl font-bold text-brand-text">Dashboard</h1>
+          <p className="text-sm text-brand-textMid">BLANKED game overview</p>
+        </div>
+      </div>
 
       {/* Top stats */}
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCard('Total Players', totalUsers ?? 0, '#6C5CE7')}
-        {statCard('Levels Built', `${totalLevels ?? 0} / 200`, '#0984E3')}
-        {statCard('Total Stars Earned', totalStars, '#D4A012')}
-        {statCard('Gems in Circulation', totalGems, '#00B894')}
+        <StatCard label="Total Players" value={totalUsers ?? 0} accent="brand-accent" />
+        <StatCard label="Levels Built" value={`${totalLevels ?? 0} / 200`} accent="brand-blue" />
+        <StatCard label="Total Stars Earned" value={totalStars} accent="brand-gold" />
+        <StatCard label="Gems in Circulation" value={totalGems} accent="brand-green" />
       </div>
 
       <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCard('Level Completions', totalProgress ?? 0, '#E17055')}
-        {statCard('Avg World Reached', avgWorld, '#FF6B6B')}
-        {statCard('Friendships', friendships ?? 0, '#FD79A8')}
-        {statCard('Friend Challenges', challenges ?? 0, '#F9A825')}
+        <StatCard label="Level Completions" value={totalProgress ?? 0} accent="brand-accent" />
+        <StatCard label="Avg World Reached" value={avgWorld} accent="brand-coral" />
+        <StatCard label="Friendships" value={friendships ?? 0} accent="brand-accentLight" />
+        <StatCard label="Friend Matches" value={friendMatches ?? 0} accent="brand-gold" />
       </div>
 
       {/* Quick actions */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href="/levels" className="bg-purple-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-purple-700">Manage Levels</Link>
-        <Link href="/economy" className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700">Economy</Link>
-        <Link href="/users" className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700">Users</Link>
+        <QuickLink href="/analytics" label="View Analytics" />
+        <QuickLink href="/levels" label="Manage Levels" />
+        <QuickLink href="/economy" label="Economy" variant="secondary" />
+        <QuickLink href="/users" label="Users" variant="secondary" />
       </div>
 
       {/* World progress */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">World Progress</h2>
+      <div className="mt-8 bg-brand-card rounded-brand shadow-brand-card p-6 border border-brand-border">
+        <h2 className="text-lg font-bold text-brand-text mb-4">World progress</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {WORLDS.map(w => {
             const built = worldCounts[w.id] ?? 0;
             const target = w.levelRange[1] - w.levelRange[0] + 1;
             const pct = Math.round((built / target) * 100);
             return (
-              <div key={w.id} className="bg-white rounded-xl shadow-sm p-4">
+              <div key={w.id} className="bg-brand-bg rounded-xl p-4 border border-brand-border">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-bold text-white px-2 py-0.5 rounded" style={{ backgroundColor: w.color }}>W{w.id}</span>
-                  <span className="text-sm font-semibold text-slate-700">{w.name}</span>
+                  <span className="text-sm font-semibold text-brand-text">{w.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 bg-brand-surface rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: w.color }} />
                   </div>
-                  <span className="text-xs font-medium text-slate-500">{built}/{target}</span>
+                  <span className="text-xs font-medium text-brand-textMid">{built}/{target}</span>
                 </div>
               </div>
             );
@@ -97,10 +98,32 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent activity */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-slate-900 mb-2">This Week</h2>
-        <p className="text-sm text-slate-500">{recentEvents ?? 0} economy events in the last 7 days</p>
+      <div className="mt-8 bg-brand-card rounded-brand shadow-brand-card p-6 border border-brand-border">
+        <h2 className="text-lg font-bold text-brand-text mb-1">This week</h2>
+        <p className="text-sm text-brand-textMid">
+          <span className="font-bold text-brand-accent">{(recentEvents ?? 0).toLocaleString()}</span> economy events in the last 7 days
+        </p>
       </div>
     </div>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: string | number; accent: string }) {
+  return (
+    <div className="bg-brand-card rounded-brand shadow-brand-card p-5 border border-brand-border">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-brand-textMid">{label}</p>
+      <p className={`mt-1 text-3xl font-bold text-${accent}`}>{typeof value === 'number' ? value.toLocaleString() : value}</p>
+    </div>
+  );
+}
+
+function QuickLink({ href, label, variant = 'primary' }: { href: string; label: string; variant?: 'primary' | 'secondary' }) {
+  const cls = variant === 'primary'
+    ? 'bg-brand-accent text-white hover:opacity-90'
+    : 'bg-brand-card text-brand-text border border-brand-border hover:bg-brand-surface';
+  return (
+    <Link href={href} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${cls}`}>
+      {label}
+    </Link>
   );
 }

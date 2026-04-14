@@ -175,26 +175,19 @@ let _sessionAdCount = 0;
  * @param totalLevelsEverCompleted  The player's all-time completed
  *                                  level count. Used for the
  *                                  onboarding grace period.
- * @param isDailyChallenge  Pass true for daily challenge levels —
- *                          interstitials are never shown on these.
  */
 export async function maybeShowInterstitial(opts: {
   isWorldCompletion?: boolean;
   totalLevelsEverCompleted?: number;
-  isDailyChallenge?: boolean;
 } = {}): Promise<boolean> {
   const {
     isWorldCompletion = false,
     totalLevelsEverCompleted = 999,
-    isDailyChallenge = false,
   } = opts;
 
   _levelsSinceLastAd += 1;
 
-  // ── Guardrail 1: never on daily challenge ──
-  if (isDailyChallenge) return false;
-
-  // ── Guardrail 2: subscriber or ads removed ──
+  // ── Guardrail 1: subscriber or ads removed ──
   try {
     const state = useGameStore.getState();
     if (state.isSubscribed() || state.adsRemoved) {

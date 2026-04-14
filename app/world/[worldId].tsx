@@ -67,25 +67,8 @@ function WorldMapScreen() {
   const [mapWidth, setMapWidth] = useState(DEFAULT_MAP_W);
 
   // ── Mastermind intro gate ──
-  // World 6 gets a dramatic one-time intro screen. After the player
-  // taps "Enter Mastermind", an AsyncStorage flag is set and they
-  // never see it again.
-  const [introChecked, setIntroChecked] = useState(worldId !== 6);
-  useEffect(() => {
-    if (worldId !== 6) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const seen = await AsyncStorage.getItem('mastermind_intro_seen');
-        if (!seen && !cancelled) {
-          router.replace('/world/mastermind-intro');
-          return;
-        }
-      } catch {}
-      if (!cancelled) setIntroChecked(true);
-    })();
-    return () => { cancelled = true; };
-  }, [worldId, router]);
+  // All worlds (including 6) render normally — no special intro.
+  const [introChecked] = useState(true);
 
   const worldColor = WORLD_COLORS[worldId] ?? '#00B894';
   const worldLightColor = WORLD_LIGHT_COLORS[worldId] ?? 'rgba(0,184,148,0.12)';

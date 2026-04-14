@@ -293,7 +293,6 @@ export async function notifyFriendRequest(
 
 export const DEFAULT_NOTIFICATION_PREFERENCES = {
   streak_reminder: true,
-  daily_challenge: true,
   friend_challenge: true,
   friend_online: true,
   challenge_result: true,

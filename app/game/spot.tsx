@@ -14,7 +14,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { generateSpotTheChangeChallenge } from '@/src/utils/spotTheChangeChallenge';
-import { getTodayDateString } from '@/src/utils/dailyChallenge';
+import { getTodayDateString } from '@/src/utils/dateHelpers';
 
 const isWeb = Platform.OS === 'web';
 
