@@ -42,33 +42,33 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
   useEffect(() => {
     if (!visible) return;
 
-    RNAnimated.timing(backdrop, { toValue: 1, duration: 400, useNativeDriver: false }).start();
+    RNAnimated.timing(backdrop, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     [ring1, ring2].forEach((r, i) => {
       RNAnimated.sequence([
         RNAnimated.delay(200 + i * 180),
-        RNAnimated.timing(r, { toValue: 1, duration: 800, useNativeDriver: false }),
+        RNAnimated.timing(r, { toValue: 1, duration: 800, useNativeDriver: true }),
       ]).start();
     });
     RNAnimated.sequence([
       RNAnimated.delay(300),
-      RNAnimated.spring(iconScale, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
+      RNAnimated.spring(iconScale, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: true }),
     ]).start();
     RNAnimated.sequence([
       RNAnimated.delay(600),
       RNAnimated.parallel([
-        RNAnimated.timing(titleOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-        RNAnimated.spring(titleScale, { toValue: 1, friction: 5, tension: 120, useNativeDriver: false }),
+        RNAnimated.timing(titleOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        RNAnimated.spring(titleScale, { toValue: 1, friction: 5, tension: 120, useNativeDriver: true }),
       ]),
     ]).start();
     RNAnimated.sequence([
       RNAnimated.delay(900),
-      RNAnimated.timing(bodyOpacity, { toValue: 1, duration: 400, useNativeDriver: false }),
+      RNAnimated.timing(bodyOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
     RNAnimated.sequence([
       RNAnimated.delay(1100),
       RNAnimated.parallel([
-        RNAnimated.spring(btnY, { toValue: 0, friction: 6, tension: 100, useNativeDriver: false }),
-        RNAnimated.timing(btnOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
+        RNAnimated.spring(btnY, { toValue: 0, friction: 6, tension: 100, useNativeDriver: true }),
+        RNAnimated.timing(btnOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]),
     ]).start();
 
@@ -78,14 +78,14 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
       RNAnimated.sequence([
         RNAnimated.delay(400 + Math.random() * 300),
         RNAnimated.parallel([
-          RNAnimated.timing(p.x, { toValue: dx, duration: 600, useNativeDriver: false }),
-          RNAnimated.timing(p.y, { toValue: dy, duration: 600, useNativeDriver: false }),
+          RNAnimated.timing(p.x, { toValue: dx, duration: 600, useNativeDriver: true }),
+          RNAnimated.timing(p.y, { toValue: dy, duration: 600, useNativeDriver: true }),
           RNAnimated.sequence([
-            RNAnimated.timing(p.opacity, { toValue: 1, duration: 100, useNativeDriver: false }),
+            RNAnimated.timing(p.opacity, { toValue: 1, duration: 100, useNativeDriver: true }),
             RNAnimated.delay(300),
-            RNAnimated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+            RNAnimated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
           ]),
-          RNAnimated.spring(p.scale, { toValue: 1, friction: 4, tension: 180, useNativeDriver: false }),
+          RNAnimated.spring(p.scale, { toValue: 1, friction: 4, tension: 180, useNativeDriver: true }),
         ]),
       ]).start();
     });
@@ -95,19 +95,19 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
     if (dismissing) return;
     setDismissing(true);
     RNAnimated.parallel([
-      RNAnimated.timing(btnOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
-      RNAnimated.timing(bodyOpacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+      RNAnimated.timing(btnOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      RNAnimated.timing(bodyOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
       RNAnimated.sequence([
         RNAnimated.delay(100),
-        RNAnimated.timing(titleOpacity, { toValue: 0, duration: 250, useNativeDriver: false }),
+        RNAnimated.timing(titleOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
       ]),
       RNAnimated.sequence([
         RNAnimated.delay(150),
-        RNAnimated.timing(iconScale, { toValue: 0, duration: 300, useNativeDriver: false }),
+        RNAnimated.timing(iconScale, { toValue: 0, duration: 300, useNativeDriver: true }),
       ]),
       RNAnimated.sequence([
         RNAnimated.delay(250),
-        RNAnimated.timing(backdrop, { toValue: 0, duration: 350, useNativeDriver: false }),
+        RNAnimated.timing(backdrop, { toValue: 0, duration: 350, useNativeDriver: true }),
       ]),
     ]).start(() => onDismiss());
   }

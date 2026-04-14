@@ -108,8 +108,10 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   // Memory score: use the stored server average if present; otherwise fall
   // back to a dash so we don't lie.
   const memoryScore = typeof profile.memory_score_avg === 'number' ? Math.round(profile.memory_score_avg) : null;
-  const recordText = record ? `${record.wins}-${record.losses}${record.draws > 0 ? `-${record.draws}` : ''}` : ' -';
-  const achievementsText = achievements ? `${achievements.unlocked}/${achievements.total}` : ' -';
+  // Null = still loading; show ellipsis so it's clear data is on the way
+  // rather than a dash that could be mistaken for "no record".
+  const recordText = record ? `${record.wins}-${record.losses}${record.draws > 0 ? `-${record.draws}` : ''}` : '…';
+  const achievementsText = achievements ? `${achievements.unlocked}/${achievements.total}` : '…';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

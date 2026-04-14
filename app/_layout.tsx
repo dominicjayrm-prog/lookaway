@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus, Linking, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
 import { registerPushToken, cancelLivesFullNotification, scheduleStreakReminder } from '@/src/utils/notifications';
@@ -11,6 +13,8 @@ import { useGameStore } from '@/src/store';
 import { updateOnlineStatus } from '@/src/utils/friends';
 import { expireOldChallenges } from '@/src/utils/challengeFlow';
 import { sounds } from '@/src/lib/sounds';
+
+SplashScreen.preventAutoHideAsync();
 
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
@@ -215,10 +219,20 @@ function ThemedStack() {
 }
 
 function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
+
+  const onLayoutReady = useCallback(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <ThemeProvider>
       <AuthProvider>
-        <MobileContainer>
+        <MobileContainer onLayout={onLayoutReady}>
           <StoreHydrator />
           <SoundLoader />
           <LevelCacheLoader />

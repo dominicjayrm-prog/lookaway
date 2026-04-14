@@ -139,7 +139,7 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
         <RNAnimated.View style={{ transform: [{ scale: pulseAnim }, { translateY: floatAnim }] }}>
-          <AnimatedBlink expression="normal" size={100} lookOffset={{ x: 0, y: lookY }} />
+          <AnimatedBlink expression="normal" size={120} lookOffset={{ x: 0, y: lookY }} />
         </RNAnimated.View>
       </FadeIn>
 
@@ -350,28 +350,28 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
       </FadeIn>
 
       <FadeIn delay={400}>
-        <View style={{ marginBottom: 20, height: 120 }}>
+        <View style={{ marginBottom: 20, height: 140 }}>
           {/* Step 0: Memorise shapes */}
           <RNAnimated.View style={{ opacity: step0Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { backgroundColor: tc.card }]}>
-              <View style={{ position: 'absolute', left: '15%', top: '18%' }}>
-                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.coral }} />
+            <View style={[s.stepVisual, { backgroundColor: tc.card, height: 140 }]}>
+              <View style={{ position: 'absolute', left: 30, top: 22 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: C.coral }} />
               </View>
-              <View style={{ position: 'absolute', right: '18%', top: '20%' }}>
-                <View style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: C.blue }} />
+              <View style={{ position: 'absolute', right: 40, top: 24 }}>
+                <View style={{ width: 26, height: 26, borderRadius: 5, backgroundColor: C.blue }} />
               </View>
-              <View style={{ position: 'absolute', left: '45%', top: '40%' }}>
-                <Svg width={24} height={24} viewBox="0 0 100 100">
+              <View style={{ position: 'absolute', left: '45%', top: 48 }}>
+                <Svg width={28} height={28} viewBox="0 0 100 100">
                   <Polygon points="50,5 62,35 95,35 68,55 78,90 50,70 22,90 32,55 5,35 38,35" fill={C.accent} />
                 </Svg>
               </View>
-              <View style={{ position: 'absolute', left: '20%', bottom: '15%' }}>
-                <Svg width={22} height={22} viewBox="0 0 100 100">
+              <View style={{ position: 'absolute', left: 44, bottom: 18 }}>
+                <Svg width={26} height={26} viewBox="0 0 100 100">
                   <Polygon points="50,8 95,88 5,88" fill={C.green} />
                 </Svg>
               </View>
-              <View style={{ position: 'absolute', right: '20%', bottom: '18%' }}>
-                <Svg width={20} height={20} viewBox="0 0 100 100">
+              <View style={{ position: 'absolute', right: 44, bottom: 22 }}>
+                <Svg width={24} height={24} viewBox="0 0 100 100">
                   <Polygon points="50,5 95,50 50,95 5,50" fill={C.gold} />
                 </Svg>
               </View>
@@ -379,14 +379,14 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
           </RNAnimated.View>
           {/* Step 1: Gone! */}
           <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { alignItems: 'center', justifyContent: 'center', backgroundColor: tc.card }]}>
+            <View style={[s.stepVisual, { height: 140, alignItems: 'center', justifyContent: 'center', backgroundColor: tc.card }]}>
               <AnimatedBlink expression="blank" size={56} />
               <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>Gone!</Text>
             </View>
           </RNAnimated.View>
           {/* Step 2: Answer */}
           <RNAnimated.View style={{ opacity: step2Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { padding: 10, backgroundColor: tc.card }]}>
+            <View style={[s.stepVisual, { height: 140, padding: 14, backgroundColor: tc.card }]}>
               <Text style={{ fontSize: 10, fontWeight: '700', color: tc.text, marginBottom: 8 }}>How many shapes?</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
                 {['4', '5', '6', '3'].map((v, i) => (

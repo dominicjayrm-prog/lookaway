@@ -158,6 +158,7 @@ function FriendsTab() {
 
   const handleAccept = useCallback(
     async (id: string) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       await acceptFriendRequest(id, userId);
       loadData();
     },
@@ -166,6 +167,7 @@ function FriendsTab() {
 
   const handleDecline = useCallback(
     async (id: string) => {
+      Haptics.selectionAsync().catch(() => {});
       await declineFriendRequest(id);
       loadData();
     },
@@ -231,12 +233,14 @@ function FriendsTab() {
 
   const handleRemoveFriend = useCallback(
     async (friendshipId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       Alert.alert('Remove friend?', 'You can always add them back later.', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
             await removeFriend(friendshipId);
             setSelectedFriend(null);
             loadData();

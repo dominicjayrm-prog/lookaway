@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMilestonesForWorld, type MilestoneReward } from '@/src/data/milestoneRewards';
 import { GiftIcon } from '@/src/components/GiftIcon';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
+import * as Haptics from 'expo-haptics';
 
 const DEFAULT_MAP_W = Math.min(Dimensions.get('window').width, 430);
 const NODE_SIZE = 42;
@@ -206,7 +207,11 @@ function WorldMapScreen() {
       {/* ── HEADER ── */}
       <RNAnimated.View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: colors.bg, opacity: headerAnim, transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)');
+          }}
           style={styles.backButton}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"

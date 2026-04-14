@@ -20,6 +20,7 @@ import {
   Platform,
   Animated as RNAnimated,
   Share,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -81,6 +82,25 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
     }).start(() => onDismiss());
   };
 
+  // Swipe-down to dismiss
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 15,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) slideAnim.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        // Lowered velocity threshold for smoother slow-swipe dismissals
+        if (g.dy > 80 || g.vy > 0.2) {
+          handleClose();
+        } else {
+          RNAnimated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 10 }).start();
+        }
+      },
+    }),
+  ).current;
+
   const handleShareLink = async () => {
     if (!userId) return;
     try {
@@ -96,8 +116,9 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
   const qrSize = Math.min(SW - 96, 280);
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
+    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
       <RNAnimated.View
+        {...panResponder.panHandlers}
         style={[
           st.root,
           { backgroundColor: colors.bg, transform: [{ translateY: slideAnim }] },
@@ -107,10 +128,10 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
           <View style={st.header}>
             <Pressable
               onPress={handleClose}
-              hitSlop={12}
+              hitSlop={16}
               style={[st.closeBtn, { backgroundColor: colors.surface }]}
             >
-              <Ionicons name="close" size={20} color={colors.textMid} />
+              <Ionicons name="close" size={22} color={colors.textMid} />
             </Pressable>
             <Text style={[st.headerTitle, { color: colors.text }]}>Your QR code</Text>
             <View style={st.closePlaceholder} />
@@ -181,13 +202,13 @@ const st = StyleSheet.create({
     paddingBottom: 10,
   },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closePlaceholder: { width: 34 },
+  closePlaceholder: { width: 40 },
   headerTitle: { fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center' },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   qrCard: {
