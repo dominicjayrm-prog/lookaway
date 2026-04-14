@@ -11,6 +11,7 @@ const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: String.fromCodePoint(0x1F4CA) },
   { href: '/analytics', label: 'Analytics', icon: String.fromCodePoint(0x1F4C8) },
   { href: '/economy', label: 'Economy', icon: String.fromCodePoint(0x1F48E) },
+  { href: '/cosmetics', label: 'Cosmetics', icon: String.fromCodePoint(0x1F3A8) },
   { href: '/levels', label: 'Campaign Levels', icon: String.fromCodePoint(0x1F3AE) },
   { href: '/users', label: 'Users', icon: String.fromCodePoint(0x1F465) },
   { href: '/settings', label: 'Settings', icon: String.fromCodePoint(0x2699, 0xFE0F) },

@@ -17,6 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { supabase } from '@/src/lib/supabase';
 
 const { width: SW } = Dimensions.get('window');
 const GOLD = '#D4A012';
@@ -65,6 +67,7 @@ export default function MastermindIntroScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const t = isDark ? DARK : LIGHT;
+  const { user } = useAuth();
 
   // ── Phased entrance animations ──
   const blinkAnim = useRef(new RNAnimated.Value(0)).current;
@@ -82,9 +85,15 @@ export default function MastermindIntroScreen() {
   }, [blinkAnim, titleAnim, contentAnim, ctaAnim]);
 
   const handleEnter = async () => {
-    try {
-      await AsyncStorage.setItem('mastermind_intro_seen', 'true');
-    } catch {}
+    // Local cache for instant decision next time on this device
+    try { await AsyncStorage.setItem('mastermind_intro_seen', 'true'); } catch {}
+    // Server flag so a fresh install on a new device also skips the intro
+    if (user?.id) {
+      supabase.from('profiles')
+        .update({ mastermind_intro_seen: true })
+        .eq('id', user.id)
+        .then(() => {});
+    }
     router.replace('/world/6');
   };
 

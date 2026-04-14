@@ -46,6 +46,7 @@ function GameScreen() {
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const peekTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { gameState, currentSceneIndex, currentQuestionIndex, selectedOption, revealedCorrect, answers, startLevel, setGameState, selectOption, revealAnswer, nextQuestion, nextScene, resetGame, score } = useGameStore();
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
 
   const [level, setLevel] = useState<Level | null>(null);
   const [loading, setLoading] = useState(true);
@@ -352,14 +353,23 @@ function GameScreen() {
             />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
-              <Text style={[styles.quitMessage, { color: colors.textMid }]}>You'll lose a life if you quit now.</Text>
+              <Text style={[styles.quitMessage, { color: colors.textMid }]}>
+                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+              </Text>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]}
-                onPress={() => { setShowQuitConfirm(false); clearTimeouts(); loseLife(); resetGame(); router.back(); }}
+                onPress={() => {
+                  setShowQuitConfirm(false);
+                  clearTimeouts();
+                  // Blanked+ members keep their lives — only non-subscribers pay the cost of quitting.
+                  if (!isSubscribed) loseLife();
+                  resetGame();
+                  router.back();
+                }}
                 accessibilityRole="button"
-                accessibilityLabel="Leave the level and lose a life"
+                accessibilityLabel={isSubscribed ? 'Leave the level' : 'Leave the level and lose a life'}
               >
-                <Text style={styles.quitBtnText}>Leave (-1 life)</Text>
+                <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]}
