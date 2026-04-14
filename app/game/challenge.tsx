@@ -5,6 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
+import { PowerUpBar } from '@/src/components/PowerUpBar';
+import { SlowTimeButton } from '@/src/components/SlowTimeButton';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import PowerUpFlash from '@/src/components/PowerUpFlash';
+import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -49,6 +54,14 @@ function ChallengeGameScreen() {
   const currentQuestion = currentScene?.questions[questionIdx];
   const totalScenes = levels.length;
   const totalQuestions = currentScene?.questions.length ?? 0;
+
+  // Classic power-ups — slowTime, peek, fiftyFifty, skip. Friend
+  // challenges use the same MEMORISE → QUESTION → REVEAL flow as
+  // campaign levels, so we re-use the shared hook that wires all the
+  // state + handlers identically.
+  const selectOptionRef = useRef<(index: number) => void>(() => {});
+  const dispatchSelect = useCallback((index: number) => selectOptionRef.current(index), []);
+  const pu = useClassicPowerUps({ onSkip: dispatchSelect, currentQuestion });
 
   // Clear timeout on unmount
   useEffect(() => { return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }; }, []);
@@ -102,7 +115,8 @@ function ChallengeGameScreen() {
     setQuestionIdx(0);
     setAnswers([]);
     setPhase('memorise');
-  }, []);
+    pu.resetPowerUps();
+  }, [pu]);
 
   const handleMemoriseComplete = useCallback(() => {
     setPhase('transition');
@@ -119,6 +133,7 @@ function ChallengeGameScreen() {
       timeoutRef.current = setTimeout(() => {
         setSelectedOption(null);
         setRevealedCorrect(null);
+        pu.clearHiddenOptions();
         const nextQ = questionIdx + 1;
         if (nextQ < totalQuestions) {
           setQuestionIdx(nextQ);
@@ -128,7 +143,14 @@ function ChallengeGameScreen() {
         }
       }, 800);
     }, 300);
-  }, [selectedOption, currentQuestion, questionIdx, totalQuestions]);
+  }, [selectedOption, currentQuestion, questionIdx, totalQuestions, pu]);
+
+  // Keep the select ref in sync so Skip routes to the latest closure.
+  useEffect(() => { selectOptionRef.current = handleSelectOption; }, [handleSelectOption]);
+
+  // Reset per-scene power-up state when moving to a new scene so
+  // slowTime / peek / fiftyFifty / skip become available again.
+  useEffect(() => { pu.resetPowerUps(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [sceneIdx]);
 
   const handleQuestionTimeout = useCallback(() => {
     if (selectedOption !== null || !currentQuestion) return;
@@ -270,9 +292,10 @@ function ChallengeGameScreen() {
       {/* Memorise */}
       {phase === 'memorise' && currentScene && (
         <View style={styles.gameArea}>
-          <CountdownTimer duration={currentScene.viewTime} running onComplete={handleMemoriseComplete} style={styles.timer} />
+          <CountdownTimer duration={currentScene.viewTime + pu.timerBonus} running={!pu.buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={[styles.memoriseText, { color: colors.textMid }]}>Memorise this scene!</Text>
           <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime} />
+          <SlowTimeButton used={pu.usedPowerUps.slowTime} onUse={pu.handleSlowTime} />
         </View>
       )}
 
@@ -286,8 +309,13 @@ function ChallengeGameScreen() {
       {/* Question */}
       {phase === 'question' && currentQuestion && (
         <View style={styles.gameArea}>
-          <CountdownTimer duration={currentQuestion.timeLimit} running onComplete={handleQuestionTimeout} style={styles.timer} />
-          <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={questionIdx + 1} totalQuestions={totalQuestions} />
+          <CountdownTimer duration={currentQuestion.timeLimit} running={!pu.showPeekScene && !pu.buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
+          {pu.showPeekScene && currentScene ? (
+            <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime} />
+          ) : (
+            <QuestionCard questionText={currentQuestion.text} options={[...currentQuestion.options]} selectedIndex={selectedOption} revealedCorrectIndex={null} onSelect={handleSelectOption} questionNumber={questionIdx + 1} totalQuestions={totalQuestions} hiddenOptions={pu.hiddenOptions} />
+          )}
+          <PowerUpBar usedThisLevel={pu.usedPowerUps} onUsePowerUp={pu.handleQuestionPowerUp} />
         </View>
       )}
 
@@ -327,6 +355,11 @@ function ChallengeGameScreen() {
           </Pressable>
         </View>
       )}
+
+      {/* Buy popup pauses game timers via buyPopupId; flash overlay hits
+          when a power-up activates. */}
+      <BuyPowerUpPopup powerUpId={pu.buyPopupId} onClose={() => pu.setBuyPopupId(null)} onBought={pu.handleBuyPopupPurchased} />
+      <PowerUpFlash type={pu.activePowerUp} onDone={pu.clearActivePowerUp} />
     </SafeAreaView>
   );
 }
