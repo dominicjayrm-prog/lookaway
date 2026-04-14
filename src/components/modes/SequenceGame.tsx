@@ -2,6 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle, Rect, Polygon, Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useGameStore } from '@/src/store';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 function ShapeSvg({ type, color, size }: { type: string; color: string; size: number }) {
   switch (type) {
@@ -38,7 +43,42 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   const totalRounds = modeData?.rounds?.length ?? 5;
   const shapes = round?.shapes ?? [];
 
+  // ── Sequence power-ups ──
+  //  - seq_replay_one: briefly flash the last shape in the sequence
+  //    again so the player can verify they remembered it correctly.
+  //  - seq_safety_net: first wrong tap doesn't end the round; it's
+  //    just ignored and the expected shape is still waiting.
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [replayShapeIdx, setReplayShapeIdx] = useState<number | null>(null);
+  const [safetyNetArmed, setSafetyNetArmed] = useState(false);
+
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
+
+  const handleUsePowerUp = useCallback((id: string) => {
+    if (usedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'seq_replay_one') {
+      // Flash the LAST shape in the original sequence for 900ms.
+      const lastIdx = shapes.findIndex((s: any) => s.order === shapes.length);
+      if (lastIdx >= 0) {
+        setReplayShapeIdx(lastIdx);
+        setTimeout(() => { if (mountedRef.current) setReplayShapeIdx(null); }, 900);
+      }
+    } else if (id === 'seq_safety_net') {
+      setSafetyNetArmed(true);
+    }
+  }, [usedPowerUps, powerUpCounts, usePowerUpStore, shapes]);
+
+  const handleBuyPopupBought = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    handleUsePowerUp(id);
+  }, [handleUsePowerUp]);
 
   const startShowing = useCallback(() => {
     setPhase('showing');
@@ -46,6 +86,10 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
     setTappedOrder([]);
     setWrongIdx(null);
     setCorrectNextIdx(null);
+    // Reset power-up state each round
+    setUsedPowerUps({});
+    setReplayShapeIdx(null);
+    setSafetyNetArmed(false);
 
     let idx = 0;
     const showNext = () => {
@@ -88,6 +132,11 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
         setRoundScores(prev => [...prev, score]);
         setPhase('round_done');
       }
+    } else if (safetyNetArmed) {
+      // Safety Net consumes its charge and turns this into a no-op
+      // so the sequence continues. Provide a gentle audio cue.
+      setSafetyNetArmed(false);
+      sounds.play('powerUp');
     } else {
       setWrongIdx(shapeIndex);
       setCorrectNextIdx(correctShapeIndex);
@@ -96,7 +145,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
       setRoundScores(prev => [...prev, score]);
       timerRef.current = setTimeout(() => setPhase('round_done'), 1500);
     }
-  }, [phase, tappedOrder, shapes]);
+  }, [phase, tappedOrder, shapes, safetyNetArmed]);
 
   const nextRound = useCallback(() => {
     if (roundIdx + 1 < totalRounds) {
@@ -122,6 +171,9 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
         </>
       )}
       {phase === 'wrong' && <Text style={[s.phaseLabel, { color: colors.wrong }]}>Wrong! The sequence ended.</Text>}
+      {phase === 'recall' && safetyNetArmed && (
+        <Text style={[s.progressText, { color: colors.correct }]}>Safety Net armed — first wrong tap is free</Text>
+      )}
 
       {phase !== 'round_done' && (
         <View style={[s.canvas, { backgroundColor: colors.card }]}>
@@ -131,6 +183,22 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
             return (
               <View style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }], alignItems: 'center' }}>
                 <ShapeSvg type={sh.type} color={sh.color} size={sz} />
+                <View style={[s.orderBadge, { backgroundColor: modeColor }]}>
+                  <Text style={s.orderText}>{sh.order}</Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* Replay One power-up: briefly flash the LAST shape in the
+              sequence during recall so the player can verify it. */}
+          {phase === 'recall' && replayShapeIdx !== null && replayShapeIdx >= 0 && (() => {
+            const sh = shapes[replayShapeIdx];
+            if (!sh) return null;
+            const sz = sh.size ?? 32;
+            return (
+              <View style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sz / 2 }, { translateY: -sz / 2 }], alignItems: 'center', zIndex: 10 }} pointerEvents="none">
+                <ShapeSvg type={sh.type} color={sh.color} size={sz + 6} />
                 <View style={[s.orderBadge, { backgroundColor: modeColor }]}>
                   <Text style={s.orderText}>{sh.order}</Text>
                 </View>
@@ -206,6 +274,15 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
           <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
         ))}
       </View>
+
+      {/* Sequence power-ups — available during showing + recall (not
+          wrong / round_done). Replay only useful in recall but we
+          don't hide it to keep the bar stable. */}
+      {(phase === 'showing' || phase === 'pause' || phase === 'recall') && (
+        <ModePowerUpBar mode="sequence" used={usedPowerUps} onUse={handleUsePowerUp} onBuyOut={(id) => setBuyPopupId(id as PowerUpId)} />
+      )}
+
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupBought} />
     </View>
   );
 }

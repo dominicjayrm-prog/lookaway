@@ -2,6 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useGameStore } from '@/src/store';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 function ShapeSvg({ type, color, size }: { type: string; color: string; size: number }) {
   switch (type) {
@@ -40,8 +45,34 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
 
-  // Viewing time per round
-  const viewingTimeMs = roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500;
+  // ── Snap Match power-ups ──
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [slowFlashBonus, setSlowFlashBonus] = useState(0); // +ms to sceneA
+  const [highlightActive, setHighlightActive] = useState(false); // shimmer on change
+  const [freezeBonus, setFreezeBonus] = useState(0); // +ms to blank pause
+
+  // Base viewing time per round + slow-flash bonus (only for this round).
+  const baseViewingMs = roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500;
+  const viewingTimeMs = baseViewingMs + slowFlashBonus;
+
+  const handleUsePowerUp = useCallback((id: string) => {
+    if (usedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'sm_slow_flash') setSlowFlashBonus(1500);
+    else if (id === 'sm_highlight') setHighlightActive(true);
+    else if (id === 'sm_freeze') setFreezeBonus(3000);
+  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+
+  const handleBuyPopupBought = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    handleUsePowerUp(id);
+  }, [handleUsePowerUp]);
 
   useEffect(() => {
     return () => {
@@ -50,12 +81,17 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
     };
   }, []);
 
-  // Start round — show Scene A with countdown timer
+  // Start round — show Scene A with countdown timer.
+  // Reset per-round power-ups so each round gets its own charges.
   const startRound = useCallback(() => {
     setLastResult(null);
     setPhase('sceneA');
     setTimerProgress(1);
     setResponseTimer(0);
+    setUsedPowerUps({});
+    setSlowFlashBonus(0);
+    setHighlightActive(false);
+    setFreezeBonus(0);
 
     const startTime = Date.now();
 
@@ -66,7 +102,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
       setTimerProgress(remaining);
     }, 50);
 
-    // Transition: sceneA -> blank -> sceneB
+    // Transition: sceneA -> blank -> sceneB. Freeze power-up extends
+    // the blank window so the player gets breathing room.
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
@@ -74,10 +111,40 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
       const inner = setTimeout(() => {
         setPhase('sceneB');
         setResponseStartTime(Date.now());
-      }, 800);
+      }, 800 + freezeBonus);
       timerRef.current = inner;
     }, viewingTimeMs);
-  }, [viewingTimeMs]);
+  // viewingTimeMs / freezeBonus captured by design — we don't want
+  // mid-round changes to re-fire this. slow_flash extension happens in
+  // a separate effect below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Slow Flash: if tapped during sceneA, extend the current timer by
+  // the bonus amount. Re-arm timer + interval with the new total.
+  useEffect(() => {
+    if (slowFlashBonus <= 0 || phase !== 'sceneA') return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    const remainingMs = Math.max(0, timerProgress * viewingTimeMs) + slowFlashBonus;
+    const totalMs = viewingTimeMs;
+    const startTime = Date.now() - (totalMs - remainingMs);
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setTimerProgress(Math.max(0, 1 - elapsed / totalMs));
+    }, 50);
+    timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setTimerProgress(0);
+      setPhase('blank');
+      const inner = setTimeout(() => {
+        setPhase('sceneB');
+        setResponseStartTime(Date.now());
+      }, 800 + freezeBonus);
+      timerRef.current = inner;
+    }, remainingMs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slowFlashBonus]);
 
   // Auto-start each round
   useEffect(() => { if (round) startRound(); }, [roundIdx, round]);
@@ -227,7 +294,12 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
         }}
       >
         {phase === 'sceneA' && renderScene(round.sceneA)}
-        {phase === 'sceneB' && renderScene(round.sceneB)}
+        {phase === 'sceneB' && (highlightActive
+          // Highlight power-up: draw a subtle accent border around the
+          // changed shape so the player can find it faster.
+          ? renderScene(round.sceneB, round.targetIndex, modeColor)
+          : renderScene(round.sceneB)
+        )}
         {phase === 'feedback' && lastResult && (
           lastResult.correct
             ? renderScene(round.sceneB, round.targetIndex, colors.correct)
@@ -256,6 +328,13 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
           <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
         ))}
       </View>
+
+      {/* Snap Match power-ups — visible during viewing + response. */}
+      {(phase === 'sceneA' || phase === 'sceneB' || phase === 'blank') && (
+        <ModePowerUpBar mode="snap_match" used={usedPowerUps} onUse={handleUsePowerUp} onBuyOut={(id) => setBuyPopupId(id as PowerUpId)} />
+      )}
+
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupBought} />
     </View>
   );
 }

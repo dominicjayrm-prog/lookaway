@@ -2,6 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import Svg, { Path, Circle as SvgCircle, Rect, Polygon, Line, Ellipse } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useGameStore } from '@/src/store';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 function ShapeSvg({ type, color, size }: { type: string; color: string; size: number }) {
   switch (type) {
@@ -45,6 +50,41 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
+  // ── Power-ups (Speed Recall) ──
+  // Resets per round, not per shape, so players can use one slow_time
+  // per round. Ghost outline + second chance are one-shot per round too.
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [slowTimeBonus, setSlowTimeBonus] = useState(0); // ms of extra viewing time
+  const [ghostOutlineActive, setGhostOutlineActive] = useState(false);
+  const [secondChanceArmed, setSecondChanceArmed] = useState(false);
+
+  const handleUsePowerUp = useCallback((id: string) => {
+    if (usedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'sr_slow_time') {
+      // +2s viewing time. Only meaningful if tapped during `viewing`.
+      setSlowTimeBonus(2000);
+    } else if (id === 'sr_ghost_outline') {
+      // Faint outline circles drawn at each shape's actual position
+      // during recall so the player has a rough guide.
+      setGhostOutlineActive(true);
+    } else if (id === 'sr_second_chance') {
+      // Arms a "free retry" for the next shape if tap is >30% off.
+      setSecondChanceArmed(true);
+    }
+  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+
+  const handleBuyPopupBought = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    handleUsePowerUp(id);
+  }, [handleUsePowerUp]);
+
   const round = modeData?.rounds?.[roundIdx];
   const totalRounds = modeData?.rounds?.length ?? 5;
   const shapes = round?.shapes ?? [];
@@ -57,28 +97,63 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     };
   }, []);
 
-  // Start viewing phase with countdown timer
+  // Start viewing phase with countdown timer.
+  // Slow Time adds `slowTimeBonus` ms to the default 3000ms window.
+  // We snapshot the bonus in a local so a mid-round tap doesn't
+  // stretch the timer retroactively (feels buggy).
   const startRound = useCallback(() => {
     setPhase('viewing');
     setShapeIdx(0);
     setShapeScores([]);
     setTapResult(null);
     setTimerProgress(1);
+    // Reset power-up state at the start of each round.
+    setUsedPowerUps({});
+    setSlowTimeBonus(0);
+    setGhostOutlineActive(false);
+    setSecondChanceArmed(false);
 
+    const totalMs = 3000 + slowTimeBonus;
     const startTime = Date.now();
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      setTimerProgress(Math.max(0, 1 - elapsed / 3000));
+      setTimerProgress(Math.max(0, 1 - elapsed / totalMs));
     }, 50);
 
     timerRef.current = setTimeout(() => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       setTimerProgress(0);
       setPhase('recall');
-    }, 3000);
+    }, totalMs);
+  // slowTimeBonus intentionally excluded: we read it at round start.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { if (round) startRound(); }, [roundIdx, round]);
+
+  // If Slow Time is tapped during the viewing phase, extend the
+  // current timer live. We clear + re-arm the timeout with the extra
+  // 2000ms, adjusting the progress calculation to match.
+  useEffect(() => {
+    if (slowTimeBonus <= 0 || phase !== 'viewing') return;
+    // Restart timer with bonus added from now
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    const remainingMs = Math.max(0, timerProgress * 3000) + slowTimeBonus;
+    const totalMs = 3000 + slowTimeBonus;
+    const startTime = Date.now() - (totalMs - remainingMs);
+    intervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      setTimerProgress(Math.max(0, 1 - elapsed / totalMs));
+    }, 50);
+    timerRef.current = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setTimerProgress(0);
+      setPhase('recall');
+    }, remainingMs);
+  // Only react to the slowTimeBonus bump itself.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slowTimeBonus]);
 
   const handleCanvasTap = useCallback((e: any) => {
     if (phase !== 'recall' || !currentShape || tapResult) return;
@@ -89,6 +164,15 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     const tapY = canvasSize.h > 0 ? (locationY / canvasSize.h) * 100 : 50;
     const dist = Math.sqrt((tapX - currentShape.x) ** 2 + (tapY - currentShape.y) ** 2);
     const score = Math.max(0, Math.round(100 - dist * 2)) || 0;
+
+    // Second Chance: if this tap was >30% off and second chance is
+    // armed, consume the charge and let the player tap again instead
+    // of locking in this low-score tap.
+    if (secondChanceArmed && dist > 30) {
+      setSecondChanceArmed(false);
+      sounds.play('powerUp');
+      return; // Don't set tapResult — stay in `recall` phase
+    }
 
     setTapResult({ tapX, tapY, actualX: currentShape.x, actualY: currentShape.y, dist: Math.round(dist) || 0, score });
     setShapeScores(prev => [...prev, score]);
@@ -108,7 +192,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
         setPhase('round_done');
       }
     }, 1500);
-  }, [phase, currentShape, shapeIdx, shapes, shapeScores, canvasSize, tapResult]);
+  }, [phase, currentShape, shapeIdx, shapes, shapeScores, canvasSize, tapResult, secondChanceArmed]);
 
   const nextRound = useCallback(() => {
     if (roundIdx + 1 < totalRounds) {
@@ -165,6 +249,26 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
             <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -(sh.size ?? 30) / 2 }, { translateY: -(sh.size ?? 30) / 2 }] }}>
               <ShapeSvg type={sh.type} color={sh.color} size={sh.size ?? 30} />
             </View>
+          ))}
+
+          {/* Ghost Outline power-up — faint dashed rings at every
+              shape's actual location during recall. */}
+          {phase === 'recall' && ghostOutlineActive && shapes.map((sh: any, i: number) => (
+            <View
+              key={`ghost-${i}`}
+              style={{
+                position: 'absolute',
+                left: `${sh.x}%`,
+                top: `${sh.y}%`,
+                width: 36, height: 36, borderRadius: 18,
+                borderWidth: 1.5,
+                borderColor: sh.color,
+                borderStyle: 'dashed',
+                opacity: 0.3,
+                transform: [{ translateX: -18 }, { translateY: -18 }],
+              }}
+              pointerEvents="none"
+            />
           ))}
 
           {/* Tap result markers */}
@@ -251,6 +355,18 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
           <View key={`e${i}`} style={[s.scoreDot, { backgroundColor: colors.border }]} />
         ))}
       </View>
+
+      {/* Second Chance indicator so the player knows it's armed. */}
+      {phase === 'recall' && secondChanceArmed && (
+        <Text style={[s.scoreText, { color: '#E17055', fontSize: 11 }]}>Second Chance armed — one free retry if you miss by a lot</Text>
+      )}
+
+      {/* Mode power-ups — render below canvas during viewing + recall. */}
+      {(phase === 'viewing' || phase === 'recall') && (
+        <ModePowerUpBar mode="speed_recall" used={usedPowerUps} onUse={handleUsePowerUp} onBuyOut={(id) => setBuyPopupId(id as PowerUpId)} />
+      )}
+
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupBought} />
     </View>
   );
 }

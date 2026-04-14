@@ -1,6 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useGameStore } from '@/src/store';
+import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
+import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { sounds } from '@/src/lib/sounds';
+import type { PowerUpId } from '@/src/utils/scoring';
 
 type Phase = 'memorise' | 'transition' | 'recall' | 'feedback';
 type TileState = 'hidden' | 'correct' | 'wrong' | 'revealed';
@@ -34,12 +39,53 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
   const totalRounds = rounds.length;
   const currentRound = rounds[recallIdx];
 
+  // ── Colour Chain power-ups ──
+  //  - cc_slow_time: +2s to the 3s memorise window
+  //  - cc_reveal_one: keep one random tile of the asked colour
+  //    revealed during recall (shown as an anchor hint)
+  const usePowerUpStore = useGameStore((s) => s.usePowerUp);
+  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
+  const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
+  const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
+  const [slowTimeBonus, setSlowTimeBonus] = useState(0); // seconds
+  const [anchorTileIdx, setAnchorTileIdx] = useState<number | null>(null);
+
+  const handleUsePowerUp = useCallback((id: string) => {
+    if (usedPowerUps[id]) return;
+    if ((powerUpCounts[id] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    usePowerUpStore(id as PowerUpId);
+    setUsedPowerUps(p => ({ ...p, [id]: true }));
+    sounds.play('powerUp');
+    if (id === 'cc_slow_time') {
+      setSlowTimeBonus(2);
+    } else if (id === 'cc_reveal_one' && currentRound) {
+      // Pick one random correct tile as an anchor.
+      const correctIndices: number[] = currentRound.correctIndices ?? [];
+      if (correctIndices.length > 0) {
+        const pick = correctIndices[Math.floor(Math.random() * correctIndices.length)];
+        setAnchorTileIdx(pick);
+      }
+    }
+  }, [usedPowerUps, powerUpCounts, usePowerUpStore, currentRound]);
+
+  const handleBuyPopupBought = useCallback((id: PowerUpId) => {
+    setBuyPopupId(null);
+    handleUsePowerUp(id);
+  }, [handleUsePowerUp]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
+
+  // Reset power-up state whenever a new round begins.
+  useEffect(() => {
+    setUsedPowerUps({});
+    setSlowTimeBonus(0);
+    setAnchorTileIdx(null);
+  }, [recallIdx]);
 
   // Init/reset tile states (on mount and between rounds)
   useEffect(() => {
@@ -49,21 +95,22 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     setTileStates(init);
   }, [recallIdx, gridCols, gridRows]);
 
-  // Memorise phase - 3 second timer
+  // Memorise phase - base 3 seconds + slow-time bonus.
   useEffect(() => {
     if (phase !== 'memorise') return;
     const startTime = Date.now();
+    const totalSec = 3 + slowTimeBonus;
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTime) / 1000;
-      setMemoriseProgress(Math.max(0, 1 - elapsed / 3));
-      if (elapsed >= 3) {
+      setMemoriseProgress(Math.max(0, 1 - elapsed / totalSec));
+      if (elapsed >= totalSec) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         setPhase('transition');
         timerRef.current = setTimeout(() => setPhase('recall'), 500);
       }
     }, 50);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [phase]);
+  }, [phase, slowTimeBonus]);
 
   const handleTapTile = useCallback((tileIdx: number) => {
     if (phase !== 'recall' || !currentRound) return;
@@ -155,6 +202,9 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
               const isMemorising = phase === 'memorise';
               const isTransition = phase === 'transition';
               const tileHex = tile.hex ?? tile.color?.hex ?? '#E8E6E1';
+              // Reveal One anchor — this tile stays coloured during
+              // recall so the player has a hint.
+              const isAnchor = anchorTileIdx === idx && (phase === 'recall' || phase === 'feedback');
 
               let bgColor: string;
               let borderColor = 'transparent';
@@ -164,6 +214,10 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
                 bgColor = tileHex;
               } else if (isTransition) {
                 bgColor = '#E8E6E1';
+              } else if (isAnchor && state === 'hidden') {
+                bgColor = tileHex;
+                borderColor = '#D4A012';
+                borderWidth = 2;
               } else {
                 switch (state) {
                   case 'hidden': bgColor = '#E8E6E1'; break;
@@ -173,7 +227,8 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
                 }
               }
 
-              const tappable = !isMemorising && !isTransition && state === 'hidden' && phase === 'recall';
+              // Anchored tile is non-tappable; it's a hint, not a click target.
+              const tappable = !isMemorising && !isTransition && state === 'hidden' && phase === 'recall' && !isAnchor;
 
               return (
                 <Pressable
@@ -206,6 +261,13 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
           );
         })}
       </View>
+
+      {/* Colour Chain power-ups — visible during memorise + recall. */}
+      {(phase === 'memorise' || phase === 'recall') && (
+        <ModePowerUpBar mode="colour_chain" used={usedPowerUps} onUse={handleUsePowerUp} onBuyOut={(id) => setBuyPopupId(id as PowerUpId)} />
+      )}
+
+      <BuyPowerUpPopup powerUpId={buyPopupId} onClose={() => setBuyPopupId(null)} onBought={handleBuyPopupBought} />
     </View>
   );
 }
