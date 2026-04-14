@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
@@ -30,6 +31,8 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
 
   useEffect(() => {
     if (!visible) return;
+    // Warning haptic on modal show — this is a "hey you're blocked" moment
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     function update() {
       if (!livesLastLostAt) { setCountdown('00:00'); return; }
       const remaining = livesLastLostAt + LIFE_REGEN_MS - Date.now();
@@ -44,7 +47,11 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
 
   const handleGemRefill = useCallback(() => {
     const ok = refillLivesWithGems();
-    if (!ok) return;
+    if (!ok) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onClose();
   }, [refillLivesWithGems, onClose]);
 

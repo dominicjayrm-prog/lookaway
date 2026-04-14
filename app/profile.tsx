@@ -23,6 +23,7 @@ import { PowerUpViewer } from '@/src/components/PowerUpViewer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
+import * as Haptics from 'expo-haptics';
 
 const isWeb = Platform.OS === 'web';
 
@@ -144,7 +145,7 @@ function ProfileScreen() {
       }
     }
   }, [user?.id, setAvatarUrl]);
-  const handleSignOut = useCallback(async () => { try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
+  const handleSignOut = useCallback(async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); try { await signOut(); setTimeout(() => router.replace('/(auth)/login'), 200); } catch { router.replace('/(auth)/login'); } }, [signOut, router]);
 
   // Delete account — Apple guideline 5.1.1(v) requires in-app account deletion.
   // Two confirmation dialogs because this is irreversible.
@@ -198,7 +199,7 @@ function ProfileScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)} style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => { Haptics.selectionAsync().catch(() => {}); router.back(); }}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -377,7 +378,7 @@ function ProfileScreen() {
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <View style={styles.settingsRow}>
               <View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: isDark ? 'rgba(124,108,247,0.12)' : colors.accentSoft }]}><Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.accent} /></View><View><Text style={[styles.settingsLabel, { color: colors.text }]}>Dark mode</Text><Text style={{ fontSize: 10, color: colors.textLight, marginTop: 1 }}>{isManual ? 'Manual' : 'Following system'}</Text></View></View>
-              <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" />
+              <Switch value={isDark} onValueChange={(v) => { Haptics.selectionAsync().catch(() => {}); toggleTheme(); }} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" />
             </View>
             {isManual && (<><View style={[styles.divider, { backgroundColor: colors.border }]} /><Pressable style={styles.settingsRow} onPress={resetToSystem} accessibilityRole="button" accessibilityLabel="Reset theme to system default"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}><Ionicons name="sync" size={16} color={colors.textMid} /></View><Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text></View></Pressable></>)}
           </View>
@@ -510,7 +511,7 @@ function ProfileScreen() {
         ownedItems={frameData.owned}
         lockedItems={frameData.locked}
         equippedId={eqFrame}
-        onEquip={(id) => equipCosmetic('frame', id)}
+        onEquip={(id) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); equipCosmetic('frame', id); }}
         renderPreview={(item) => (
           <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2.5, borderColor: 'borderColor' in item ? String(item.borderColor) : colors.accent, alignItems: 'center', justifyContent: 'center' }}>
             <Blink expression="normal" size={34} />
@@ -526,7 +527,7 @@ function ProfileScreen() {
         ownedItems={exprData.owned}
         lockedItems={exprData.locked}
         equippedId={eqExpr}
-        onEquip={(id) => equipCosmetic('expression', id)}
+        onEquip={(id) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); equipCosmetic('expression', id); }}
         renderPreview={(item) => (
           <View style={{ marginBottom: 4 }}>
             <Blink expression={'blinkExpression' in item ? (String((item as Record<string, unknown>).blinkExpression) as 'normal') : 'normal'} size={40} />
@@ -542,7 +543,7 @@ function ProfileScreen() {
         ownedItems={bannerData.owned}
         lockedItems={bannerData.locked}
         equippedId={equippedBanner}
-        onEquip={(id) => equipCosmetic('banner', id)}
+        onEquip={(id) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); equipCosmetic('banner', id); }}
         renderPreview={(item) => (
           <LinearGradient
             colors={'gradientColors' in item ? (item as Record<string, unknown>).gradientColors as [string, string] : ['#6C5CE7', '#A29BFE']}

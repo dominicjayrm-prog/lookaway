@@ -41,12 +41,12 @@ function ThreeStarBurst({ trigger, stars }: Props) {
       // Golden glow pulse
       RNAnimated.sequence([
         RNAnimated.parallel([
-          RNAnimated.timing(glowOpacity, { toValue: 0.6, duration: 200, useNativeDriver: false }),
-          RNAnimated.spring(glowScale, { toValue: 1.3, friction: 3, tension: 200, useNativeDriver: false }),
+          RNAnimated.timing(glowOpacity, { toValue: 0.6, duration: 200, useNativeDriver: true }),
+          RNAnimated.spring(glowScale, { toValue: 1.3, friction: 3, tension: 200, useNativeDriver: true }),
         ]),
         RNAnimated.parallel([
-          RNAnimated.timing(glowOpacity, { toValue: 0, duration: 600, useNativeDriver: false }),
-          RNAnimated.timing(glowScale, { toValue: 2, duration: 600, useNativeDriver: false }),
+          RNAnimated.timing(glowOpacity, { toValue: 0, duration: 600, useNativeDriver: true }),
+          RNAnimated.timing(glowScale, { toValue: 2, duration: 600, useNativeDriver: true }),
         ]),
       ]).start();
 
@@ -58,17 +58,17 @@ function ThreeStarBurst({ trigger, stars }: Props) {
         RNAnimated.sequence([
           RNAnimated.delay(p.delay),
           RNAnimated.parallel([
-            RNAnimated.timing(p.x, { toValue: dx, duration: 600, useNativeDriver: false }),
-            RNAnimated.timing(p.y, { toValue: dy, duration: 600, useNativeDriver: false }),
+            RNAnimated.timing(p.x, { toValue: dx, duration: 600, useNativeDriver: true }),
+            RNAnimated.timing(p.y, { toValue: dy, duration: 600, useNativeDriver: true }),
             RNAnimated.sequence([
-              RNAnimated.timing(p.opacity, { toValue: 1, duration: 100, useNativeDriver: false }),
+              RNAnimated.timing(p.opacity, { toValue: 1, duration: 100, useNativeDriver: true }),
               RNAnimated.delay(300),
-              RNAnimated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+              RNAnimated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
             ]),
             RNAnimated.sequence([
-              RNAnimated.spring(p.scale, { toValue: 1, friction: 4, tension: 200, useNativeDriver: false }),
+              RNAnimated.spring(p.scale, { toValue: 1, friction: 4, tension: 200, useNativeDriver: true }),
               RNAnimated.delay(200),
-              RNAnimated.timing(p.scale, { toValue: 0, duration: 200, useNativeDriver: false }),
+              RNAnimated.timing(p.scale, { toValue: 0, duration: 200, useNativeDriver: true }),
             ]),
           ]),
         ]).start();

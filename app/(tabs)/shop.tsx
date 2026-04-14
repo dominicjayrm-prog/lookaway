@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { useGameStore } from '@/src/store';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { TabTransition } from '@/src/components/TabTransition';
@@ -162,7 +163,12 @@ function ShopTab() {
 
   const handleBuyPowerUp = (p: PowerUpDef, qty: number) => {
     const cost = qty >= 3 ? p.bundleCost : p.cost * qty;
-    if (gems < cost) { setGemShortfall({ cost, name: 'this item' }); return; }
+    if (gems < cost) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setGemShortfall({ cost, name: 'this item' });
+      return;
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     buyPowerUp(p.id, qty, p.cost);
   };
 
@@ -248,9 +254,13 @@ function ShopTab() {
     const result = await purchaseProduct(productId);
     if (result === 'cancelled') return;
     if (result === 'error') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
       return;
     }
+
+    // Premium IAP success — heavy impact feels earned
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     // ── Grant the reward based on which product was purchased ──
     const store = useGameStore.getState();

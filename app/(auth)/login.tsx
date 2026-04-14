@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Haptics from 'expo-haptics';
 import { Wordmark } from '@/src/components/Wordmark';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { BlankedLogo } from '@/src/components/BlankedLogo';
@@ -122,6 +123,7 @@ function AuthScreen() {
     setLoading(false);
 
     if (result.ok) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       // Session useEffect will redirect. Explicit replace belt-and-braces
       // in case the listener fires before the render cycle.
       router.replace('/');
@@ -131,6 +133,7 @@ function AuthScreen() {
       // User dismissed the native sheet — stay silent, no toast.
       return;
     }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     setError(result.message);
   };
 

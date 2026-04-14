@@ -36,18 +36,18 @@ export function animateParticleBurst(
     return Animated.sequence([
       Animated.delay(startDelay + p.delay),
       Animated.parallel([
-        Animated.timing(p.x, { toValue: dx, duration: 700, useNativeDriver: false }),
-        Animated.timing(p.y, { toValue: dy, duration: 700, useNativeDriver: false }),
-        Animated.timing(p.rotation, { toValue: 360, duration: 700, useNativeDriver: false }),
+        Animated.timing(p.x, { toValue: dx, duration: 700, useNativeDriver: true }),
+        Animated.timing(p.y, { toValue: dy, duration: 700, useNativeDriver: true }),
+        Animated.timing(p.rotation, { toValue: 360, duration: 700, useNativeDriver: true }),
         Animated.sequence([
-          Animated.timing(p.opacity, { toValue: 1, duration: 150, useNativeDriver: false }),
+          Animated.timing(p.opacity, { toValue: 1, duration: 150, useNativeDriver: true }),
           Animated.delay(350),
-          Animated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: false }),
+          Animated.timing(p.opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
         ]),
         Animated.sequence([
-          Animated.spring(p.scale, { toValue: 1, friction: 4, tension: 180, useNativeDriver: false }),
+          Animated.spring(p.scale, { toValue: 1, friction: 4, tension: 180, useNativeDriver: true }),
           Animated.delay(250),
-          Animated.timing(p.scale, { toValue: 0, duration: 200, useNativeDriver: false }),
+          Animated.timing(p.scale, { toValue: 0, duration: 200, useNativeDriver: true }),
         ]),
       ]),
     ]);
@@ -63,7 +63,7 @@ export function animateRings(rings: Animated.Value[], color: string, startDelay 
   return rings.map((r, i) =>
     Animated.sequence([
       Animated.delay(startDelay + i * 150),
-      Animated.timing(r, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(r, { toValue: 1, duration: 800, useNativeDriver: true }),
     ])
   );
 }
@@ -72,7 +72,7 @@ export function animateRings(rings: Animated.Value[], color: string, startDelay 
 export function springIn(value: Animated.Value, delay = 0, friction = 4, tension = 200) {
   return Animated.sequence([
     Animated.delay(delay),
-    Animated.spring(value, { toValue: 1, friction, tension, useNativeDriver: false }),
+    Animated.spring(value, { toValue: 1, friction, tension, useNativeDriver: true }),
   ]);
 }
 
@@ -80,7 +80,7 @@ export function springIn(value: Animated.Value, delay = 0, friction = 4, tension
 export function fadeIn(value: Animated.Value, delay = 0, duration = 300) {
   return Animated.sequence([
     Animated.delay(delay),
-    Animated.timing(value, { toValue: 1, duration, useNativeDriver: false }),
+    Animated.timing(value, { toValue: 1, duration, useNativeDriver: true }),
   ]);
 }
 
@@ -89,8 +89,8 @@ export function slideUp(yValue: Animated.Value, opacityValue: Animated.Value, de
   return Animated.sequence([
     Animated.delay(delay),
     Animated.parallel([
-      Animated.spring(yValue, { toValue: 0, friction: 6, tension: 100, useNativeDriver: false }),
-      Animated.timing(opacityValue, { toValue: 1, duration: 300, useNativeDriver: false }),
+      Animated.spring(yValue, { toValue: 0, friction: 6, tension: 100, useNativeDriver: true }),
+      Animated.timing(opacityValue, { toValue: 1, duration: 300, useNativeDriver: true }),
     ]),
   ]);
 }
@@ -101,8 +101,8 @@ export function staggerFadeOut(values: { opacity: Animated.Value; scale?: Animat
     Animated.sequence([
       Animated.delay(i * interval),
       Animated.parallel([
-        Animated.timing(v.opacity, { toValue: 0, duration: 200, useNativeDriver: false }),
-        ...(v.scale ? [Animated.timing(v.scale, { toValue: 0.8, duration: 200, useNativeDriver: false })] : []),
+        Animated.timing(v.opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+        ...(v.scale ? [Animated.timing(v.scale, { toValue: 0.8, duration: 200, useNativeDriver: true })] : []),
       ]),
     ])
   );

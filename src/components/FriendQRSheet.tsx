@@ -91,7 +91,8 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
         if (g.dy > 0) slideAnim.setValue(g.dy);
       },
       onPanResponderRelease: (_, g) => {
-        if (g.dy > 100 || g.vy > 0.5) {
+        // Lowered velocity threshold for smoother slow-swipe dismissals
+        if (g.dy > 80 || g.vy > 0.2) {
           handleClose();
         } else {
           RNAnimated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 10 }).start();

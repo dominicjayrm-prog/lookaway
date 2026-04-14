@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { REWARDS, checkDailyReward, advanceLoginReward, pickCosmeticReward } from '@/src/utils/dailyLoginRewards';
@@ -38,6 +39,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
 
   useEffect(() => {
     if (!visible) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     var check = checkDailyReward(loginReward);
     setRewardDay(check.currentDay);
     setStreak(check.streak);
@@ -53,6 +55,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     var check = checkDailyReward(loginReward);
     if (!check.available) return;
 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     var reward = { ...check.reward, streak: check.streak };
     claimLoginReward(advanceLoginReward(loginReward));
     setClaimed(true);
