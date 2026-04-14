@@ -14,6 +14,7 @@ import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
 import { getTodayDateString } from '@/src/utils/dailyChallenge';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import type { Level, Scene } from '@/src/types/game';
@@ -27,6 +28,7 @@ function buildSpeedLevel(dateStr: string): Level {
 }
 
 function SpeedGameScreen() {
+  const { colors: tc } = useTheme();
   const router = useRouter();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,7 +94,7 @@ function SpeedGameScreen() {
 
   if (gameState === 'READY') {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
             <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
@@ -114,7 +116,7 @@ function SpeedGameScreen() {
 
   if (!currentScene || !currentQuestion) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.levelSubtitle}>Loading...</Text>
         </View>
@@ -123,7 +125,7 @@ function SpeedGameScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => { setShowQuitConfirm(true); }}>
           <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>

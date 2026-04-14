@@ -13,6 +13,7 @@ import { useGameStore } from '@/src/store';
 import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
 import { generateDailyChallenge, getTodayDateString } from '@/src/utils/dailyChallenge';
 import { colors } from '@/src/theme/colors';
+import { useTheme } from '@/src/providers/ThemeProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import type { Level } from '@/src/types/game';
@@ -21,6 +22,7 @@ const isWeb = Platform.OS === 'web';
 
 function DailyGameScreen() {
   const router = useRouter();
+  const { colors: tc } = useTheme();
   const revealTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dateStr = getTodayDateString();
@@ -77,7 +79,7 @@ function DailyGameScreen() {
   const formattedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => {
           const activePhases = ['MEMORISE', 'TRANSITION', 'QUESTION', 'REVEAL', 'SCENE_SCORE'];

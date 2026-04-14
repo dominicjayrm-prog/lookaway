@@ -37,9 +37,9 @@ export const lightColors = {
 // the light hex strings.
 export const darkColors: Record<keyof typeof lightColors, string> = {
   bg: '#0A0914',
-  card: '#13122A',
-  cardBorder: 'rgba(255,255,255,0.06)',
-  surface: '#1A1929',
+  card: '#1B1938',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  surface: '#242243',
   inputBg: '#1A1929',
   accent: '#6C5CE7',
   accentLight: '#A29BFE',

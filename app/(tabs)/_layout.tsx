@@ -33,11 +33,16 @@ function TabLayout() {
     <>
     <OfflineBanner />
     <Tabs
+      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarShowLabel: false,
+        // contentStyle applies to each tab's content container — prevents
+        // a brief system-default (white) flash between tab transitions
+        // on iOS when in dark mode.
+        contentStyle: { backgroundColor: colors.bg },
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
