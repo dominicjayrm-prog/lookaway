@@ -12,6 +12,7 @@ import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow
 import { notifyChallengeReceived } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
 import { recordFriendChallengedForChallenges } from '@/src/utils/weeklyChallenges';
+import { logActivity } from '@/src/utils/activity';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
 import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
@@ -112,7 +113,10 @@ function ChallengeModeScreen() {
     else {
       const total = roundScores.reduce((a, b) => a + b, 0);
       setTotalScore(total); setPhase('complete');
-      if (dbChallengeId && userId) { const pct = getScorePercentage(mode ?? 'speed_recall', total); recordChallengeScore(dbChallengeId, userId, pct, 0); }
+      // Log to recent activity feed so the home screen surfaces it
+      const totalPct = getScorePercentage(mode ?? 'speed_recall', total);
+      logActivity('mode_complete', { mode, modeName: modeConfig?.name ?? mode, score: total, scorePct: totalPct });
+      if (dbChallengeId && userId) { recordChallengeScore(dbChallengeId, userId, totalPct, 0); }
       else if (action === 'create' && friendId && userId) {
         (async () => {
           const { data: inserted } = await supabase.from('friend_challenges').insert({ challenger_id: userId, challenged_id: friendId, level_ids: [], mode: mode, mode_data: modeData, challenger_score: getScorePercentage(mode ?? 'speed_recall', total), status: 'pending' }).select('id').single();
@@ -134,6 +138,8 @@ function ChallengeModeScreen() {
   const handleModeComplete = useCallback((rawScore: number) => {
     const pct = getScorePercentage(mode ?? 'classic', rawScore);
     setTotalScore(rawScore); setPhase('complete');
+    // Log to recent activity feed so the home screen surfaces it
+    logActivity('mode_complete', { mode, modeName: modeConfig?.name ?? mode, score: rawScore, scorePct: pct });
     if (dbChallengeId && userId) { recordChallengeScore(dbChallengeId, userId, pct, 0); }
     else if (action === 'create' && friendId && userId) {
       (async () => {

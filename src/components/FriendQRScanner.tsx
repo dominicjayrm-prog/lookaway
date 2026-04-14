@@ -170,7 +170,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
   const permissionDenied = permission && !permission.granted;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
       <View style={st.root}>
         {/* Camera feed — only mount when granted so we don't trigger the
             permission prompt more than once per open. */}

@@ -42,6 +42,8 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       login_reward_streak: state.loginReward?.streak ?? 0,
       best_streak: state.bestStreak ?? 0,
       days_played: state.daysPlayed ?? 0,
+      streak_shields: state.streakShields ?? 0,
+      recovery_window_start: state.recoveryWindowStart ?? null,
       subscription_status: state.subscriptionStatus ?? 'inactive',
       // username is NOT written from here — it's set by app/username.tsx
       // at signup and we only READ it into the store via loadFromCloud.
@@ -137,6 +139,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       streakCount: profile.streak_count ?? 0,
       bestStreak: profile.best_streak ?? 0,
       daysPlayed: profile.days_played ?? 0,
+      streakShields: profile.streak_shields ?? 0,
+      recoveryWindowStart: profile.recovery_window_start ?? null,
       username: profile.username ?? null,
       avatarUrl: profile.avatar_url ?? null,
       subscriptionStatus: (profile.subscription_status === 'active' ? 'active' : 'inactive') as SubscriptionStatus,

@@ -23,6 +23,16 @@ import { Blink } from '@/src/components/Blink';
 import { getExpressionById } from '@/src/data/cosmetics';
 import { InfoCard } from '@/src/components/InfoCard';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
+import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
+import { getNextMilestone } from '@/src/data/streakMilestones';
+import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
+import {
+  computeAppOpenOutcome,
+  getDaysMissed,
+  recoverWithShield,
+  startRecoveryWindow,
+  RECOVERY_WINDOW_MS,
+} from '@/src/utils/streakRecovery';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -53,6 +63,8 @@ function ActivityIcon({ type, color }: { type: string; color: string }) {
     case 'friend_added': return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill={color} /><Path d="M4,21 Q4,14 12,14 Q20,14 20,21" fill={color} /></Svg>;
     case 'star_improved': return <Svg width={14} height={14} viewBox="0 0 24 24"><Path d="M12,4 L5,12 L9,12 L9,20 L15,20 L15,12 L19,12Z" fill={color} /></Svg>;
     case 'powerup_bought': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill={color} /></Svg>;
+    // Lightning bolt — used for any side-game / challenge mode completion (SnapMatch, Speed Recall, Spot the Change, Sequence, Counting Blitz, Colour Chain)
+    case 'mode_complete': return <Svg width={14} height={14} viewBox="0 0 24 24"><Polygon points="13,2 4,13 11,13 9,22 20,10 13,10" fill={color} /></Svg>;
     default: return <Svg width={14} height={14} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={8} fill={color} /></Svg>;
   }
 }
@@ -69,6 +81,11 @@ function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: 
     case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Added @${d.username}`, sub: `New friend · ${t}` };
     case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Improved Level ${d.levelNumber}`, sub: `${d.oldStars}→${d.newStars} stars · ${t}` };
     case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Bought power-up`, sub: `Shop · ${t}` };
+    case 'mode_complete': {
+      const modeName = (d.modeName as string) ?? 'Mode';
+      const pct = typeof d.scorePct === 'number' ? `${d.scorePct}%` : null;
+      return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Completed ${modeName}`, sub: pct ? `${pct} score · ${t}` : `Challenge mode · ${t}` };
+    }
     default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: 'Activity', sub: t };
   }
 }
@@ -131,7 +148,11 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed, streakShields, recoveryWindowStart, lastPlayDate, setRecoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal } = useGameStore();
+  // Next milestone teaser shown under the streak number on the home card.
+  // Derived locally — claimed list is mirrored from Supabase by the
+  // result-screen claim path.
+  const nextStreakReward = getNextMilestone(streakCount, streakMilestonesClaimed);
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
   // Parse world/level from ID format "w1-l3"
@@ -175,12 +196,90 @@ function PlayTab() {
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   const [infoCard, setInfoCard] = useState<string | null>(null);
+
+  // Streak recovery state ─────────────────────────────────
+  const [recoveryModal, setRecoveryModal] = useState<{ streak: number; daysMissed: number } | null>(null);
+  // Force a re-render every 30s while the recovery window is active so
+  // the "X min to recover" label ticks down without an explicit timer state.
+  const [, forceTickRerender] = useState(0);
+  useEffect(() => {
+    if (!recoveryWindowStart) return;
+    const id = setInterval(() => forceTickRerender((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [recoveryWindowStart]);
+
+  const recoveryMinsRemaining = (() => {
+    if (!recoveryWindowStart) return null;
+    const elapsed = Date.now() - new Date(recoveryWindowStart).getTime();
+    const remaining = RECOVERY_WINDOW_MS - elapsed;
+    if (remaining <= 0) return 0;
+    return Math.ceil(remaining / 60_000);
+  })();
+  const inRecoveryWindow = recoveryMinsRemaining !== null && recoveryMinsRemaining > 0;
+
+  const recoveryDaysMissed = getDaysMissed(lastPlayDate);
+
+  // Re-run the outcome whenever any input changes (cloud sync can update
+  // streakCount / lastPlayDate / streakShields / recoveryWindowStart AFTER
+  // the first mount). Dedup via a key string so we don't fire twice for
+  // the same exact state.
+  const lastCheckedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    const checkKey = `${user.id}|${lastPlayDate ?? '_'}|${streakCount}|${streakShields}|${recoveryWindowStart ?? '_'}`;
+    if (lastCheckedKey.current === checkKey) return;
+    lastCheckedKey.current = checkKey;
+    if (streakCount < 3) return; // Too-small streaks aren't protected
+    const outcome = computeAppOpenOutcome({
+      userId: user.id,
+      lastPlayDate,
+      streakCount,
+      streakShields,
+      recoveryWindowStart,
+    });
+
+    if (outcome.kind === 'ok') return;
+    if (outcome.kind === 'shield_auto_used') {
+      // Silent save — consume a shield, no modal
+      recoverWithShield(user.id, 0).then((ok) => {
+        if (!ok) return;
+        applyStreakRecoveryLocal(0, -1);
+        setToast({ title: `${'\uD83D\uDEE1\uFE0F'} Streak Shield used! Your streak is safe.`, tone: 'success' });
+      });
+      return;
+    }
+    if (outcome.kind === 'reset') {
+      resetStreakLocal();
+      return;
+    }
+    // outcome.kind === 'modal' → show the recovery modal + persist window if new
+    setRecoveryModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
+    if (outcome.windowElapsedMs === 0) {
+      // Persist server-side FIRST so a Supabase failure leaves both sides
+      // consistent (no window). Local state mirrors only after success.
+      const iso = outcome.recoveryStart.toISOString();
+      startRecoveryWindow(user.id, outcome.recoveryStart).then((ok) => {
+        // Only mirror to local if Supabase confirmed the write — keeps
+        // both sides in sync if the write fails (modal can re-trigger
+        // cleanly on the next app open).
+        if (ok) setRecoveryWindowStart(iso);
+      });
+    }
+  }, [user?.id, streakCount, streakShields, lastPlayDate, recoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, setRecoveryWindowStart]);
+
+  // Simple toast state for the shield auto-used confirmation
+  const [toast, setToast] = useState<{ title: string; tone: 'success' | 'info' } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(id);
+  }, [toast]);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem('blanked_tutorial_seen').then(seen => {
+    AsyncStorage.getItem('blanked_tutorial_seen').catch(() => null).then(seen => {
       if (cancelled) return;
       if (!seen) {
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
@@ -272,7 +371,7 @@ function PlayTab() {
               accessibilityHint="Tap to see how gems work"
             >
               <Ionicons name="diamond" size={13} color={colors.accent} />
-              <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+              <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
             </Pressable>
             <Pressable
               style={styles.profileButton}
@@ -348,17 +447,47 @@ function PlayTab() {
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
           <Pressable
-            onPress={() => setInfoCard(infoCard === 'streak' ? null : 'streak')}
-            style={[styles.statCard, { backgroundColor: colors.card }]}
+            onPress={() => {
+              // While the recovery window is active, the streak card acts
+              // as a shortcut back to the modal rather than to rewards.
+              if (inRecoveryWindow && streakCount >= 3) {
+                setRecoveryModal({ streak: streakCount, daysMissed: recoveryDaysMissed });
+                return;
+              }
+              router.push('/streak-rewards');
+            }}
+            style={[
+              styles.statCard,
+              { backgroundColor: colors.card },
+              inRecoveryWindow && { borderWidth: 1.5, borderColor: colors.wrong + '40' },
+            ]}
             accessibilityRole="button"
-            accessibilityLabel={`Streak: ${streakCount} days`}
-            accessibilityHint="Tap to see how streaks work"
+            accessibilityLabel={inRecoveryWindow ? `Streak in danger: ${recoveryMinsRemaining} minutes to recover` : `Streak: ${streakCount} days. Tap for rewards.`}
           >
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
+            {inRecoveryWindow ? (
+              <Text
+                style={[
+                  styles.streakReward,
+                  { color: (recoveryMinsRemaining ?? 0) < 5 ? colors.wrong : colors.accent },
+                ]}
+                numberOfLines={1}
+              >
+                {(recoveryMinsRemaining ?? 0) < 5 ? '\u26A0\uFE0F ' : '\u23F1 '}
+                {recoveryMinsRemaining} min to recover
+              </Text>
+            ) : (
+              nextStreakReward && (
+                <Text style={[styles.streakReward, { color: colors.wrong }]} numberOfLines={1}>
+                  Day {nextStreakReward.day}: {nextStreakReward.gems}{'\u{1F48E}'}
+                  {nextStreakReward.shields > 0 ? ` +${nextStreakReward.shields}${'\u{1F6E1}\uFE0F'}` : ''}
+                </Text>
+              )
+            )}
           </Pressable>
         </View>
 
@@ -462,6 +591,25 @@ function PlayTab() {
         accentColor="#FF6B6B"
         onClose={() => setInfoCard(null)}
       />
+
+      {/* Streak recovery modal — shown after app-open check detects missed days */}
+      {recoveryModal && (
+        <StreakRecoveryModal
+          visible
+          streak={recoveryModal.streak}
+          daysMissed={recoveryModal.daysMissed}
+          onDismiss={() => setRecoveryModal(null)}
+        />
+      )}
+
+      {/* Shield auto-use toast (also covers generic shield actions) */}
+      {toast && (
+        <View style={styles.toastWrap} pointerEvents="none">
+          <View style={[styles.toastCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.toastText, { color: colors.text }]}>{toast.title}</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
     </TabTransition>
   );
@@ -503,6 +651,15 @@ const styles = StyleSheet.create({
   statIconBg: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
   statValue: { fontSize: 20, fontWeight: '800' },
+  // Teaser line under the streak number — coral, tiny, just a hint
+  streakReward: { fontSize: 9, fontWeight: '600', marginTop: 2 },
+  // Transient success toast (shield auto-used, etc.)
+  toastWrap: { position: 'absolute', top: 60, left: 16, right: 16, alignItems: 'center', zIndex: 9998 },
+  toastCard: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 6,
+  },
+  toastText: { fontSize: 13, fontWeight: '700' },
 
   // Journey
   journeyCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },

@@ -15,6 +15,7 @@ import { WORLD_LEVEL_COUNTS, WORLD_NAMES, WORLD_COLORS } from '@/src/data/worldP
 import { StreakCelebration } from '@/src/components/StreakCelebration';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
+import { claimDueStreakRewards } from '@/src/utils/streakRewards';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder } from '@/src/utils/notifications';
 import { recordLevelCompleteForChallenges, recordLevelFailedForChallenges, type WeeklyChallenge } from '@/src/utils/weeklyChallenges';
@@ -139,6 +140,25 @@ function ResultScreen() {
       // Gem sound deferred to home/map screen for smoother feel
       if (stars > 0) addStars(stars);
       incrementStreak();
+
+      // Streak rewards: only the first level of the day flips streakCount,
+      // so this only does work once per day. The cloud claim flips Supabase
+      // rows + grants gems/shields; the result is queued for the toast.
+      (async () => {
+        const uid = useGameStore.getState()._authUserId;
+        const newStreak = useGameStore.getState().streakCount;
+        if (!uid || newStreak < 3) return;
+        const claimed = await claimDueStreakRewards(uid, newStreak);
+        if (claimed.length === 0) return;
+        // Sync local mirrors: bump shields, mark days claimed, surface toasts
+        const totalShields = claimed.reduce((s, m) => s + m.shields, 0);
+        const claimedDays = claimed.map((m) => m.day);
+        useGameStore.setState((s) => ({
+          streakShields: s.streakShields + totalShields,
+          streakMilestonesClaimed: Array.from(new Set([...s.streakMilestonesClaimed, ...claimedDays])),
+        }));
+        useGameStore.getState().pushStreakRewards(claimed);
+      })();
 
       // Milestone cosmetic check — fires for Classic mode levels
       if (!isReplay) {

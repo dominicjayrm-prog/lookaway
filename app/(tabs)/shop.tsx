@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,7 @@ import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
@@ -86,6 +88,27 @@ function CosmeticStatus({
 
 function ShopTab() {
   const { colors } = useTheme();
+  // Shop can be navigated to with a "need X more gems" hint from the
+  // streak recovery modal. We snapshot the params on first mount and
+  // CLEAR them from the URL so they don't re-trigger after the player
+  // recovers and visits the shop again later.
+  const params = useLocalSearchParams<{ needGems?: string; reason?: string }>();
+  const router = useRouter();
+  const [bannerSnapshot] = useState(() => {
+    const need = params.needGems ? parseInt(params.needGems, 10) : 0;
+    if (need > 0 && params.reason === 'streak_recovery') {
+      return `You need ${need} more gem${need !== 1 ? 's' : ''} to save your streak`;
+    }
+    return null;
+  });
+  useEffect(() => {
+    if (bannerSnapshot) {
+      // One-shot: clear params so a future tab visit doesn't re-show
+      router.setParams({ needGems: undefined, reason: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const bannerMessage = bannerSnapshot;
   // NOTE: destructuring `ownedCosmetics` here is load-bearing — without
   // it, the three cosmetic tabs read via `useGameStore.getState()` which
   // doesn't subscribe the component to changes, so buying an item (or
@@ -308,11 +331,21 @@ function ShopTab() {
         <Text style={[styles.title, { color: colors.text }]}>Shop</Text>
         <View style={[styles.gemDisplay, { backgroundColor: colors.accentSoft }]}>
           <Text style={{ fontSize: 20 }}>{GEM}</Text>
-          <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+          <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Streak-recovery hint banner — set when the player tapped the
+            gem option in the recovery modal but didn't have enough. */}
+        {bannerMessage && (
+          <View style={[styles.recoveryBanner, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '40' }]}>
+            <Text style={{ fontSize: 16 }}>{'\u{1F525}'}</Text>
+            <Text style={[styles.recoveryBannerText, { color: colors.wrong }]} numberOfLines={2}>
+              {bannerMessage}
+            </Text>
+          </View>
+        )}
         {/* ── Blanked+ Banner ── */}
         <Pressable
           style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
@@ -803,6 +836,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
   title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.3 },
   gemDisplay: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
+  recoveryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  recoveryBannerText: { fontSize: 12, fontWeight: '700', flex: 1 },
   gemCount: { fontSize: 20, fontWeight: '800' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   sectionTitle: { fontSize: 18, fontWeight: '700', marginTop: 24, marginBottom: 12 },

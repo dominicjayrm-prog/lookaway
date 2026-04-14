@@ -13,6 +13,8 @@ import { useGameStore } from '@/src/store';
 import { updateOnlineStatus } from '@/src/utils/friends';
 import { expireOldChallenges } from '@/src/utils/challengeFlow';
 import { sounds } from '@/src/lib/sounds';
+import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
+import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -100,6 +102,8 @@ function CloudSyncLoader() {
     updateOnlineStatus(user.id);
     expireOldChallenges();
     registerPushToken(user.id);
+    // Idempotent: insert any missing streak_rewards rows for this player
+    seedStreakMilestonesIfMissing(user.id);
     // Update online status every 60 seconds (for 3-tier: online/recent/offline)
     const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
@@ -186,6 +190,16 @@ function NotificationHandler() {
   return null;
 }
 
+/** Renders the streak reward toast slide-down whenever the queue has
+ *  items. Lives here so any milestone claim — from any screen — surfaces
+ *  consistently on top of the navigation stack. */
+function StreakRewardToastMounter() {
+  const queue = useGameStore((s) => s.streakRewardQueue);
+  const clear = useGameStore((s) => s.clearStreakRewardQueue);
+  if (!queue || queue.length === 0) return null;
+  return <StreakRewardToast queue={queue} onDone={clear} />;
+}
+
 function ThemedStack() {
   const { colors, isDark } = useTheme();
   return (
@@ -210,6 +224,7 @@ function ThemedStack() {
         <Stack.Screen name="game/side-campaign" options={{ gestureEnabled: false }} />
         <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="streak-rewards" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="stats-space" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings" />
       </Stack>
@@ -240,6 +255,7 @@ function RootLayout() {
           <CloudSyncLoader />
           <NotificationHandler />
           <ThemedStack />
+          <StreakRewardToastMounter />
         </MobileContainer>
       </AuthProvider>
     </ThemeProvider>
