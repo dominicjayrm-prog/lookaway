@@ -225,6 +225,8 @@ function ThemedStack() {
         <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="streak-rewards" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="privacy" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="terms" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="stats-space" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings" />
       </Stack>
