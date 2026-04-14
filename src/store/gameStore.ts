@@ -6,6 +6,7 @@ import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/pr
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
+import type { ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
 
 /** In-memory fallback for platforms where localStorage is unavailable */
 let _memoryUserId: string | null = null;
@@ -148,6 +149,7 @@ interface SavedState {
   streakCount?: number;
   bestStreak?: number;
   daysPlayed?: number;
+  streakShields?: number;
   username?: string | null;
   avatarUrl?: string | null;
   subscriptionStatus?: SubscriptionStatus;
@@ -208,6 +210,7 @@ function saveState(state: GameStore) {
       gems: state.gems, lives: state.lives, maxLives: state.maxLives, livesLastLostAt: state.livesLastLostAt,
       adsRemoved: state.adsRemoved, unlimitedLivesUntil: state.unlimitedLivesUntil,
       streakCount: state.streakCount, bestStreak: state.bestStreak, daysPlayed: state.daysPlayed,
+      streakShields: state.streakShields,
       username: state.username, avatarUrl: state.avatarUrl,
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
@@ -264,6 +267,10 @@ export interface GameStore {
    *  lives display shows ∞. 0 or null means inactive. */
   unlimitedLivesUntil: number | null;
   streakCount: number; bestStreak: number; daysPlayed: number;
+  /** Streak shield count — earned from milestones (7d, 21d, 30d…), consumed
+   *  automatically when a streak would otherwise break. Server source of
+   *  truth is `profiles.streak_shields`. */
+  streakShields: number;
   username: string | null;
   avatarUrl: string | null;
   subscriptionStatus: SubscriptionStatus;
@@ -322,6 +329,12 @@ export interface GameStore {
   addStars: (c: number) => void;
   incrementStreak: () => void;
   resetStreak: () => void;
+  /** Toast queue for newly-claimed streak rewards. The root layout renders
+   *  `<StreakRewardToast queue={…} onDone={clearStreakRewardQueue} />` and
+   *  the result screen pushes after a successful `claimDueStreakRewards()`. */
+  streakRewardQueue: ImportedClaimedMilestone[];
+  pushStreakRewards: (rewards: ImportedClaimedMilestone[]) => void;
+  clearStreakRewardQueue: () => void;
   checkLifeRegen: () => void;
   buyPowerUp: (id: string, qty?: number, cost?: number) => boolean;
   usePowerUp: (id: string) => boolean;
@@ -396,6 +409,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     streakCount: saved.streakCount ?? 0,
     bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
     daysPlayed: saved.daysPlayed ?? 0,
+    streakShields: saved.streakShields ?? 0,
+    streakRewardQueue: [],
     username: saved.username ?? null,
     avatarUrl: saved.avatarUrl ?? null,
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
@@ -516,7 +531,24 @@ export const useGameStore = create<GameStore>((set, get) => {
       });
       setTimeout(() => saveState(get()), 0);
     },
-    resetStreak: () => { set({ streakCount: 0, lastPlayDate: null }); setTimeout(() => saveState(get()), 0); },
+    resetStreak: () => {
+      // Streak shield: if the player has at least one shield, consume it and
+      // KEEP the streak intact. Otherwise the streak resets to 0.
+      const { streakShields, streakCount } = get();
+      if (streakShields > 0 && streakCount >= 3) {
+        set({ streakShields: streakShields - 1 });
+        setTimeout(() => saveState(get()), 0);
+        return;
+      }
+      set({ streakCount: 0, lastPlayDate: null });
+      setTimeout(() => saveState(get()), 0);
+    },
+    streakRewardQueue: [],
+    pushStreakRewards: (rewards) => {
+      if (!rewards || rewards.length === 0) return;
+      set((s) => ({ streakRewardQueue: [...s.streakRewardQueue, ...rewards] }));
+    },
+    clearStreakRewardQueue: () => set({ streakRewardQueue: [] }),
     checkLifeRegen: () => {
       const { lives, maxLives, livesLastLostAt } = get();
       if (lives >= maxLives || !livesLastLostAt) return;
@@ -636,6 +668,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           streakCount: saved.streakCount ?? 0,
           bestStreak: saved.bestStreak ?? saved.streakCount ?? 0,
           daysPlayed: saved.daysPlayed ?? 0,
+          streakShields: saved.streakShields ?? 0,
+          streakRewardQueue: [],
           username: saved.username ?? null,
           avatarUrl: saved.avatarUrl ?? null,
           subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
@@ -795,6 +829,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakCount: Math.max(cloud.streakCount, local.streakCount),
         bestStreak: Math.max(cloud.bestStreak ?? 0, local.bestStreak ?? 0, cloud.streakCount, local.streakCount),
         daysPlayed: Math.max(cloud.daysPlayed ?? 0, local.daysPlayed ?? 0),
+        // Server is the source of truth for shields (so claims sync across devices)
+        streakShields: cloud.streakShields ?? local.streakShields ?? 0,
         // Username is server-sourced (set via app/username.tsx). Cloud wins;
         // keep local only as a fallback if cloud hasn't returned one.
         username: cloud.username ?? local.username ?? null,

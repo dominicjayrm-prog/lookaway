@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGameStore } from '@/src/store';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { checkStreakMilestone } from '@/src/data/streakMilestones';
+// checkStreakMilestone import retired — claim flow lives in claimDueStreakRewards now.
 import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { scheduleLivesFullNotification } from '@/src/utils/notifications';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
@@ -48,10 +48,11 @@ export function useCelebrations() {
     worldId?: number,
   ) => {
     safeTimeout(() => {
-      const newStreak = useGameStore.getState().streakCount;
-      const claimed = useGameStore.getState().streakMilestonesClaimed;
-      const milestone = checkStreakMilestone(newStreak, claimed);
-      if (milestone) setCelebration(milestone);
+      // Streak milestone celebration is now handled by the slide-down
+      // StreakRewardToast (mounted globally in app/_layout.tsx) — auto
+      // claimed via claimDueStreakRewards() in result.tsx. The legacy
+      // full-screen modal would double-award gems, so it's disabled here.
+      // The component file stays for now in case we want to revive it.
 
       const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
 

@@ -18,6 +18,7 @@ import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
 import type { Cosmetic } from '@/src/data/cosmetics';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
@@ -308,7 +309,7 @@ function ShopTab() {
         <Text style={[styles.title, { color: colors.text }]}>Shop</Text>
         <View style={[styles.gemDisplay, { backgroundColor: colors.accentSoft }]}>
           <Text style={{ fontSize: 20 }}>{GEM}</Text>
-          <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+          <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
         </View>
       </View>
 

@@ -23,6 +23,8 @@ import { Blink } from '@/src/components/Blink';
 import { getExpressionById } from '@/src/data/cosmetics';
 import { InfoCard } from '@/src/components/InfoCard';
 import { PremiumCelebration } from '@/src/components/PremiumCelebration';
+import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
+import { getNextMilestone } from '@/src/data/streakMilestones';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
@@ -138,7 +140,11 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed } = useGameStore();
+  // Next milestone teaser shown under the streak number on the home card.
+  // Derived locally — claimed list is mirrored from Supabase by the
+  // result-screen claim path.
+  const nextStreakReward = getNextMilestone(streakCount, streakMilestonesClaimed);
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
   // Parse world/level from ID format "w1-l3"
@@ -279,7 +285,7 @@ function PlayTab() {
               accessibilityHint="Tap to see how gems work"
             >
               <Ionicons name="diamond" size={13} color={colors.accent} />
-              <Text style={[styles.gemCount, { color: colors.accent }]}>{gems.toLocaleString()}</Text>
+              <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
             </Pressable>
             <Pressable
               style={styles.profileButton}
@@ -355,17 +361,23 @@ function PlayTab() {
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
           <Pressable
-            onPress={() => setInfoCard(infoCard === 'streak' ? null : 'streak')}
+            onPress={() => router.push('/streak-rewards')}
             style={[styles.statCard, { backgroundColor: colors.card }]}
             accessibilityRole="button"
-            accessibilityLabel={`Streak: ${streakCount} days`}
-            accessibilityHint="Tap to see how streaks work"
+            accessibilityLabel={`Streak: ${streakCount} days. Tap for rewards.`}
+            accessibilityHint="Tap to see streak rewards and milestones"
           >
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
+            {nextStreakReward && (
+              <Text style={[styles.streakReward, { color: colors.wrong }]} numberOfLines={1}>
+                Day {nextStreakReward.day}: {nextStreakReward.gems}{'\u{1F48E}'}
+                {nextStreakReward.shields > 0 ? ` +${nextStreakReward.shields}${'\u{1F6E1}\uFE0F'}` : ''}
+              </Text>
+            )}
           </Pressable>
         </View>
 
@@ -510,6 +522,8 @@ const styles = StyleSheet.create({
   statIconBg: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 2 },
   statValue: { fontSize: 20, fontWeight: '800' },
+  // Teaser line under the streak number — coral, tiny, just a hint
+  streakReward: { fontSize: 9, fontWeight: '600', marginTop: 2 },
 
   // Journey
   journeyCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
