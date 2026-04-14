@@ -422,3 +422,325 @@ export async function getStreakDistribution(): Promise<StreakBucket[]> {
 
   return Object.entries(buckets).map(([range, count]) => ({ range, count }));
 }
+
+// ─── 10. Revenue ─────────────────────────────────────────────────────
+//
+// We don't have a `purchases` table wired to Supabase yet (RevenueCat
+// is the source of truth for $ amounts), so the closest signal we have
+// is `economy_events.event_type = 'iap_gems' / 'iap_lives' / 'iap_unlimited'`.
+// The `details` JSON on those rows includes `productId` and (where logged)
+// `usdAmount`. For products with no usdAmount in details, we fall back
+// to a hardcoded price book so revenue numbers are still meaningful.
+
+const PRODUCT_PRICES: Record<string, number> = {
+  // Gem packs
+  'com.blanked.gems100': 0.99,
+  'com.blanked.gems500': 4.99,
+  'com.blanked.gems1200': 9.99,
+  'com.blanked.gems3000': 19.99,
+  // Convenience purchases
+  'com.blanked.lives_refill': 0.99,
+  'com.blanked.lives_unlimited_1h': 1.99,
+  // Starter pack + remove ads
+  'com.blanked.starter_pack': 2.99,
+  'com.blanked.remove_ads': 4.99,
+  // Subscriptions (rough monthly value — used to size revenue contribution)
+  'com.blanked.plus_monthly': 4.99,
+  'com.blanked.plus_yearly': 39.99,
+};
+
+function priceFor(productId: string, details: Record<string, unknown> | null | undefined): number {
+  const fromDetails = details && typeof details.usdAmount === 'number' ? details.usdAmount : null;
+  if (fromDetails !== null) return fromDetails;
+  return PRODUCT_PRICES[productId] ?? 0;
+}
+
+export interface RevenueSnapshot {
+  totalRevenue: number;       // all-time $ revenue from logged IAP events
+  todayRevenue: number;       // last 24h $
+  monthRevenue: number;       // last 30d $
+  totalPayingUsers: number;   // distinct users who've made any IAP
+  payingUsers30d: number;     // distinct payers in the last 30d
+  arpu: number;               // total revenue / total players
+  arppu: number;              // total revenue / paying users
+  arpdau: number;             // last-30d revenue / DAU avg
+  conversionRate: number;     // % of all players who've ever paid
+}
+
+export async function getRevenueSnapshot(): Promise<RevenueSnapshot> {
+  const day1 = daysAgo(1);
+  const day30 = daysAgo(30);
+
+  const [iapRes, profileRes, dauRes] = await Promise.all([
+    supabase
+      .from('economy_events')
+      .select('user_id, event_type, amount, details, created_at')
+      .in('event_type', ['iap_gems', 'iap_lives', 'iap_unlimited']),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('economy_events')
+      .select('user_id, created_at')
+      .gte('created_at', day30.toISOString()),
+  ]);
+
+  const events = iapRes.data ?? [];
+  const totalPlayers = profileRes.count ?? 0;
+
+  let totalRevenue = 0;
+  let todayRevenue = 0;
+  let monthRevenue = 0;
+  const payers = new Set<string>();
+  const payers30d = new Set<string>();
+
+  for (const e of events) {
+    const details = (e as { details?: Record<string, unknown> }).details ?? {};
+    const productId = (details.productId as string) ?? '';
+    const usd = priceFor(productId, details);
+    totalRevenue += usd;
+    payers.add(e.user_id);
+    const ts = new Date(e.created_at);
+    if (ts >= day30) {
+      monthRevenue += usd;
+      payers30d.add(e.user_id);
+    }
+    if (ts >= day1) todayRevenue += usd;
+  }
+
+  // ARPDAU: average of (daily revenue / daily active users) over last 30d.
+  // Compute DAU per day from the dauRes activity slice.
+  const dauByDay = new Map<string, Set<string>>();
+  for (const row of dauRes.data ?? []) {
+    const k = row.created_at.slice(0, 10);
+    if (!dauByDay.has(k)) dauByDay.set(k, new Set());
+    dauByDay.get(k)!.add(row.user_id);
+  }
+  const revenueByDay = new Map<string, number>();
+  for (const e of events) {
+    const ts = new Date(e.created_at);
+    if (ts < day30) continue;
+    const k = e.created_at.slice(0, 10);
+    const details = (e as { details?: Record<string, unknown> }).details ?? {};
+    const productId = (details.productId as string) ?? '';
+    revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + priceFor(productId, details));
+  }
+  let arpdauSum = 0;
+  let arpdauDays = 0;
+  for (const [k, dauSet] of dauByDay.entries()) {
+    if (dauSet.size === 0) continue;
+    arpdauSum += (revenueByDay.get(k) ?? 0) / dauSet.size;
+    arpdauDays++;
+  }
+  const arpdau = arpdauDays > 0 ? arpdauSum / arpdauDays : 0;
+
+  return {
+    totalRevenue,
+    todayRevenue,
+    monthRevenue,
+    totalPayingUsers: payers.size,
+    payingUsers30d: payers30d.size,
+    arpu: totalPlayers > 0 ? totalRevenue / totalPlayers : 0,
+    arppu: payers.size > 0 ? totalRevenue / payers.size : 0,
+    arpdau,
+    conversionRate: totalPlayers > 0 ? (payers.size / totalPlayers) * 100 : 0,
+  };
+}
+
+export interface RevenueByProduct {
+  productId: string;
+  displayName: string;
+  units: number;
+  revenue: number;
+  uniqueBuyers: number;
+}
+
+const PRODUCT_DISPLAY: Record<string, string> = {
+  'com.blanked.gems100': '100 Gems',
+  'com.blanked.gems500': '500 Gems',
+  'com.blanked.gems1200': '1,200 Gems',
+  'com.blanked.gems3000': '3,000 Gems',
+  'com.blanked.lives_refill': 'Lives Refill',
+  'com.blanked.lives_unlimited_1h': 'Unlimited Lives (1h)',
+  'com.blanked.starter_pack': 'Starter Pack',
+  'com.blanked.remove_ads': 'Remove Ads',
+  'com.blanked.plus_monthly': 'Blanked+ Monthly',
+  'com.blanked.plus_yearly': 'Blanked+ Yearly',
+};
+
+export async function getRevenueByProduct(): Promise<RevenueByProduct[]> {
+  const { data } = await supabase
+    .from('economy_events')
+    .select('user_id, details')
+    .in('event_type', ['iap_gems', 'iap_lives', 'iap_unlimited']);
+
+  const agg = new Map<string, { units: number; revenue: number; buyers: Set<string> }>();
+  for (const e of data ?? []) {
+    const details = (e as { details?: Record<string, unknown> }).details ?? {};
+    const productId = (details.productId as string) ?? 'unknown';
+    if (!agg.has(productId)) agg.set(productId, { units: 0, revenue: 0, buyers: new Set() });
+    const row = agg.get(productId)!;
+    row.units++;
+    row.revenue += priceFor(productId, details);
+    row.buyers.add(e.user_id);
+  }
+
+  return Array.from(agg.entries())
+    .map(([productId, { units, revenue, buyers }]) => ({
+      productId,
+      displayName: PRODUCT_DISPLAY[productId] ?? productId,
+      units,
+      revenue,
+      uniqueBuyers: buyers.size,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+export interface RevenueDay {
+  date: string;
+  revenue: number;
+  units: number;
+}
+
+export async function getRevenueTimeseries(days = 30): Promise<RevenueDay[]> {
+  const start = daysAgo(days);
+  const { data } = await supabase
+    .from('economy_events')
+    .select('details, created_at')
+    .in('event_type', ['iap_gems', 'iap_lives', 'iap_unlimited'])
+    .gte('created_at', start.toISOString());
+
+  const byDay = new Map<string, { revenue: number; units: number }>();
+  for (const e of data ?? []) {
+    const k = e.created_at.slice(0, 10);
+    const details = (e as { details?: Record<string, unknown> }).details ?? {};
+    const productId = (details.productId as string) ?? '';
+    const usd = priceFor(productId, details);
+    if (!byDay.has(k)) byDay.set(k, { revenue: 0, units: 0 });
+    const row = byDay.get(k)!;
+    row.revenue += usd;
+    row.units++;
+  }
+
+  const out: RevenueDay[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const k = dayKey(daysAgo(i));
+    const row = byDay.get(k) ?? { revenue: 0, units: 0 };
+    out.push({ date: k, revenue: row.revenue, units: row.units });
+  }
+  return out;
+}
+
+// ─── 10c. Retention curve (averaged across all cohorts) ──────────────
+
+export interface RetentionPoint {
+  day: number;        // days since signup
+  pct: number;        // % of cohort still active that day
+}
+
+export async function getRetentionCurve(maxDay = 30): Promise<RetentionPoint[]> {
+  // Only consider users who signed up at least `maxDay` days ago, so each
+  // cohort has had a fair shot at every day in the curve.
+  const cutoff = daysAgo(maxDay + 1);
+  const [profiles, activity] = await Promise.all([
+    supabase.from('profiles').select('id, created_at').lte('created_at', cutoff.toISOString()),
+    supabase.from('economy_events').select('user_id, created_at'),
+  ]);
+
+  if (!profiles.data || profiles.data.length === 0) return [];
+
+  // For each user, build the set of "days-since-signup" they were active on.
+  const signupBy = new Map<string, Date>();
+  for (const p of profiles.data) signupBy.set(p.id, new Date(p.created_at));
+
+  const activeDays = new Map<string, Set<number>>();
+  for (const row of activity.data ?? []) {
+    const signup = signupBy.get(row.user_id);
+    if (!signup) continue;
+    const ts = new Date(row.created_at);
+    const dayN = Math.floor((ts.getTime() - signup.getTime()) / 86400000);
+    if (dayN < 0 || dayN > maxDay) continue;
+    if (!activeDays.has(row.user_id)) activeDays.set(row.user_id, new Set());
+    activeDays.get(row.user_id)!.add(dayN);
+  }
+
+  const cohortSize = profiles.data.length;
+  const out: RetentionPoint[] = [];
+  for (let d = 0; d <= maxDay; d++) {
+    let count = 0;
+    for (const [, days] of activeDays.entries()) {
+      if (days.has(d)) count++;
+    }
+    out.push({ day: d, pct: cohortSize > 0 ? (count / cohortSize) * 100 : 0 });
+  }
+  return out;
+}
+
+// ─── 11. Conversion funnel: install → first level → first IAP ─────────
+
+export interface FunnelStep {
+  label: string;
+  count: number;
+  pct: number;       // % of the previous step
+  pctOverall: number; // % of the first step
+}
+
+export async function getInstallToPayFunnel(): Promise<FunnelStep[]> {
+  // Step 1: total profiles (proxy for installs that completed signup)
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, total_stars, gems');
+  const installs = (profiles ?? []).length;
+
+  // Step 2: played at least one level (total_stars > 0 OR has user_progress)
+  const { data: progress } = await supabase
+    .from('user_progress')
+    .select('user_id');
+  const playedSet = new Set<string>();
+  for (const r of progress ?? []) playedSet.add(r.user_id);
+  const playedFirst = playedSet.size;
+
+  // Step 3: completed at least 5 levels (engaged player)
+  const completionsByUser = new Map<string, number>();
+  for (const r of progress ?? []) {
+    completionsByUser.set(r.user_id, (completionsByUser.get(r.user_id) ?? 0) + 1);
+  }
+  const engaged = Array.from(completionsByUser.values()).filter((n) => n >= 5).length;
+
+  // Step 4: spent gems (engaged enough to use the economy)
+  const { data: spent } = await supabase
+    .from('economy_events')
+    .select('user_id')
+    .in('event_type', ['gem_spend_powerup', 'gem_spend_lives', 'gem_spend_cosmetic']);
+  const gemSpenders = new Set<string>();
+  for (const r of spent ?? []) gemSpenders.add(r.user_id);
+
+  // Step 5: made any IAP purchase
+  const { data: iap } = await supabase
+    .from('economy_events')
+    .select('user_id')
+    .in('event_type', ['iap_gems', 'iap_lives', 'iap_unlimited']);
+  const payers = new Set<string>();
+  for (const r of iap ?? []) payers.add(r.user_id);
+
+  // Step 6: subscribed to Blanked+
+  const { data: subs } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('subscription_status', 'active');
+  const subscribers = (subs ?? []).length;
+
+  const raw = [
+    { label: 'Signed up', count: installs },
+    { label: 'Played a level', count: playedFirst },
+    { label: 'Completed 5+ levels', count: engaged },
+    { label: 'Spent gems', count: gemSpenders.size },
+    { label: 'Made an IAP', count: payers.size },
+    { label: 'Subscribed to Blanked+', count: subscribers },
+  ];
+  const top = raw[0].count;
+  return raw.map((step, i) => ({
+    label: step.label,
+    count: step.count,
+    pct: i === 0 ? 100 : raw[i - 1].count > 0 ? (step.count / raw[i - 1].count) * 100 : 0,
+    pctOverall: top > 0 ? (step.count / top) * 100 : 0,
+  }));
+}
