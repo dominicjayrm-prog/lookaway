@@ -37,7 +37,10 @@ function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.tabBarInactive,
+        // The default inactive color (#B2BEC3 light / #7A7890 dark) is
+        // so faint on a white tab bar it reads as invisible to some
+        // users. Use textMid for strong contrast against tabBar bg.
+        tabBarInactiveTintColor: colors.textMid,
         tabBarShowLabel: false,
         // contentStyle applies to each tab's content container — prevents
         // a brief system-default (white) flash between tab transitions
@@ -45,15 +48,21 @@ function TabLayout() {
         contentStyle: { backgroundColor: colors.bg },
         tabBarStyle: {
           backgroundColor: colors.tabBar,
-          borderTopWidth: 0,
+          // Explicit top border so the tab bar is always visually
+          // distinct from page content. Subtle shadows alone weren't
+          // enough to delineate the bar on iOS in light mode where
+          // tabBar (#FFFFFF) sits against bg (#F7F6F3) — the 3% delta
+          // plus a 0.06 shadow was effectively invisible.
+          borderTopWidth: 1,
+          borderTopColor: colors.tabBarBorder,
           height: 54 + bottomPadding,
           paddingBottom: bottomPadding,
           paddingTop: 8,
-          elevation: 8,
+          elevation: 12,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.06,
-          shadowRadius: 12,
+          shadowOpacity: 0.12,
+          shadowRadius: 16,
         },
       }}
     >
@@ -83,8 +92,8 @@ function TabLayout() {
                 <View style={focused ? [styles.activeIconContainer, { backgroundColor: colors.accentSoft }] : styles.inactiveIconContainer}>
                   <Ionicons
                     name={focused ? tab.iconFocused : tab.icon}
-                    size={22}
-                    color={focused ? colors.accent : colors.tabBarInactive}
+                    size={24}
+                    color={focused ? colors.accent : colors.textMid}
                   />
                 </View>
               ),
