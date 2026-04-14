@@ -115,7 +115,7 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
   const qrSize = Math.min(SW - 96, 280);
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
+    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
       <RNAnimated.View
         {...panResponder.panHandlers}
         style={[
