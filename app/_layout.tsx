@@ -6,7 +6,18 @@ import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
-import { registerPushToken, cancelLivesFullNotification, scheduleStreakReminder } from '@/src/utils/notifications';
+import {
+  registerPushToken,
+  cancelLivesFullNotification,
+  scheduleStreakReminder,
+  scheduleDailyReminder,
+  cancelDailyReminder,
+  loadDailyReminderTime,
+  loadNotificationPreferences,
+  scheduleWinBackReminders,
+  cancelWinBackReminders,
+  scheduleWeeklyChallengeReminder,
+} from '@/src/utils/notifications';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -148,6 +159,28 @@ function CloudSyncLoader() {
     registerPushToken(user.id);
     // Idempotent: insert any missing streak_rewards rows for this player
     seedStreakMilestonesIfMissing(user.id);
+
+    // Notification scheduling. Each of these is idempotent — it
+    // cancels any prior pending version of the same identifier before
+    // scheduling, so calling on every app open is safe.
+    //  - Daily reminder: fires at user-configured time each day
+    //  - Weekly challenge: fires Sunday 7pm local (resets every week)
+    //  - Win-back: 3/7/14 days of absence — cancelled on next foreground
+    Promise.all([
+      loadNotificationPreferences(user.id),
+      loadDailyReminderTime(user.id),
+    ]).then(([prefs, time]) => {
+      if (prefs.daily_reminder !== false && time) {
+        scheduleDailyReminder(time);
+      } else {
+        cancelDailyReminder();
+      }
+      if (prefs.weekly_challenge !== false) {
+        scheduleWeeklyChallengeReminder();
+      }
+    }).catch(() => {});
+    // Cancel any pending win-back since the user just opened the app.
+    cancelWinBackReminders();
     // Update online status every 60 seconds (for 3-tier: online/recent/offline)
     const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
@@ -159,11 +192,26 @@ function CloudSyncLoader() {
       if (appState.current.match(/inactive|background/) && next === 'active') {
         // Returning to foreground — pull latest cloud data + update online status
         if (user?.id) { loadFromCloud(user.id); updateOnlineStatus(user.id); }
+        // Cancel any pending win-back notifications — the player came
+        // back, so we don't want to nag them tomorrow.
+        cancelWinBackReminders();
       }
       if (next === 'background' || next === 'inactive') {
         // Going to background — push local state to cloud + localStorage
         saveState();
         syncToCloud();
+        // Arm the 3/7/14-day win-back series. If the player returns
+        // before each trigger, the foreground handler above cancels
+        // them. If they don't return, the 3-day hits first, then 7,
+        // then 14 — gentle escalating nudges.
+        if (user?.id) {
+          // Respect the user's win_back preference (synchronous
+          // load via the already-fetched profile would be ideal,
+          // but the cached value in localStorage is fine here too).
+          loadNotificationPreferences(user.id).then((prefs) => {
+            if (prefs.win_back !== false) scheduleWinBackReminders();
+          }).catch(() => {});
+        }
       }
       appState.current = next;
     });
