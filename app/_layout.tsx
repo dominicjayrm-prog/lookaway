@@ -6,7 +6,18 @@ import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
-import { registerPushToken, cancelLivesFullNotification, scheduleStreakReminder } from '@/src/utils/notifications';
+import {
+  registerPushToken,
+  cancelLivesFullNotification,
+  scheduleStreakReminder,
+  scheduleDailyReminder,
+  cancelDailyReminder,
+  loadDailyReminderTime,
+  loadNotificationPreferences,
+  scheduleWinBackReminders,
+  cancelWinBackReminders,
+  scheduleWeeklyChallengeReminder,
+} from '@/src/utils/notifications';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -91,12 +102,56 @@ function CloudSyncLoader() {
   const syncToCloud = useGameStore((s) => s.syncToCloud);
   const saveState = useGameStore((s) => s.saveState);
   const setAuthUserId = useGameStore((s) => s.setAuthUserId);
+  const resetForNewUser = useGameStore((s) => s.resetForNewUser);
   const { user } = useAuth();
   const appState = useRef(AppState.currentState);
+  // Track the last user ID we synced for so we can detect account
+  // switches on the same device. Without this, logging in as a new
+  // user on a device where another user already played inherits their
+  // gems / streak / world / stars via the max-merge in loadFromCloud.
+  const lastUserIdRef = useRef<string | null>(null);
 
   // Load from cloud on login + update online status + expire old challenges
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      // Sign-out path: user cleared. If we had a previous user, wipe
+      // local state so the next sign-in doesn't leak the old account.
+      if (lastUserIdRef.current) {
+        resetForNewUser();
+        lastUserIdRef.current = null;
+      }
+      return;
+    }
+
+    // Account switch on the same device (e.g. signed out of account A
+    // and into account B) — reset first so the loadFromCloud that
+    // follows doesn't max-merge A's higher values into B's fresh row.
+    //
+    // Two paths:
+    //   1. Same-session switch: lastUserIdRef is the previous user.id
+    //   2. Cold start on a device where the previous user's progress
+    //      is still in localStorage — we stamp _authUserId inside the
+    //      blob, so we can compare here and reset before we even
+    //      kick off loadFromCloud.
+    const prevUserId = lastUserIdRef.current;
+    let storedUserId: string | null = null;
+    try {
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('blanked-progress');
+        if (raw) {
+          const parsed = JSON.parse(raw) as { _authUserId?: string | null };
+          storedUserId = parsed._authUserId ?? null;
+        }
+      }
+    } catch {}
+
+    const switchedInSession = prevUserId && prevUserId !== user.id;
+    const coldStartMismatch = !prevUserId && storedUserId && storedUserId !== user.id;
+    if (switchedInSession || coldStartMismatch) {
+      resetForNewUser();
+    }
+    lastUserIdRef.current = user.id;
+
     setAuthUserId(user.id); // Store real auth ID for cloud sync
     loadFromCloud(user.id);
     updateOnlineStatus(user.id);
@@ -104,10 +159,32 @@ function CloudSyncLoader() {
     registerPushToken(user.id);
     // Idempotent: insert any missing streak_rewards rows for this player
     seedStreakMilestonesIfMissing(user.id);
+
+    // Notification scheduling. Each of these is idempotent — it
+    // cancels any prior pending version of the same identifier before
+    // scheduling, so calling on every app open is safe.
+    //  - Daily reminder: fires at user-configured time each day
+    //  - Weekly challenge: fires Sunday 7pm local (resets every week)
+    //  - Win-back: 3/7/14 days of absence — cancelled on next foreground
+    Promise.all([
+      loadNotificationPreferences(user.id),
+      loadDailyReminderTime(user.id),
+    ]).then(([prefs, time]) => {
+      if (prefs.daily_reminder !== false && time) {
+        scheduleDailyReminder(time);
+      } else {
+        cancelDailyReminder();
+      }
+      if (prefs.weekly_challenge !== false) {
+        scheduleWeeklyChallengeReminder();
+      }
+    }).catch(() => {});
+    // Cancel any pending win-back since the user just opened the app.
+    cancelWinBackReminders();
     // Update online status every 60 seconds (for 3-tier: online/recent/offline)
     const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
-  }, [user?.id, loadFromCloud]);
+  }, [user?.id, loadFromCloud, resetForNewUser, setAuthUserId]);
 
   // Sync on foreground (pull latest from other devices) + save on background
   useEffect(() => {
@@ -115,11 +192,26 @@ function CloudSyncLoader() {
       if (appState.current.match(/inactive|background/) && next === 'active') {
         // Returning to foreground — pull latest cloud data + update online status
         if (user?.id) { loadFromCloud(user.id); updateOnlineStatus(user.id); }
+        // Cancel any pending win-back notifications — the player came
+        // back, so we don't want to nag them tomorrow.
+        cancelWinBackReminders();
       }
       if (next === 'background' || next === 'inactive') {
         // Going to background — push local state to cloud + localStorage
         saveState();
         syncToCloud();
+        // Arm the 3/7/14-day win-back series. If the player returns
+        // before each trigger, the foreground handler above cancels
+        // them. If they don't return, the 3-day hits first, then 7,
+        // then 14 — gentle escalating nudges.
+        if (user?.id) {
+          // Respect the user's win_back preference (synchronous
+          // load via the already-fetched profile would be ideal,
+          // but the cached value in localStorage is fine here too).
+          loadNotificationPreferences(user.id).then((prefs) => {
+            if (prefs.win_back !== false) scheduleWinBackReminders();
+          }).catch(() => {});
+        }
       }
       appState.current = next;
     });

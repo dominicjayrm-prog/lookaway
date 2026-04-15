@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { notifyFriendRequest } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
+import { notifyFriendRequestAccepted } from '@/src/utils/notifications';
 import { log } from '@/src/lib/logger';
 
 // \u2500\u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -112,11 +113,31 @@ export async function addFriendById(myId: string, targetId: string): Promise<Add
 }
 
 export async function acceptFriendRequest(friendshipId: string, myUserId?: string): Promise<boolean> {
+  // Fetch the request row BEFORE updating so we can figure out who
+  // the original sender is and push a "request accepted" notification
+  // back to them. Small extra query, but only fires on accept so the
+  // overhead is negligible.
+  const { data: row } = await supabase
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('id', friendshipId)
+    .single();
+
   const { error } = await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId);
   if (log.supabaseError('friends', 'acceptFriendRequest', error, { friendshipId })) return false;
   if (myUserId) {
     const { count } = await supabase.from('friendships').select('id', { count: 'exact', head: true }).eq('status', 'accepted').or(`requester_id.eq.${myUserId},addressee_id.eq.${myUserId}`);
     checkAchievements(myUserId, { type: 'friend_added', data: { totalFriends: count ?? 0 } }).catch(() => {});
+
+    // Ping the original requester. We only push to them if they're
+    // NOT the one accepting (me accepting my own pending outgoing
+    // request shouldn't fire a self-notification).
+    if (row?.requester_id && row.requester_id !== myUserId) {
+      const { data: me } = await supabase.from('profiles').select('username').eq('id', myUserId).single();
+      if (me?.username) {
+        notifyFriendRequestAccepted(row.requester_id, me.username).catch(() => {});
+      }
+    }
   }
   return true;
 }

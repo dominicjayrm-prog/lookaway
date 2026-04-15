@@ -175,6 +175,19 @@ export async function checkAchievements(
         { onConflict: 'user_id,achievement_id' },
       );
     }
+
+    // Fire push notifications for any tiers that unlocked in this
+    // pass. Fire-and-forget — we shouldn't block the player's
+    // gameplay flow on a notification send. `notifyUser` already
+    // respects the user's `achievements` preference and the daily
+    // rate limit, so we don't have to filter here.
+    if (unlocks.length > 0) {
+      const { notifyAchievementUnlocked } = await import('@/src/utils/notifications');
+      for (const u of unlocks) {
+        const tierLabel = u.tier.charAt(0).toUpperCase() + u.tier.slice(1);
+        notifyAchievementUnlocked(userId, u.achievementName, tierLabel, u.gems).catch(() => {});
+      }
+    }
   } catch (e) {
     log.error('achievements', 'checkAchievements threw', e);
   }

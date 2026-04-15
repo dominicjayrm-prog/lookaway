@@ -334,10 +334,14 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
     });
   }, [step]);
 
+  // Tight copy — descriptions must fit in 2 lines inside the step
+  // cards on an iPhone SE / Mini without overflowing into the
+  // pagination dots. Previously "The scene disappears completely"
+  // wrapped to 3 lines and spilled over the bottom bar.
   const steps = [
-    { num: '1', title: 'Memorise', desc: 'Study the shapes, colours, and positions' },
-    { num: '2', title: 'Go blank', desc: 'The scene disappears completely' },
-    { num: '3', title: 'Answer', desc: 'Test your memory with questions' },
+    { num: '1', title: 'Memorise', desc: 'Study the shapes and colours' },
+    { num: '2', title: 'Go blank', desc: 'The scene disappears' },
+    { num: '3', title: 'Answer', desc: 'Test your memory' },
   ];
 
   return (
@@ -421,7 +425,7 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
                 <Text style={{ fontSize: 13, fontWeight: '800', color: i === step ? 'white' : tc.textLight }}>{st.num}</Text>
               </View>
               <Text style={{ fontSize: 14, fontWeight: '700', color: i === step ? C.accent : tc.text, marginTop: 4 }} numberOfLines={1}>{st.title}</Text>
-              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 3, lineHeight: 14 }} numberOfLines={3}>{st.desc}</Text>
+              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 3, lineHeight: 14 }} numberOfLines={2}>{st.desc}</Text>
             </Pressable>
           </FadeIn>
         ))}
