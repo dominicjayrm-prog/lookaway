@@ -496,7 +496,12 @@ function PlayTab() {
             </View>
             <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
-            {inRecoveryWindow ? (
+            {inRecoveryWindow && (
+              // Recovery countdown stays — it's a critical safety
+              // prompt. The next-milestone preview ("Day 150: 50 +3")
+              // was removed because it crowded the stat card and
+              // duplicated info the dedicated streak-rewards screen
+              // already presents better.
               <Text
                 style={[
                   styles.streakReward,
@@ -507,13 +512,6 @@ function PlayTab() {
                 {(recoveryMinsRemaining ?? 0) < 5 ? '\u26A0\uFE0F ' : '\u23F1 '}
                 {recoveryMinsRemaining} min to recover
               </Text>
-            ) : (
-              nextStreakReward && (
-                <Text style={[styles.streakReward, { color: colors.wrong }]} numberOfLines={1}>
-                  Day {nextStreakReward.day}: {nextStreakReward.gems}{'\u{1F48E}'}
-                  {nextStreakReward.shields > 0 ? ` +${nextStreakReward.shields}${'\u{1F6E1}\uFE0F'}` : ''}
-                </Text>
-              )
             )}
           </Pressable>
         </View>
