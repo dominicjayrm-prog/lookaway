@@ -332,7 +332,19 @@ function AuthScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
+              <View style={styles.passwordLabelRow}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
+                {mode === 'login' && (
+                  <Pressable
+                    onPress={() => router.push('/(auth)/forgot-password')}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Forgot password"
+                  >
+                    <Text style={[styles.forgotLink, { color: colors.accent }]}>Forgot?</Text>
+                  </Pressable>
+                )}
+              </View>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: focusedField === 'password' ? colors.accent : 'transparent' }]}
                 placeholder="At least 6 characters"
@@ -414,6 +426,10 @@ const styles = StyleSheet.create({
   formSubtitle: { fontSize: typography.sizes.md, marginBottom: spacing.xxl },
   inputContainer: { marginBottom: spacing.lg },
   inputLabel: { fontSize: typography.sizes.sm, fontWeight: '600', marginBottom: spacing.sm },
+  // "Forgot?" link sits inline with the Password label (right-aligned)
+  // so it's discoverable without adding a whole row under the input.
+  passwordLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  forgotLink: { fontSize: typography.sizes.sm, fontWeight: '700', marginBottom: spacing.sm },
   input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg, borderWidth: 1.5, borderColor: 'transparent' },
   usernameRow: { flexDirection: 'row', alignItems: 'center', borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14 },
   atPrefix: { fontSize: typography.sizes.lg, fontWeight: '600', marginRight: 2 },

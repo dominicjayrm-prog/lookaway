@@ -115,6 +115,11 @@ function ShopTab() {
   // ad-unlocking a common) wouldn't flip the card to OWNED until some
   // other state change forced a re-render.
   const { gems, powerUps, buyPowerUp, refillLivesWithGems, addGems, ownedCosmetics } = useGameStore();
+  // Read subscription status reactively so the Blanked+ upsell
+  // banner disappears immediately when the user becomes a subscriber
+  // (and re-appears if they ever churn). Selector form triggers a
+  // re-render on change, unlike useGameStore.getState() one-shots.
+  const isSubscribed = useGameStore((s) => s.isSubscribed());
   const [selectedMode, setSelectedMode] = useState('classic');
   const [cosmeticTab, setCosmeticTab] = useState<'featured' | 'frames' | 'banners' | 'expressions'>('featured');
   const [gemShortfall, setGemShortfall] = useState<{ cost: number; name: string } | null>(null);
@@ -346,33 +351,38 @@ function ShopTab() {
             </Text>
           </View>
         )}
-        {/* ── Blanked+ Banner ── */}
-        <Pressable
-          style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-          onPress={() => setShowPaywall(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Open Blanked Plus subscription"
-        >
-          <LinearGradient
-            colors={['#6C5CE7', '#5B4CC8']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.plusBanner}
+        {/* ── Blanked+ Banner ── hidden for existing subscribers so
+            they're not upsold their own product. The Cosmetics
+            section below shifts up naturally since Pressable is
+            just omitted from the flow. */}
+        {!isSubscribed && (
+          <Pressable
+            style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+            onPress={() => setShowPaywall(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Open Blanked Plus subscription"
           >
-            <View style={styles.plusBannerLeft}>
-              <View style={styles.plusLogoBg}>
-                <Blink expression="celebrate" size={28} />
+            <LinearGradient
+              colors={['#6C5CE7', '#5B4CC8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.plusBanner}
+            >
+              <View style={styles.plusBannerLeft}>
+                <View style={styles.plusLogoBg}>
+                  <Blink expression="celebrate" size={28} />
+                </View>
+                <View>
+                  <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
+                  <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 300 gems/mo</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
-                <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 300 gems/mo</Text>
+              <View style={styles.plusArrow}>
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
               </View>
-            </View>
-            <View style={styles.plusArrow}>
-              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
-            </View>
-          </LinearGradient>
-        </Pressable>
+            </LinearGradient>
+          </Pressable>
+        )}
 
         {/* ── Starter Pack (24hr window only) ── */}
         {starterPackAvailable && (

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
+import { supabase } from '@/src/lib/supabase';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
 import {
   registerPushToken,
@@ -51,6 +52,7 @@ function LevelCacheLoader() {
 
 function DeepLinkHandler() {
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     // Handle incoming deep links
@@ -71,6 +73,22 @@ function DeepLinkHandler() {
   useEffect(() => {
     if (user?.id) processPendingInvite(user.id);
   }, [user?.id]);
+
+  // Password recovery flow — when the user taps the link in a reset
+  // email, Supabase exchanges the token and fires the
+  // 'PASSWORD_RECOVERY' auth event. We intercept it here and route
+  // to the dedicated reset screen regardless of where they were in
+  // the app when the deep link fired. This has to live alongside the
+  // auth state listener in AuthProvider; keeping the router.push
+  // here keeps routing concerns out of that provider.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        router.push('/(auth)/reset-password');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   return null;
 }

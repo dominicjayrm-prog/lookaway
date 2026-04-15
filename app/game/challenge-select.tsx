@@ -9,7 +9,6 @@ import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, MODE_ORDER, EXCLUSIVE_MODES } from '@/src/data/challengeModes';
 import { DIFFICULTY_META, isUserOnline, sendInvite, pickChallengeLevels, type ChallengeDifficulty } from '@/src/utils/challengeFlow';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
-import { notifyChallengeReceived } from '@/src/utils/notifications';
 import { spacing } from '@/src/theme/spacing';
 
 function ModeIcon({ mode, size = 22, color = '#FFF' }: { mode: string; size?: number; color?: string }) {
@@ -115,25 +114,29 @@ function ChallengeSelectScreen() {
     }
   }
 
-  /** Offline friend path — falls back to the original async flow
-   *  where the challenger plays first and the push notification is
-   *  fired after insertChallengeRow. */
-  function startAsyncChallenge() {
-    if (selectedMode === 'classic') {
-      router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create', difficulty } });
-    } else {
-      router.push({ pathname: '/game/challenge-mode', params: { friendId, mode: selectedMode, action: 'create' } });
-    }
-  }
+  // (Async fallback removed — challenges are real-time only now.
+  // If the friend is offline, handleStart shows an error popup
+  // instead of silently creating a pending row that may sit for
+  // hours.)
 
   const handleStart = () => {
     if (friendOnline === true) { startInstantInvite(); return; }
-    // Offline or unknown — confirm with the user. We default to
-    // async since real-time requires both players active at the
-    // same time.
-    const title = '@' + (friendUsername || 'friend') + ' is offline';
-    const body = 'Send an async challenge? They\u2019ll play when they next open the app and you\u2019ll see the result after they finish.';
-    confirm(title, body, startAsyncChallenge);
+    // Friend isn't online — hard block. The async fallback is
+    // disabled by design: the user wants real-time 1v1 only, with
+    // a clear error instead of a silently-created pending row.
+    // Re-check status on tap so a friend who just came online
+    // (between the 5s poll and the tap) still gets through.
+    if (friendId) {
+      isUserOnline(friendId).then((online) => {
+        if (online) { setFriendOnline(true); startInstantInvite(); return; }
+        notify(
+          '@' + (friendUsername || 'friend') + ' is offline',
+          'You can only send a challenge when your friend has the app open. Ask them to hop on and try again.',
+        );
+      });
+    } else {
+      notify('Friend unavailable', 'Couldn\u2019t find that friend. Go back and pick them again.');
+    }
   };
 
   return (
@@ -258,13 +261,13 @@ function ChallengeSelectScreen() {
           onPress={handleStart}
           disabled={sending}
           accessibilityRole="button"
-          accessibilityLabel={friendOnline ? 'Send instant challenge invite' : 'Send async challenge'}
+          accessibilityLabel={friendOnline ? 'Send instant challenge invite' : 'Friend is offline — cannot challenge'}
         >
           {sending ? (
             <ActivityIndicator color="#FFF" />
           ) : (
             <Text style={styles.startBtnText}>
-              {friendOnline ? 'Invite to 1v1' : 'Send async challenge'}
+              {friendOnline ? 'Invite to 1v1' : 'Friend is offline'}
             </Text>
           )}
         </Pressable>
