@@ -98,3 +98,34 @@ export const POWERUP_EMOJIS: Record<string, string> = {
   'cc_slow_time': '\u23F1',
   'cc_reveal_one': '\uD83D\uDCCC',
 };
+
+/**
+ * Map a power-up icon token (from the `icon` field on POWER_UPS
+ * entries) to a real Ionicons glyph name. The tokens are
+ * design-friendly aliases like `"scissors"` / `"fast-forward"` /
+ * `"ghost"` that don't all correspond to valid Ionicons — this
+ * translator guarantees every token renders a sensible glyph
+ * instead of the question-mark fallback.
+ *
+ * Anything unknown renders a generic `flash` so a future misnamed
+ * icon is obvious but doesn't break the layout.
+ */
+export function iconForPowerUp(token: string): string {
+  switch (token) {
+    case 'timer': return 'timer';
+    case 'eye': return 'eye';
+    case 'scissors': return 'cut';
+    case 'fast-forward': return 'play-forward';
+    case 'ghost': return 'skull-outline';
+    case 'refresh': return 'refresh';
+    case 'sparkle': return 'sparkles';
+    case 'snowflake': return 'snow';
+    case 'replay': return 'play-back';
+    case 'shield': return 'shield';
+    case 'slow': return 'hourglass';
+    case 'filter': return 'color-palette';
+    case 'pin': return 'pin';
+    case 'heart-shield': return 'heart';
+    default: return 'flash';
+  }
+}

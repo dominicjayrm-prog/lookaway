@@ -68,6 +68,9 @@ export async function getGlobalLeaderboard(limit: number = 50): Promise<Leaderbo
     highest_world: row.highest_world ?? 1,
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
+    avatar_url: row.avatar_url ?? null,
+    equipped_frame: row.equipped_frame ?? null,
+    equipped_expression: row.equipped_expression ?? null,
   }));
 }
 
@@ -106,6 +109,9 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
     highest_world: row.highest_world ?? 1,
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
+    avatar_url: row.avatar_url ?? null,
+    equipped_frame: row.equipped_frame ?? null,
+    equipped_expression: row.equipped_expression ?? null,
   }));
 }
 

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { POWER_UPS, QUESTION_POWER_UPS } from '@/src/data/powerUps';
+import { POWER_UPS, QUESTION_POWER_UPS, iconForPowerUp } from '@/src/data/powerUps';
 import type { PowerUpId } from '@/src/utils/scoring';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import Svg, { Polygon } from 'react-native-svg';
@@ -56,7 +56,7 @@ export const PowerUpBar = React.memo(function PowerUpBar({ usedThisLevel, onUseP
             {used ? (
               <Ionicons name="checkmark-circle" size={22} color={colors.textLight} />
             ) : (
-              <Ionicons name={def.icon as keyof typeof Ionicons.glyphMap} size={22} color={available ? def.color : colors.textLight} />
+              <Ionicons name={iconForPowerUp(def.icon) as keyof typeof Ionicons.glyphMap} size={22} color={available ? def.color : colors.textLight} />
             )}
             <Text style={[styles.count, { color: used ? colors.textLight : available ? def.color : colors.textLight }]}>
               {used ? '\u2713' : `x${count}`}

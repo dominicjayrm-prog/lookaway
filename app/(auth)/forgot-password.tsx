@@ -191,7 +191,14 @@ const styles = StyleSheet.create({
   input: { borderRadius: borderRadius.md, paddingHorizontal: spacing.lg, paddingVertical: 14, fontSize: typography.sizes.lg },
   errorContainer: { backgroundColor: 'rgba(255,107,107,0.08)', borderRadius: borderRadius.sm, padding: spacing.md },
   errorText: { fontSize: typography.sizes.sm, textAlign: 'center' },
-  primaryButton: { borderRadius: borderRadius.md, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: spacing.sm, ...shadows.card },
+  // `alignSelf: 'stretch'` makes the button span the full width of
+  // its parent in the success-state `centerContainer` (which sets
+  // `alignItems: 'center'`, shrinking children to content size). Without
+  // it the label "Back to sign in" has no horizontal breathing room —
+  // you see the text touching the button edges. In the form state the
+  // parent flexbox already gives the button full width, so this has
+  // no effect there.
+  primaryButton: { alignSelf: 'stretch', borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: spacing.sm, ...shadows.card },
   primaryButtonText: { color: '#FFFFFF', fontSize: typography.sizes.lg, fontWeight: '700' },
   buttonDisabled: { opacity: 0.6 },
   successTitle: { fontSize: 24, fontWeight: '800', marginTop: spacing.md },

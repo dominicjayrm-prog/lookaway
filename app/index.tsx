@@ -17,7 +17,7 @@ function hasSeenOnboarding(): boolean {
 }
 
 function Index() {
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecovery } = useAuth();
   const { colors } = useTheme();
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [hasUsername, setHasUsername] = useState<boolean | null>(null);
@@ -65,6 +65,16 @@ function Index() {
 
   // Already logged in — check for username before entering app
   if (session) {
+    // Password reset flow: Supabase's PKCE exchange hands us a real
+    // session, but the user hasn't proven they know the new
+    // password yet — they still need to set it. Hard-redirect to
+    // the reset screen instead of letting them into the app.
+    // The flag is cleared after a successful password update (or
+    // on SIGNED_OUT) so normal sign-in flows don't detour here.
+    if (passwordRecovery) {
+      return <Redirect href="/(auth)/reset-password" />;
+    }
+
     // Still checking username — show loading
     if (hasUsername === null) {
       return (

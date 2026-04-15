@@ -62,7 +62,7 @@ function LevelCacheLoader() {
 }
 
 function DeepLinkHandler() {
-  const { user } = useAuth();
+  const { user, markPasswordRecovery } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -92,16 +92,35 @@ function DeepLinkHandler() {
       try {
         const isReset = url.includes('reset-password');
         if (!isReset) return;
-        const fail = (msg: string) => Alert.alert(
-          'Reset link not valid',
-          msg + ' Tap "Forgot?" on the sign in screen to send a fresh one.',
-        );
+
+        // CRITICAL: set the recovery flag BEFORE we exchange the code.
+        // Supabase's exchange will fire both `SIGNED_IN` and
+        // `PASSWORD_RECOVERY` events, and `app/index.tsx` reacts to
+        // the session appearing by redirecting to `(tabs)`. If we
+        // only set the flag AFTER exchange (via the PASSWORD_RECOVERY
+        // event listener in AuthProvider), we lose the race and the
+        // user ends up on the home tab, auto-logged-in — which is
+        // exactly the bug we're fixing. Setting it here guarantees
+        // index.tsx's first re-render already sees `passwordRecovery
+        // === true` and routes to the reset screen.
+        markPasswordRecovery();
+
+        const fail = async (msg: string) => {
+          // Sign out so the user doesn't end up with a half-finished
+          // recovery session that would bypass the login screen on
+          // next launch. Safe even if no session exists.
+          try { await supabase.auth.signOut(); } catch {}
+          Alert.alert(
+            'Reset link not valid',
+            msg + ' Tap "Forgot?" on the sign in screen to send a fresh one.',
+          );
+        };
         const codeMatch = url.match(/[?&#]code=([^&]+)/);
         if (codeMatch?.[1]) {
           const { error } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
           if (error) {
             console.warn('exchangeCodeForSession failed:', error.message);
-            fail('That reset link has expired or already been used.');
+            await fail('That reset link has expired or already been used.');
           }
           return;
         }
@@ -115,14 +134,15 @@ function DeepLinkHandler() {
             const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
             if (error) {
               console.warn('setSession from hash failed:', error.message);
-              fail('That reset link has expired or already been used.');
+              await fail('That reset link has expired or already been used.');
             }
           } else {
-            fail('That reset link is missing the security token.');
+            await fail('That reset link is missing the security token.');
           }
         }
       } catch (e) {
         console.warn('password reset deep link handler threw:', e);
+        try { await supabase.auth.signOut(); } catch {}
         Alert.alert('Reset link not valid', 'Something went wrong opening the link. Tap "Forgot?" on the sign in screen to send a fresh one.');
       }
     };

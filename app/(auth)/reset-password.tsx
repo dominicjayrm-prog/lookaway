@@ -31,7 +31,7 @@ import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 function ResetPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { session } = useAuth();
+  const { session, clearPasswordRecovery } = useAuth();
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -77,6 +77,11 @@ function ResetPasswordScreen() {
       return;
     }
     setDone(true);
+    // Clear the recovery flag FIRST so that when signOut fires below
+    // (which itself clears it too, belt-and-braces), any transient
+    // re-render while navigating doesn't briefly re-route the user
+    // back to this screen.
+    clearPasswordRecovery();
     // Sign out of the recovery session so the user has to log in
     // fresh with the new password — confirms they know it and
     // keeps other-device sessions invalidated.
@@ -143,18 +148,27 @@ function ResetPasswordScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
-              placeholder="Type it again"
-              placeholderTextColor={colors.textLight}
-              value={confirm}
-              onChangeText={setConfirm}
-              secureTextEntry={!showPwd}
-              autoCapitalize="none"
-              autoComplete="new-password"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
+            {/* The shared `input` style is `flex: 1, paddingVertical: 0`
+                because it was designed to sit inside an `inputWrap`
+                container (see the new-password field above). Applying
+                it standalone collapses the field to zero height, which
+                is why this box was invisible and untappable. Wrap it
+                in an `inputWrap` the same way so the confirm input
+                matches the new-password input exactly. */}
+            <View style={[styles.inputWrap, { backgroundColor: colors.surface }]}>
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Type it again"
+                placeholderTextColor={colors.textLight}
+                value={confirm}
+                onChangeText={setConfirm}
+                secureTextEntry={!showPwd}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+            </View>
           </View>
 
           {error && (
