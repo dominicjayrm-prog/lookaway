@@ -23,7 +23,6 @@ import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
-import { createChallenge } from '@/src/utils/challengeFlow';
 import { spacing } from '@/src/theme/spacing';
 
 interface ChallengeRow {
@@ -32,6 +31,7 @@ interface ChallengeRow {
   challenger_score: number | null;
   challenged_score: number | null;
   status: string | null;
+  abandoned_by: string | null;
 }
 
 interface ResultData {
@@ -88,7 +88,7 @@ function ChallengeResultScreen() {
     async function load() {
       const { data: ch } = await supabase
         .from('friend_challenges')
-        .select('challenger_id, challenged_id, challenger_score, challenged_score, status')
+        .select('challenger_id, challenged_id, challenger_score, challenged_score, status, abandoned_by')
         .eq('id', challengeId)
         .single();
 
@@ -148,18 +148,62 @@ function ChallengeResultScreen() {
     };
   }, [challengeId, userId]);
 
-  const handleRematch = async () => {
-    if (!userId || !data) return;
-    const newId = await createChallenge(userId, data.friendId);
-    if (newId) {
-      router.replace({ pathname: '/game/challenge', params: { challengeId: newId, mode: 'create', friendId: data.friendId } });
-    }
+  // Rematch — route back to challenge-select with the friend already
+  // identified. This preserves mode (previously a speed_recall
+  // rematch silently became classic because we used createChallenge)
+  // AND lets the online-status check re-run cleanly: if the friend
+  // went offline since the last match, challenge-select shows the
+  // offline fallback; if they're still online, it kicks off a fresh
+  // live invite.
+  const handleRematch = () => {
+    if (!data) return;
+    router.replace({
+      pathname: '/game/challenge-select',
+      params: { friendId: data.friendId, friendUsername: data.theirUsername },
+    });
   };
 
   if (loading || !data || !row) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
         <Text style={[styles.loadingText, { color: colors.textMid }]}>Loading result...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Terminal state: one of the players bailed mid-match. Flip to
+  // the "opponent left" screen instead of waiting for scores that
+  // will never come. abandoned_by tells us who to blame.
+  if (row.status === 'abandoned') {
+    const iAbandoned = row.abandoned_by === userId;
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
+        <View style={styles.content}>
+          <View style={[styles.abandonedIcon, { backgroundColor: colors.wrongSoft }]}>
+            <Svg width={28} height={28} viewBox="0 0 24 24">
+              <Path d="M13 14L12 20 11 14 5 13 11 12 12 6 13 12 19 13Z" fill={colors.wrong} opacity={0.3} />
+              <Path d="M16 4L8 20" stroke={colors.wrong} strokeWidth={2.5} strokeLinecap="round" />
+            </Svg>
+          </View>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {iAbandoned ? 'You left the match' : `@${data.theirUsername} left`}
+          </Text>
+          <Text style={[styles.waitingBody, { color: colors.textMid }]}>
+            {iAbandoned
+              ? "You'll skip straight back to friends. No result recorded."
+              : 'Your opponent closed the game before finishing. The match has been cancelled.'}
+          </Text>
+          <View style={styles.buttons}>
+            {!iAbandoned && (
+              <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={handleRematch}>
+                <Text style={styles.primaryBtnText}>Send a new challenge</Text>
+              </Pressable>
+            )}
+            <Pressable style={styles.secondaryLink} onPress={() => router.replace('/(tabs)/friends')}>
+              <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to friends</Text>
+            </Pressable>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -273,6 +317,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
   title: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
   waitingBody: { fontSize: 14, textAlign: 'center', maxWidth: 320, lineHeight: 20, marginTop: -8 },
+  abandonedIcon: { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   waitingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18, borderRadius: 18, borderWidth: 1, width: '100%', maxWidth: 340, marginTop: 12 },
   waitingPlayer: { alignItems: 'center', gap: 6, flex: 1 },
   waitingName: { fontSize: 13, fontWeight: '600' },

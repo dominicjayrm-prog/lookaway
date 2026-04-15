@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { cancelInvite } from '@/src/utils/challengeFlow';
+import { cancelInvite, expireInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
 
 interface InviteRow {
@@ -164,18 +164,31 @@ export default function ChallengeWaitingScreen() {
 
   // Countdown timer anchored to invite_expires_at so the challenger
   // and the challenged see a consistent remaining time.
+  //
+  // On countdown-to-zero we ALSO call expireInvite() to flip the DB
+  // row to status='expired'. Without this, the row sits at 'invited'
+  // until the next expireOldChallenges() sweep (on friends-tab
+  // focus), which can be hours away if neither player opens Friends.
   useEffect(() => {
     if (!invite?.invite_expires_at || terminal) return;
     const endMs = new Date(invite.invite_expires_at).getTime();
+    const inviteId = invite.id;
+    let expiredWrite = false;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
       setSecondsLeft(remaining);
-      if (remaining === 0) setTerminal('expired');
+      if (remaining === 0) {
+        if (!expiredWrite) {
+          expiredWrite = true;
+          expireInvite(inviteId).catch(() => {});
+        }
+        setTerminal('expired');
+      }
     };
     tick();
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [invite?.invite_expires_at, terminal]);
+  }, [invite?.invite_expires_at, invite?.id, terminal]);
 
   // Pulse the "waiting" icon while the countdown is running.
   useEffect(() => {

@@ -14,16 +14,27 @@
  * this is a time-critical real-time invite, not a passive notification.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, Animated, Platform, Alert } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/src/lib/supabase';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { acceptInvite, declineInvite } from '@/src/utils/challengeFlow';
+import { acceptInvite, declineInvite, expireInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
 import { sounds } from '@/src/lib/sounds';
+
+/** Cross-platform notification helper. Alert.alert does not render on
+ *  React Native Web, so we fall back to window.alert there. Kept
+ *  lightweight — error surfacing only, no dismiss callback. */
+function notify(title: string, body?: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    (window as any).alert?.(body ? `${title}\n\n${body}` : title);
+    return;
+  }
+  Alert.alert(title, body);
+}
 
 /** Routes where interrupting with a full-screen invite would hijack
  *  the player's attention mid-task. On these pages we still receive
@@ -125,8 +136,8 @@ export function IncomingInviteListener() {
           sounds.play('powerUp');
         },
       )
-      // Also watch for UPDATEs — if the challenger cancels or the row
-      // is otherwise invalidated, we should dismiss the modal.
+      // Also watch for UPDATEs — if the challenger cancels (via
+      // row.status flip) or it expires, we should dismiss the modal.
       .on(
         'postgres_changes',
         {
@@ -141,6 +152,29 @@ export function IncomingInviteListener() {
             // Challenger cancelled / it expired / we already acted.
             setInvite(null);
           }
+          // Also clear a queued pending invite if it was invalidated
+          // while we were on a blocked route.
+          if (pendingInvite && row.id === pendingInvite.id && row.status !== 'invited') {
+            setPendingInvite(null);
+          }
+        },
+      )
+      // DELETE handler — cancelInvite() is a row delete, not a status
+      // change, so the UPDATE listener above never sees those events.
+      // Without this, the invitee's modal stays open for the full 60s
+      // after the challenger taps Cancel.
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'friend_challenges',
+          filter: `challenged_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.old as InviteRow;
+          if (invite && row?.id === invite.id) setInvite(null);
+          if (pendingInvite && row?.id === pendingInvite.id) setPendingInvite(null);
         },
       )
       .subscribe();
@@ -176,18 +210,33 @@ export function IncomingInviteListener() {
 
   // Countdown from invite_expires_at. Re-computes every second and
   // auto-dismisses on zero. Pulses the scale every second for tension.
+  //
+  // On countdown hit zero we ALSO write status='expired' to the DB
+  // so the challenger's waiting screen + every other client with a
+  // subscription sees the invite become terminal immediately, rather
+  // than waiting for the challenger's local timer to fire separately.
   useEffect(() => {
     if (!invite?.invite_expires_at) return;
     const endMs = new Date(invite.invite_expires_at).getTime();
+    const inviteId = invite.id;
+    let expiredWrite = false;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
       setSecondsLeft(remaining);
-      if (remaining === 0) setInvite(null);
+      if (remaining === 0) {
+        if (!expiredWrite) {
+          expiredWrite = true;
+          // Fire-and-forget; eq('status','invited') guard means a
+          // simultaneous write from the challenger is a no-op.
+          expireInvite(inviteId).catch(() => {});
+        }
+        setInvite(null);
+      }
     };
     tick();
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [invite?.invite_expires_at]);
+  }, [invite?.invite_expires_at, invite?.id]);
 
   // Subtle pulse on the countdown pill so users feel the urgency.
   useEffect(() => {
@@ -222,17 +271,24 @@ export function IncomingInviteListener() {
         router.push({ pathname: '/game/challenge-mode', params: { challengeId: invite.id, mode: invite.mode, action: 'play' } });
       }
     } else {
-      // Accept failed (likely row expired between render and tap).
-      // Dismiss the modal so the user isn't stuck.
+      // Accept failed — either the row expired between render and tap
+      // or a network blip. Surface a toast so the user isn't left
+      // wondering why nothing happened, and dismiss the modal.
       setInvite(null);
+      notify('Could not accept', 'That invite has expired or the network is unavailable. Ask your friend to send it again.');
     }
   }
 
   async function handleDecline() {
     if (!invite || !user?.id) return;
     actedIdsRef.current.add(invite.id);
-    const { data: me } = await supabase.from('profiles').select('username').eq('id', user.id).single();
-    await declineInvite(invite.id, me?.username, invite.challenger_id);
+    try {
+      const { data: me } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+      const ok = await declineInvite(invite.id, me?.username, invite.challenger_id);
+      if (!ok) notify('Could not decline', 'Your friend will still see the invite time out after 60s.');
+    } catch {
+      notify('Could not decline', 'Your friend will still see the invite time out after 60s.');
+    }
     sounds.play('wrong');
     setInvite(null);
   }

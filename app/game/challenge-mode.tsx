@@ -8,7 +8,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
-import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import { createChallenge, recordChallengeScore, abandonChallenge } from '@/src/utils/challengeFlow';
 import { notifyChallengeReceived } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
 import { recordFriendChallengedForChallenges } from '@/src/utils/weeklyChallenges';
@@ -228,7 +228,18 @@ function ChallengeModeScreen() {
         nonPremiumBody={action === 'create'
           ? "Your progress will be lost and no challenge will be sent to your friend."
           : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
-        onLeave={() => { setShowQuitConfirm(false); router.back(); }}
+        onLeave={() => {
+          setShowQuitConfirm(false);
+          // Live-challenge abandonment — flip the row to 'abandoned'
+          // so the opponent's result screen breaks out of its
+          // waiting state with a "they left the match" terminal
+          // view. Only when the row already exists (live invite
+          // path). Fire-and-forget.
+          if (dbChallengeId && userId) {
+            abandonChallenge(dbChallengeId, userId).catch(() => {});
+          }
+          router.back();
+        }}
         onKeepPlaying={() => setShowQuitConfirm(false)}
       />
     </SafeAreaView>

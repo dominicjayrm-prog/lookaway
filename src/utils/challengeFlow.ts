@@ -597,3 +597,43 @@ export async function cancelInvite(challengeId: string): Promise<boolean> {
     return false;
   }
 }
+
+/** Mark a live or invited challenge as abandoned by the given user.
+ *  Fires from game-screen quit flows — if a player bails out
+ *  mid-match, the opponent's result screen flips to
+ *  "@opponent left the match" instead of stranding them on a
+ *  "waiting for scores…" spinner forever.
+ *
+ *  Guards: only flips rows currently in 'live' or 'invited' so a
+ *  late tap after completion / expiry / decline is a no-op. */
+export async function abandonChallenge(challengeId: string, userId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('friend_challenges')
+      .update({ status: 'abandoned', abandoned_by: userId })
+      .eq('id', challengeId)
+      .in('status', ['live', 'invited']);
+    if (log.supabaseError('challenges', 'abandonChallenge', error, { challengeId, userId })) return false;
+    return true;
+  } catch (e) {
+    log.error('challenges', 'abandonChallenge threw', e, { challengeId, userId });
+    return false;
+  }
+}
+
+/** Flip a still-open invite to 'expired' when the 60s acceptance
+ *  window elapses. Both the challenger's waiting screen and the
+ *  challenged user's IncomingInviteListener call this when their
+ *  local countdown hits zero — the .eq('status','invited') guard
+ *  makes the second caller a no-op. */
+export async function expireInvite(challengeId: string): Promise<void> {
+  try {
+    await supabase
+      .from('friend_challenges')
+      .update({ status: 'expired' })
+      .eq('id', challengeId)
+      .eq('status', 'invited');
+  } catch (e) {
+    log.error('challenges', 'expireInvite threw', e, { challengeId });
+  }
+}

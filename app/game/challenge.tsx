@@ -19,6 +19,7 @@ import {
   pickChallengeLevels,
   insertChallengeRow,
   recordChallengeScore,
+  abandonChallenge,
   type ChallengeDifficulty,
 } from '@/src/utils/challengeFlow';
 import type { Level, Scene } from '@/src/types/game';
@@ -237,11 +238,22 @@ function ChallengeGameScreen() {
     setShowQuitConfirm(true);
   }, [phase, router]);
 
-  const confirmLeave = useCallback(() => {
+  const confirmLeave = useCallback(async () => {
     setShowQuitConfirm(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Live-challenge abandonment: mark the row 'abandoned' so the
+    // opponent's result screen can flip to "they left the match"
+    // instead of waiting on a perpetual spinner. Only fires when
+    // the row already exists in the DB (i.e. the live-invite path
+    // that came in via IncomingInviteListener + /game/challenge-
+    // waiting, NOT the async-create path where the row is only
+    // inserted after the challenger finishes playing). Fire-and-
+    // forget — navigation shouldn't block on a network write.
+    if (dbChallengeId && userId) {
+      abandonChallenge(dbChallengeId, userId).catch(() => {});
+    }
     router.back();
-  }, [router]);
+  }, [router, dbChallengeId, userId]);
 
   // Score calculation for complete phase
   const totalCorrect = answers.filter(a => a.correct).length;
