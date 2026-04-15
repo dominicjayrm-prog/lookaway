@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { ALL_POWERUPS } from '@/src/data/powerUps';
+import { ALL_POWERUPS, iconForPowerUp } from '@/src/data/powerUps';
 import { spacing } from '@/src/theme/spacing';
 
 function BoltIcon({ size = 18, color = '#6C5CE7' }: { size?: number; color?: string }) {
@@ -91,7 +91,7 @@ export function ModePowerUpBar({ mode, used, onUse, onBuyOut, disabled }: Props)
             {isUsed ? (
               <Ionicons name="checkmark-circle" size={22} color={colors.textLight} />
             ) : (
-              <Ionicons name={iconFor(def.icon) as keyof typeof Ionicons.glyphMap} size={22} color={available ? def.color : colors.textLight} />
+              <Ionicons name={iconForPowerUp(def.icon) as keyof typeof Ionicons.glyphMap} size={22} color={available ? def.color : colors.textLight} />
             )}
             <Text style={[styles.count, { color: isUsed ? colors.textLight : available ? def.color : colors.textLight }]}>
               {isUsed ? '\u2713' : `x${count}`}
@@ -107,30 +107,6 @@ export function ModePowerUpBar({ mode, used, onUse, onBuyOut, disabled }: Props)
       })}
     </View>
   );
-}
-
-/** Map power-up icon tokens to real Ionicons names. The powerUps.ts
- *  file uses a mix of tokens like "timer", "snowflake", "ghost" that
- *  aren't all valid Ionicons; we translate them here so every entry
- *  renders something sensible. */
-function iconFor(token: string): string {
-  switch (token) {
-    case 'timer': return 'timer';
-    case 'eye': return 'eye';
-    case 'scissors': return 'cut';
-    case 'fast-forward': return 'play-forward';
-    case 'ghost': return 'skull-outline';
-    case 'refresh': return 'refresh';
-    case 'sparkle': return 'sparkles';
-    case 'snowflake': return 'snow';
-    case 'replay': return 'play-back';
-    case 'shield': return 'shield';
-    case 'slow': return 'hourglass';
-    case 'filter': return 'color-palette';
-    case 'pin': return 'pin';
-    case 'heart-shield': return 'heart';
-    default: return 'flash';
-  }
 }
 
 const styles = StyleSheet.create({

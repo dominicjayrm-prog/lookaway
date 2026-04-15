@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { POWER_UPS } from '@/src/data/powerUps';
+import { POWER_UPS, iconForPowerUp } from '@/src/data/powerUps';
 import type { PowerUpId } from '@/src/utils/scoring';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 
@@ -34,7 +34,7 @@ export const BuyPowerUpPopup = React.memo(function BuyPowerUpPopup({ powerUpId, 
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Ionicons name={def.icon as keyof typeof Ionicons.glyphMap} size={32} color={def.color} style={{ marginBottom: 8 }} />
+          <Ionicons name={iconForPowerUp(def.icon) as keyof typeof Ionicons.glyphMap} size={32} color={def.color} style={{ marginBottom: 8 }} />
           <Text style={[styles.name, { color: colors.text }]}>{def.name}</Text>
           <Text style={[styles.desc, { color: colors.textMid }]}>{def.description}</Text>
           <Text style={[styles.remaining, { color: colors.wrong }]}>You have 0 remaining</Text>

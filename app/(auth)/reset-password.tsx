@@ -148,18 +148,27 @@ function ResetPasswordScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
-              placeholder="Type it again"
-              placeholderTextColor={colors.textLight}
-              value={confirm}
-              onChangeText={setConfirm}
-              secureTextEntry={!showPwd}
-              autoCapitalize="none"
-              autoComplete="new-password"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
+            {/* The shared `input` style is `flex: 1, paddingVertical: 0`
+                because it was designed to sit inside an `inputWrap`
+                container (see the new-password field above). Applying
+                it standalone collapses the field to zero height, which
+                is why this box was invisible and untappable. Wrap it
+                in an `inputWrap` the same way so the confirm input
+                matches the new-password input exactly. */}
+            <View style={[styles.inputWrap, { backgroundColor: colors.surface }]}>
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Type it again"
+                placeholderTextColor={colors.textLight}
+                value={confirm}
+                onChangeText={setConfirm}
+                secureTextEntry={!showPwd}
+                autoCapitalize="none"
+                autoComplete="new-password"
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+            </View>
           </View>
 
           {error && (
