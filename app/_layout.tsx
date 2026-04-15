@@ -55,16 +55,54 @@ function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    // Handle incoming deep links
-    const handleUrl = ({ url }: { url: string }) => {
+    // Handle incoming deep links. Two flows live here:
+    //  1. Friend invites (blanked://invite/<id>)
+    //  2. Password recovery — Supabase emails contain a link that
+    //     resolves to blanked://reset-password?code=<pkce_code> on
+    //     native. Because supabase-js is configured with
+    //     detectSessionInUrl=false on native (true would only work
+    //     if the URL hit a webview), we have to manually extract
+    //     the PKCE code and exchange it for a session. That call
+    //     then triggers the PASSWORD_RECOVERY auth event which the
+    //     other effect below routes on.
+    const handleUrl = async ({ url }: { url: string }) => {
+      // Friend invite path — unchanged.
       const inviterId = parseInviteUrl(url);
       if (inviterId) storePendingInvite(inviterId);
+
+      // Password reset path. Supabase PKCE puts the code in either
+      // the query string OR the URL fragment depending on flow.
+      // Parse both. We also accept the legacy magic-link format
+      // that uses access_token + refresh_token in the fragment.
+      try {
+        const isReset = url.includes('reset-password');
+        if (!isReset) return;
+        const codeMatch = url.match(/[?&#]code=([^&]+)/);
+        if (codeMatch?.[1]) {
+          const { error } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
+          if (error) console.warn('exchangeCodeForSession failed:', error.message);
+          return;
+        }
+        // Fallback: legacy hash-fragment tokens
+        const hashIdx = url.indexOf('#');
+        if (hashIdx > -1) {
+          const params = new URLSearchParams(url.slice(hashIdx + 1));
+          const access = params.get('access_token');
+          const refresh = params.get('refresh_token');
+          if (access && refresh) {
+            const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
+            if (error) console.warn('setSession from hash failed:', error.message);
+          }
+        }
+      } catch (e) {
+        console.warn('password reset deep link handler threw:', e);
+      }
     };
 
-    // Check initial URL (app opened from link)
+    // Cold-start URL (app opened directly from the email link)
     Linking.getInitialURL().then(url => { if (url) handleUrl({ url }); }).catch(() => {});
 
-    // Listen for future links
+    // Foreground URL (app was already open when the link fired)
     const sub = Linking.addEventListener('url', handleUrl);
     return () => sub.remove();
   }, []);
@@ -74,13 +112,11 @@ function DeepLinkHandler() {
     if (user?.id) processPendingInvite(user.id);
   }, [user?.id]);
 
-  // Password recovery flow — when the user taps the link in a reset
-  // email, Supabase exchanges the token and fires the
-  // 'PASSWORD_RECOVERY' auth event. We intercept it here and route
-  // to the dedicated reset screen regardless of where they were in
-  // the app when the deep link fired. This has to live alongside the
-  // auth state listener in AuthProvider; keeping the router.push
-  // here keeps routing concerns out of that provider.
+  // PASSWORD_RECOVERY auth event fires after exchangeCodeForSession
+  // succeeds (or for the legacy hash-fragment flow when setSession
+  // succeeds with a recovery token). Either way: route to the
+  // reset screen. Keeping the router.push here rather than in
+  // AuthProvider keeps routing concerns out of the provider.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
