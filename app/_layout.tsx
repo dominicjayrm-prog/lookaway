@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { AppState, AppStateStatus, Linking, Platform } from 'react-native';
+import { Alert, AppState, AppStateStatus, Linking, Platform } from 'react-native';
 import { Stack, useRouter, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -28,6 +28,8 @@ import { sounds } from '@/src/lib/sounds';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
+import { initAdsAndTracking } from '@/src/utils/adService';
+import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +41,15 @@ function StoreHydrator() {
 
 function SoundLoader() {
   useEffect(() => { sounds.init(); }, []);
+  return null;
+}
+
+/** Fire the iOS App Tracking Transparency prompt and bring up the
+ *  AdMob SDK. App Store guideline 5.1.2 requires this BEFORE any
+ *  ad request, otherwise reviewers reject for "tracking without
+ *  consent". Idempotent — only runs once per app session. */
+function AdsInitialiser() {
+  useEffect(() => { initAdsAndTracking(); }, []);
   return null;
 }
 
@@ -55,16 +66,71 @@ function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    // Handle incoming deep links
-    const handleUrl = ({ url }: { url: string }) => {
+    // Handle incoming deep links. Two flows live here:
+    //  1. Friend invites (blanked://invite/<id>)
+    //  2. Password recovery — Supabase emails contain a link that
+    //     resolves to blanked://reset-password?code=<pkce_code> on
+    //     native. Because supabase-js is configured with
+    //     detectSessionInUrl=false on native (true would only work
+    //     if the URL hit a webview), we have to manually extract
+    //     the PKCE code and exchange it for a session. That call
+    //     then triggers the PASSWORD_RECOVERY auth event which the
+    //     other effect below routes on.
+    const handleUrl = async ({ url }: { url: string }) => {
+      // Friend invite path — unchanged.
       const inviterId = parseInviteUrl(url);
       if (inviterId) storePendingInvite(inviterId);
+
+      // Password reset path. Supabase PKCE puts the code in either
+      // the query string OR the URL fragment depending on flow.
+      // Parse both. We also accept the legacy magic-link format
+      // that uses access_token + refresh_token in the fragment.
+      //
+      // On any failure we surface a user-facing alert so they're
+      // not silently dumped on the login screen wondering what
+      // happened. The most common cause is an expired link (>1 hr).
+      try {
+        const isReset = url.includes('reset-password');
+        if (!isReset) return;
+        const fail = (msg: string) => Alert.alert(
+          'Reset link not valid',
+          msg + ' Tap "Forgot?" on the sign in screen to send a fresh one.',
+        );
+        const codeMatch = url.match(/[?&#]code=([^&]+)/);
+        if (codeMatch?.[1]) {
+          const { error } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
+          if (error) {
+            console.warn('exchangeCodeForSession failed:', error.message);
+            fail('That reset link has expired or already been used.');
+          }
+          return;
+        }
+        // Fallback: legacy hash-fragment tokens
+        const hashIdx = url.indexOf('#');
+        if (hashIdx > -1) {
+          const params = new URLSearchParams(url.slice(hashIdx + 1));
+          const access = params.get('access_token');
+          const refresh = params.get('refresh_token');
+          if (access && refresh) {
+            const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
+            if (error) {
+              console.warn('setSession from hash failed:', error.message);
+              fail('That reset link has expired or already been used.');
+            }
+          } else {
+            fail('That reset link is missing the security token.');
+          }
+        }
+      } catch (e) {
+        console.warn('password reset deep link handler threw:', e);
+        Alert.alert('Reset link not valid', 'Something went wrong opening the link. Tap "Forgot?" on the sign in screen to send a fresh one.');
+      }
     };
 
-    // Check initial URL (app opened from link)
+    // Cold-start URL (app opened directly from the email link)
     Linking.getInitialURL().then(url => { if (url) handleUrl({ url }); }).catch(() => {});
 
-    // Listen for future links
+    // Foreground URL (app was already open when the link fired)
     const sub = Linking.addEventListener('url', handleUrl);
     return () => sub.remove();
   }, []);
@@ -74,13 +140,11 @@ function DeepLinkHandler() {
     if (user?.id) processPendingInvite(user.id);
   }, [user?.id]);
 
-  // Password recovery flow — when the user taps the link in a reset
-  // email, Supabase exchanges the token and fires the
-  // 'PASSWORD_RECOVERY' auth event. We intercept it here and route
-  // to the dedicated reset screen regardless of where they were in
-  // the app when the deep link fired. This has to live alongside the
-  // auth state listener in AuthProvider; keeping the router.push
-  // here keeps routing concerns out of that provider.
+  // PASSWORD_RECOVERY auth event fires after exchangeCodeForSession
+  // succeeds (or for the legacy hash-fragment flow when setSession
+  // succeeds with a recovery token). Either way: route to the
+  // reset screen. Keeping the router.push here rather than in
+  // AuthProvider keeps routing concerns out of the provider.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -360,11 +424,17 @@ function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    // RootErrorBoundary wraps the WHOLE tree so a thrown render
+    // anywhere — provider, layout, screen — surfaces a recovery
+    // screen instead of a white crash. Critical for App Store
+    // review on devices with corrupted caches / bad network.
+    <RootErrorBoundary>
     <ThemeProvider>
       <AuthProvider>
         <MobileContainer onLayout={onLayoutReady}>
           <StoreHydrator />
           <SoundLoader />
+          <AdsInitialiser />
           <LevelCacheLoader />
           <DeepLinkHandler />
           <LifeRegenChecker />
@@ -376,6 +446,7 @@ function RootLayout() {
         </MobileContainer>
       </AuthProvider>
     </ThemeProvider>
+    </RootErrorBoundary>
   );
 }
 

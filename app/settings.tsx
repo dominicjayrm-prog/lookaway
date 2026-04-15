@@ -101,8 +101,15 @@ function SettingsScreen() {
             style={styles.row}
             onPress={async () => {
               const status = await restorePurchases();
+              const store = useGameStore.getState();
+              // Sync ALL entitlements that came back, not just plus.
+              // Previously the noAds branch surfaced the alert but
+              // didn't actually flip ads off in the store, so the
+              // user would still see ads after restore.
+              if (status.plus) store.activatePlus();
+              if (status.noAds) store.setAdsRemoved();
+
               if (status.plus) {
-                useGameStore.getState().activatePlus();
                 Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
               } else if (status.noAds) {
                 Alert.alert('Restored', 'Your ad-free purchase has been restored.');

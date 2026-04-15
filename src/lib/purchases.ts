@@ -89,6 +89,19 @@ export async function logOutPurchases(): Promise<void> {
 
 export type PurchaseResult = 'success' | 'cancelled' | 'error';
 
+/** Wrap a promise with a hard timeout. RevenueCat / StoreKit calls
+ *  can hang indefinitely if the App Store is unreachable; without
+ *  this the user sees a stuck purchase modal forever and we'd hold
+ *  no chance of surfacing a "try again" toast. 30s is generous —
+ *  Apple's own purchase UI typically resolves under 10s. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
+const PURCHASE_TIMEOUT_MS = 30_000;
+
 /** Buy a consumable or non-consumable product by its App Store
  *  product ID (e.g. `IAP_PRODUCT_IDS.GEMS_100`). */
 export async function purchaseProduct(productId: string): Promise<PurchaseResult> {
@@ -103,7 +116,7 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
       log.warn('purchases', 'product not found', { productId });
       return 'error';
     }
-    await Purchases.purchaseStoreProduct(products[0]);
+    await withTimeout(Purchases.purchaseStoreProduct(products[0]), PURCHASE_TIMEOUT_MS, 'purchaseStoreProduct');
     log.breadcrumb('purchases', 'product purchased', { productId });
     return 'success';
   } catch (e: any) {
@@ -136,7 +149,7 @@ export async function purchaseSubscription(
       log.warn('purchases', `no ${plan} package in current offering`);
       return { result: 'error', isActive: false };
     }
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    const { customerInfo } = await withTimeout(Purchases.purchasePackage(pkg), PURCHASE_TIMEOUT_MS, 'purchasePackage');
     const isActive = !!customerInfo.entitlements?.active?.['plus'];
     log.breadcrumb('purchases', 'subscription purchased', { plan, isActive });
     return { result: 'success', isActive };

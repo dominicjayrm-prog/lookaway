@@ -21,7 +21,7 @@ import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlankedLogo } from '@/src/components/BlankedLogo';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -104,7 +104,9 @@ function ResetPasswordScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
         <View style={styles.content}>
-          <BlankedLogo size={56} />
+          <View style={{ alignSelf: 'center' }}>
+            <AnimatedBlink expression="thinking" size={96} entrance="spring" />
+          </View>
           <Text style={[styles.title, { color: colors.text }]}>Set a new password</Text>
           {email ? (
             <Text style={[styles.subtitle, { color: colors.textMid }]}>for {email}</Text>
