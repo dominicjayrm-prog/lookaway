@@ -264,8 +264,14 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
   async function handleRestore() {
     try {
       const status = await restorePurchases();
+      const store = useGameStore.getState();
+      // Sync EVERY entitlement that came back. Previously the
+      // noAds branch surfaced the toast but didn't flip
+      // adsRemoved on the store, so the user kept seeing ads.
+      if (status.plus) store.activatePlus();
+      if (status.noAds) store.setAdsRemoved();
+
       if (status.plus) {
-        useGameStore.getState().activatePlus();
         handleDismiss();
         Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
       } else if (status.noAds) {

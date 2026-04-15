@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { AppState, AppStateStatus, Linking, Platform } from 'react-native';
+import { Alert, AppState, AppStateStatus, Linking, Platform } from 'react-native';
 import { Stack, useRouter, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -28,6 +28,8 @@ import { sounds } from '@/src/lib/sounds';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
+import { initAdsAndTracking } from '@/src/utils/adService';
+import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +41,15 @@ function StoreHydrator() {
 
 function SoundLoader() {
   useEffect(() => { sounds.init(); }, []);
+  return null;
+}
+
+/** Fire the iOS App Tracking Transparency prompt and bring up the
+ *  AdMob SDK. App Store guideline 5.1.2 requires this BEFORE any
+ *  ad request, otherwise reviewers reject for "tracking without
+ *  consent". Idempotent — only runs once per app session. */
+function AdsInitialiser() {
+  useEffect(() => { initAdsAndTracking(); }, []);
   return null;
 }
 
@@ -74,13 +85,24 @@ function DeepLinkHandler() {
       // the query string OR the URL fragment depending on flow.
       // Parse both. We also accept the legacy magic-link format
       // that uses access_token + refresh_token in the fragment.
+      //
+      // On any failure we surface a user-facing alert so they're
+      // not silently dumped on the login screen wondering what
+      // happened. The most common cause is an expired link (>1 hr).
       try {
         const isReset = url.includes('reset-password');
         if (!isReset) return;
+        const fail = (msg: string) => Alert.alert(
+          'Reset link not valid',
+          msg + ' Tap "Forgot?" on the sign in screen to send a fresh one.',
+        );
         const codeMatch = url.match(/[?&#]code=([^&]+)/);
         if (codeMatch?.[1]) {
           const { error } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
-          if (error) console.warn('exchangeCodeForSession failed:', error.message);
+          if (error) {
+            console.warn('exchangeCodeForSession failed:', error.message);
+            fail('That reset link has expired or already been used.');
+          }
           return;
         }
         // Fallback: legacy hash-fragment tokens
@@ -91,11 +113,17 @@ function DeepLinkHandler() {
           const refresh = params.get('refresh_token');
           if (access && refresh) {
             const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
-            if (error) console.warn('setSession from hash failed:', error.message);
+            if (error) {
+              console.warn('setSession from hash failed:', error.message);
+              fail('That reset link has expired or already been used.');
+            }
+          } else {
+            fail('That reset link is missing the security token.');
           }
         }
       } catch (e) {
         console.warn('password reset deep link handler threw:', e);
+        Alert.alert('Reset link not valid', 'Something went wrong opening the link. Tap "Forgot?" on the sign in screen to send a fresh one.');
       }
     };
 
@@ -396,11 +424,17 @@ function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    // RootErrorBoundary wraps the WHOLE tree so a thrown render
+    // anywhere — provider, layout, screen — surfaces a recovery
+    // screen instead of a white crash. Critical for App Store
+    // review on devices with corrupted caches / bad network.
+    <RootErrorBoundary>
     <ThemeProvider>
       <AuthProvider>
         <MobileContainer onLayout={onLayoutReady}>
           <StoreHydrator />
           <SoundLoader />
+          <AdsInitialiser />
           <LevelCacheLoader />
           <DeepLinkHandler />
           <LifeRegenChecker />
@@ -412,6 +446,7 @@ function RootLayout() {
         </MobileContainer>
       </AuthProvider>
     </ThemeProvider>
+    </RootErrorBoundary>
   );
 }
 

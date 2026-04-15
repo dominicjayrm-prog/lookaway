@@ -35,6 +35,67 @@ function getAdMob(): any {
   }
 }
 
+// ─── ATT + AdMob initialization (App Store guideline 5.1.2) ────────
+
+let _initStarted = false;
+
+/**
+ * Request App Tracking Transparency permission and then initialize
+ * AdMob with the right consent state. Apple REJECTS apps that load
+ * AdMob before showing the ATT prompt on iOS 14.5+ — this is the
+ * single most common rejection for indie game apps using ads.
+ *
+ * Idempotent: only runs once per app session.
+ *
+ * Permission outcomes:
+ *  - 'granted' → AdMob can use IDFA, personalised ads
+ *  - 'denied' / 'restricted' → AdMob serves non-personalised ads
+ *  - 'not-determined' → user dismissed before deciding; treat as denied
+ *
+ * Web + Android no-op (ATT is iOS-only). Android uses GDPR consent
+ * via a different flow not addressed here.
+ */
+export async function initAdsAndTracking(): Promise<void> {
+  if (_initStarted) return;
+  _initStarted = true;
+  if (Platform.OS === 'web') return;
+  const admob = getAdMob();
+  if (!admob) return;
+
+  try {
+    if (Platform.OS === 'ios') {
+      // Lazy-import ATT so it doesn't bloat the JS bundle on Android.
+      const TT = require('expo-tracking-transparency');
+      const { status: existing } = await TT.getTrackingPermissionsAsync();
+      let status = existing;
+      if (existing === 'undetermined') {
+        const result = await TT.requestTrackingPermissionsAsync();
+        status = result.status;
+      }
+      // Tell AdMob whether we have IDFA permission BEFORE the SDK
+      // boots, so the very first ad request goes out with the right
+      // signals.
+      const granted = status === 'granted';
+      try {
+        await admob.default().setRequestConfiguration({
+          // When ATT is denied, AdMob must serve only non-
+          // personalised ads. tagForChildDirectedTreatment stays
+          // unset because BLANKED is rated 4+ but not strictly
+          // child-directed.
+          maxAdContentRating: admob.MaxAdContentRating?.PG ?? 'PG',
+          tagForUnderAgeOfConsent: !granted,
+        });
+      } catch (e) {
+        log.warn('ads', 'setRequestConfiguration failed', { error: String(e) });
+      }
+    }
+    // Boot the SDK. Safe to call after setRequestConfiguration.
+    await admob.default().initialize();
+  } catch (e) {
+    log.warn('ads', 'initAdsAndTracking failed', { error: String(e) });
+  }
+}
+
 // ─── Types ─────────────────────────────────────────────────────────
 
 export type AdFailureReason =
