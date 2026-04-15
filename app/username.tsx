@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, consumeUsernameSuggestion } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
@@ -130,6 +131,14 @@ function UsernameScreen() {
       log.error('auth', 'username save failed', error, { userId: user.id });
       return;
     }
+    // Brand-new account — guarantee the spotlight tutorial fires
+    // when they land on the Play tab. We clear the "already seen"
+    // key here (rather than in the tutorial effect itself) because
+    // this is the only code path that confirms a fresh signup and
+    // it runs exactly once per account. Prevents the case where
+    // AsyncStorage carried a stale `1` value over from a previous
+    // account on the same device.
+    try { await AsyncStorage.removeItem('blanked_tutorial_seen'); } catch {}
     router.replace('/(tabs)');
   };
 

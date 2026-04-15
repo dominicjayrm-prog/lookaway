@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,6 +127,34 @@ function SettingsScreen() {
         </Card>
 
         <Card style={styles.card}>
+          {/* Escape hatch: if a user misses the spotlight tutorial
+              on first launch (e.g. they tapped past the Play tab
+              too quickly, or the very-first-render measurement
+              race skipped it) they can re-trigger it here. Clears
+              BOTH the local AsyncStorage flag and the server
+              `tutorial_seen` flag so it fires on their next Play
+              tab visit. */}
+          <Pressable
+            style={styles.row}
+            onPress={async () => {
+              try { await AsyncStorage.removeItem('blanked_tutorial_seen'); } catch {}
+              if (user?.id) {
+                try {
+                  await supabase.from('profiles').update({ tutorial_seen: false }).eq('id', user.id);
+                } catch {}
+              }
+              Alert.alert(
+                'Tutorial reset',
+                'Tap the Play tab to see the quick tour again.',
+              );
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Replay tutorial"
+          >
+            <Text style={[styles.rowLabel, { color: colors.text }]}>Replay tutorial</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: colors.text }]}>Version</Text>
             <Text style={[styles.rowValue, { color: colors.textMid }]}>1.0.0</Text>

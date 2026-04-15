@@ -39,10 +39,29 @@ function ProfileScreen() {
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
   const email = user?.email || 'Guest';
-  // Header handle — pulled from the game store which hydrates
-  // synchronously from localStorage on mount (see gameStore.ts hydrate),
-  // so the real @username renders on first paint with no flash.
-  const headerName = storeUsername ?? user?.email?.split('@')[0] ?? 'Player';
+  // Header handle: prefer the game store's username (hydrates from
+  // cloud on sign-in). If for any reason the store hasn't caught up
+  // yet — e.g. Apple sign-in where the username was set on another
+  // render tick — fetch directly from `profiles.username` and cache
+  // locally. We deliberately DO NOT fall back to
+  // `user.email.split('@')[0]` because Apple Private Relay produces
+  // opaque hashes like `94my4rngp5@privaterelay.appleid.com` that
+  // make no sense as a visible @-handle.
+  const [fetchedUsername, setFetchedUsername] = useState<string | null>(null);
+  useEffect(() => {
+    if (storeUsername || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+      if (!cancelled && data?.username) setFetchedUsername(data.username);
+    })();
+    return () => { cancelled = true; };
+  }, [storeUsername, user?.id]);
+  const headerName = storeUsername ?? fetchedUsername ?? 'Player';
   const initials = headerName.slice(0, 2).toUpperCase();
   // Profile pic priority: server avatar_url (works across devices) →
   // localStorage cached data URI (works offline / during upload).

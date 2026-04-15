@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, ScrollView, Share, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { supabase } from '@/src/lib/supabase';
 import * as Haptics from 'expo-haptics';
 
 import { TabTransition } from '@/src/components/TabTransition';
@@ -285,6 +286,49 @@ function FriendsTab() {
       if (userId) loadData();
     }, 30_000);
     return () => clearInterval(refreshInterval);
+  }, [userId, loadData]);
+
+  // Refresh the moment the user lands on this tab. Without this, the
+  // 30s polling interval could leave an incoming friend request
+  // (inserted while the user was on another tab) hidden for almost
+  // half a minute. Pairs with the realtime subscription below —
+  // focus handles "user just came back", realtime handles "request
+  // lands while user is already looking".
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) loadData();
+    }, [userId, loadData]),
+  );
+
+  // Realtime subscription: wakes the list up the instant a
+  // friendship row lands with us as the addressee. We refresh the
+  // whole dataset rather than patching in-place because the join
+  // that powers `requests` (via getFriendRequests) pulls the
+  // requester's profile row, and we'd otherwise have to re-query
+  // anyway. Status-change UPDATEs (e.g. the other side accepting
+  // our outgoing request) also re-fetch so the friends list +
+  // incoming list stay consistent.
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`friendships-inbox-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${userId}` },
+        () => { loadData(); },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'friendships', filter: `requester_id=eq.${userId}` },
+        () => { loadData(); },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${userId}` },
+        () => { loadData(); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [userId, loadData]);
 
   return (
