@@ -21,7 +21,7 @@ import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Pla
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlankedLogo } from '@/src/components/BlankedLogo';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
 import { typography } from '@/src/theme/typography';
@@ -72,11 +72,23 @@ function ForgotPasswordScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.centerContainer}>
-          <BlankedLogo size={64} />
+          <AnimatedBlink expression="love" size={120} entrance="spring" />
           <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
           <Text style={[styles.successBody, { color: colors.textMid }]}>
-            If an account exists for {email.trim()}, we\u2019ve sent a password reset link from hello@playblanked.com. Tap the link in the email to set a new password.
+            {`We’ve sent a reset link to ${email.trim()}. Tap the button in the email to set a new password — the link is valid for an hour.`}
           </Text>
+
+          {/* Fallback help — covers the "I don't see it" case BEFORE
+              the user emails support, which deflects most tickets. */}
+          <View style={[styles.helpCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.helpTitle, { color: colors.text }]}>Can’t find it?</Text>
+            <Text style={[styles.helpBody, { color: colors.textMid }]}>
+              Give it a minute, then check your spam or junk folder. Still nothing? Email us at{' '}
+              <Text style={[styles.helpEmail, { color: colors.accent }]}>hello@playblanked.com</Text>
+              {' '}and we’ll sort it out for you.
+            </Text>
+          </View>
+
           <Pressable
             style={[styles.primaryButton, { backgroundColor: colors.accent }]}
             onPress={() => router.replace('/(auth)/login')}
@@ -116,10 +128,9 @@ function ForgotPasswordScreen() {
         </View>
 
         <View style={styles.content}>
-          <BlankedLogo size={56} />
           <Text style={[styles.title, { color: colors.text }]}>Forgot password?</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>
-            Enter the email you signed up with. We\u2019ll send you a link to set a new password.
+            {'Enter the email you signed up with. We’ll send you a link to set a new password.'}
           </Text>
 
           <View style={styles.inputContainer}>
@@ -185,6 +196,14 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   successTitle: { fontSize: 24, fontWeight: '800', marginTop: spacing.md },
   successBody: { fontSize: typography.sizes.md, textAlign: 'center', lineHeight: 22 },
+  // Soft "can't find it?" callout sits above the primary CTA so it
+  // catches the user's eye before they hit "back to sign in" and
+  // bounce. Quietly deflects support tickets by surfacing the spam
+  // folder check + escalation email in the same place.
+  helpCard: { borderRadius: borderRadius.md, padding: spacing.lg, marginTop: spacing.md, width: '100%' },
+  helpTitle: { fontSize: typography.sizes.md, fontWeight: '700', marginBottom: 4 },
+  helpBody: { fontSize: typography.sizes.sm, lineHeight: 20 },
+  helpEmail: { fontWeight: '700' },
   secondaryButton: { paddingVertical: spacing.md },
   secondaryButtonText: { fontSize: typography.sizes.md, fontWeight: '600' },
 });
