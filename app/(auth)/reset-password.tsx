@@ -31,7 +31,7 @@ import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 function ResetPasswordScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { session } = useAuth();
+  const { session, clearPasswordRecovery } = useAuth();
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -77,6 +77,11 @@ function ResetPasswordScreen() {
       return;
     }
     setDone(true);
+    // Clear the recovery flag FIRST so that when signOut fires below
+    // (which itself clears it too, belt-and-braces), any transient
+    // re-render while navigating doesn't briefly re-route the user
+    // back to this screen.
+    clearPasswordRecovery();
     // Sign out of the recovery session so the user has to log in
     // fresh with the new password — confirms they know it and
     // keeps other-device sessions invalidated.

@@ -47,6 +47,27 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  /**
+   * True when the user is in the middle of a password-reset flow.
+   *
+   * Why this exists: when Supabase exchanges the PKCE code from the
+   * reset email it creates a VALID session and fires BOTH
+   * `SIGNED_IN` and `PASSWORD_RECOVERY` events. Without this flag,
+   * the root redirect in `app/index.tsx` sees `session != null` and
+   * drops the user straight into the app — skipping the reset
+   * screen entirely. This flag lets index.tsx detour to
+   * `/(auth)/reset-password` instead. Cleared on reset success or
+   * sign-out.
+   */
+  passwordRecovery: boolean;
+  /** Called by DeepLinkHandler the moment we know the URL is a
+   *  reset link — BEFORE the code exchange — so the flag is set by
+   *  the time SIGNED_IN fires and the root redirect runs. */
+  markPasswordRecovery: () => void;
+  /** Called by reset-password.tsx after the password is successfully
+   *  updated (before the forced sign-out) so the user can log in
+   *  normally on their next attempt. */
+  clearPasswordRecovery: () => void;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithApple: () => Promise<SocialSignInResult>;
@@ -57,6 +78,9 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  passwordRecovery: false,
+  markPasswordRecovery: () => {},
+  clearPasswordRecovery: () => {},
   signUp: async () => ({ error: null }),
   signIn: async () => ({ error: null }),
   signInWithApple: async () => ({ ok: false, reason: 'unsupported', message: 'not initialised' }),
@@ -66,6 +90,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     // Configure RevenueCat as early as possible — before we even know
@@ -87,6 +112,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         log.setUser(session?.user?.id ?? null);
         log.breadcrumb('auth', `state changed: ${_event}`, { userId: session?.user?.id });
+        // Belt-and-braces: if Supabase DOES fire PASSWORD_RECOVERY
+        // (it's inconsistent across SDK versions + platforms), latch
+        // the flag here too. DeepLinkHandler also sets it before the
+        // code exchange so we don't have to rely on this firing.
+        if (_event === 'PASSWORD_RECOVERY') {
+          setPasswordRecovery(true);
+        }
+        // Clear the flag on explicit sign-out so the next session
+        // (e.g. after the user resets + logs back in) doesn't still
+        // think it's in recovery.
+        if (_event === 'SIGNED_OUT') {
+          setPasswordRecovery(false);
+        }
         // Re-identify on sign-in, log out on sign-out so the next
         // session starts anonymous until a new sign-in happens.
         if (session?.user?.id) {
@@ -99,6 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const markPasswordRecovery = () => setPasswordRecovery(true);
+  const clearPasswordRecovery = () => setPasswordRecovery(false);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     const { error } = await supabase.auth.signUp({
@@ -262,6 +303,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user: session?.user ?? null,
         loading,
+        passwordRecovery,
+        markPasswordRecovery,
+        clearPasswordRecovery,
         signUp,
         signIn,
         signInWithApple,
