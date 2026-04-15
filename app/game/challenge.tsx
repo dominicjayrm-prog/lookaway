@@ -210,9 +210,14 @@ function ChallengeGameScreen() {
 
       // Route to the result screen. The result screen hides scores +
       // the win/loss verdict until BOTH players have submitted and
-      // updates live via a postgres_changes subscription.
+      // updates live via a postgres_changes subscription. If the
+      // row insert failed (no network etc.), fall back to friends
+      // tab rather than leaving the player stranded on a "Nice work!"
+      // screen with no escape.
       if (resultChallengeId) {
         setTimeout(() => router.replace({ pathname: '/game/challenge-result', params: { challengeId: resultChallengeId as string } }), 400);
+      } else {
+        setTimeout(() => router.replace('/(tabs)/friends'), 800);
       }
     }
   }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty, router]);

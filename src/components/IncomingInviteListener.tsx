@@ -15,7 +15,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, Animated, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/src/lib/supabase';
@@ -24,6 +24,21 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { acceptInvite, declineInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
 import { sounds } from '@/src/lib/sounds';
+
+/** Routes where interrupting with a full-screen invite would hijack
+ *  the player's attention mid-task. On these pages we still receive
+ *  the realtime event, but we queue the invite into `pendingInvite`
+ *  and surface it once the user returns to a neutral screen. */
+const BLOCKED_ROUTE_PREFIXES = [
+  '/game/',        // any active gameplay
+  '/onboarding',   // don't derail someone finishing onboarding
+  '/(auth)',       // pre-auth flows
+];
+
+function isBlockedRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return BLOCKED_ROUTE_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 interface InviteRow {
   id: string;
@@ -43,11 +58,19 @@ interface ChallengerProfile {
 export function IncomingInviteListener() {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { colors } = useTheme();
   const [invite, setInvite] = useState<InviteRow | null>(null);
+  // Pending invite holds the most recent invite the user received
+  // while on a blocked route. When they leave that route we pull
+  // the queued invite out and present it (if still valid).
+  const [pendingInvite, setPendingInvite] = useState<InviteRow | null>(null);
   const [challenger, setChallenger] = useState<ChallengerProfile | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number>(60);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Track id of invite we've already shown/acted on, so the UPDATE
+  // filter on the same row doesn't reopen the modal after Accept.
+  const actedIdsRef = useRef<Set<string>>(new Set());
 
   // Realtime subscription. Filter on challenged_id so every device
   // only receives invites meant for the logged-in user.
@@ -67,6 +90,9 @@ export function IncomingInviteListener() {
         async (payload) => {
           const row = payload.new as InviteRow;
           if (row.status !== 'invited') return;
+          // Ignore invites we've already interacted with (defensive
+          // against the UPDATE listener below re-firing).
+          if (actedIdsRef.current.has(row.id)) return;
 
           // Resolve challenger profile for the modal (avatar + name).
           const { data: profile } = await supabase
@@ -74,7 +100,23 @@ export function IncomingInviteListener() {
             .select('username, avatar_color')
             .eq('id', row.challenger_id)
             .single();
-          setChallenger(profile ?? { username: 'someone', avatar_color: '#6C5CE7' });
+          const resolvedChallenger = profile ?? { username: 'someone', avatar_color: '#6C5CE7' };
+
+          // If the user is in the middle of something where a
+          // full-screen modal would hijack attention, queue it. As
+          // soon as they leave that route the other effect below
+          // promotes the pending invite to the active slot. We still
+          // play a subtle haptic so they know something happened.
+          if (isBlockedRoute(pathname)) {
+            setPendingInvite(row);
+            setChallenger(resolvedChallenger);
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+            }
+            return;
+          }
+
+          setChallenger(resolvedChallenger);
           setInvite(row);
 
           if (Platform.OS !== 'web') {
@@ -111,6 +153,27 @@ export function IncomingInviteListener() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Promote a queued invite to the active slot once the user
+  // navigates back to a neutral route. Skip if the invite's
+  // already expired in the meantime.
+  useEffect(() => {
+    if (!pendingInvite || isBlockedRoute(pathname)) return;
+    if (pendingInvite.invite_expires_at && new Date(pendingInvite.invite_expires_at).getTime() < Date.now()) {
+      setPendingInvite(null);
+      return;
+    }
+    if (actedIdsRef.current.has(pendingInvite.id)) {
+      setPendingInvite(null);
+      return;
+    }
+    setInvite(pendingInvite);
+    setPendingInvite(null);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+    sounds.play('powerUp');
+  }, [pathname, pendingInvite]);
+
   // Countdown from invite_expires_at. Re-computes every second and
   // auto-dismisses on zero. Pulses the scale every second for tension.
   useEffect(() => {
@@ -145,6 +208,7 @@ export function IncomingInviteListener() {
 
   async function handleAccept() {
     if (!invite) return;
+    actedIdsRef.current.add(invite.id);
     const result = await acceptInvite(invite.id);
     if (result.ok) {
       sounds.play('correct');
@@ -157,11 +221,16 @@ export function IncomingInviteListener() {
       } else {
         router.push({ pathname: '/game/challenge-mode', params: { challengeId: invite.id, mode: invite.mode, action: 'play' } });
       }
+    } else {
+      // Accept failed (likely row expired between render and tap).
+      // Dismiss the modal so the user isn't stuck.
+      setInvite(null);
     }
   }
 
   async function handleDecline() {
     if (!invite || !user?.id) return;
+    actedIdsRef.current.add(invite.id);
     const { data: me } = await supabase.from('profiles').select('username').eq('id', user.id).single();
     await declineInvite(invite.id, me?.username, invite.challenger_id);
     sounds.play('wrong');

@@ -19,12 +19,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
+import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { cancelInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
 
 interface InviteRow {
   id: string;
+  challenger_id: string;
   challenged_id: string;
   mode: string;
   status: string;
@@ -42,11 +44,16 @@ export default function ChallengeWaitingScreen() {
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const { user } = useAuth();
 
   const [invite, setInvite] = useState<InviteRow | null>(null);
   const [friend, setFriend] = useState<FriendProfile | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(60);
   const [terminal, setTerminal] = useState<TerminalState>(null);
+  const [unauthorized, setUnauthorized] = useState(false);
+  // Guard so realtime + poll don't both fire routeIntoGame and
+  // cause a double navigation.
+  const routedRef = useRef(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Initial fetch + realtime subscription. If the row is already past
@@ -59,10 +66,20 @@ export default function ChallengeWaitingScreen() {
     async function load() {
       const { data: ch } = await supabase
         .from('friend_challenges')
-        .select('id, challenged_id, mode, status, invite_expires_at')
+        .select('id, challenger_id, challenged_id, mode, status, invite_expires_at')
         .eq('id', challengeId)
         .single();
       if (!ch || cancelled) return;
+
+      // Verify the viewer IS the challenger. Guards against a
+      // challenged user (or anyone) deep-linking here to inspect
+      // someone else's invite. Also protects against stray route
+      // transitions from rematch buttons etc.
+      if (user?.id && ch.challenger_id !== user.id) {
+        setUnauthorized(true);
+        return;
+      }
+
       setInvite(ch as InviteRow);
 
       if (ch.status === 'live' || ch.status === 'completed') {
@@ -89,6 +106,7 @@ export default function ChallengeWaitingScreen() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${challengeId}` },
         (payload) => {
+          if (terminal || routedRef.current) return;
           const next = payload.new as InviteRow;
           setInvite(next);
           if (next.status === 'live') {
@@ -103,18 +121,40 @@ export default function ChallengeWaitingScreen() {
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${challengeId}` },
-        () => { setTerminal('cancelled'); },
+        () => { if (!terminal && !routedRef.current) setTerminal('cancelled'); },
       )
       .subscribe();
 
+    // Realtime-event-lost fallback: poll every 4s for status changes.
+    // Realtime is usually fine but can be delayed on flaky networks,
+    // and the whole invite-acceptance UX relies on the challenger
+    // learning about the "live" transition within seconds. Cheap
+    // insurance — only running while this screen is mounted.
+    const pollId = setInterval(async () => {
+      if (cancelled || terminal || routedRef.current) return;
+      const { data: poll } = await supabase
+        .from('friend_challenges')
+        .select('id, challenger_id, challenged_id, mode, status, invite_expires_at')
+        .eq('id', challengeId)
+        .single();
+      if (!poll || cancelled || terminal || routedRef.current) return;
+      setInvite(poll as InviteRow);
+      if (poll.status === 'live') routeIntoGame(poll as InviteRow);
+      else if (poll.status === 'declined') setTerminal('declined');
+      else if (poll.status === 'expired') setTerminal('expired');
+    }, 4000);
+
     return () => {
       cancelled = true;
+      clearInterval(pollId);
       supabase.removeChannel(channel);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [challengeId]);
+  }, [challengeId, user?.id]);
 
   function routeIntoGame(row: InviteRow) {
+    if (routedRef.current) return;       // double-nav guard
+    routedRef.current = true;
     if (row.mode === 'classic') {
       router.replace({ pathname: '/game/challenge', params: { challengeId: row.id, mode: 'play' } });
     } else {
@@ -153,6 +193,22 @@ export default function ChallengeWaitingScreen() {
   async function handleCancel() {
     if (challengeId) await cancelInvite(challengeId);
     router.back();
+  }
+
+  if (unauthorized) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
+        <View style={styles.centered}>
+          <Text style={[styles.terminalTitle, { color: colors.text }]}>Not your invite</Text>
+          <Text style={[styles.terminalBody, { color: colors.textMid }]}>
+            This invite belongs to another player. Head back to see your active challenges.
+          </Text>
+          <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.replace('/(tabs)/friends')}>
+            <Text style={styles.primaryBtnText}>Back to friends</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (terminal) {
