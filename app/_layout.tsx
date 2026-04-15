@@ -26,6 +26,7 @@ import { expireOldChallenges } from '@/src/utils/challengeFlow';
 import { sounds } from '@/src/lib/sounds';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
+import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -313,6 +314,7 @@ function ThemedStack() {
         <Stack.Screen name="game/challenge-result" />
         <Stack.Screen name="game/challenge-select" />
         <Stack.Screen name="game/challenge-mode" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="game/challenge-waiting" options={{ gestureEnabled: false }} />
         <Stack.Screen name="game/side-campaign" options={{ gestureEnabled: false }} />
         <Stack.Screen name="profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="achievements" options={{ animation: 'slide_from_right' }} />
@@ -352,6 +354,7 @@ function RootLayout() {
           <NotificationHandler />
           <ThemedStack />
           <StreakRewardToastMounter />
+          <IncomingInviteListener />
         </MobileContainer>
       </AuthProvider>
     </ThemeProvider>

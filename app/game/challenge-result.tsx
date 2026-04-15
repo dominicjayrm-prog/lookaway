@@ -1,5 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+/**
+ * Friend-challenge result screen.
+ *
+ * Core guarantee: neither player sees their own score, the opponent's
+ * score, or the win/loss verdict until BOTH players have submitted.
+ * This is the real-time "Clash Royale" UX — you finish, you see
+ * "Waiting for @friend…" with a live subscription, and only when the
+ * challenge row flips to status='completed' do the numbers reveal.
+ *
+ * Data flow:
+ *   1. Load the row on mount. If both scores exist, skip straight to
+ *      the reveal. Otherwise render the waiting state.
+ *   2. Subscribe to postgres_changes on the row. When the other
+ *      player finishes, the UPDATE event flips local state and the
+ *      reveal animates in.
+ *   3. Clean up the subscription on unmount.
+ */
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -8,6 +25,14 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { createChallenge } from '@/src/utils/challengeFlow';
 import { spacing } from '@/src/theme/spacing';
+
+interface ChallengeRow {
+  challenger_id: string;
+  challenged_id: string;
+  challenger_score: number | null;
+  challenged_score: number | null;
+  status: string | null;
+}
 
 interface ResultData {
   myScore: number;
@@ -36,9 +61,26 @@ function ChallengeResultScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const userId = user?.id;
+  const [row, setRow] = useState<ChallengeRow | null>(null);
   const [data, setData] = useState<ResultData | null>(null);
   const [loading, setLoading] = useState(true);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Pulse the "waiting" spinner so users know the screen is alive.
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.6, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulseAnim]);
+
+  // Initial fetch + realtime subscription. Subscribing up-front is
+  // safe even if the row is already completed — we just unsub on
+  // unmount and the callback is a no-op in the already-done case.
   useEffect(() => {
     if (!challengeId || !userId) return;
     let cancelled = false;
@@ -46,21 +88,21 @@ function ChallengeResultScreen() {
     async function load() {
       const { data: ch } = await supabase
         .from('friend_challenges')
-        .select('challenger_id, challenged_id, challenger_score, challenged_score')
+        .select('challenger_id, challenged_id, challenger_score, challenged_score, status')
         .eq('id', challengeId)
         .single();
 
       if (!ch || cancelled) { setLoading(false); return; }
+      setRow(ch as ChallengeRow);
 
       const isChallenger = ch.challenger_id === userId;
       const friendId = isChallenger ? ch.challenged_id : ch.challenger_id;
 
-      // Fetch both profiles
       const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_color').in('id', [userId, friendId]);
       if (cancelled) return;
 
-      const myProfile = profiles?.find(p => p.id === userId);
-      const theirProfile = profiles?.find(p => p.id === friendId);
+      const myProfile = profiles?.find((p) => p.id === userId);
+      const theirProfile = profiles?.find((p) => p.id === friendId);
 
       setData({
         myScore: isChallenger ? (ch.challenger_score ?? 0) : (ch.challenged_score ?? 0),
@@ -75,7 +117,35 @@ function ChallengeResultScreen() {
     }
 
     load();
-    return () => { cancelled = true; };
+
+    // Realtime: watch for the opponent finishing. This gives the
+    // winner a live "they finished!" flip to the reveal screen
+    // without any polling.
+    const channel = supabase
+      .channel(`challenge-result-${challengeId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${challengeId}` },
+        (payload) => {
+          const next = payload.new as ChallengeRow;
+          setRow(next);
+          setData((prev) => {
+            if (!prev) return prev;
+            const isChallenger = next.challenger_id === userId;
+            return {
+              ...prev,
+              myScore: isChallenger ? (next.challenger_score ?? 0) : (next.challenged_score ?? 0),
+              theirScore: isChallenger ? (next.challenged_score ?? 0) : (next.challenger_score ?? 0),
+            };
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [challengeId, userId]);
 
   const handleRematch = async () => {
@@ -86,8 +156,64 @@ function ChallengeResultScreen() {
     }
   };
 
-  if (loading || !data) {
-    return (<SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}><Text style={[styles.loadingText, { color: colors.textMid }]}>Loading result...</Text></SafeAreaView>);
+  if (loading || !data || !row) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+        <Text style={[styles.loadingText, { color: colors.textMid }]}>Loading result...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Both sides must have submitted for the reveal to show. Any time
+  // a score is still null, we render the waiting screen regardless
+  // of `status`.
+  const bothFinished =
+    row.challenger_score !== null &&
+    row.challenged_score !== null &&
+    row.status === 'completed';
+
+  if (!bothFinished) {
+    const mySubmitted = (row.challenger_id === userId ? row.challenger_score : row.challenged_score) !== null;
+    const theirSubmitted = (row.challenger_id === userId ? row.challenged_score : row.challenger_score) !== null;
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
+        <View style={styles.content}>
+          <Animated.View style={{ opacity: pulseAnim }}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </Animated.View>
+          <Text style={[styles.title, { color: colors.text, marginTop: 24 }]}>
+            Waiting for @{data.theirUsername}…
+          </Text>
+          <Text style={[styles.waitingBody, { color: colors.textMid }]}>
+            {mySubmitted && !theirSubmitted
+              ? `You've finished. ${data.theirUsername} is still playing — results unlock when they're done.`
+              : !mySubmitted && theirSubmitted
+                ? `${data.theirUsername} finished first. Your score will reveal once you play.`
+                : 'Results will appear once both of you have played.'}
+          </Text>
+          <View style={[styles.waitingRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.waitingPlayer}>
+              <Avatar initial={data.myUsername[0]} color={data.myColor} size={40} />
+              <Text style={[styles.waitingName, { color: colors.text }]}>You</Text>
+              <Text style={[styles.waitingStatus, { color: mySubmitted ? colors.correct : colors.textLight }]}>
+                {mySubmitted ? '\u2713 Done' : 'Playing…'}
+              </Text>
+            </View>
+            <Text style={[styles.vsText, { color: colors.textLight }]}>VS</Text>
+            <View style={styles.waitingPlayer}>
+              <Avatar initial={data.theirUsername[0]} color={data.theirColor} size={40} />
+              <Text style={[styles.waitingName, { color: colors.text }]}>@{data.theirUsername}</Text>
+              <Text style={[styles.waitingStatus, { color: theirSubmitted ? colors.correct : colors.textLight }]}>
+                {theirSubmitted ? '\u2713 Done' : 'Playing…'}
+              </Text>
+            </View>
+          </View>
+          <Pressable style={styles.secondaryLink} onPress={() => router.replace('/(tabs)/friends')}>
+            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Leave for now</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const won = data.myScore > data.theirScore;
@@ -145,7 +271,12 @@ export default ChallengeResultScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: spacing.lg },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
-  title: { fontSize: 24, fontWeight: '800' },
+  title: { fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  waitingBody: { fontSize: 14, textAlign: 'center', maxWidth: 320, lineHeight: 20, marginTop: -8 },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18, borderRadius: 18, borderWidth: 1, width: '100%', maxWidth: 340, marginTop: 12 },
+  waitingPlayer: { alignItems: 'center', gap: 6, flex: 1 },
+  waitingName: { fontSize: 13, fontWeight: '600' },
+  waitingStatus: { fontSize: 11, fontWeight: '700' },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 24, marginTop: 8 },
   playerCol: { alignItems: 'center', gap: 8 },
   avatar: { borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
