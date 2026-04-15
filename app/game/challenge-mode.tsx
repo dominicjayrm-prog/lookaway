@@ -8,7 +8,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
 import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
-import { createChallenge, recordChallengeScore } from '@/src/utils/challengeFlow';
+import { createChallenge, recordChallengeScore, abandonChallenge } from '@/src/utils/challengeFlow';
 import { notifyChallengeReceived } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
 import { recordFriendChallengedForChallenges } from '@/src/utils/weeklyChallenges';
@@ -110,6 +110,14 @@ function ChallengeModeScreen() {
     }, 1200);
   }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize]);
 
+  /** After a score is submitted to a challenge row, route to the
+   *  result screen which handles the "hide until both finish"
+   *  behaviour. Small delay so the local score animation has a
+   *  moment to play before we navigate. */
+  const routeToResult = useCallback((challengeId: string) => {
+    setTimeout(() => router.replace({ pathname: '/game/challenge-result', params: { challengeId } }), 400);
+  }, [router]);
+
   const nextRound = useCallback(() => {
     if (roundIdx + 1 < (modeData?.rounds?.length ?? 0)) { setRoundIdx(prev => prev + 1); startRound(); }
     else {
@@ -118,8 +126,9 @@ function ChallengeModeScreen() {
       // Log to recent activity feed so the home screen surfaces it
       const totalPct = getScorePercentage(mode ?? 'speed_recall', total);
       logActivity('mode_complete', { mode, modeName: modeConfig?.name ?? mode, score: total, scorePct: totalPct });
-      if (dbChallengeId && userId) { recordChallengeScore(dbChallengeId, userId, totalPct, 0); }
-      else if (action === 'create' && friendId && userId) {
+      if (dbChallengeId && userId) {
+        recordChallengeScore(dbChallengeId, userId, totalPct, 0).then(() => routeToResult(dbChallengeId));
+      } else if (action === 'create' && friendId && userId) {
         (async () => {
           const { data: inserted } = await supabase.from('friend_challenges').insert({ challenger_id: userId, challenged_id: friendId, level_ids: [], mode: mode, mode_data: modeData, challenger_score: getScorePercentage(mode ?? 'speed_recall', total), status: 'pending' }).select('id').single();
           if (inserted?.id) {
@@ -131,19 +140,21 @@ function ChallengeModeScreen() {
             // Weekly challenge tracker — counts toward the "challenge a
             // friend" engagement goal when it's active this week.
             recordFriendChallengedForChallenges().catch(() => {});
+            routeToResult(inserted.id);
           }
         })();
       }
     }
-  }, [roundIdx, modeData, roundScores, dbChallengeId, userId, mode, action, friendId]);
+  }, [roundIdx, modeData, roundScores, dbChallengeId, userId, mode, action, friendId, routeToResult]);
 
   const handleModeComplete = useCallback((rawScore: number) => {
     const pct = getScorePercentage(mode ?? 'classic', rawScore);
     setTotalScore(rawScore); setPhase('complete');
     // Log to recent activity feed so the home screen surfaces it
     logActivity('mode_complete', { mode, modeName: modeConfig?.name ?? mode, score: rawScore, scorePct: pct });
-    if (dbChallengeId && userId) { recordChallengeScore(dbChallengeId, userId, pct, 0); }
-    else if (action === 'create' && friendId && userId) {
+    if (dbChallengeId && userId) {
+      recordChallengeScore(dbChallengeId, userId, pct, 0).then(() => routeToResult(dbChallengeId));
+    } else if (action === 'create' && friendId && userId) {
       (async () => {
         const { data: inserted } = await supabase.from('friend_challenges').insert({ challenger_id: userId, challenged_id: friendId, level_ids: [], mode, mode_data: modeData, challenger_score: pct, status: 'pending' }).select('id').single();
         if (inserted?.id) {
@@ -155,10 +166,11 @@ function ChallengeModeScreen() {
             // Weekly challenge tracker — counts toward the "challenge a
             // friend" engagement goal when it's active this week.
             recordFriendChallengedForChallenges().catch(() => {});
+            routeToResult(inserted.id);
           }
       })();
     }
-  }, [mode, dbChallengeId, userId, action, friendId, modeData]);
+  }, [mode, dbChallengeId, userId, action, friendId, modeData, routeToResult]);
 
   const isExternalMode = mode && ['speed_recall', 'snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
 
@@ -216,7 +228,18 @@ function ChallengeModeScreen() {
         nonPremiumBody={action === 'create'
           ? "Your progress will be lost and no challenge will be sent to your friend."
           : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
-        onLeave={() => { setShowQuitConfirm(false); router.back(); }}
+        onLeave={() => {
+          setShowQuitConfirm(false);
+          // Live-challenge abandonment — flip the row to 'abandoned'
+          // so the opponent's result screen breaks out of its
+          // waiting state with a "they left the match" terminal
+          // view. Only when the row already exists (live invite
+          // path). Fire-and-forget.
+          if (dbChallengeId && userId) {
+            abandonChallenge(dbChallengeId, userId).catch(() => {});
+          }
+          router.back();
+        }}
         onKeepPlaying={() => setShowQuitConfirm(false)}
       />
     </SafeAreaView>

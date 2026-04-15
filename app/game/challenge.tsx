@@ -19,6 +19,7 @@ import {
   pickChallengeLevels,
   insertChallengeRow,
   recordChallengeScore,
+  abandonChallenge,
   type ChallengeDifficulty,
 } from '@/src/utils/challengeFlow';
 import type { Level, Scene } from '@/src/types/game';
@@ -187,6 +188,7 @@ function ChallengeGameScreen() {
 
       if (!userId) return;
 
+      let resultChallengeId: string | null = dbChallengeId;
       if (isChallenger && !dbChallengeId && friendId) {
         // Challenger path — insert the row NOW, with a real score, and
         // fire the "you've been challenged" notification to the friend.
@@ -199,15 +201,27 @@ function ChallengeGameScreen() {
           challengerStars: stars,
           modeName: 'Classic',
         });
-        if (id) setDbChallengeId(id);
+        if (id) { setDbChallengeId(id); resultChallengeId = id; }
       } else if (dbChallengeId) {
         // Challenged player finishing their half — update the row via
         // the existing recordChallengeScore path.
         const saved = await recordChallengeScore(dbChallengeId, userId, pct, stars);
         if (!saved) log.warn('challenges', 'recordChallengeScore returned false', { dbChallengeId, userId });
       }
+
+      // Route to the result screen. The result screen hides scores +
+      // the win/loss verdict until BOTH players have submitted and
+      // updates live via a postgres_changes subscription. If the
+      // row insert failed (no network etc.), fall back to friends
+      // tab rather than leaving the player stranded on a "Nice work!"
+      // screen with no escape.
+      if (resultChallengeId) {
+        setTimeout(() => router.replace({ pathname: '/game/challenge-result', params: { challengeId: resultChallengeId as string } }), 400);
+      } else {
+        setTimeout(() => router.replace('/(tabs)/friends'), 800);
+      }
     }
-  }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty]);
+  }, [sceneIdx, totalScenes, answers, levels, dbChallengeId, userId, isChallenger, friendId, levelIds, difficulty, router]);
 
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
@@ -224,11 +238,22 @@ function ChallengeGameScreen() {
     setShowQuitConfirm(true);
   }, [phase, router]);
 
-  const confirmLeave = useCallback(() => {
+  const confirmLeave = useCallback(async () => {
     setShowQuitConfirm(false);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Live-challenge abandonment: mark the row 'abandoned' so the
+    // opponent's result screen can flip to "they left the match"
+    // instead of waiting on a perpetual spinner. Only fires when
+    // the row already exists in the DB (i.e. the live-invite path
+    // that came in via IncomingInviteListener + /game/challenge-
+    // waiting, NOT the async-create path where the row is only
+    // inserted after the challenger finishes playing). Fire-and-
+    // forget — navigation shouldn't block on a network write.
+    if (dbChallengeId && userId) {
+      abandonChallenge(dbChallengeId, userId).catch(() => {});
+    }
     router.back();
-  }, [router]);
+  }, [router, dbChallengeId, userId]);
 
   // Score calculation for complete phase
   const totalCorrect = answers.filter(a => a.correct).length;
@@ -332,16 +357,14 @@ function ChallengeGameScreen() {
         </View>
       )}
 
-      {/* Complete */}
+      {/* Complete — route straight to the result screen, which
+          enforces the "hide until both finish" behaviour. Using a
+          momentary loading state here so the route navigation has
+          a frame to mount. */}
       {phase === 'complete' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Challenge Complete!</Text>
-          <Text style={[styles.bigScore, { color: colors.text }]}>{finalPct}%</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>{totalCorrect}/{totalQ} correct</Text>
-          {isChallenger && <Text style={[styles.sentText, { color: colors.correct }]}>Challenge sent! Waiting for your friend to play.</Text>}
-          <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent, marginTop: 24 }]} onPress={() => router.replace('/(tabs)/friends')}>
-            <Text style={styles.primaryBtnText}>Back to friends</Text>
-          </Pressable>
+          <Text style={[styles.bigTitle, { color: colors.accent }]}>Nice work!</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent\u2019s progress\u2026</Text>
         </View>
       )}
 

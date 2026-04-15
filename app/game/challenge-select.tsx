@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Polygon, Rect, Line } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, MODE_ORDER, EXCLUSIVE_MODES } from '@/src/data/challengeModes';
-import { DIFFICULTY_META, type ChallengeDifficulty } from '@/src/utils/challengeFlow';
+import { DIFFICULTY_META, isUserOnline, sendInvite, pickChallengeLevels, type ChallengeDifficulty } from '@/src/utils/challengeFlow';
+import { generateSpeedRecallData, generateSnapMatchData, generateSequenceData, generateCountingBlitzData, generateColourChainData } from '@/src/utils/modeGenerators';
+import { notifyChallengeReceived } from '@/src/utils/notifications';
 import { spacing } from '@/src/theme/spacing';
 
 function ModeIcon({ mode, size = 22, color = '#FFF' }: { mode: string; size?: number; color?: string }) {
@@ -20,20 +24,116 @@ function ModeIcon({ mode, size = 22, color = '#FFF' }: { mode: string; size?: nu
   }
 }
 
+/** Cross-platform confirm dialog. Alert.alert multi-step chains
+ *  are unreliable on RN-web so we fall back to window.confirm there. */
+function confirm(title: string, body: string, onConfirm: () => void) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if ((window as any).confirm?.(`${title}\n\n${body}`)) onConfirm();
+    return;
+  }
+  Alert.alert(title, body, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Send anyway', onPress: onConfirm },
+  ]);
+}
+function notify(title: string, body: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    (window as any).alert?.(`${title}\n\n${body}`);
+    return;
+  }
+  Alert.alert(title, body);
+}
+
 function ChallengeSelectScreen() {
   const { friendId, friendUsername } = useLocalSearchParams<{ friendId: string; friendUsername: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const { user } = useAuth();
   const [selectedMode, setSelectedMode] = useState('classic');
   const [difficulty, setDifficulty] = useState<ChallengeDifficulty>('medium');
+  const [friendOnline, setFriendOnline] = useState<boolean | null>(null);
+  const [sending, setSending] = useState(false);
   const selected = CHALLENGE_MODES[selectedMode];
 
-  const handleStart = () => {
+  // Poll friend's online status every 5s so the CTA accurately
+  // reflects whether we'll send a real-time invite or fall back
+  // to async. Initial fetch on mount.
+  useEffect(() => {
+    if (!friendId) return;
+    let cancelled = false;
+    const check = () => { isUserOnline(friendId).then((on) => { if (!cancelled) setFriendOnline(on); }); };
+    check();
+    const id = setInterval(check, 5000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [friendId]);
+
+  /** Build the mode-specific shared seed that BOTH players will see.
+   *  Classic uses the level_ids pool from their shared campaign pool.
+   *  Exclusive modes generate a deterministic blob locally. */
+  async function buildSharedSeed(userId: string, targetId: string): Promise<{ modeData: unknown; levelIds: string[] }> {
+    if (selectedMode === 'classic') {
+      const ids = await pickChallengeLevels(userId, targetId, difficulty);
+      return { modeData: { difficulty }, levelIds: ids };
+    }
+    if (selectedMode === 'speed_recall') return { modeData: generateSpeedRecallData(), levelIds: [] };
+    if (selectedMode === 'snap_match') return { modeData: generateSnapMatchData(), levelIds: [] };
+    if (selectedMode === 'sequence') return { modeData: generateSequenceData(), levelIds: [] };
+    if (selectedMode === 'counting_blitz') return { modeData: generateCountingBlitzData(), levelIds: [] };
+    if (selectedMode === 'colour_chain') return { modeData: generateColourChainData(), levelIds: [] };
+    return { modeData: {}, levelIds: [] };
+  }
+
+  async function startInstantInvite() {
+    if (!user?.id || !friendId || sending) return;
+    setSending(true);
+    try {
+      const { modeData, levelIds } = await buildSharedSeed(user.id, friendId);
+      if (selectedMode === 'classic' && levelIds.length === 0) {
+        notify('Cannot create challenge', 'No levels match this difficulty. Try a different one.');
+        setSending(false);
+        return;
+      }
+      const id = await sendInvite({
+        challengerId: user.id,
+        challengedId: friendId,
+        mode: selectedMode,
+        modeData,
+        levelIds,
+        difficulty,
+      });
+      if (!id) {
+        notify('Could not send invite', 'Please try again in a moment.');
+        setSending(false);
+        return;
+      }
+      // Realtime will deliver the INSERT to the invited user's
+      // IncomingInviteListener; a separate push is redundant + noisy
+      // when both are online, so we skip it for live invites.
+      router.replace({ pathname: '/game/challenge-waiting', params: { challengeId: id } });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  /** Offline friend path — falls back to the original async flow
+   *  where the challenger plays first and the push notification is
+   *  fired after insertChallengeRow. */
+  function startAsyncChallenge() {
     if (selectedMode === 'classic') {
       router.push({ pathname: '/game/challenge', params: { friendId, mode: 'create', difficulty } });
     } else {
       router.push({ pathname: '/game/challenge-mode', params: { friendId, mode: selectedMode, action: 'create' } });
     }
+  }
+
+  const handleStart = () => {
+    if (friendOnline === true) { startInstantInvite(); return; }
+    // Offline or unknown — confirm with the user. We default to
+    // async since real-time requires both players active at the
+    // same time.
+    const title = '@' + (friendUsername || 'friend') + ' is offline';
+    const body = 'Send an async challenge? They\u2019ll play when they next open the app and you\u2019ll see the result after they finish.';
+    confirm(title, body, startAsyncChallenge);
   };
 
   return (
@@ -144,9 +244,29 @@ function ChallengeSelectScreen() {
             <Text style={[styles.bottomName, { color: colors.text }]}>{selected.name}</Text>
             <Text style={[styles.bottomMeta, { color: colors.textMid }]}>{selected.roundLabel} · {selected.estimatedTime}</Text>
           </View>
+          {/* Online indicator. Green pulse if ready for an instant
+              invite, grey if we\u2019ll fall back to async. */}
+          <View style={[styles.statusPill, { backgroundColor: friendOnline ? '#00B89420' : colors.surface }]}>
+            <View style={[styles.statusDot, { backgroundColor: friendOnline ? '#00B894' : colors.textLight }]} />
+            <Text style={[styles.statusText, { color: friendOnline ? '#00B894' : colors.textMid }]}>
+              {friendOnline === null ? '\u2026' : friendOnline ? 'Online' : 'Offline'}
+            </Text>
+          </View>
         </View>
-        <Pressable style={[styles.startBtn, { backgroundColor: selected.color }]} onPress={handleStart}>
-          <Text style={styles.startBtnText}>Start Challenge</Text>
+        <Pressable
+          style={[styles.startBtn, { backgroundColor: selected.color, opacity: sending ? 0.6 : 1 }]}
+          onPress={handleStart}
+          disabled={sending}
+          accessibilityRole="button"
+          accessibilityLabel={friendOnline ? 'Send instant challenge invite' : 'Send async challenge'}
+        >
+          {sending ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.startBtnText}>
+              {friendOnline ? 'Invite to 1v1' : 'Send async challenge'}
+            </Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>
@@ -218,4 +338,7 @@ const styles = StyleSheet.create({
   bottomMeta: { fontSize: 11, marginTop: 1 },
   startBtn: { paddingVertical: 16, borderRadius: 14, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 4 },
   startBtnText: { color: '#FFF', fontSize: 17, fontWeight: '700' },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 11, fontWeight: '700' },
 });

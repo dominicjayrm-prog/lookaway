@@ -333,7 +333,17 @@ export async function sendChallengeNotification(
 
 /**
  * Record a player's score for a challenge.
- * If both scores are now recorded, mark as completed.
+ *
+ * Status management is now handled by a Postgres trigger
+ * (`mark_challenge_completed`) that flips status -> 'completed'
+ * the moment both score columns become non-null. This removes a
+ * real client-side race where two simultaneous writers each read
+ * null for the other's score and neither ended up setting status
+ * to 'completed', stranding the row as 'live'/'pending' forever.
+ *
+ * After UPDATE we re-read the row to decide whether to fire the
+ * "result ready" push notification (only the second finisher's
+ * write actually flips the row to completed).
  */
 export async function recordChallengeScore(
   challengeId: string,
@@ -342,7 +352,6 @@ export async function recordChallengeScore(
   stars: number,
 ): Promise<boolean> {
   try {
-    // Get the challenge to determine which side this user is
     const { data: challenge } = await supabase
       .from('friend_challenges')
       .select('*')
@@ -356,13 +365,6 @@ export async function recordChallengeScore(
       ? { challenger_score: score, challenger_stars: stars }
       : { challenged_score: score, challenged_stars: stars };
 
-    // Check if the other side has already played
-    const otherScore = isChallenger ? challenge.challenged_score : challenge.challenger_score;
-    if (otherScore !== null) {
-      update.status = 'completed';
-      update.completed_at = new Date().toISOString();
-    }
-
     const { error } = await supabase
       .from('friend_challenges')
       .update(update)
@@ -370,12 +372,27 @@ export async function recordChallengeScore(
 
     if (log.supabaseError('challenges', 'recordChallengeScore', error, { challengeId, userId, score })) return false;
 
-    // Check challenge achievements (challenge sent for challenger, challenge won for winner)
-    if (update.status === 'completed') {
-      const myScore = score;
-      const theirScore = otherScore as number;
-      if (myScore > theirScore) {
-        // Count total wins for this user
+    // Re-read to get the authoritative post-trigger status and both
+    // scores. `mark_challenge_completed` (BEFORE UPDATE trigger) will
+    // have flipped status to 'completed' and stamped completed_at if
+    // both score columns are now non-null.
+    const { data: fresh } = await supabase
+      .from('friend_challenges')
+      .select('status, challenger_score, challenged_score, challenger_id, challenged_id')
+      .eq('id', challengeId)
+      .single();
+
+    // Only the player whose write actually completed the challenge
+    // (i.e. the second finisher) should fire the result notification
+    // and the "challenge won" achievement check. Otherwise both
+    // writers race to send the same push and the achievement tally
+    // double-counts.
+    const justCompleted = fresh?.status === 'completed' && fresh.challenger_score != null && fresh.challenged_score != null;
+    if (justCompleted) {
+      const myScore = isChallenger ? fresh.challenger_score : fresh.challenged_score;
+      const theirScore = isChallenger ? fresh.challenged_score : fresh.challenger_score;
+
+      if (myScore != null && theirScore != null && myScore > theirScore) {
         const { count } = await supabase
           .from('friend_challenges')
           .select('id', { count: 'exact', head: true })
@@ -385,27 +402,23 @@ export async function recordChallengeScore(
           );
         checkAchievements(userId, { type: 'challenge_won', data: { totalChallengesWon: count ?? 0 } }).catch(() => {});
       }
-    }
 
-    // If challenge is now completed, notify the challenger about the result
-    if (update.status === 'completed' && !isChallenger) {
-      // The challenged player just finished — notify the challenger
-      const myScore = score;
-      const theirScore = otherScore as number;
-      // Get username of the player who just finished
+      // Notify the OPPONENT of the completion. Only the second
+      // finisher's device runs this branch, so there's no dupe.
+      const opponentId = isChallenger ? fresh.challenged_id : fresh.challenger_id;
       const { data: myProfile } = await supabase
         .from('profiles')
         .select('username')
         .eq('id', userId)
         .single();
-      if (myProfile?.username) {
+      if (myProfile?.username && myScore != null && theirScore != null) {
         notifyChallengeResult(
-          challenge.challenger_id,
+          opponentId,
           myProfile.username,
-          theirScore, // challenger's score
-          myScore,    // challenged's score
+          theirScore,   // opponent's own score (from their perspective the "their" score is ours)
+          myScore,
           challengeId,
-        ).catch(() => {}); // Fire and forget
+        ).catch(() => {});
       }
     }
 
@@ -438,7 +451,189 @@ export async function expireOldChallenges(): Promise<void> {
       .update({ status: 'expired' })
       .eq('status', 'pending')
       .lt('created_at', cutoff);
+    // Also expire any live-invite rows whose 60s acceptance window
+    // elapsed while the invited user was offline / ignoring the modal.
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from('friend_challenges')
+      .update({ status: 'expired' })
+      .eq('status', 'invited')
+      .lt('invite_expires_at', nowIso);
   } catch (e) {
     log.error('challenges', 'expireOldChallenges threw', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Real-time 1v1 invite flow (Clash-Royale style).
+//
+//  Difference from the async flow above: instead of the challenger
+//  playing first and submitting a score, sendInvite() creates a row
+//  with status='invited' that expires in INVITE_WINDOW_SECS. The
+//  challenged user's device receives a Supabase realtime INSERT and
+//  surfaces an accept/decline modal. If they accept within the
+//  window, status flips to 'live' and both clients navigate into
+//  the game with the shared mode_data that was pre-generated on
+//  the challenger's device. Scores flow through recordChallengeScore
+//  as before, and the result screen hides both scores until both
+//  sides have submitted.
+// ═══════════════════════════════════════════════════════════════════
+
+/** Window (seconds) the challenged user has to accept the invite. */
+export const INVITE_WINDOW_SECS = 60;
+
+/** Time after `profiles.last_seen` a user is still considered "online"
+ *  for the purposes of issuing an instant invite. Matches the ≤2min
+ *  bucket used by StatusDot in the friends list. */
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+
+/** Check whether the given user should be considered online right
+ *  now. Clients poll this before offering an instant invite; if the
+ *  opponent is offline, the UI falls back to the async challenge
+ *  flow (same as before this overhaul). */
+export async function isUserOnline(userId: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('last_seen')
+      .eq('id', userId)
+      .single();
+    if (!data?.last_seen) return false;
+    return Date.now() - new Date(data.last_seen).getTime() < ONLINE_THRESHOLD_MS;
+  } catch {
+    return false;
+  }
+}
+
+interface SendInviteArgs {
+  challengerId: string;
+  challengedId: string;
+  mode: string;             // 'classic' | 'speed_recall' | 'snap_match' | ...
+  modeData: unknown;        // pre-generated shared seed for both sides
+  levelIds?: string[];      // classic mode only
+  difficulty?: ChallengeDifficulty;
+}
+
+/** Create an "invited" row and return its id, or null on failure.
+ *  Pre-generates mode_data so both sides play identical content. */
+export async function sendInvite(args: SendInviteArgs): Promise<string | null> {
+  try {
+    const expiresAt = new Date(Date.now() + INVITE_WINDOW_SECS * 1000).toISOString();
+    const insertBody: Record<string, unknown> = {
+      challenger_id: args.challengerId,
+      challenged_id: args.challengedId,
+      mode: args.mode,
+      mode_data: args.modeData,
+      level_ids: args.levelIds ?? [],
+      status: 'invited',
+      invite_expires_at: expiresAt,
+    };
+    const { data, error } = await supabase
+      .from('friend_challenges')
+      .insert(insertBody)
+      .select('id')
+      .single();
+    if (log.supabaseError('challenges', 'sendInvite', error, { challengerId: args.challengerId, challengedId: args.challengedId, mode: args.mode })) return null;
+    return data?.id ?? null;
+  } catch (e) {
+    log.error('challenges', 'sendInvite threw', e, { args });
+    return null;
+  }
+}
+
+/** Flip a row from 'invited' to 'live' + stamp accepted_at. Returns
+ *  the freshly-loaded row (needed by the challenged-side game screen
+ *  so it can pull mode + mode_data without a second round-trip). */
+export async function acceptInvite(challengeId: string): Promise<{ ok: boolean; row?: Record<string, unknown> }> {
+  try {
+    const { data, error } = await supabase
+      .from('friend_challenges')
+      .update({ status: 'live', accepted_at: new Date().toISOString() })
+      .eq('id', challengeId)
+      .eq('status', 'invited')  // defensive — don't accept an already-expired or cancelled invite
+      .select('*')
+      .single();
+    if (log.supabaseError('challenges', 'acceptInvite', error, { challengeId })) return { ok: false };
+    if (!data) return { ok: false };
+    return { ok: true, row: data };
+  } catch (e) {
+    log.error('challenges', 'acceptInvite threw', e, { challengeId });
+    return { ok: false };
+  }
+}
+
+/** Challenged user explicitly declines. Marks status and notifies
+ *  the challenger. Returns whether the update succeeded. */
+export async function declineInvite(challengeId: string, declinerUsername?: string, challengerId?: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('friend_challenges')
+      .update({ status: 'declined' })
+      .eq('id', challengeId)
+      .eq('status', 'invited');
+    if (log.supabaseError('challenges', 'declineInvite', error, { challengeId })) return false;
+    if (challengerId && declinerUsername) {
+      notifyChallengeDeclined(challengerId, declinerUsername).catch(() => {});
+    }
+    return true;
+  } catch (e) {
+    log.error('challenges', 'declineInvite threw', e, { challengeId });
+    return false;
+  }
+}
+
+/** Challenger cancels before the invite is accepted. */
+export async function cancelInvite(challengeId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('friend_challenges')
+      .delete()
+      .eq('id', challengeId)
+      .eq('status', 'invited');
+    if (log.supabaseError('challenges', 'cancelInvite', error, { challengeId })) return false;
+    return true;
+  } catch (e) {
+    log.error('challenges', 'cancelInvite threw', e, { challengeId });
+    return false;
+  }
+}
+
+/** Mark a live or invited challenge as abandoned by the given user.
+ *  Fires from game-screen quit flows — if a player bails out
+ *  mid-match, the opponent's result screen flips to
+ *  "@opponent left the match" instead of stranding them on a
+ *  "waiting for scores…" spinner forever.
+ *
+ *  Guards: only flips rows currently in 'live' or 'invited' so a
+ *  late tap after completion / expiry / decline is a no-op. */
+export async function abandonChallenge(challengeId: string, userId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('friend_challenges')
+      .update({ status: 'abandoned', abandoned_by: userId })
+      .eq('id', challengeId)
+      .in('status', ['live', 'invited']);
+    if (log.supabaseError('challenges', 'abandonChallenge', error, { challengeId, userId })) return false;
+    return true;
+  } catch (e) {
+    log.error('challenges', 'abandonChallenge threw', e, { challengeId, userId });
+    return false;
+  }
+}
+
+/** Flip a still-open invite to 'expired' when the 60s acceptance
+ *  window elapses. Both the challenger's waiting screen and the
+ *  challenged user's IncomingInviteListener call this when their
+ *  local countdown hits zero — the .eq('status','invited') guard
+ *  makes the second caller a no-op. */
+export async function expireInvite(challengeId: string): Promise<void> {
+  try {
+    await supabase
+      .from('friend_challenges')
+      .update({ status: 'expired' })
+      .eq('id', challengeId)
+      .eq('status', 'invited');
+  } catch (e) {
+    log.error('challenges', 'expireInvite threw', e, { challengeId });
   }
 }
