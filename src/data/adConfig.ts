@@ -22,19 +22,48 @@
  *    - "They look ugly asf" — user's words
  *    - Monetisation is strong enough via IAP + subs + interstitials
  *
- * To swap ad unit IDs: update the PRODUCTION_IDS below. The App ID
- * lives in app.json → plugins → react-native-google-mobile-ads →
- * iosAppId and requires a rebuild to take effect.
+ * Test vs production IDs:
+ *   AdMob production ad units take 24-48 hours to start serving on a
+ *   new app, and fill rate is near-zero for the first week or two
+ *   (Google's ad network needs traffic history before auctioning
+ *   ads). During TestFlight this means real ads almost NEVER fill
+ *   and testers see no interstitials at all.
+ *
+ *   Google publishes always-filling TEST ad unit IDs that serve
+ *   placeholder "Test Ad" creatives on-demand — perfect for
+ *   verifying the code path works end-to-end.
+ *
+ *   `USE_TEST_ADS` switches between them. Set to `false` before
+ *   App Store submission. The test IDs are safe to leave compiled
+ *   in — they're Google's own public constants, not our account.
  */
 
 import { Platform } from 'react-native';
 
-// ─── Real production ad unit IDs ───────────────────────────────────
+// ─── Toggle ─────────────────────────────────────────────────────────
+//
+// FLIP TO `false` BEFORE SUBMITTING TO APP STORE — otherwise testers
+// see "Test Ad" creatives and production users earn no revenue.
+// During TestFlight + internal testing, leave `true` so ads actually
+// fill and the pipeline is observable.
+export const USE_TEST_ADS = true;
 
-export const AD_UNIT_IDS = {
+// ─── Ad unit IDs ───────────────────────────────────────────────────
+
+// Google's always-filling test IDs. Docs:
+// https://developers.google.com/admob/ios/test-ads
+const TEST_IDS = {
+  INTERSTITIAL: 'ca-app-pub-3940256099942544/4411468910',
+  REWARDED: 'ca-app-pub-3940256099942544/1712485313',
+};
+
+// Real production ad unit IDs from your AdMob account.
+const PRODUCTION_IDS = {
   INTERSTITIAL: 'ca-app-pub-9228812020612351/4576685235',
   REWARDED: 'ca-app-pub-9228812020612351/9386158787',
 };
+
+export const AD_UNIT_IDS = USE_TEST_ADS ? TEST_IDS : PRODUCTION_IDS;
 
 // ─── Placement rules ───────────────────────────────────────────────
 
