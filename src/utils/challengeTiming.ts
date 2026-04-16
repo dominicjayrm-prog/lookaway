@@ -24,8 +24,10 @@
  *  this and memorise it" countdown in challenge mode. */
 export const CHALLENGE_VIEW_TIME_MULT = 1.3;
 
-/** Per-question response timer in classic mode. 50% more time
- *  because in 1v1 you're also racing your opponent — the default
- *  8s solo timeLimit feels too tight when you can see the live
- *  opponent status on the other side. */
-export const CHALLENGE_QUESTION_TIME_MULT = 1.5;
+/** Per-question response timer in classic mode. 2x the solo
+ *  timeLimit because in 1v1 the combination of "what was in the
+ *  scene?" recall + "my opponent's clock is also ticking" still
+ *  felt tight at 1.5x — playtesters found it unplayable under
+ *  competitive pressure. Doubling keeps the urgency (the clock is
+ *  still visible and can still run out) without the panic. */
+export const CHALLENGE_QUESTION_TIME_MULT = 2.0;

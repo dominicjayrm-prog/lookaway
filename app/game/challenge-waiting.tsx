@@ -23,6 +23,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { cancelInvite, expireInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
+import { FriendAvatar } from '@/src/components/FriendAvatar';
 
 interface InviteRow {
   id: string;
@@ -34,6 +35,9 @@ interface InviteRow {
 }
 
 interface FriendProfile {
+  avatar_url?: string | null;
+  equipped_frame?: string | null;
+  equipped_expression?: string | null;
   username: string;
   avatar_color: string;
 }
@@ -92,7 +96,7 @@ export default function ChallengeWaitingScreen() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('username, avatar_color')
+        .select('username, avatar_color, avatar_url, equipped_frame, equipped_expression')
         .eq('id', ch.challenged_id)
         .single();
       if (!cancelled) setFriend(profile ?? { username: 'friend', avatar_color: '#6C5CE7' });
@@ -259,15 +263,28 @@ export default function ChallengeWaitingScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.centered}>
         <Animated.View style={[styles.avatarWrap, { transform: [{ scale: pulseAnim }] }]}>
-          <View style={[styles.avatar, { backgroundColor: friend?.avatar_color ?? colors.accent }]}>
-            <Text style={styles.avatarInitial}>{friend?.username?.[0]?.toUpperCase() ?? '?'}</Text>
-          </View>
+          {/* Render the friend's real customisation (equipped frame /
+              expression / uploaded photo) via the shared FriendAvatar,
+              not a bare initials pill. Matches the waiting / reveal
+              screens in challenge-result + the friends tab. */}
+          <FriendAvatar
+            username={friend?.username}
+            avatarColor={friend?.avatar_color ?? colors.accent}
+            avatarUrl={friend?.avatar_url}
+            equippedFrame={friend?.equipped_frame}
+            equippedExpression={friend?.equipped_expression}
+            size={96}
+            showDefaultRing
+          />
         </Animated.View>
+        {/* JSX text content doesn't interpret JS escape sequences —
+            `\u2026` and `\u2019` appeared literally on screen. Using
+            the actual characters inline fixes the rendering. */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Waiting for @{friend?.username ?? 'friend'}\u2026
+          Waiting for @{friend?.username ?? 'friend'}…
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMid }]}>
-          They\u2019re being invited to a {modeName} match right now.
+          They’re being invited to a {modeName} match right now.
         </Text>
         <View style={[styles.countdown, { backgroundColor: colors.accentSoft }]}>
           <Ionicons name="time" size={18} color={colors.accent} />

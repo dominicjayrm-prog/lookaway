@@ -129,7 +129,13 @@ function ChallengeGameScreen() {
   }, []);
 
   const handleSelectOption = useCallback((index: number) => {
-    if (selectedOption !== null || !currentQuestion) return;
+    // Gate: block taps after a selection AND after a timeout — previously
+    // only `selectedOption !== null` was checked, which meant a tap
+    // landing in the 800ms reveal window AFTER the timer expired (when
+    // `revealedCorrect` is set but `selectedOption` is still null from
+    // the timeout path) slipped through and let the player "answer" a
+    // question that was already scored wrong. This blocked it cleanly.
+    if (selectedOption !== null || revealedCorrect !== null || !currentQuestion) return;
     setSelectedOption(index);
     timeoutRef.current = setTimeout(() => {
       const correct = index === currentQuestion.correctIndex;
@@ -148,7 +154,7 @@ function ChallengeGameScreen() {
         }
       }, 800);
     }, 300);
-  }, [selectedOption, currentQuestion, questionIdx, totalQuestions, pu]);
+  }, [selectedOption, revealedCorrect, currentQuestion, questionIdx, totalQuestions, pu]);
 
   // Keep the select ref in sync so Skip routes to the latest closure.
   useEffect(() => { selectOptionRef.current = handleSelectOption; }, [handleSelectOption]);
@@ -385,7 +391,7 @@ function ChallengeGameScreen() {
       {phase === 'complete' && (
         <View style={styles.centered}>
           <Text style={[styles.bigTitle, { color: colors.accent }]}>Nice work!</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent\u2019s progress\u2026</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent’s progress…</Text>
         </View>
       )}
 
