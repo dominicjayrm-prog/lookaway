@@ -137,8 +137,13 @@ function SettingsScreen() {
           <Pressable
             style={styles.row}
             onPress={async () => {
+              // Clear both the legacy device-global key (may still
+              // exist on pre-upgrade installs) and this user's
+              // scoped key so the Play tab definitely re-fires the
+              // tutorial on next visit.
               try { await AsyncStorage.removeItem('blanked_tutorial_seen'); } catch {}
               if (user?.id) {
+                try { await AsyncStorage.removeItem(`blanked_tutorial_seen_${user.id}`); } catch {}
                 try {
                   await supabase.from('profiles').update({ tutorial_seen: false }).eq('id', user.id);
                 } catch {}

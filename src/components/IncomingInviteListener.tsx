@@ -98,7 +98,11 @@ export function IncomingInviteListener() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`incoming-invites-${user.id}`)
+      // Unique per-mount suffix — see friends.tsx for context. The
+      // global IncomingInviteListener mounts once under AuthProvider
+      // but the hot-reload cycle + React StrictMode double-mount can
+      // still race against channel cleanup on web.
+      .channel(`incoming-invites-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {

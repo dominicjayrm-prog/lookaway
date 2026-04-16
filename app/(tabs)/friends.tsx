@@ -325,8 +325,20 @@ function FriendsTab() {
 
   useEffect(() => {
     if (!userId) return;
+    // Unique channel name per mount. Using just `friendships-inbox-
+    // ${userId}` meant that if the friends tab was torn down and
+    // remounted fast enough (e.g. declining an invite then navigating
+    // back) the removeChannel cleanup might not land BEFORE the new
+    // effect tried to create a channel with the same name — Supabase
+    // internally dedupes by channel name and returned the old,
+    // already-subscribed channel, so the new .on() calls hit the
+    // "cannot add postgres_changes callbacks after subscribe()"
+    // failure and threw to the root error boundary. A per-mount
+    // suffix (timestamp + random nonce) guarantees every mount gets
+    // a fresh, uncontested channel slot.
+    const mountId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`friendships-inbox-${userId}`)
+      .channel(`friendships-inbox-${userId}-${mountId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${userId}` },

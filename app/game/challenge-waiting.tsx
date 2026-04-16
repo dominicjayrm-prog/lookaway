@@ -105,7 +105,10 @@ export default function ChallengeWaitingScreen() {
     load();
 
     const channel = supabase
-      .channel(`challenge-waiting-${challengeId}`)
+      // Unique per-mount suffix to avoid "cannot add postgres_changes
+      // callbacks after subscribe()" when the screen remounts faster
+      // than the previous channel can be torn down.
+      .channel(`challenge-waiting-${challengeId}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${challengeId}` },

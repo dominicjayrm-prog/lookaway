@@ -30,6 +30,7 @@ import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { initAdsAndTracking } from '@/src/utils/adService';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
+import { OfflineScreen } from '@/src/components/OfflineScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -463,6 +464,10 @@ function RootLayout() {
           <ThemedStack />
           <StreakRewardToastMounter />
           <IncomingInviteListener />
+          {/* Global offline takeover — renders null while online,
+              full-screen Blink + CTA when NetInfo reports no
+              connection. Mounted last so it overlays every screen. */}
+          <OfflineScreen />
         </MobileContainer>
       </AuthProvider>
     </ThemeProvider>

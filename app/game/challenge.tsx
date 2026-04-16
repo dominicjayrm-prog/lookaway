@@ -71,6 +71,36 @@ function ChallengeGameScreen() {
   // Clear timeout on unmount
   useEffect(() => { return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); }; }, []);
 
+  // Mid-game abandonment watcher: if the OPPONENT quits while we're
+  // still playing, their confirmLeave fires `abandonChallenge()` which
+  // flips the row to status='abandoned' in Supabase. Without this
+  // subscription the current player keeps grinding through the
+  // questions until they submit, only finding out on the result
+  // screen that their opponent bailed 3 minutes ago. Subscribe to
+  // the row and route to the result screen the instant we see
+  // status='abandoned' — the result screen already renders the
+  // "opponent left the match" terminal state.
+  useEffect(() => {
+    if (!dbChallengeId || !userId) return;
+    const channel = supabase
+      .channel(`challenge-live-${dbChallengeId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${dbChallengeId}` },
+        (payload) => {
+          const next = payload.new as { status?: string | null; abandoned_by?: string | null };
+          // If WE abandoned it'd already be reflected locally; only
+          // act on the OTHER side abandoning.
+          if (next.status === 'abandoned' && next.abandoned_by && next.abandoned_by !== userId) {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            router.replace({ pathname: '/game/challenge-result', params: { challengeId: dbChallengeId } });
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [dbChallengeId, userId, router]);
+
   // Load levels. Challenger path no longer inserts a DB row here —
   // it just picks the ids so the challenger can play their half
   // locally first. The row is inserted (with the challenger's real
