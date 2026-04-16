@@ -27,7 +27,9 @@ export type BlinkExpression =
   | 'golden_blink' | 'galaxy' | 'rainbow' | 'shadow' | 'cherry_blossom'
   // Milestone earn-only expressions
   | 'sharp_eye' | 'lightning_mind' | 'detective' | 'motion_master'
-  | 'mastermind_boss';
+  | 'mastermind_boss'
+  // Status expressions (not in cosmetic picker — system-only)
+  | 'offline';
 
 interface BlinkProps {
   expression?: BlinkExpression;
@@ -823,6 +825,49 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
           d={`M${cx - s * 0.012},${cy + s * 0.346} L${cx - s * 0.012},${cy + s * 0.328} L${cx},${cy + s * 0.342} L${cx + s * 0.012},${cy + s * 0.328} L${cx + s * 0.012},${cy + s * 0.346}`}
           fill="none" stroke="#9C7406" strokeWidth={sw(0.7, 0.01)} strokeLinecap="round" strokeLinejoin="round"
         />
+      </>
+    ),
+
+    // System-only expression rendered by the global OfflineScreen when
+    // NetInfo reports no connection. X-eyes (the classic "knocked-out"
+    // look) + a red wifi symbol above the head with a slash through
+    // it to make the "no signal" meaning unmistakable.
+    offline: (
+      <>
+        {/* X eyes — two crossed strokes per eye */}
+        {[-1, 1].map((side) => (
+          <React.Fragment key={`xeye-${side}`}>
+            <Line
+              x1={cx + side * s * 0.1 - s * 0.05} y1={cy - s * 0.05 - s * 0.05}
+              x2={cx + side * s * 0.1 + s * 0.05} y2={cy - s * 0.05 + s * 0.05}
+              stroke={C.text} strokeWidth={sw(1.6, 0.028)} strokeLinecap="round"
+            />
+            <Line
+              x1={cx + side * s * 0.1 - s * 0.05} y1={cy - s * 0.05 + s * 0.05}
+              x2={cx + side * s * 0.1 + s * 0.05} y2={cy - s * 0.05 - s * 0.05}
+              stroke={C.text} strokeWidth={sw(1.6, 0.028)} strokeLinecap="round"
+            />
+          </React.Fragment>
+        ))}
+        {/* Small flat "meh" mouth */}
+        <Line x1={cx - s * 0.08} y1={cy + s * 0.13} x2={cx + s * 0.08} y2={cy + s * 0.13} stroke={C.text} strokeWidth={sw(1.2, 0.022)} strokeLinecap="round" />
+        {/* Red wifi icon above Blink's head — three arcs + dot, with
+            a diagonal slash across it to signal "no connection". */}
+        {(() => {
+          const wifiCx = cx;
+          const wifiCy = cy - bR - s * 0.05;
+          const red = '#FF4444';
+          return (
+            <>
+              <Path d={`M${wifiCx - s * 0.16},${wifiCy + s * 0.04} Q${wifiCx},${wifiCy - s * 0.12} ${wifiCx + s * 0.16},${wifiCy + s * 0.04}`} fill="none" stroke={red} strokeWidth={sw(1.4, 0.024)} strokeLinecap="round" opacity={0.85} />
+              <Path d={`M${wifiCx - s * 0.1},${wifiCy + s * 0.06} Q${wifiCx},${wifiCy - s * 0.04} ${wifiCx + s * 0.1},${wifiCy + s * 0.06}`} fill="none" stroke={red} strokeWidth={sw(1.3, 0.022)} strokeLinecap="round" opacity={0.85} />
+              <Path d={`M${wifiCx - s * 0.04},${wifiCy + s * 0.08} Q${wifiCx},${wifiCy + s * 0.04} ${wifiCx + s * 0.04},${wifiCy + s * 0.08}`} fill="none" stroke={red} strokeWidth={sw(1.2, 0.02)} strokeLinecap="round" opacity={0.85} />
+              <Circle cx={wifiCx} cy={wifiCy + s * 0.1} r={s * 0.013} fill={red} />
+              {/* Diagonal slash */}
+              <Line x1={wifiCx - s * 0.19} y1={wifiCy - s * 0.08} x2={wifiCx + s * 0.19} y2={wifiCy + s * 0.14} stroke={red} strokeWidth={sw(1.6, 0.028)} strokeLinecap="round" />
+            </>
+          );
+        })()}
       </>
     ),
   };
