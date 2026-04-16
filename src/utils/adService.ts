@@ -163,9 +163,14 @@ export async function showRewardedAd(): Promise<AdResult> {
 
   const AdMob = getAdMob();
   if (!AdMob) {
-    // Web / unsupported — grant the reward anyway (better than blocking)
-    await saveCounter({ date: counter.date, count: counter.count + 1 });
-    return { granted: true };
+    // Module didn't load on this platform/build. This used to grant
+    // the reward for free which let users unlock cosmetics without
+    // watching ads — exactly the "I clicked watch-ad and just got
+    // the expression" bug the user reported. Fail loudly instead:
+    // the shop surfaces a "Couldn't load an ad" toast and the user
+    // can try again.
+    log.warn('ads', 'rewarded ad unavailable — AdMob module not loaded');
+    return { granted: false, reason: 'unavailable' };
   }
 
   try {

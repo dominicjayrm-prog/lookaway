@@ -21,7 +21,7 @@
  * showPeekScene into QuestionCard / SceneRenderer.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useGameStore } from '@/src/store';
 import { sounds } from '@/src/lib/sounds';
@@ -65,6 +65,22 @@ export function useClassicPowerUps({
 
   useEffect(() => {
     return () => { if (peekTimeoutRef.current) clearTimeout(peekTimeoutRef.current); };
+  }, []);
+
+  // Defensive: when the app is backgrounded mid-challenge with the
+  // BuyPowerUpPopup open, the modal can come back "stuck" — the
+  // underlying timer's `running` prop is tied to `!buyPopupId`, so a
+  // stale popup state freezes the countdown bar and locks the screen
+  // until the user taps the modal (which may itself be visually
+  // broken). Auto-close any open popup when the app returns from
+  // background so the gameplay can resume cleanly.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        setBuyPopupId(null);
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   /** Reset all power-up state — call when starting a new level/round. */
