@@ -29,6 +29,18 @@ import { log } from '@/src/lib/logger';
 
 type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'reveal' | 'scene_done' | 'complete' | 'error';
 
+/**
+ * Challenge-mode timer multipliers. Solo gameplay uses the raw
+ * `viewTime` / `timeLimit` values baked into each level, tuned for
+ * a relaxed self-paced experience. 1v1 changes the psychology
+ * entirely — both players are watching the same clock under
+ * competitive pressure, so the same values that felt fine solo
+ * felt "unbearable" in challenge. These multipliers add a buffer
+ * without removing the clock (which is what gives 1v1 its edge).
+ */
+const CHALLENGE_VIEW_TIME_MULT = 1.3;     // 30% more time to memorise the scene
+const CHALLENGE_QUESTION_TIME_MULT = 1.5; // 50% more time per question
+
 interface Answer { correct: boolean; }
 
 function ChallengeGameScreen() {
@@ -303,12 +315,18 @@ function ChallengeGameScreen() {
         </View>
       )}
 
-      {/* Memorise */}
+      {/* Memorise — challenge mode gets a 30% longer study window
+          than solo play. Solo is self-paced, challenge is 1v1 with
+          a visible countdown on both devices, and the pressure of
+          "we're both staring at the same scene with a clock
+          running" made users report the default viewTime as
+          unplayably tight. A 30% buffer keeps the challenge feel
+          without the unbearable panic. */}
       {phase === 'memorise' && currentScene && (
         <View style={styles.gameArea}>
-          <CountdownTimer duration={currentScene.viewTime + pu.timerBonus} running={!pu.buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
+          <CountdownTimer duration={currentScene.viewTime * CHALLENGE_VIEW_TIME_MULT + pu.timerBonus} running={!pu.buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
           <Text style={[styles.memoriseText, { color: colors.textMid }]}>Memorise this scene!</Text>
-          <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime} />
+          <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime * CHALLENGE_VIEW_TIME_MULT} />
           <SlowTimeButton used={pu.usedPowerUps.slowTime} onUse={pu.handleSlowTime} />
         </View>
       )}
@@ -320,10 +338,15 @@ function ChallengeGameScreen() {
         </View>
       )}
 
-      {/* Question */}
+      {/* Question — also scaled up for challenge mode. Solo players
+          reported the default per-question timeLimit felt fine
+          while tapping at their own pace, but in 1v1 the combination
+          of "did I just see 8 shapes or 9?" + "my opponent is also
+          trying to beat the clock" made tappers feel perpetually
+          behind. 50% more time per question eases the pressure. */}
       {phase === 'question' && currentQuestion && (
         <View style={styles.gameArea}>
-          <CountdownTimer duration={currentQuestion.timeLimit} running={!pu.showPeekScene && !pu.buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
+          <CountdownTimer duration={currentQuestion.timeLimit * CHALLENGE_QUESTION_TIME_MULT} running={!pu.showPeekScene && !pu.buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />
           {pu.showPeekScene && currentScene ? (
             <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime} />
           ) : (
