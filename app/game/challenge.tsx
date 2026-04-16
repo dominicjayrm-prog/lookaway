@@ -10,6 +10,7 @@ import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -321,10 +322,17 @@ function ChallengeGameScreen() {
         </View>
       )}
 
-      {/* Transition */}
+      {/* Transition — "Go blank!" moment between memorise and the
+          question. The solo campaign screen renders a Blink mascot
+          here with the `blank` expression + sub-copy "What do you
+          remember?" so the beat reads as a playful handoff rather
+          than a blank wait. Challenge mode skipped the mascot —
+          fixed here so 1v1 matches the solo feel across every mode. */}
       {phase === 'transition' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Go blank!</Text>
+          <AnimatedBlink expression="blank" size={80} entrance="spring" />
+          <Text style={[styles.bigTitle, { color: colors.accent, marginTop: 16 }]}>Go blank!</Text>
+          <Text style={[styles.subtitle, { color: colors.textLight }]}>What do you remember?</Text>
         </View>
       )}
 

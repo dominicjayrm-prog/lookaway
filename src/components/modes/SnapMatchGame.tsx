@@ -5,6 +5,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { sounds } from '@/src/lib/sounds';
 import type { PowerUpId } from '@/src/utils/scoring';
 
@@ -338,8 +339,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
             : renderScene(round.sceneB, round.targetIndex >= 0 ? round.targetIndex : undefined, '#D4A012')
         )}
         {phase === 'blank' && (
+          // Show Blink with the blank expression instead of bare "..."
+          // so the 800ms transition feels like a proper "look away"
+          // beat — consistent with Classic / solo campaign.
           <View style={s.blankOverlay}>
-            <Text style={[s.blankText, { color: colors.textLight }]}>...</Text>
+            <AnimatedBlink expression="blank" size={64} entrance="spring" />
           </View>
         )}
       </Pressable>
