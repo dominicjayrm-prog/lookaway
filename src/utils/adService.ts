@@ -253,6 +253,7 @@ export async function maybeShowInterstitial(opts: {
     const state = useGameStore.getState();
     if (state.isSubscribed() || state.adsRemoved) {
       _levelsSinceLastAd = 0;
+      log.breadcrumb('ads', 'interstitial skipped — subscriber / adsRemoved', { isSubscribed: state.isSubscribed(), adsRemoved: state.adsRemoved });
       return false;
     }
   } catch {}
@@ -261,12 +262,14 @@ export async function maybeShowInterstitial(opts: {
   // First N levels ever played are ad-free so new users get hooked
   // before seeing any monetisation friction.
   if (totalLevelsEverCompleted <= INTERSTITIAL_GRACE_LEVELS) {
+    log.breadcrumb('ads', 'interstitial skipped — in grace period', { totalLevelsEverCompleted, graceCeiling: INTERSTITIAL_GRACE_LEVELS });
     return false;
   }
 
   // ── Guardrail 4: session cap ──
   // Prevents power users from getting hammered during long sessions.
   if (_sessionAdCount >= INTERSTITIAL_SESSION_CAP) {
+    log.breadcrumb('ads', 'interstitial skipped — session cap reached', { sessionAdCount: _sessionAdCount, cap: INTERSTITIAL_SESSION_CAP });
     return false;
   }
 
@@ -274,14 +277,20 @@ export async function maybeShowInterstitial(opts: {
   // World completion always qualifies (natural narrative break).
   // Otherwise, check the 5-level counter.
   const isTime = isWorldCompletion || _levelsSinceLastAd >= INTERSTITIAL_EVERY_N_LEVELS;
-  if (!isTime) return false;
+  if (!isTime) {
+    log.breadcrumb('ads', 'interstitial skipped — cadence not met', { levelsSinceLastAd: _levelsSinceLastAd, everyN: INTERSTITIAL_EVERY_N_LEVELS, isWorldCompletion });
+    return false;
+  }
 
   // ── All guardrails passed — show the ad ──
   const AdMob = getAdMob();
   if (!AdMob) {
     _levelsSinceLastAd = 0;
+    log.warn('ads', 'interstitial skipped — AdMob module not available');
     return false;
   }
+
+  log.breadcrumb('ads', 'interstitial loading', { isWorldCompletion, totalLevelsEverCompleted, levelsSinceLastAd: _levelsSinceLastAd });
 
   try {
     const { InterstitialAd, AdEventType } = AdMob;
