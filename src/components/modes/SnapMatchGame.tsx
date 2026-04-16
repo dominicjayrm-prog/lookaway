@@ -25,9 +25,17 @@ interface Props {
   modeData: any;
   onComplete: (totalScore: number) => void;
   modeColor: string;
+  /**
+   * Multiplier applied to Scene A viewing time. Solo defaults to
+   * `1.0`; challenge mode passes `CHALLENGE_VIEW_TIME_MULT` (1.3)
+   * so rounds 3-5 (originally only 1500ms) get a humane buffer
+   * in the competitive context. See
+   * `src/utils/challengeTiming.ts`.
+   */
+  viewTimeMultiplier?: number;
 }
 
-export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props) {
+export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('sceneA');
@@ -61,7 +69,10 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor }: Props
   const [freezeActive, setFreezeActive] = useState(false); // UI flag for the "Frozen" label
 
   // Base viewing time per round + slow-flash bonus (only for this round).
-  const baseViewingMs = roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500;
+  // Apply challenge multiplier to the BASE window only — slow-flash is
+  // a flat power-up bonus that should feel the same regardless of
+  // context (you paid for exactly 1500ms extra).
+  const baseViewingMs = Math.round((roundIdx < 2 ? 2500 : roundIdx < 4 ? 2000 : 1500) * viewTimeMultiplier);
   const viewingTimeMs = baseViewingMs + slowFlashBonus;
 
   const handleUsePowerUp = useCallback((id: string) => {

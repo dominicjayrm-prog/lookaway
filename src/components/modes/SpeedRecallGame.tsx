@@ -35,9 +35,18 @@ interface Props {
   modeData: any;
   onComplete: (totalScore: number) => void;
   modeColor: string;
+  /**
+   * Multiplier applied to the shape-viewing window. Solo gameplay
+   * passes nothing (defaults to `1.0`); the challenge entry point
+   * passes `CHALLENGE_VIEW_TIME_MULT` (1.3) so 1v1 matches get a
+   * 30% buffer to match Classic challenge timing. See
+   * `src/utils/challengeTiming.ts` for the shared constant.
+   */
+  viewTimeMultiplier?: number;
 }
 
-export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Props) {
+export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+  const BASE_VIEW_MS = Math.round(3000 * viewTimeMultiplier);
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('viewing');
@@ -113,7 +122,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     setGhostOutlineActive(false);
     setSecondChanceArmed(false);
 
-    const totalMs = 3000 + slowTimeBonus;
+    const totalMs = BASE_VIEW_MS + slowTimeBonus;
     const startTime = Date.now();
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -140,8 +149,8 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor }: Pro
     // Restart timer with bonus added from now
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
-    const remainingMs = Math.max(0, timerProgress * 3000) + slowTimeBonus;
-    const totalMs = 3000 + slowTimeBonus;
+    const remainingMs = Math.max(0, timerProgress * BASE_VIEW_MS) + slowTimeBonus;
+    const totalMs = BASE_VIEW_MS + slowTimeBonus;
     const startTime = Date.now() - (totalMs - remainingMs);
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;

@@ -27,19 +27,9 @@ import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
 import { log } from '@/src/lib/logger';
 
-type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'reveal' | 'scene_done' | 'complete' | 'error';
+import { CHALLENGE_VIEW_TIME_MULT, CHALLENGE_QUESTION_TIME_MULT } from '@/src/utils/challengeTiming';
 
-/**
- * Challenge-mode timer multipliers. Solo gameplay uses the raw
- * `viewTime` / `timeLimit` values baked into each level, tuned for
- * a relaxed self-paced experience. 1v1 changes the psychology
- * entirely — both players are watching the same clock under
- * competitive pressure, so the same values that felt fine solo
- * felt "unbearable" in challenge. These multipliers add a buffer
- * without removing the clock (which is what gives 1v1 its edge).
- */
-const CHALLENGE_VIEW_TIME_MULT = 1.3;     // 30% more time to memorise the scene
-const CHALLENGE_QUESTION_TIME_MULT = 1.5; // 50% more time per question
+type Phase = 'loading' | 'ready' | 'memorise' | 'transition' | 'question' | 'reveal' | 'scene_done' | 'complete' | 'error';
 
 interface Answer { correct: boolean; }
 

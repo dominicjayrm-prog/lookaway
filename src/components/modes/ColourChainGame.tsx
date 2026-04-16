@@ -14,12 +14,19 @@ interface Props {
   modeData: any;
   onComplete: (totalScore: number) => void;
   modeColor: string;
+  /**
+   * Multiplier on the memorise phase. Solo = 1.0, challenge passes
+   * `CHALLENGE_VIEW_TIME_MULT` (1.3) so the tile-memorise window
+   * lengthens from 3s to 3.9s in 1v1 — matching the Classic +
+   * Speed Recall / Snap Match / Counting Blitz buffers.
+   */
+  viewTimeMultiplier?: number;
 }
 
 const GRID_PADDING = 20;
 const GAP = 8;
 
-export default function ColourChainGame({ modeData, onComplete, modeColor }: Props) {
+export default function ColourChainGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
   const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('memorise');
   const [recallIdx, setRecallIdx] = useState(0);
@@ -95,11 +102,14 @@ export default function ColourChainGame({ modeData, onComplete, modeColor }: Pro
     setTileStates(init);
   }, [recallIdx, gridCols, gridRows]);
 
-  // Memorise phase - base 3 seconds + slow-time bonus.
+  // Memorise phase - base 3s (scaled by challenge multiplier) +
+  // slow-time power-up bonus. The challenge multiplier only
+  // stretches the BASE window; slow-time is a flat power-up
+  // bonus that adds exactly +2s regardless of context.
   useEffect(() => {
     if (phase !== 'memorise') return;
     const startTime = Date.now();
-    const totalSec = 3 + slowTimeBonus;
+    const totalSec = 3 * viewTimeMultiplier + slowTimeBonus;
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTime) / 1000;
       setMemoriseProgress(Math.max(0, 1 - elapsed / totalSec));
