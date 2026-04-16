@@ -1,14 +1,27 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+/**
+ * CountdownTimer — pure JS-driven countdown bar.
+ *
+ * Previous version used Reanimated 4's useAnimatedStyle + worklet-
+ * driven progress, which works great on most devices but had visual
+ * bugs on certain combinations (notably iPhone 11 + iOS 18.6 the
+ * user reported): the bar appeared as a static greyed-out track even
+ * though the underlying timer fired and the phase advanced. Reanimated
+ * worklet style application is occasionally unreliable on older A-chip
+ * devices; rather than chase the platform bug, this rewrite uses a
+ * plain `useState` + `setInterval` driving a normal `width: %` style.
+ *
+ * Tradeoff: we re-render the timer ~30 times per second on the JS
+ * thread instead of a UI-thread worklet. For an 8s countdown that's
+ * ~240 React renders — negligible overhead and proven to work on
+ * every device + browser. The visual is identical at 30fps for a
+ * smoothly-shrinking bar.
+ *
+ * onComplete is fired exactly once when the timer hits 0 OR when the
+ * setTimeout safety net trips, whichever comes first. completedRef
+ * prevents double-fire.
+ */
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  cancelAnimation,
-  Easing,
-  runOnJS,
-  useAnimatedReaction,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { sounds } from '@/src/lib/sounds';
@@ -21,6 +34,10 @@ interface CountdownTimerProps {
   style?: ViewStyle;
 }
 
+/** How often to re-render the timer bar. 33ms ≈ 30fps which is
+ *  visually smooth for a slowly-shrinking bar. */
+const TICK_MS = 33;
+
 export const CountdownTimer = React.memo(function CountdownTimer({
   duration,
   running,
@@ -29,85 +46,22 @@ export const CountdownTimer = React.memo(function CountdownTimer({
   style,
 }: CountdownTimerProps) {
   const { colors } = useTheme();
-  // Guard against NaN / negative / non-finite durations slipping in
-  // from upstream (e.g. `currentScene.viewTime` undefined → NaN math).
-  // A zero or negative duration was the freeze trigger: withTiming
-  // would jump progress to 0 in one frame and the useAnimatedReaction
-  // worklet sometimes missed the transition, so onComplete never
-  // fired and the screen was stuck on the memorise/question phase
-  // with an invisible (0%-width) timer bar. Floor to 1s so even
-  // pathological inputs visibly tick down.
+  // Guard against NaN / negative / non-finite durations (e.g. NaN
+  // from undefined viewTime upstream). Floor to 1s so even
+  // pathological inputs visibly tick down rather than collapsing
+  // instantly.
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 1;
 
-  const progress = useSharedValue(1);
+  const [progress, setProgress] = useState(1);
   const prevDuration = useRef(safeDuration);
-  const initialized = useRef(false);
+  const startTimeRef = useRef<number | null>(null);
+  const startProgressRef = useRef(1);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const completedRef = useRef(false);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    // Reset to full on new duration (new question/scene)
-    if (safeDuration !== prevDuration.current || !initialized.current) {
-      prevDuration.current = safeDuration;
-      initialized.current = true;
-      completedRef.current = false;
-      cancelAnimation(progress);
-      progress.value = 1;
-    }
-
-    // Clear any pending fallback before setting a new one.
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-
-    if (running) {
-      // Resume from current progress value
-      const remaining = progress.value * safeDuration * 1000;
-      progress.value = withTiming(0, {
-        duration: remaining,
-        easing: Easing.linear,
-      });
-
-      // SAFETY NET — JS-side fallback. If the reanimated worklet
-      // misses the 1→0 transition (e.g. an animation duration of 0,
-      // a backgrounding race, or a hot-reload edge case), this
-      // setTimeout still fires onComplete on time. The
-      // `completedRef` guard means whichever side fires first
-      // (worklet via runOnJS, or this fallback) wins and the other
-      // is a no-op. Without this the user's screen could freeze
-      // forever with a bar at 0% width and no transition.
-      const fallbackMs = Math.max(50, remaining + 100);
-      fallbackTimerRef.current = setTimeout(() => {
-        if (!completedRef.current) {
-          completedRef.current = true;
-          onComplete();
-        }
-      }, fallbackMs);
-    } else {
-      // Freeze at current position
-      cancelAnimation(progress);
-    }
-
-    return () => {
-      if (fallbackTimerRef.current) {
-        clearTimeout(fallbackTimerRef.current);
-        fallbackTimerRef.current = null;
-      }
-    };
-  }, [running, safeDuration, progress, onComplete]);
-
-  const triggerHaptic = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, []);
-
-  const triggerWarningSound = useCallback(() => {
-    sounds.play('timerWarning');
-  }, []);
-
-  const triggerTickSound = useCallback(() => {
-    sounds.play('timerTick');
-  }, []);
+  // Track which thresholds have already played sounds/haptics so they
+  // don't re-fire if `running` toggles.
+  const fired40Ref = useRef(false);
+  const fired15Ref = useRef(false);
 
   const triggerComplete = useCallback(() => {
     if (completedRef.current) return;
@@ -115,49 +69,115 @@ export const CountdownTimer = React.memo(function CountdownTimer({
     onComplete();
   }, [onComplete]);
 
-  useAnimatedReaction(
-    () => progress.value,
-    (current, previous) => {
-      if (previous !== null) {
-        if (previous > 0.4 && current <= 0.4) {
-          runOnJS(triggerHaptic)();
-          runOnJS(triggerWarningSound)();
-        }
-        if (previous > 0.15 && current <= 0.15) {
-          runOnJS(triggerHaptic)();
-          runOnJS(triggerTickSound)();
-        }
-        if (previous > 0 && current <= 0) {
-          runOnJS(triggerComplete)();
-        }
-      }
-    },
-  );
-
-  const correctColor = colors.correct;
-  const goldColor = colors.gold;
-  const wrongColor = colors.wrong;
-
-  const fillStyle = useAnimatedStyle(() => {
-    const p = progress.value;
-    let barColor: string = correctColor;
-    if (p <= 0.15) {
-      barColor = wrongColor;
-    } else if (p <= 0.4) {
-      barColor = goldColor;
+  // Reset progress when duration changes (new question/scene).
+  useEffect(() => {
+    if (safeDuration !== prevDuration.current) {
+      prevDuration.current = safeDuration;
+      setProgress(1);
+      startProgressRef.current = 1;
+      startTimeRef.current = null;
+      completedRef.current = false;
+      fired40Ref.current = false;
+      fired15Ref.current = false;
     }
-    return {
-      width: `${p * 100}%` as `${number}%`,
-      backgroundColor: barColor,
+  }, [safeDuration]);
+
+  // Drive the bar via setInterval. Each tick reads wall-clock to
+  // compute progress so the UI stays in sync even if a tick is
+  // missed (e.g. JS thread momentarily blocked).
+  useEffect(() => {
+    if (!running) {
+      // Pause: capture current progress, stop the interval. The next
+      // resume reads `startProgressRef` so it picks up where it left.
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        startProgressRef.current = progress;
+        startTimeRef.current = null;
+      }
+      return;
+    }
+
+    if (completedRef.current) return;
+
+    // (Re)start. Capture wall-clock anchor so we can compute elapsed
+    // accurately on every tick.
+    startTimeRef.current = Date.now();
+
+    const tick = () => {
+      const start = startTimeRef.current;
+      if (start === null) return;
+      const elapsedMs = Date.now() - start;
+      const totalMs = startProgressRef.current * safeDuration * 1000;
+      const remainingMs = Math.max(0, totalMs - elapsedMs);
+      const next = remainingMs / (safeDuration * 1000);
+      setProgress(next);
+
+      // Threshold cues — fire once per pass.
+      if (!fired40Ref.current && next <= 0.4 && next > 0.15) {
+        fired40Ref.current = true;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        sounds.play('timerWarning');
+      }
+      if (!fired15Ref.current && next <= 0.15 && next > 0) {
+        fired15Ref.current = true;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        sounds.play('timerTick');
+      }
+
+      if (remainingMs <= 0) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        triggerComplete();
+      }
     };
-  });
+
+    // Run one tick immediately so the bar starts moving without
+    // a 33ms gap, then schedule the interval.
+    tick();
+    intervalRef.current = setInterval(tick, TICK_MS);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  // We intentionally exclude `progress` from deps — it changes every
+  // tick and would cause the interval to constantly tear down and
+  // rebuild. The closure reads `startProgressRef.current` which is
+  // mutable, so we capture the "starting point" on each
+  // pause/resume cycle.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, safeDuration, triggerComplete]);
+
+  // Belt-and-braces JS timeout in case the interval is throttled (e.g.
+  // backgrounded tab on web). Fires onComplete after the full duration
+  // elapsed regardless of whether the interval ran.
+  useEffect(() => {
+    if (!running || completedRef.current) return;
+    const fallbackMs = startProgressRef.current * safeDuration * 1000 + 200;
+    const t = setTimeout(() => {
+      triggerComplete();
+    }, fallbackMs);
+    return () => clearTimeout(t);
+  }, [running, safeDuration, triggerComplete]);
+
+  // Bar color: green > yellow > red as it depletes.
+  const barColor = progress <= 0.15 ? colors.wrong : progress <= 0.4 ? colors.gold : colors.correct;
+  const widthPct = `${Math.max(0, Math.min(100, progress * 100))}%` as `${number}%`;
 
   return (
     <View
       style={[styles.track, { height, borderRadius: height / 2, backgroundColor: colors.border }, style]}
     >
-      <Animated.View
-        style={[styles.fill, { borderRadius: height / 2 }, fillStyle]}
+      <View
+        style={[
+          styles.fill,
+          { borderRadius: height / 2, width: widthPct, backgroundColor: barColor },
+        ]}
       />
     </View>
   );

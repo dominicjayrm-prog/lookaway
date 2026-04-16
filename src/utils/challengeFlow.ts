@@ -443,6 +443,14 @@ export async function recordChallengeScore(
  * any time before the timer runs out.
  */
 const EXPIRY_HOURS = 2;
+/** A live 1v1 match shouldn't take longer than this. If both players
+ *  accepted but one (or both) never submitted a score within this
+ *  window, the row gets auto-abandoned so the still-waiting player
+ *  isn't stuck on "Waiting for @opponent…" forever. 15 minutes is
+ *  generous — a classic 5-scene match takes 2-3 minutes of actual
+ *  play, so 15 covers normal pauses but kicks in for genuine
+ *  walk-aways. */
+const STALE_LIVE_MINUTES = 15;
 export async function expireOldChallenges(): Promise<void> {
   try {
     const cutoff = new Date(Date.now() - EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
@@ -459,6 +467,18 @@ export async function expireOldChallenges(): Promise<void> {
       .update({ status: 'expired' })
       .eq('status', 'invited')
       .lt('invite_expires_at', nowIso);
+    // Auto-abandon LIVE rows that have been alive too long without
+    // both scores landing. Catches the case where one player closes
+    // the app mid-game and the other is left on a perpetual
+    // "waiting for opponent" screen with no resolution. abandoned_by
+    // is left null because we don't know which side stalled — the
+    // result screen handles a null abandoner gracefully.
+    const staleLiveCutoff = new Date(Date.now() - STALE_LIVE_MINUTES * 60 * 1000).toISOString();
+    await supabase
+      .from('friend_challenges')
+      .update({ status: 'abandoned' })
+      .eq('status', 'live')
+      .lt('created_at', staleLiveCutoff);
   } catch (e) {
     log.error('challenges', 'expireOldChallenges threw', e);
   }
