@@ -163,7 +163,8 @@ function ChallengeResultScreen() {
     // winner a live "they finished!" flip to the reveal screen
     // without any polling.
     const channel = supabase
-      .channel(`challenge-result-${challengeId}`)
+      // Unique per-mount suffix — see friends.tsx for context
+      .channel(`challenge-result-${challengeId}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'friend_challenges', filter: `id=eq.${challengeId}` },

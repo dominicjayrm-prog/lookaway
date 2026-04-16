@@ -24,10 +24,12 @@
  *  this and memorise it" countdown in challenge mode. */
 export const CHALLENGE_VIEW_TIME_MULT = 1.3;
 
-/** Per-question response timer in classic mode. 2x the solo
- *  timeLimit because in 1v1 the combination of "what was in the
- *  scene?" recall + "my opponent's clock is also ticking" still
- *  felt tight at 1.5x — playtesters found it unplayable under
- *  competitive pressure. Doubling keeps the urgency (the clock is
- *  still visible and can still run out) without the panic. */
-export const CHALLENGE_QUESTION_TIME_MULT = 2.0;
+/** Per-question response timer in classic mode. 3x the solo
+ *  timeLimit. 2x still felt tight to playtesters — the user
+ *  explicitly asked for more breathing room with the reasoning
+ *  that "worst case they complete the questions before the timer
+ *  ends, it aint a bad thing". Generous timing turns the clock
+ *  from a stressor into a safety net: fast players barely notice
+ *  it, slow players don't panic. 1v1 tension now comes from
+ *  accuracy + opponent completion time, not wall-clock pressure. */
+export const CHALLENGE_QUESTION_TIME_MULT = 3.0;
