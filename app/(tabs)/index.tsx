@@ -283,12 +283,22 @@ function PlayTab() {
     // Tutorial-seen check: AsyncStorage first for instant decisions, then
     // fall back to the server flag so a fresh device install for a
     // returning player skips the spotlight tour.
+    //
+    // CRITICAL: the cache key is user-scoped. The old key
+    // `blanked_tutorial_seen` was device-global, so when user A
+    // dismissed the tutorial on this iPhone and user B later signed
+    // in with a different account, B inherited A's "seen" flag and
+    // never saw the tour. Binding the key to user.id means each
+    // account keeps its own local state, matching the server
+    // `profiles.tutorial_seen` flag which is already per-user.
     (async () => {
+      if (!user?.id) return;
+      const key = `blanked_tutorial_seen_${user.id}`;
       let seen: string | null = null;
       try {
-        seen = await AsyncStorage.getItem('blanked_tutorial_seen');
+        seen = await AsyncStorage.getItem(key);
       } catch {}
-      if (!seen && user?.id) {
+      if (!seen) {
         try {
           const { data } = await supabase
             .from('profiles')
@@ -298,7 +308,7 @@ function PlayTab() {
           if (data?.tutorial_seen) {
             seen = '1';
             // Mirror locally so we skip the network call next launch
-            try { await AsyncStorage.setItem('blanked_tutorial_seen', '1'); } catch {}
+            try { await AsyncStorage.setItem(key, '1'); } catch {}
           }
         } catch {}
       }
@@ -360,10 +370,12 @@ function PlayTab() {
 
   const completeTutorial = useCallback(async () => {
     setShowTutorial(false);
-    // Local cache so this device skips the network on next open
-    try { await AsyncStorage.setItem('blanked_tutorial_seen', 'true'); } catch {}
-    // Server flag so a fresh install on a new device also skips it
+    // Local cache — user-scoped so a different account on this
+    // device starts with a clean slate. Matches the key used in the
+    // seen-check effect above.
     if (user?.id) {
+      try { await AsyncStorage.setItem(`blanked_tutorial_seen_${user.id}`, 'true'); } catch {}
+      // Server flag so a fresh install on a new device also skips it
       supabase.from('profiles').update({ tutorial_seen: true }).eq('id', user.id).then(() => {});
     }
   }, [user?.id]);
