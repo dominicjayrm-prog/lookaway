@@ -29,31 +29,73 @@ export const CountdownTimer = React.memo(function CountdownTimer({
   style,
 }: CountdownTimerProps) {
   const { colors } = useTheme();
+  // Guard against NaN / negative / non-finite durations slipping in
+  // from upstream (e.g. `currentScene.viewTime` undefined → NaN math).
+  // A zero or negative duration was the freeze trigger: withTiming
+  // would jump progress to 0 in one frame and the useAnimatedReaction
+  // worklet sometimes missed the transition, so onComplete never
+  // fired and the screen was stuck on the memorise/question phase
+  // with an invisible (0%-width) timer bar. Floor to 1s so even
+  // pathological inputs visibly tick down.
+  const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 1;
+
   const progress = useSharedValue(1);
-  const prevDuration = useRef(duration);
+  const prevDuration = useRef(safeDuration);
   const initialized = useRef(false);
+  const completedRef = useRef(false);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Reset to full on new duration (new question/scene)
-    if (duration !== prevDuration.current || !initialized.current) {
-      prevDuration.current = duration;
+    if (safeDuration !== prevDuration.current || !initialized.current) {
+      prevDuration.current = safeDuration;
       initialized.current = true;
+      completedRef.current = false;
       cancelAnimation(progress);
       progress.value = 1;
     }
 
+    // Clear any pending fallback before setting a new one.
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+
     if (running) {
       // Resume from current progress value
-      const remaining = progress.value * duration * 1000;
+      const remaining = progress.value * safeDuration * 1000;
       progress.value = withTiming(0, {
         duration: remaining,
         easing: Easing.linear,
       });
+
+      // SAFETY NET — JS-side fallback. If the reanimated worklet
+      // misses the 1→0 transition (e.g. an animation duration of 0,
+      // a backgrounding race, or a hot-reload edge case), this
+      // setTimeout still fires onComplete on time. The
+      // `completedRef` guard means whichever side fires first
+      // (worklet via runOnJS, or this fallback) wins and the other
+      // is a no-op. Without this the user's screen could freeze
+      // forever with a bar at 0% width and no transition.
+      const fallbackMs = Math.max(50, remaining + 100);
+      fallbackTimerRef.current = setTimeout(() => {
+        if (!completedRef.current) {
+          completedRef.current = true;
+          onComplete();
+        }
+      }, fallbackMs);
     } else {
       // Freeze at current position
       cancelAnimation(progress);
     }
-  }, [running, duration, progress]);
+
+    return () => {
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+    };
+  }, [running, safeDuration, progress, onComplete]);
 
   const triggerHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -68,6 +110,8 @@ export const CountdownTimer = React.memo(function CountdownTimer({
   }, []);
 
   const triggerComplete = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
     onComplete();
   }, [onComplete]);
 
