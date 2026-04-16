@@ -12,8 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Blink, type BlinkExpression } from '@/src/components/Blink';
-import { AvatarFrame } from '@/src/components/AvatarFrame';
+import { FriendAvatar } from '@/src/components/FriendAvatar';
 import { ProfileBanner } from '@/src/components/ProfileBanner';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
@@ -72,7 +71,6 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   const banner = profile.equipped_banner ? getBannerById(profile.equipped_banner) ?? null : null;
   const nameColor = profile.equipped_name_color ? getNameColorById(profile.equipped_name_color) : undefined;
   const expressionCosmetic = profile.equipped_expression ? getExpressionById(profile.equipped_expression) : undefined;
-  const blinkExpression: BlinkExpression = expressionCosmetic?.blinkExpression ?? 'normal';
   const nameStyleColor = nameColor && nameColor.color !== 'theme' ? nameColor.color : colors.text;
 
   // Achievements + head-to-head fetched lazily when the popup opens.
@@ -121,15 +119,26 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          {/* Banner header with the avatar overlapping the bottom edge */}
+          {/* Banner header with the avatar overlapping the bottom edge.
+              Previously this rendered a bespoke stack (AvatarFrame +
+              hardcoded-white inner plate + Blink) which produced an
+              ugly white circle between the Blink and gold/gradient
+              frames. It also ignored `profile.avatar_url` entirely,
+              so friends who had uploaded a photo never saw it here.
+              FriendAvatar handles both cleanly and matches every
+              other social surface in the app. */}
           <View style={styles.bannerWrap}>
             <ProfileBanner banner={banner} height={108} />
             <View style={styles.avatarAnchor}>
-              <AvatarFrame frame={frame} size={78}>
-                <View style={[styles.avatarInner, { backgroundColor: colors.card }]}>
-                  <Blink expression={blinkExpression} size={72} />
-                </View>
-              </AvatarFrame>
+              <FriendAvatar
+                username={profile.username}
+                avatarColor={profile.avatar_color}
+                avatarUrl={profile.avatar_url}
+                equippedFrame={profile.equipped_frame}
+                equippedExpression={profile.equipped_expression}
+                size={78}
+                showDefaultRing={false}
+              />
             </View>
           </View>
 
@@ -287,13 +296,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: -44,
     alignItems: 'center',
-  },
-  avatarInner: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   username: { fontSize: 20, fontWeight: typography.weights.bold, marginTop: 56, textAlign: 'center' },
