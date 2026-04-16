@@ -1,44 +1,41 @@
 /**
- * AnimatedGemCount — drop-in replacement for `<Text>{gems}</Text>` that:
- *   • Counts up from the previous value to the new value over ~800ms
- *   • Plays the gem-clink sound exactly once per increase
- *   • Briefly bumps the parent's scale (via shared value) for emphasis
+ * AnimatedGemCount — drop-in replacement for `<Text>{gems}</Text>` that
+ * counts up from the previous value to the new value over ~800ms.
+ *
+ * Sound responsibility moved to `addGems()` in the store — see the
+ * docstring there for why. The `sound` prop is kept for API stability
+ * but ignored, since the store now owns the audio cue.
  *
  * Decreases (spending), the very first render, AND any count change
- * that lands inside the hydration grace window are not animated — only
- * actual in-session gains (reward claims, level completions, purchases)
- * trigger the celebration.
+ * that lands inside the hydration grace window are not animated.
  *
  * Why the grace window: the component typically mounts while the
  * Zustand store still holds its default (0 gems), then the cloud
  * sync finishes a beat later and bumps the count to the user's real
  * balance. Without the grace window that hydration bump looked like
- * a +N gain, so every app launch played the clink sound and animated
- * the pill — which is exactly what the user complained about.
+ * a +N gain.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, type TextStyle, type StyleProp } from 'react-native';
-import { sounds } from '@/src/lib/sounds';
 
 /**
- * How long after mount to suppress count-up animations. 1500ms is
- * comfortably longer than a typical cloud hydration round-trip (~400-
- * 800ms) but still short enough that a real reward claimed within
- * the first couple seconds of app open still animates.
+ * How long after mount to suppress count-up animations. Bumped from
+ * 1500ms → 3000ms because slow Supabase round trips were exceeding
+ * the old window and re-triggering the visual count-up on hydration.
+ * 3s is still well below "user has navigated and earned gems" speed.
  */
-const HYDRATION_GRACE_MS = 1500;
+const HYDRATION_GRACE_MS = 3000;
 
 interface AnimatedGemCountProps {
   count: number;
   style?: StyleProp<TextStyle>;
-  /** Override the sound effect ('gemClink' by default). Set to null to mute. */
+  /** @deprecated — sound is now played by `addGems()` in the store. */
   sound?: 'gemClink' | null;
 }
 
 export const AnimatedGemCount = React.memo(function AnimatedGemCount({
   count,
   style,
-  sound = 'gemClink',
 }: AnimatedGemCountProps) {
   const prevCount = useRef(count);
   const mountedRef = useRef(true);
@@ -57,7 +54,7 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
     }
 
     // Hydration grace — the count went up but it's within the first
-    // 1.5s of mount, so it's almost certainly the cloud sync landing
+    // 3s of mount, so it's almost certainly the cloud sync landing
     // with the user's real balance. Snap silently.
     if (Date.now() - mountedAt.current < HYDRATION_GRACE_MS) {
       setDisplayCount(count);
@@ -71,8 +68,6 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
     const steps = Math.max(8, Math.min(diff, 24));
     const stepTime = Math.round(800 / steps);
     let frame = 0;
-
-    if (sound) sounds.play(sound);
 
     const interval = setInterval(() => {
       // Bail if the component unmounted mid-tick — avoids "setState on
@@ -93,7 +88,7 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
     }, stepTime);
 
     return () => clearInterval(interval);
-  }, [count, sound]);
+  }, [count]);
 
   return <Text style={style}>{displayCount.toLocaleString()}</Text>;
 });

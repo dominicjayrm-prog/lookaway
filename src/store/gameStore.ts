@@ -540,7 +540,29 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'equip sync failed', e, { uid }));
     },
 
-    addGems: (amount) => { if (amount <= 0) return; set((s) => ({ gems: s.gems + amount })); setTimeout(() => saveState(get()), 0); },
+    /**
+     * Add gems and play the gem-clink sound. The sound used to live
+     * inside `AnimatedGemCount` (fired when the count prop changed),
+     * which had two bugs: (a) hydration writes from `loadFromCloud`
+     * looked like a "+N gain" if the cloud round trip took longer
+     * than the 1.5s grace window, so a fresh login played the sound
+     * for no reason; (b) gems claimed from a modal on a screen
+     * that didn't render the gem pill (e.g. weekly challenges)
+     * were silent because the component wasn't mounted.
+     *
+     * Moving the sound to `addGems` fixes both — `loadFromCloud`
+     * uses `set({ gems: ... })` directly so it never plays, and
+     * any "user earned gems" caller (level complete, weekly claim,
+     * login reward, ad reward) plays the sound regardless of which
+     * screen is foregrounded.
+     */
+    addGems: (amount) => {
+      if (amount <= 0) return;
+      set((s) => ({ gems: s.gems + amount }));
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      try { require('@/src/lib/sounds').sounds.play('gemClink'); } catch {}
+      setTimeout(() => saveState(get()), 0);
+    },
     spendGems: (amount) => { const { gems } = get(); if (gems < amount) return false; set({ gems: gems - amount }); setTimeout(() => saveState(get()), 0); return true; },
     loseLife: () => {
       // Don't deduct a life if the unlimited-lives boost is active
