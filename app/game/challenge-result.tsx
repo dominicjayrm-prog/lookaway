@@ -23,6 +23,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
+import { abandonChallenge } from '@/src/utils/challengeFlow';
 import { spacing } from '@/src/theme/spacing';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
 
@@ -292,7 +293,21 @@ function ChallengeResultScreen() {
               </Text>
             </View>
           </View>
-          <Pressable style={styles.secondaryLink} onPress={() => router.replace('/(tabs)/friends')}>
+          {/* "Leave for now" now ALSO calls abandonChallenge so the
+              opponent's realtime subscription flips their UI to
+              "your opponent left" — previously it only navigated the
+              leaver away and the other side kept "waiting" forever.
+              Guarded by status so we don't abandon an already-
+              completed match (edge case: both submit, realtime lags,
+              user taps Leave before the reveal renders). */}
+          <Pressable style={styles.secondaryLink} onPress={async () => {
+            try {
+              if (userId && challengeId && row?.status !== 'completed' && row?.status !== 'abandoned') {
+                await abandonChallenge(challengeId, userId);
+              }
+            } catch {}
+            router.replace('/(tabs)/friends');
+          }}>
             <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Leave for now</Text>
           </Pressable>
         </View>
