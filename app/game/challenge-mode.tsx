@@ -19,6 +19,7 @@ import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
 import ColourChainGame from '@/src/components/modes/ColourChainGame';
 import SpeedRecallGame from '@/src/components/modes/SpeedRecallGame';
 import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
+import { CHALLENGE_VIEW_TIME_MULT } from '@/src/utils/challengeTiming';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'error';
 
@@ -207,11 +208,17 @@ function ChallengeModeScreen() {
       {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
 
       {phase === 'show' && isExternalMode && modeData && (<>
-        {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-        {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        {/* `viewTimeMultiplier` is the shared challenge-mode buffer
+            (see `src/utils/challengeTiming.ts`). Each mode that has
+            a viewing / chaos / memorise phase takes it and stretches
+            that phase by 1.3x — matching the Classic challenge
+            timer fix. Sequence is turn-based with no viewing
+            timer, so it doesn't take the prop. */}
+        {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
+        {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
         {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-        {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-        {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+        {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
+        {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
       </>)}
 
       {phase === 'show' && !isExternalMode && currentRound && (<View style={s.gameArea}><Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text><View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{currentRound.shapes.map((sh: any, i: number) => (<View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}><ShapeSvg type={sh.type} color={sh.color} size={sh.size} /></View>))}</View></View>)}

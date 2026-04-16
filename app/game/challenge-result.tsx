@@ -16,7 +16,7 @@
  *   3. Clean up the subscription on unmount.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated, Easing } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -24,6 +24,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { spacing } from '@/src/theme/spacing';
+import { FriendAvatar } from '@/src/components/FriendAvatar';
 
 interface ChallengeRow {
   challenger_id: string;
@@ -34,23 +35,50 @@ interface ChallengeRow {
   abandoned_by: string | null;
 }
 
+/**
+ * The shape we hydrate from Supabase for each player — everything
+ * FriendAvatar needs to render properly customised mascots on the
+ * waiting + reveal screens. Previously this screen only pulled
+ * `username` + `avatar_color` so both players always showed as
+ * generic coloured initial circles; the 1v1 screens now match the
+ * rest of the app.
+ */
+interface PlayerSkin {
+  username: string;
+  avatarColor: string;
+  avatarUrl: string | null;
+  equippedFrame: string | null;
+  equippedExpression: string | null;
+}
+
 interface ResultData {
   myScore: number;
   theirScore: number;
-  myColor: string;
-  theirColor: string;
-  myUsername: string;
-  theirUsername: string;
+  me: PlayerSkin;
+  them: PlayerSkin;
   friendId: string;
 }
 
-function Avatar({ initial, color, size = 56, winner = false }: { initial: string; color: string; size?: number; winner?: boolean }) {
+/**
+ * PlayerAvatar — renders the player's equipped Blink / frame /
+ * expression / uploaded photo via the shared FriendAvatar so the
+ * 1v1 screens look the same as the friends list, leaderboard and
+ * friend-profile popup. Adds a gold crown above the avatar when
+ * `winner` is true.
+ */
+function PlayerAvatar({ skin, size = 72, winner = false }: { skin: PlayerSkin; size?: number; winner?: boolean }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      {winner && <Svg width={20} height={16} viewBox="0 0 24 24" style={{ marginBottom: 4 }}><Path d="M3,18 L5,8 L9,13 L12,5 L15,13 L19,8 L21,18 Z" fill="#D4A012" stroke="#D4A012" strokeWidth={1.5} strokeLinejoin="round" /></Svg>}
-      <View style={[styles.avatar, { width: size, height: size, backgroundColor: color, borderColor: winner ? '#D4A012' : 'transparent', borderWidth: winner ? 2.5 : 0 }]}>
-        <Text style={[styles.avatarText, { fontSize: size * 0.4 }]}>{initial}</Text>
-      </View>
+      {winner && <Svg width={22} height={18} viewBox="0 0 24 24" style={{ marginBottom: 4 }}><Path d="M3,18 L5,8 L9,13 L12,5 L15,13 L19,8 L21,18 Z" fill="#D4A012" stroke="#D4A012" strokeWidth={1.5} strokeLinejoin="round" /></Svg>}
+      <FriendAvatar
+        username={skin.username}
+        avatarColor={skin.avatarColor}
+        avatarUrl={skin.avatarUrl}
+        equippedFrame={skin.equippedFrame}
+        equippedExpression={skin.equippedExpression}
+        size={size}
+        showDefaultRing
+      />
     </View>
   );
 }
@@ -98,19 +126,31 @@ function ChallengeResultScreen() {
       const isChallenger = ch.challenger_id === userId;
       const friendId = isChallenger ? ch.challenged_id : ch.challenger_id;
 
-      const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_color').in('id', [userId, friendId]);
+      // Pull enough profile fields for FriendAvatar to render the
+      // player's real customisation (frame / expression / uploaded
+      // photo) instead of falling back to a plain coloured circle.
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_color, avatar_url, equipped_frame, equipped_expression')
+        .in('id', [userId, friendId]);
       if (cancelled) return;
 
       const myProfile = profiles?.find((p) => p.id === userId);
       const theirProfile = profiles?.find((p) => p.id === friendId);
 
+      const toSkin = (p: typeof myProfile, fallbackColor: string): PlayerSkin => ({
+        username: p?.username ?? 'player',
+        avatarColor: p?.avatar_color ?? fallbackColor,
+        avatarUrl: p?.avatar_url ?? null,
+        equippedFrame: p?.equipped_frame ?? null,
+        equippedExpression: p?.equipped_expression ?? null,
+      });
+
       setData({
         myScore: isChallenger ? (ch.challenger_score ?? 0) : (ch.challenged_score ?? 0),
         theirScore: isChallenger ? (ch.challenged_score ?? 0) : (ch.challenger_score ?? 0),
-        myColor: myProfile?.avatar_color ?? '#6C5CE7',
-        theirColor: theirProfile?.avatar_color ?? '#0984E3',
-        myUsername: myProfile?.username ?? 'you',
-        theirUsername: theirProfile?.username ?? 'opponent',
+        me: toSkin(myProfile, '#6C5CE7'),
+        them: toSkin(theirProfile, '#0984E3'),
         friendId,
       });
       setLoading(false);
@@ -159,7 +199,7 @@ function ChallengeResultScreen() {
     if (!data) return;
     router.replace({
       pathname: '/game/challenge-select',
-      params: { friendId: data.friendId, friendUsername: data.theirUsername },
+      params: { friendId: data.friendId, friendUsername: data.them.username },
     });
   };
 
@@ -186,7 +226,7 @@ function ChallengeResultScreen() {
             </Svg>
           </View>
           <Text style={[styles.title, { color: colors.text }]}>
-            {iAbandoned ? 'You left the match' : `@${data.theirUsername} left`}
+            {iAbandoned ? 'You left the match' : `@${data.them.username} left`}
           </Text>
           <Text style={[styles.waitingBody, { color: colors.textMid }]}>
             {iAbandoned
@@ -226,18 +266,18 @@ function ChallengeResultScreen() {
             <ActivityIndicator size="large" color={colors.accent} />
           </Animated.View>
           <Text style={[styles.title, { color: colors.text, marginTop: 24 }]}>
-            Waiting for @{data.theirUsername}…
+            Waiting for @{data.them.username}…
           </Text>
           <Text style={[styles.waitingBody, { color: colors.textMid }]}>
             {mySubmitted && !theirSubmitted
-              ? `You've finished. ${data.theirUsername} is still playing — results unlock when they're done.`
+              ? `You've finished. ${data.them.username} is still playing — results unlock when they're done.`
               : !mySubmitted && theirSubmitted
-                ? `${data.theirUsername} finished first. Your score will reveal once you play.`
+                ? `${data.them.username} finished first. Your score will reveal once you play.`
                 : 'Results will appear once both of you have played.'}
           </Text>
           <View style={[styles.waitingRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.waitingPlayer}>
-              <Avatar initial={data.myUsername[0]} color={data.myColor} size={40} />
+              <PlayerAvatar skin={data.me} size={44} />
               <Text style={[styles.waitingName, { color: colors.text }]}>You</Text>
               <Text style={[styles.waitingStatus, { color: mySubmitted ? colors.correct : colors.textLight }]}>
                 {mySubmitted ? '\u2713 Done' : 'Playing…'}
@@ -245,8 +285,8 @@ function ChallengeResultScreen() {
             </View>
             <Text style={[styles.vsText, { color: colors.textLight }]}>VS</Text>
             <View style={styles.waitingPlayer}>
-              <Avatar initial={data.theirUsername[0]} color={data.theirColor} size={40} />
-              <Text style={[styles.waitingName, { color: colors.text }]}>@{data.theirUsername}</Text>
+              <PlayerAvatar skin={data.them} size={44} />
+              <Text style={[styles.waitingName, { color: colors.text }]}>@{data.them.username}</Text>
               <Text style={[styles.waitingStatus, { color: theirSubmitted ? colors.correct : colors.textLight }]}>
                 {theirSubmitted ? '\u2713 Done' : 'Playing…'}
               </Text>
@@ -260,48 +300,112 @@ function ChallengeResultScreen() {
     );
   }
 
+  return <RevealScreen data={data} onRematch={handleRematch} onBack={() => router.replace('/(tabs)/friends')} colors={colors} />;
+}
+
+/**
+ * The "big reveal" screen, extracted so we can scope the win
+ * animation (useRef, useEffect) to the moment both players have
+ * finished — no point mounting an Animated.Value on the waiting
+ * screen that'll never fire. The winner avatar springs up into
+ * place while the banner fades in, which gives the moment a bit
+ * of weight instead of just popping into view.
+ */
+function RevealScreen({
+  data,
+  onRematch,
+  onBack,
+  colors,
+}: {
+  data: ResultData;
+  onRematch: () => void;
+  onBack: () => void;
+  colors: Record<string, string>;
+}) {
   const won = data.myScore > data.theirScore;
   const lost = data.theirScore > data.myScore;
   const tied = data.myScore === data.theirScore;
   const resultText = tied ? "It's a tie!" : won ? 'You won!' : 'They won!';
   const resultColor = tied ? colors.gold : won ? colors.correct : colors.wrong;
 
+  const winnerScale = useRef(new Animated.Value(0.6)).current;
+  const winnerOpacity = useRef(new Animated.Value(0)).current;
+  const bannerOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(winnerScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 140,
+          useNativeDriver: true,
+        }),
+        Animated.timing(winnerOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(bannerOpacity, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [winnerScale, winnerOpacity, bannerOpacity]);
+
+  // Winner avatar gets the spring-in. Loser avatar just fades in
+  // alongside the winner's pop — they shouldn't both get hero
+  // treatment or the celebration reads as shared.
+  const myAnim = won ? { transform: [{ scale: winnerScale }], opacity: winnerOpacity } : { opacity: winnerOpacity };
+  const theirAnim = lost ? { transform: [{ scale: winnerScale }], opacity: winnerOpacity } : { opacity: winnerOpacity };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.accent }]}>Challenge Complete!</Text>
 
-        {/* Avatars */}
+        {/* Avatars — winner springs up, loser fades in */}
         <View style={styles.avatarRow}>
-          <View style={styles.playerCol}>
-            <Avatar initial={data.myUsername[0]} color={data.myColor} winner={won} />
+          <Animated.View style={[styles.playerCol, myAnim]}>
+            <PlayerAvatar skin={data.me} winner={won} />
             <Text style={[styles.playerName, { color: colors.text }]}>You</Text>
-          </View>
+          </Animated.View>
           <Text style={[styles.vsText, { color: colors.textLight }]}>VS</Text>
-          <View style={styles.playerCol}>
-            <Avatar initial={data.theirUsername[0]} color={data.theirColor} winner={lost} />
-            <Text style={[styles.playerName, { color: colors.text }]}>@{data.theirUsername}</Text>
+          <Animated.View style={[styles.playerCol, theirAnim]}>
+            <PlayerAvatar skin={data.them} winner={lost} />
+            <Text style={[styles.playerName, { color: colors.text }]}>@{data.them.username}</Text>
+          </Animated.View>
+        </View>
+
+        {/* Score row with a clear label above the numbers. Previously
+            it was "28% vs 64%" with no context, which left players
+            asking "percent of what?". Labelling it Memory Score
+            matches the terminology used on the solo result screen
+            and in the app's analytics. */}
+        <View style={styles.scoreBlock}>
+          <Text style={[styles.scoreLabel, { color: colors.textMid }]}>Memory Score</Text>
+          <View style={styles.scoreRow}>
+            <Text style={[styles.score, { color: won ? colors.correct : colors.text }]}>{data.myScore}%</Text>
+            <View style={{ width: 40 }} />
+            <Text style={[styles.score, { color: lost ? colors.correct : colors.text }]}>{data.theirScore}%</Text>
           </View>
         </View>
 
-        {/* Scores */}
-        <View style={styles.scoreRow}>
-          <Text style={[styles.score, { color: won ? colors.correct : colors.text }]}>{data.myScore}%</Text>
-          <View style={{ width: 40 }} />
-          <Text style={[styles.score, { color: lost ? colors.correct : colors.text }]}>{data.theirScore}%</Text>
-        </View>
-
-        {/* Result badge */}
-        <View style={[styles.resultBadge, { backgroundColor: resultColor + '15' }]}>
+        {/* Result banner fades in after the avatars settle */}
+        <Animated.View style={[styles.resultBadge, { backgroundColor: resultColor + '15', opacity: bannerOpacity }]}>
           <Text style={[styles.resultText, { color: resultColor }]}>{won ? '\u{1F3C6} ' : ''}{resultText}</Text>
-        </View>
+        </Animated.View>
 
         {/* Buttons */}
         <View style={styles.buttons}>
-          <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={handleRematch}>
+          <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={onRematch}>
             <Text style={styles.primaryBtnText}>Rematch</Text>
           </Pressable>
-          <Pressable style={styles.secondaryLink} onPress={() => router.replace('/(tabs)/friends')}>
+          <Pressable style={styles.secondaryLink} onPress={onBack}>
             <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to friends</Text>
           </Pressable>
         </View>
@@ -328,6 +432,8 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFFFFF', fontWeight: '800' },
   playerName: { fontSize: 14, fontWeight: '600' },
   vsText: { fontSize: 14, fontWeight: '700' },
+  scoreBlock: { alignItems: 'center', gap: 4 },
+  scoreLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
   scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   score: { fontSize: 32, fontWeight: '800' },
   resultBadge: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },

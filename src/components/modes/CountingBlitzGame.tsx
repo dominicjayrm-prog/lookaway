@@ -23,9 +23,17 @@ interface Props {
   modeData: any;
   onComplete: (totalScore: number) => void;
   modeColor: string;
+  /**
+   * Multiplier applied to the chaos window. Solo = 1.0, challenge
+   * passes `CHALLENGE_VIEW_TIME_MULT` (1.3) so the 5s-event-second
+   * budget stretches to 6.5 real seconds in 1v1. The event
+   * schedule (appearAt / duration) stays identical — we just slow
+   * the progress clock so the player has more wall-time to count.
+   */
+  viewTimeMultiplier?: number;
 }
 
-export default function CountingBlitzGame({ modeData, onComplete, modeColor }: Props) {
+export default function CountingBlitzGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('chaos');
@@ -131,7 +139,13 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor }: P
       // time-scale factor to the elapsed reading. Each event's
       // appearAt/duration are still in original seconds; the scale
       // means 1 real second advances only 0.67 event-seconds.
-      const scale = slowMotionActive ? (1 / 1.5) : 1;
+      //
+      // `viewTimeMultiplier` layers on top: in challenge mode (1.3)
+      // the player gets 6.5 real seconds for the same 5-event-second
+      // chaos. Combined with Slow Motion, they stack — 1v1 + slow
+      // motion = ~9.75 real seconds.
+      const slowMotionScale = slowMotionActive ? (1 / 1.5) : 1;
+      const scale = slowMotionScale * (1 / viewTimeMultiplier);
       const scaledElapsed = elapsed * scale;
       const totalSec = 5; // event-time budget stays the same
       setChaosProgress(Math.max(0, 1 - scaledElapsed / totalSec));

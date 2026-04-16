@@ -159,27 +159,81 @@ export async function removeFriend(friendshipId: string): Promise<boolean> {
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
   const { data, error } = await supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
   if (log.supabaseError('friends', 'getFriendRequests', error, { userId })) return [];
-  return (data ?? []).map((row: Record<string, unknown>) => ({ id: row.id as string, requester: row.requester as FriendProfile, created_at: row.created_at as string }));
+  // Same defensive filter as getFriends / getRecentResults: skip
+  // rows where the requester profile failed to join.
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => {
+      const requester = row.requester as FriendProfile | null | undefined;
+      if (!requester || typeof requester !== 'object' || !(requester as FriendProfile).username) return null;
+      return { id: row.id as string, requester: requester as FriendProfile, created_at: row.created_at as string };
+    })
+    .filter((r): r is FriendRequest => r !== null);
 }
 
 export async function getFriends(userId: string): Promise<Friend[]> {
   const { data, error } = await supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
   if (log.supabaseError('friends', 'getFriends', error, { userId })) return [];
-  return (data ?? []).map((row: Record<string, unknown>) => { const isRequester = row.requester_id === userId; return { friendshipId: row.id as string, profile: (isRequester ? row.addressee : row.requester) as FriendProfile }; });
+  // Filter out rows whose other-side profile FK returned null
+  // (deleted account, RLS edge, or mid-cleanup row). Without this
+  // guard the FriendsListSection crashes on `profile.username`
+  // and bubbles up to the root error boundary.
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => {
+      const isRequester = row.requester_id === userId;
+      const profile = (isRequester ? row.addressee : row.requester) as FriendProfile | null | undefined;
+      if (!profile || typeof profile !== 'object' || !(profile as FriendProfile).username) return null;
+      return { friendshipId: row.id as string, profile: profile as FriendProfile };
+    })
+    .filter((f): f is Friend => f !== null);
 }
 
 // \u2500\u2500\u2500 Challenges \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
+/**
+ * Shared row → Challenge mapper. Historically this logic was inlined
+ * inside both getActiveChallenges and getRecentResults, and if the
+ * profile FK join returned null (deleted profile, RLS edge, or a
+ * row mid-cleanup) the downstream `c.opponent.username` read in
+ * ActiveChallengesSection / RecentResultsSection threw at render
+ * time — which is what was tripping the root error boundary when
+ * the user tapped "Back to friends" after a challenge. Filtering
+ * those broken rows out here is a single fix point that protects
+ * every consumer.
+ */
+function mapChallengeRow(row: Record<string, unknown>, userId: string): Challenge | null {
+  const iAmChallenger = row.challenger_id === userId;
+  const opponent = (iAmChallenger ? row.challenged : row.challenger) as FriendProfile | null | undefined;
+  if (!opponent || typeof opponent !== 'object' || !(opponent as FriendProfile).username) {
+    return null;
+  }
+  return {
+    id: row.id as string,
+    challenger_id: row.challenger_id as string,
+    challenged_id: row.challenged_id as string,
+    opponent: opponent as FriendProfile,
+    level_ids: row.level_ids as string[],
+    my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null,
+    their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null,
+    status: row.status as string,
+    created_at: row.created_at as string,
+    mode: (row.mode as string) ?? 'classic',
+  };
+}
+
 export async function getActiveChallenges(userId: string): Promise<Challenge[]> {
   const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
   if (log.supabaseError('friends', 'getActiveChallenges', error, { userId })) return [];
-  return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => mapChallengeRow(row, userId))
+    .filter((c): c is Challenge => c !== null);
 }
 
 export async function getRecentResults(userId: string, limit: number): Promise<Challenge[]> {
   const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
   if (log.supabaseError('friends', 'getRecentResults', error, { userId, limit })) return [];
-  return (data ?? []).map((row: Record<string, unknown>) => { const iAmChallenger = row.challenger_id === userId; return { id: row.id as string, challenger_id: row.challenger_id as string, challenged_id: row.challenged_id as string, opponent: (iAmChallenger ? row.challenged : row.challenger) as FriendProfile, level_ids: row.level_ids as string[], my_score: (iAmChallenger ? row.challenger_score : row.challenged_score) as number | null, their_score: (iAmChallenger ? row.challenged_score : row.challenger_score) as number | null, status: row.status as string, created_at: row.created_at as string, mode: (row.mode as string) ?? 'classic' }; });
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => mapChallengeRow(row, userId))
+    .filter((c): c is Challenge => c !== null);
 }
 
 // \u2500\u2500\u2500 Head-to-head record \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
