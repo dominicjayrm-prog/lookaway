@@ -31,9 +31,11 @@ interface Props {
    * the progress clock so the player has more wall-time to count.
    */
   viewTimeMultiplier?: number;
+  /** Keeps parent external round header in sync with internal state. */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
-export default function CountingBlitzGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+export default function CountingBlitzGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1, onRoundChange }: Props) {
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('chaos');
@@ -165,6 +167,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
   }, [round, slowMotionActive]);
 
   useEffect(() => { if (round) startChaos(); }, [roundIdx, round]);
+  useEffect(() => { onRoundChange?.(roundIdx); }, [roundIdx, onRoundChange]);
 
   const handleAnswer = useCallback((optionIdx: number) => {
     if (phase !== 'question' || !round) return;

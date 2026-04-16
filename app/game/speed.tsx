@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -185,7 +186,12 @@ function SpeedGameScreen() {
           <SlowTimeButton used={pu.usedPowerUps.slowTime} onUse={pu.handleSlowTime} />
         </Animated.View>
       )}
-      {gameState === 'TRANSITION' && (<Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}><Text style={styles.blankText}>Go blank!</Text></Animated.View>)}
+      {gameState === 'TRANSITION' && (
+        <Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}>
+          <AnimatedBlink expression="blank" size={80} entrance="spring" />
+          <Text style={[styles.blankText, { marginTop: 16 }]}>Go blank!</Text>
+        </Animated.View>
+      )}
       {gameState === 'QUESTION' && currentQuestion && (
         <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.gameArea}>
           <CountdownTimer duration={currentQuestion.timeLimit} running={!pu.showPeekScene && !pu.buyPopupId} onComplete={handleQuestionTimeout} style={styles.timer} />

@@ -25,9 +25,11 @@ interface Props {
   modeData: any;
   onComplete: (totalScore: number) => void;
   modeColor: string;
+  /** Keeps parent external round header in sync with internal state. */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
-export default function SequenceGame({ modeData, onComplete, modeColor }: Props) {
+export default function SequenceGame({ modeData, onComplete, modeColor, onRoundChange }: Props) {
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('showing');
@@ -116,6 +118,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor }: Props)
   }, [phase]);
 
   useEffect(() => { if (round) startShowing(); }, [roundIdx, round]);
+  useEffect(() => { onRoundChange?.(roundIdx); }, [roundIdx, onRoundChange]);
 
   const handleTapShape = useCallback((shapeIndex: number) => {
     if (phase !== 'recall') return;

@@ -5,6 +5,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { sounds } from '@/src/lib/sounds';
 import type { PowerUpId } from '@/src/utils/scoring';
 
@@ -33,9 +34,12 @@ interface Props {
    * `src/utils/challengeTiming.ts`.
    */
   viewTimeMultiplier?: number;
+  /** See SpeedRecallGame — keeps the parent's external round
+   *  header in sync with this component's internal round state. */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
-export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1, onRoundChange }: Props) {
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>('sceneA');
@@ -175,6 +179,8 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
 
   // Auto-start each round
   useEffect(() => { if (round) startRound(); }, [roundIdx, round]);
+  // Sync parent's external round counter to our internal one
+  useEffect(() => { onRoundChange?.(roundIdx); }, [roundIdx, onRoundChange]);
 
   // Response timer (counts up during Scene B)
   useEffect(() => {
@@ -194,18 +200,36 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
     const { changeType, targetIndex, sceneB, removedShape, description } = round;
     let correct = false;
 
-    // Use generous hit radius — vary by change type
+    // Hit radius — vary by change type. `removed` checks distance
+    // to the empty slot (no shape to tap on), the others use the
+    // closest-shape approach below.
     const hitRadius = changeType === 'removed' ? 22 : changeType === 'position' ? 24 : 20;
 
     if (changeType === 'removed' && removedShape) {
       const dist = Math.sqrt((tapX - removedShape.x) ** 2 + (tapY - removedShape.y) ** 2);
       correct = dist < hitRadius;
     } else {
-      const target = sceneB[targetIndex];
-      if (target) {
-        const dist = Math.sqrt((tapX - target.x) ** 2 + (tapY - target.y) ** 2);
-        correct = dist < hitRadius;
+      // CLOSEST-SHAPE detection. Previously we only checked "is
+      // the tap within hitRadius of the target?" — with shapes
+      // placed as close as 18% apart and a 20-24% hit radius,
+      // the target's hit zone could overlap another shape's
+      // rendered position, letting a tap on the WRONG shape count
+      // as correct (the bug where tapping a star was marked
+      // correct for a "circle changed colour" round). Now we find
+      // the shape nearest the tap AND require it to be both the
+      // target AND within a shape-hit distance — the wrong shape
+      // can never score.
+      let closestIdx = -1;
+      let closestDist = Infinity;
+      for (let i = 0; i < sceneB.length; i++) {
+        const s = sceneB[i];
+        const d = Math.sqrt((tapX - s.x) ** 2 + (tapY - s.y) ** 2);
+        if (d < closestDist) {
+          closestDist = d;
+          closestIdx = i;
+        }
       }
+      correct = closestIdx === targetIndex && closestDist < hitRadius;
     }
 
     const score = correct ? Math.max(10, Math.round(100 - (elapsed / 1000) * 10)) : 0;
@@ -338,8 +362,11 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
             : renderScene(round.sceneB, round.targetIndex >= 0 ? round.targetIndex : undefined, '#D4A012')
         )}
         {phase === 'blank' && (
+          // Show Blink with the blank expression instead of bare "..."
+          // so the 800ms transition feels like a proper "look away"
+          // beat — consistent with Classic / solo campaign.
           <View style={s.blankOverlay}>
-            <Text style={[s.blankText, { color: colors.textLight }]}>...</Text>
+            <AnimatedBlink expression="blank" size={64} entrance="spring" />
           </View>
         )}
       </Pressable>

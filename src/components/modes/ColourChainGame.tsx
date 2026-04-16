@@ -4,6 +4,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { sounds } from '@/src/lib/sounds';
 import type { PowerUpId } from '@/src/utils/scoring';
 
@@ -21,12 +22,14 @@ interface Props {
    * Speed Recall / Snap Match / Counting Blitz buffers.
    */
   viewTimeMultiplier?: number;
+  /** Keeps parent external round header in sync with internal state. */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
 const GRID_PADDING = 20;
 const GAP = 8;
 
-export default function ColourChainGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+export default function ColourChainGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1, onRoundChange }: Props) {
   const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('memorise');
   const [recallIdx, setRecallIdx] = useState(0);
@@ -101,6 +104,9 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
     for (let i = 0; i < total; i++) init[i] = 'hidden';
     setTileStates(init);
   }, [recallIdx, gridCols, gridRows]);
+
+  // Sync parent's external round counter to our internal recallIdx
+  useEffect(() => { onRoundChange?.(recallIdx); }, [recallIdx, onRoundChange]);
 
   // Memorise phase - base 3s (scaled by challenge multiplier) +
   // slow-time power-up bonus. The challenge multiplier only
@@ -191,7 +197,12 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
           </View>
         </>
       )}
-      {phase === 'transition' && <Text style={[s.phaseLabel, { color: colors.textMid }]}>Get ready...</Text>}
+      {phase === 'transition' && (
+        <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}>
+          <AnimatedBlink expression="blank" size={56} entrance="spring" />
+          <Text style={[s.phaseLabel, { color: colors.textMid, marginTop: 8 }]}>Get ready...</Text>
+        </View>
+      )}
       {(phase === 'recall' || phase === 'feedback') && currentRound && (
         <>
           <Text style={[s.phaseLabel, { color: colors.textMid }]}>Where was this colour?</Text>

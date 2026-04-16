@@ -10,6 +10,7 @@ import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -128,7 +129,13 @@ function ChallengeGameScreen() {
   }, []);
 
   const handleSelectOption = useCallback((index: number) => {
-    if (selectedOption !== null || !currentQuestion) return;
+    // Gate: block taps after a selection AND after a timeout — previously
+    // only `selectedOption !== null` was checked, which meant a tap
+    // landing in the 800ms reveal window AFTER the timer expired (when
+    // `revealedCorrect` is set but `selectedOption` is still null from
+    // the timeout path) slipped through and let the player "answer" a
+    // question that was already scored wrong. This blocked it cleanly.
+    if (selectedOption !== null || revealedCorrect !== null || !currentQuestion) return;
     setSelectedOption(index);
     timeoutRef.current = setTimeout(() => {
       const correct = index === currentQuestion.correctIndex;
@@ -147,7 +154,7 @@ function ChallengeGameScreen() {
         }
       }, 800);
     }, 300);
-  }, [selectedOption, currentQuestion, questionIdx, totalQuestions, pu]);
+  }, [selectedOption, revealedCorrect, currentQuestion, questionIdx, totalQuestions, pu]);
 
   // Keep the select ref in sync so Skip routes to the latest closure.
   useEffect(() => { selectOptionRef.current = handleSelectOption; }, [handleSelectOption]);
@@ -321,10 +328,17 @@ function ChallengeGameScreen() {
         </View>
       )}
 
-      {/* Transition */}
+      {/* Transition — "Go blank!" moment between memorise and the
+          question. The solo campaign screen renders a Blink mascot
+          here with the `blank` expression + sub-copy "What do you
+          remember?" so the beat reads as a playful handoff rather
+          than a blank wait. Challenge mode skipped the mascot —
+          fixed here so 1v1 matches the solo feel across every mode. */}
       {phase === 'transition' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Go blank!</Text>
+          <AnimatedBlink expression="blank" size={80} entrance="spring" />
+          <Text style={[styles.bigTitle, { color: colors.accent, marginTop: 16 }]}>Go blank!</Text>
+          <Text style={[styles.subtitle, { color: colors.textLight }]}>What do you remember?</Text>
         </View>
       )}
 
@@ -377,7 +391,7 @@ function ChallengeGameScreen() {
       {phase === 'complete' && (
         <View style={styles.centered}>
           <Text style={[styles.bigTitle, { color: colors.accent }]}>Nice work!</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent\u2019s progress\u2026</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent’s progress…</Text>
         </View>
       )}
 

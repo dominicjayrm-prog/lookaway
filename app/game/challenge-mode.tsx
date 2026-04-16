@@ -181,7 +181,7 @@ function ChallengeModeScreen() {
   const mColor = modeConfig?.color ?? '#6C5CE7';
 
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <View style={s.header}>
         <Pressable
           onPress={() => {
@@ -214,11 +214,15 @@ function ChallengeModeScreen() {
             that phase by 1.3x — matching the Classic challenge
             timer fix. Sequence is turn-based with no viewing
             timer, so it doesn't take the prop. */}
-        {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
-        {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
-        {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-        {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
-        {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} />}
+        {/* onRoundChange keeps the external "Round X/5" header in the
+            top-right in sync with each mode's internal round state.
+            Without it the header stuck at "Round 1/5" through the
+            whole match since the embedded mode owns its own counter. */}
+        {mode === 'speed_recall' && <SpeedRecallGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} onRoundChange={setRoundIdx} />}
+        {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} onRoundChange={setRoundIdx} />}
+        {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} onRoundChange={setRoundIdx} />}
+        {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} onRoundChange={setRoundIdx} />}
+        {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} onRoundChange={setRoundIdx} />}
       </>)}
 
       {phase === 'show' && !isExternalMode && currentRound && (<View style={s.gameArea}><Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text><View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{currentRound.shapes.map((sh: any, i: number) => (<View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}><ShapeSvg type={sh.type} color={sh.color} size={sh.size} /></View>))}</View></View>)}

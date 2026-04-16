@@ -82,6 +82,15 @@ export function IncomingInviteListener() {
   // Track id of invite we've already shown/acted on, so the UPDATE
   // filter on the same row doesn't reopen the modal after Accept.
   const actedIdsRef = useRef<Set<string>>(new Set());
+  // Fresh pathname ref so the realtime callback always sees the
+  // CURRENT route, not the one captured when the subscription was
+  // set up. Previously a user who logged in on the friends tab and
+  // then navigated to /game/challenge-select had their pathname
+  // frozen at the first value, so incoming invites were never
+  // recognised as "blocked route" and a full-screen modal pop'd
+  // over the mid-flow challenge-select screen — freezing taps.
+  const pathnameRef = useRef(pathname);
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
   // Realtime subscription. Filter on challenged_id so every device
   // only receives invites meant for the logged-in user.
@@ -118,7 +127,9 @@ export function IncomingInviteListener() {
           // soon as they leave that route the other effect below
           // promotes the pending invite to the active slot. We still
           // play a subtle haptic so they know something happened.
-          if (isBlockedRoute(pathname)) {
+          // Using pathnameRef.current (not the closure-captured
+          // `pathname`) so this check sees the CURRENT route.
+          if (isBlockedRoute(pathnameRef.current)) {
             setPendingInvite(row);
             setChallenger(resolvedChallenger);
             if (Platform.OS !== 'web') {

@@ -308,6 +308,21 @@ function FriendsTab() {
   // anyway. Status-change UPDATEs (e.g. the other side accepting
   // our outgoing request) also re-fetch so the friends list +
   // incoming list stay consistent.
+  //
+  // CRITICAL: we deliberately DON'T put `loadData` in the deps
+  // array. Supabase Realtime refuses to add `.on()` handlers to a
+  // channel after `.subscribe()` has fired — and since channel
+  // names are global per-user, re-running this effect (which
+  // happens every time loadData gets re-created) tries to bind
+  // callbacks to the previous, already-subscribed channel and
+  // throws:
+  //   "cannot add postgres_changes callbacks after subscribe()"
+  // That error bubbled up through the RootErrorBoundary on
+  // navigations back to the Friends tab. Using a ref keeps the
+  // callback current without re-subscribing.
+  const loadDataRef = useRef(loadData);
+  useEffect(() => { loadDataRef.current = loadData; }, [loadData]);
+
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
@@ -315,21 +330,21 @@ function FriendsTab() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${userId}` },
-        () => { loadData(); },
+        () => { loadDataRef.current(); },
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'friendships', filter: `requester_id=eq.${userId}` },
-        () => { loadData(); },
+        () => { loadDataRef.current(); },
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${userId}` },
-        () => { loadData(); },
+        () => { loadDataRef.current(); },
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId, loadData]);
+  }, [userId]);
 
   return (
     <TabTransition>
