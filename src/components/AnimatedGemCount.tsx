@@ -4,16 +4,29 @@
  *   • Plays the gem-clink sound exactly once per increase
  *   • Briefly bumps the parent's scale (via shared value) for emphasis
  *
- * Decreases (spending) and the very first render are not animated — only
- * positive deltas trigger the celebration so spending feels instant.
+ * Decreases (spending), the very first render, AND any count change
+ * that lands inside the hydration grace window are not animated — only
+ * actual in-session gains (reward claims, level completions, purchases)
+ * trigger the celebration.
  *
- * The component renders ONLY the formatted number Text. Wrap it with
- * whatever icon / pill / styling you need — this lets it slot into the
- * home screen's gem pill, the shop header, etc. without forcing a layout.
+ * Why the grace window: the component typically mounts while the
+ * Zustand store still holds its default (0 gems), then the cloud
+ * sync finishes a beat later and bumps the count to the user's real
+ * balance. Without the grace window that hydration bump looked like
+ * a +N gain, so every app launch played the clink sound and animated
+ * the pill — which is exactly what the user complained about.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Text, type TextStyle, type StyleProp } from 'react-native';
 import { sounds } from '@/src/lib/sounds';
+
+/**
+ * How long after mount to suppress count-up animations. 1500ms is
+ * comfortably longer than a typical cloud hydration round-trip (~400-
+ * 800ms) but still short enough that a real reward claimed within
+ * the first couple seconds of app open still animates.
+ */
+const HYDRATION_GRACE_MS = 1500;
 
 interface AnimatedGemCountProps {
   count: number;
@@ -29,6 +42,7 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
 }: AnimatedGemCountProps) {
   const prevCount = useRef(count);
   const mountedRef = useRef(true);
+  const mountedAt = useRef(Date.now());
   useEffect(() => () => { mountedRef.current = false; }, []);
   const [displayCount, setDisplayCount] = useState(count);
 
@@ -38,6 +52,14 @@ export const AnimatedGemCount = React.memo(function AnimatedGemCount({
 
     // First render or decrease — snap to the new value, no animation
     if (prev === count || prev > count) {
+      setDisplayCount(count);
+      return;
+    }
+
+    // Hydration grace — the count went up but it's within the first
+    // 1.5s of mount, so it's almost certainly the cloud sync landing
+    // with the user's real balance. Snap silently.
+    if (Date.now() - mountedAt.current < HYDRATION_GRACE_MS) {
       setDisplayCount(count);
       return;
     }
