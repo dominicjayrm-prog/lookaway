@@ -22,12 +22,14 @@ interface Props {
    * Speed Recall / Snap Match / Counting Blitz buffers.
    */
   viewTimeMultiplier?: number;
+  /** Keeps parent external round header in sync with internal state. */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
 const GRID_PADDING = 20;
 const GAP = 8;
 
-export default function ColourChainGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+export default function ColourChainGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1, onRoundChange }: Props) {
   const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('memorise');
   const [recallIdx, setRecallIdx] = useState(0);
@@ -102,6 +104,9 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
     for (let i = 0; i < total; i++) init[i] = 'hidden';
     setTileStates(init);
   }, [recallIdx, gridCols, gridRows]);
+
+  // Sync parent's external round counter to our internal recallIdx
+  useEffect(() => { onRoundChange?.(recallIdx); }, [recallIdx, onRoundChange]);
 
   // Memorise phase - base 3s (scaled by challenge multiplier) +
   // slow-time power-up bonus. The challenge multiplier only

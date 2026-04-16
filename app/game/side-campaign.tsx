@@ -373,7 +373,7 @@ function SideCampaignScreen() {
   }
 
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={s.header}>
         <Pressable onPress={() => {
@@ -410,10 +410,10 @@ function SideCampaignScreen() {
       {/* External mode games */}
       {phase === 'show' && isExternalMode && modeData && (
         <>
-          {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
-          {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} />}
+          {mode === 'snap_match' && <SnapMatchGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} onRoundChange={setRoundIdx} />}
+          {mode === 'sequence' && <SequenceGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} onRoundChange={setRoundIdx} />}
+          {mode === 'counting_blitz' && <CountingBlitzGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} onRoundChange={setRoundIdx} />}
+          {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} onRoundChange={setRoundIdx} />}
         </>
       )}
 

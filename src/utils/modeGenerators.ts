@@ -26,7 +26,12 @@ function placeShapes(count: number, minDist: number = 18) {
       colorName: colors[i % colors.length].name,
       x: Math.round(x * 10) / 10,
       y: Math.round(y * 10) / 10,
-      size: 28 + Math.floor(Math.random() * 10),
+      // Bumped from 28-37 → 48-60. Playtesters found the smaller
+      // shapes hard to parse in the 3s Speed Recall / Snap Match
+      // viewing window. Larger shapes also give generous hit-boxes
+      // in Snap Match's scene B tap-detection since the hit radius
+      // scales off the rendered size.
+      size: 48 + Math.floor(Math.random() * 12),
     });
   }
   return shapes;
@@ -40,7 +45,13 @@ export function generateSpeedRecallData() {
 
 // ─── SNAP MATCH ───
 export function generateSnapMatchData() {
-  const changeTypes = ['colour', 'position', 'added', 'removed', 'type'] as const;
+  // Shuffle the change types so rematches don't always serve them
+  // in the same order (previously always colour → position → added
+  // → removed → type). Each of the 5 is still guaranteed to appear
+  // once — we just randomise the sequence.
+  const changeTypes = (['colour', 'position', 'added', 'removed', 'type'] as const)
+    .slice()
+    .sort(() => Math.random() - 0.5);
   const altColors = ['#FF6B6B', '#0984E3', '#00B894', '#D4A012', '#6C5CE7', '#E17055', '#FD79A8'];
   const rounds = changeTypes.map((changeType, r) => {
     const count = r >= 3 ? 5 : 4;

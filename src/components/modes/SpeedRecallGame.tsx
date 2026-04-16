@@ -43,9 +43,17 @@ interface Props {
    * `src/utils/challengeTiming.ts` for the shared constant.
    */
   viewTimeMultiplier?: number;
+  /**
+   * Called when the internal round index advances. Lets the
+   * parent screen (challenge-mode.tsx) keep its external header
+   * "Round 1/5" in sync — previously the parent had no way to
+   * know that the embedded mode was on round 3, so the header was
+   * stuck at 1/5 for the whole match.
+   */
+  onRoundChange?: (roundIdx: number) => void;
 }
 
-export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1 }: Props) {
+export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewTimeMultiplier = 1, onRoundChange }: Props) {
   const BASE_VIEW_MS = Math.round(3000 * viewTimeMultiplier);
   const { colors } = useTheme();
   const [roundIdx, setRoundIdx] = useState(0);
@@ -140,6 +148,10 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
   }, []);
 
   useEffect(() => { if (round) startRound(); }, [roundIdx, round]);
+  // Notify parent when the internal round changes so external
+  // round counters (e.g. the header in challenge-mode.tsx) stay
+  // in sync with the embedded game's actual progress.
+  useEffect(() => { onRoundChange?.(roundIdx); }, [roundIdx, onRoundChange]);
 
   // If Slow Time is tapped during the viewing phase, extend the
   // current timer live. We clear + re-arm the timeout with the extra
@@ -257,10 +269,15 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
           onPress={phase === 'recall' ? handleCanvasTap : undefined}
           onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
         >
-          {/* Show all shapes during viewing */}
+          {/* Show all shapes during viewing. Bumped size from 30 →
+              48 per playtester feedback — 30px on a real iPhone is
+              hard to recognize at a glance, especially in the 3s
+              viewing window. 48 is large enough to read shape AND
+              colour in a blink. Fallback size 48 also applies when
+              the generator doesn't specify one. */}
           {phase === 'viewing' && shapes.map((sh: any, i: number) => (
-            <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -(sh.size ?? 30) / 2 }, { translateY: -(sh.size ?? 30) / 2 }] }}>
-              <ShapeSvg type={sh.type} color={sh.color} size={sh.size ?? 30} />
+            <View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -(sh.size ?? 48) / 2 }, { translateY: -(sh.size ?? 48) / 2 }] }}>
+              <ShapeSvg type={sh.type} color={sh.color} size={sh.size ?? 48} />
             </View>
           ))}
 
