@@ -807,6 +807,13 @@ export const useGameStore = create<GameStore>((set, get) => {
       clearTimeout((saveState as { _syncTimer?: ReturnType<typeof setTimeout> })._syncTimer);
 
       set({
+        // Clear the ownership stamp so any in-flight save timer that
+        // reads live state AFTER this reset doesn't push to the
+        // previous user's row. CloudSyncLoader sets the new user's
+        // id via `setAuthUserId(user.id)` immediately before
+        // `loadFromCloud` runs, so the window where _authUserId is
+        // null is tiny and safe.
+        _authUserId: null,
         // Economy
         gems: 0,
         lives: 5,
@@ -904,6 +911,57 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!cloud) return;
       const local = get();
 
+      // ── Cross-account contamination guard ────────────────────────
+      // If the in-memory state's implicit owner (local._authUserId)
+      // doesn't match the userId we're loading FOR, local state is
+      // either stale from a previous sign-in OR was never properly
+      // reset on sign-out. Merging it would fold the PREVIOUS user's
+      // cosmetics / stars / login-reward into THIS user's row on
+      // the next save — the exact bug that duplicated idjpvp's
+      // premium cosmetics onto juanjo's profile.
+      //
+      // We treat `local` as empty in that case so the merge falls
+      // through to cloud values across the board. It's safe because
+      // we're about to overwrite in-memory with the merged state
+      // anyway, and any legitimately newer-on-this-device values
+      // (e.g. offline play that beat the cloud) only apply when
+      // the user is the same as the cloud row's owner.
+      const localOwnerMatches = !local._authUserId || local._authUserId === userId;
+      const safeLocal = localOwnerMatches ? local : {
+        ...local,
+        gems: 0,
+        lives: 5,
+        maxLives: 5,
+        livesLastLostAt: null,
+        streakCount: 0,
+        bestStreak: 0,
+        daysPlayed: 0,
+        streakShields: 0,
+        recoveryWindowStart: null,
+        totalStars: 0,
+        highestWorld: 1,
+        levelProgress: {},
+        completedScores: [],
+        ownedCosmetics: [],
+        equippedFrame: 'frame_blink_normal',
+        equippedBanner: 'banner_none',
+        equippedNameColor: 'name_default',
+        equippedExpression: 'expr_normal',
+        powerUps: { ...DEFAULT_POWERUPS },
+        streakMilestonesClaimed: [],
+        lastPlayDate: null,
+        loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
+        localUpdatedAt: 0,
+        username: null,
+        avatarUrl: null,
+        subscriptionStatus: 'inactive' as SubscriptionStatus,
+      };
+      if (!localOwnerMatches) {
+        log.warn('sync', 'cross-account loadFromCloud — forcing cloud-only hydrate', {
+          localOwner: local._authUserId, incoming: userId,
+        });
+      }
+
       // ── Timestamp-based truth source ─────────────────────────────
       // Previously this code used `localHasProgress = levelProgress has entries`
       // to decide whether to prefer local or cloud for scalar fields
@@ -915,12 +973,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       // whichever side wrote more recently. On a fresh device with
       // no local save at all, `localUpdatedAt` is 0 and cloud wins
       // by default.
-      const localIsNewer = local.localUpdatedAt > cloud.cloudUpdatedAt;
+      const localIsNewer = safeLocal.localUpdatedAt > cloud.cloudUpdatedAt;
 
       // Merge level progress — always keep the best from either source
       // regardless of timestamps, since levels can only improve.
       const mergedProgress = { ...cloud.levelProgress };
-      for (const [id, lp] of Object.entries(local.levelProgress)) {
+      for (const [id, lp] of Object.entries(safeLocal.levelProgress)) {
         const cp = mergedProgress[id];
         if (!cp) {
           mergedProgress[id] = lp;
@@ -950,7 +1008,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Merge cosmetics — keep union of both local and cloud (never lose a
       // purchase) UNLESS cloud says the user isn't a subscriber, in which
       // case subscriber-only cosmetics get stripped from the merge.
-      let mergedCosmetics = [...new Set([...local.ownedCosmetics, ...cloud.ownedCosmetics])];
+      let mergedCosmetics = [...new Set([...safeLocal.ownedCosmetics, ...cloud.ownedCosmetics])];
       if (!cloudIsActive) {
         mergedCosmetics = mergedCosmetics.filter((id) => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       }
@@ -972,7 +1030,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       // player's streak and position in the 7-day cycle follow them across
       // devices. A claim from today always wins.
       const pickLoginReward = (): LoginRewardState => {
-        const localLR = local.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE };
+        const localLR = safeLocal.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE };
         const cloudLR = cloud.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE };
         if (!localLR.lastClaimDate) return cloudLR;
         if (!cloudLR.lastClaimDate) return localLR;
@@ -986,51 +1044,52 @@ export const useGameStore = create<GameStore>((set, get) => {
       const pickScalar = <T,>(localVal: T, cloudVal: T): T => (localIsNewer ? localVal : cloudVal);
 
       set({
-        gems: pickScalar(local.gems, cloud.gems),
-        lives: pickScalar(local.lives, cloud.lives),
-        livesLastLostAt: pickScalar(local.livesLastLostAt, cloud.livesLastLostAt),
-        streakCount: Math.max(cloud.streakCount, local.streakCount),
-        bestStreak: Math.max(cloud.bestStreak ?? 0, local.bestStreak ?? 0, cloud.streakCount, local.streakCount),
-        daysPlayed: Math.max(cloud.daysPlayed ?? 0, local.daysPlayed ?? 0),
+        _authUserId: userId, // lock the merged state to THIS user
+        gems: pickScalar(safeLocal.gems, cloud.gems),
+        lives: pickScalar(safeLocal.lives, cloud.lives),
+        livesLastLostAt: pickScalar(safeLocal.livesLastLostAt, cloud.livesLastLostAt),
+        streakCount: Math.max(cloud.streakCount, safeLocal.streakCount),
+        bestStreak: Math.max(cloud.bestStreak ?? 0, safeLocal.bestStreak ?? 0, cloud.streakCount, safeLocal.streakCount),
+        daysPlayed: Math.max(cloud.daysPlayed ?? 0, safeLocal.daysPlayed ?? 0),
         // Server is the source of truth for shields (so claims sync across devices)
-        streakShields: cloud.streakShields ?? local.streakShields ?? 0,
+        streakShields: cloud.streakShields ?? safeLocal.streakShields ?? 0,
         // Recovery window is server-authoritative — cross-device consistency matters
         recoveryWindowStart: cloud.recoveryWindowStart ?? null,
         // Username is server-sourced (set via app/username.tsx). Cloud wins;
         // keep local only as a fallback if cloud hasn't returned one.
-        username: cloud.username ?? local.username ?? null,
+        username: cloud.username ?? safeLocal.username ?? null,
         // Avatar url is server-sourced too (set via avatarUpload.ts
         // after a Supabase Storage upload succeeds). Prefer cloud
         // unless local was updated more recently (covers the narrow
         // window where the user JUST uploaded on this device and the
         // first save with the new URL hasn't persisted to cloud yet).
-        avatarUrl: pickScalar(local.avatarUrl, cloud.avatarUrl),
+        avatarUrl: pickScalar(safeLocal.avatarUrl, cloud.avatarUrl),
         totalStars: mergedTotalStars,
-        highestWorld: Math.max(cloud.highestWorld, local.highestWorld),
+        highestWorld: Math.max(cloud.highestWorld, safeLocal.highestWorld),
         levelProgress: mergedProgress,
         completedScores: mergedScores,
         subscriptionStatus: cloudSubStatus,
         ownedCosmetics: mergedCosmetics,
-        equippedFrame: resolveEquipped(pickScalar(local.equippedFrame, cloud.equippedFrame), 'frame_blink_normal'),
-        equippedBanner: resolveEquipped(pickScalar(local.equippedBanner, cloud.equippedBanner), 'banner_none'),
-        equippedNameColor: resolveEquipped(pickScalar(local.equippedNameColor, cloud.equippedNameColor), 'name_default'),
-        equippedExpression: resolveEquipped(pickScalar(local.equippedExpression, cloud.equippedExpression), 'expr_normal'),
+        equippedFrame: resolveEquipped(pickScalar(safeLocal.equippedFrame, cloud.equippedFrame), 'frame_blink_normal'),
+        equippedBanner: resolveEquipped(pickScalar(safeLocal.equippedBanner, cloud.equippedBanner), 'banner_none'),
+        equippedNameColor: resolveEquipped(pickScalar(safeLocal.equippedNameColor, cloud.equippedNameColor), 'name_default'),
+        equippedExpression: resolveEquipped(pickScalar(safeLocal.equippedExpression, cloud.equippedExpression), 'expr_normal'),
         // Power-ups: keep the max of each type from local and cloud
         powerUps: (() => {
-          const merged = { ...local.powerUps };
+          const merged = { ...safeLocal.powerUps };
           for (const [key, val] of Object.entries(cloud.powerUps)) {
             merged[key as keyof typeof merged] = Math.max((merged as any)[key] ?? 0, val as number);
           }
           return merged;
         })(),
         // Streak milestones: union of claimed milestones (prevent re-claiming)
-        streakMilestonesClaimed: [...new Set([...local.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
+        streakMilestonesClaimed: [...new Set([...safeLocal.streakMilestonesClaimed, ...cloud.streakMilestonesClaimed])],
         // lastPlayDate: take the most recent of the two. Plain string max
         // works because the format is YYYY-MM-DD (lexicographic = chronological).
         // This handles cross-device play (other device played later → cloud
         // wins) while still letting "I just played here" beat stale cloud.
         lastPlayDate: ((): string | null => {
-          const a = local.lastPlayDate;
+          const a = safeLocal.lastPlayDate;
           const b = cloud.lastPlayDate;
           if (!a) return b ?? null;
           if (!b) return a;
@@ -1039,7 +1098,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         // completedScores already merged above (line ~762) via mergedScores —
         // an older version of this block also wrote it here under a now-dead
         // `localHasProgress` flag, which silently overrode the merged value.
-        maxLives: Math.max(local.maxLives, cloud.maxLives),
+        maxLives: Math.max(safeLocal.maxLives, cloud.maxLives),
         loginReward: pickLoginReward(),
       });
       setTimeout(() => saveState(get()), 0);

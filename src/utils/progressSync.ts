@@ -13,6 +13,20 @@ import { log } from '@/src/lib/logger';
  */
 export async function saveProgressToSupabase(userId: string, state: GameStore) {
   try {
+    // Ownership guard — refuse to write if the in-memory state's
+    // implicit owner doesn't match the userId we're writing FOR.
+    // This catches the class of bug where account A's cosmetics /
+    // stars / login-reward state leak onto account B's profile row
+    // during a fast sign-out → sign-in switch. Without this guard
+    // a stale debounced save could fire mid-swap and corrupt
+    // whichever user's row is currently in `userId`.
+    if (state._authUserId && state._authUserId !== userId) {
+      log.warn('sync', 'refusing cross-account save — state owner differs from target', {
+        stateOwner: state._authUserId, target: userId,
+      });
+      return;
+    }
+
     // Update profile
     const memoryScore = state.completedScores.length > 0
       ? Math.round(state.completedScores.reduce((a, v) => a + v, 0) / state.completedScores.length)

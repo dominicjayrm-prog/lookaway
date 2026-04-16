@@ -62,6 +62,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     setClaimedReward(reward);
 
     // Apply reward
+    let unlockedCosmetic: Cosmetic | null = null;
     if (reward.type === 'gems') {
       addGems(reward.amount);
     } else if ((reward as any).type === 'powerup' && (reward as any).powerupId) {
@@ -71,7 +72,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
       if (cosmeticId) {
         unlockCosmetic(cosmeticId);
         const item = getCosmeticById(cosmeticId);
-        if (item) setCelebrationItem(item as Cosmetic);
+        if (item) unlockedCosmetic = item as Cosmetic;
       } else {
         // All cosmetics of this type owned — give bonus gems instead
         addGems(10);
@@ -85,6 +86,30 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     }
 
     RNAnimated.spring(claimScale, { toValue: 1, friction: 3, tension: 200, useNativeDriver: false }).start();
+
+    // Cosmetic rewards: auto-dismiss this modal and open the
+    // celebration a beat later. Previously we set `celebrationItem`
+    // while the DailyLoginReward modal was still up, which on iOS
+    // means the CosmeticCelebration modal mounts BEHIND it and the
+    // player never sees the confetti. Closing this modal first
+    // makes the celebration the only surface on screen so the
+    // "Random Expression Unlocked!" reveal actually shows.
+    if (unlockedCosmetic) {
+      setTimeout(() => {
+        RNAnimated.parallel([
+          RNAnimated.timing(cardOpacity, { toValue: 0, duration: 220, useNativeDriver: false }),
+          RNAnimated.timing(backdrop, { toValue: 0, duration: 300, useNativeDriver: false }),
+        ]).start(() => {
+          setClaimed(false);
+          setClaimedReward(null);
+          claimScale.setValue(0);
+          onDismiss();
+          // Small defer so the reward modal's dismissal finishes
+          // before the celebration modal requests presentation.
+          setTimeout(() => setCelebrationItem(unlockedCosmetic), 80);
+        });
+      }, 500);
+    }
   }
 
   function handleDismiss() {
