@@ -47,6 +47,20 @@ export async function getRemainingAdWatches(): Promise<number> {
   return Math.max(0, DAILY_LIMIT - counter.count);
 }
 
+/**
+ * Web no-op for the native AdMob + ATT initialiser. The caller in
+ * `app/_layout.tsx` fires this once on mount; if the export is
+ * missing, the import resolves to `undefined` and the whole
+ * provider tree crashes with
+ * "(0, initAdsAndTracking) is not a function". That's exactly the
+ * regression that took the Vercel deployment down — this stub
+ * keeps the web bundle callable while the real ATT flow lives
+ * on iOS only (see `adService.ts`).
+ */
+export async function initAdsAndTracking(): Promise<void> {
+  // No ads, no tracking prompt, no-op.
+}
+
 /** On web, rewarded ads grant the reward immediately (no ad to show). */
 export async function showRewardedAd(): Promise<AdResult> {
   try {
