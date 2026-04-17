@@ -10,7 +10,7 @@
  *  - Challenge + Close + Remove friend actions
  */
 import React, { useEffect, useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { Modal, View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
 import { ProfileBanner } from '@/src/components/ProfileBanner';
@@ -27,6 +27,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { loadPlayerProgress, countUnlockedTiers, loadAllAchievements } from '@/src/utils/achievements';
 import { getHeadToHeadRecord } from '@/src/utils/friends';
 import { ReportUserModal } from '@/src/components/ReportUserModal';
+import { blockUser } from '@/src/utils/blockUser';
 
 interface FriendProfileInput {
   id: string;
@@ -65,6 +66,41 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   // Report modal is owned by the popup itself rather than the parent
   // so we don't have to prop-drill yet another callback.
   const [showReport, setShowReport] = React.useState(false);
+  const [blocking, setBlocking] = React.useState(false);
+
+  // Standalone Block — prompts a confirm dialog, then inserts a
+  // `blocked_users` row and silently removes any existing friendship
+  // (see blockUser() in src/utils/blockUser.ts). The parent list is
+  // refreshed via `onRemove` because from the friends-list point of
+  // view a blocked user IS a removed one.
+  const handleBlock = React.useCallback(() => {
+    if (!myId || blocking) return;
+    const confirmMsg = `Block @${profile.username}? They won't be able to send you friend requests or challenges, and they'll disappear from your search results. You can unblock them from your profile.`;
+    const runBlock = async () => {
+      setBlocking(true);
+      const ok = await blockUser(myId, profile.id);
+      setBlocking(false);
+      if (ok) {
+        // Friendship (if any) was deleted inside blockUser(); tell the
+        // parent list to drop this row. Pass the friendshipId so the
+        // same handler that handles Remove works here too.
+        onRemove(friend.friendshipId);
+        onClose();
+      } else {
+        const errMsg = `Could not block @${profile.username}. Please try again.`;
+        if (Platform.OS === 'web' && typeof window !== 'undefined') (window as any).alert?.(errMsg);
+        else Alert.alert('Block failed', errMsg);
+      }
+    };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if ((window as any).confirm?.(confirmMsg)) runBlock();
+      return;
+    }
+    Alert.alert('Block user', confirmMsg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Block', style: 'destructive', onPress: runBlock },
+    ]);
+  }, [myId, blocking, profile.username, profile.id, friend.friendshipId, onRemove, onClose]);
 
   // Resolve cosmetics
   const frame = profile.equipped_frame ? getFrameById(profile.equipped_frame) ?? null : null;
@@ -226,6 +262,11 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
               <Pressable style={styles.secondaryBtn} onPress={() => setShowReport(true)} accessibilityRole="button" accessibilityLabel={`Report @${profile.username}`}>
                 <Ionicons name="flag-outline" size={14} color={colors.wrong} />
                 <Text style={[styles.secondaryText, { color: colors.wrong }]}>Report</Text>
+              </Pressable>
+              <View style={[styles.secondaryDivider, { backgroundColor: colors.border }]} />
+              <Pressable style={styles.secondaryBtn} onPress={handleBlock} disabled={blocking} accessibilityRole="button" accessibilityLabel={`Block @${profile.username}`}>
+                <Ionicons name="ban-outline" size={14} color={colors.wrong} />
+                <Text style={[styles.secondaryText, { color: colors.wrong }]}>Block</Text>
               </Pressable>
             </View>
           </View>

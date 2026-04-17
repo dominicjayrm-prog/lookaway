@@ -21,6 +21,7 @@ import { BlankedLogo } from '@/src/components/BlankedLogo';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
+import { checkUsername } from '@/src/utils/profanityFilter';
 import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius, shadows } from '@/src/theme/spacing';
 
@@ -40,7 +41,12 @@ function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsernameInput] = useState('');
-  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'disallowed'>('idle');
+  // Holds the specific reason when `usernameStatus === 'disallowed'`
+  // (reserved name, profanity, l33t-speak bypass). Separate from the
+  // generic 'invalid' path because the UI copy differs and we don't
+  // want to leak the banned word back to the user.
+  const [usernameDisallowedMessage, setUsernameDisallowedMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Consent checkbox — required before signup (either email or Apple).
@@ -54,9 +60,19 @@ function AuthScreen() {
   const handleUsernameChange = (text: string) => {
     const sanitized = text.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 16);
     setUsernameInput(sanitized);
+    setUsernameDisallowedMessage(null);
     if (usernameTimer.current) clearTimeout(usernameTimer.current);
     if (sanitized.length < 3) { setUsernameStatus(sanitized.length > 0 ? 'invalid' : 'idle'); return; }
     if (!/^[a-z0-9_]+$/.test(sanitized)) { setUsernameStatus('invalid'); return; }
+    // Profanity / reserved-name check before spending a round-trip on
+    // the availability lookup — if the name is banned it's banned
+    // whether or not it's taken.
+    const profanityCheck = checkUsername(sanitized);
+    if (!profanityCheck.ok) {
+      setUsernameStatus('disallowed');
+      setUsernameDisallowedMessage(profanityCheck.message ?? 'Please choose a different username.');
+      return;
+    }
     setUsernameStatus('checking');
     usernameTimer.current = setTimeout(async () => {
       const { data } = await supabase.from('profiles').select('username').eq('username', sanitized).single();
@@ -78,8 +94,22 @@ function AuthScreen() {
     }
 
     if (mode === 'signup' && usernameStatus !== 'available') {
-      setError('Please choose an available username');
+      if (usernameStatus === 'disallowed') {
+        setError(usernameDisallowedMessage ?? 'Please choose a different username.');
+      } else {
+        setError('Please choose an available username');
+      }
       return;
+    }
+    // Belt-and-braces: re-run the profanity / format check against the
+    // submitted value. Prevents a race where the user toggled focus
+    // fast enough to beat the debounce.
+    if (mode === 'signup') {
+      const finalCheck = checkUsername(username.trim());
+      if (!finalCheck.ok) {
+        setError(finalCheck.message ?? 'Please choose a different username.');
+        return;
+      }
     }
 
     if (mode === 'signup' && !consent) {
@@ -309,6 +339,7 @@ function AuthScreen() {
                 {usernameStatus === 'available' && <Text style={styles.usernameAvailable}>Available</Text>}
                 {usernameStatus === 'taken' && <Text style={styles.usernameTaken}>Already taken</Text>}
                 {usernameStatus === 'invalid' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>3-16 chars, lowercase letters, numbers, underscores</Text>}
+                {usernameStatus === 'disallowed' && <Text style={styles.usernameTaken}>{usernameDisallowedMessage ?? 'Please choose a different username.'}</Text>}
                 {usernameStatus === 'checking' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>Checking...</Text>}
               </View>
             )}

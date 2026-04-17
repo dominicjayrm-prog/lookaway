@@ -46,7 +46,7 @@ import { Platform } from 'react-native';
 // see "Test Ad" creatives and production users earn no revenue.
 // During TestFlight + internal testing, leave `true` so ads actually
 // fill and the pipeline is observable.
-export const USE_TEST_ADS = true;
+export const USE_TEST_ADS = false;
 
 // ─── Ad unit IDs ───────────────────────────────────────────────────
 

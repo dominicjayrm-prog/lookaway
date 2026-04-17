@@ -15,6 +15,7 @@ import { View, Text, StyleSheet, Modal, Pressable, TextInput, Alert, Platform, S
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { reportUser, REPORT_REASONS, type ReportReason } from '@/src/utils/reportUser';
+import { blockUser } from '@/src/utils/blockUser';
 
 interface Props {
   visible: boolean;
@@ -39,10 +40,16 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // "Also block" defaults ON because in practice if someone is
+  // worth reporting they're worth not seeing again. User can toggle
+  // off if they're reporting a bug/spam that they don't mind
+  // encountering again (rare).
+  const [alsoBlock, setAlsoBlock] = useState(true);
 
   function reset() {
     setReason(null);
     setDetails('');
+    setAlsoBlock(true);
     setSubmitting(false);
   }
 
@@ -50,10 +57,20 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
     if (!reporterId || !reason) return;
     setSubmitting(true);
     const result = await reportUser(reporterId, reportedId, reason, details);
+    // If the report landed (or was a duplicate of an existing one)
+    // and the user opted to also block, fire the block in the
+    // background. We don't block the UI on its result — the block
+    // is best-effort and shouldn't derail the report success path.
+    if ((result.ok || result.alreadyReported) && alsoBlock) {
+      blockUser(reporterId, reportedId).catch(() => {});
+    }
     setSubmitting(false);
 
     if (result.ok) {
-      notify('Report submitted', 'Thanks — our team will review this. The user has not been notified.');
+      const msg = alsoBlock
+        ? "Thanks — our team will review this. The user has been blocked and will no longer be able to reach you."
+        : "Thanks — our team will review this. The user has not been notified.";
+      notify('Report submitted', msg);
       reset();
       onClose();
     } else if (result.alreadyReported) {
@@ -122,6 +139,24 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
             style={[styles.detailsInput, { backgroundColor: colors.surface, color: colors.text }]}
           />
 
+          <Pressable
+            onPress={() => setAlsoBlock((v) => !v)}
+            style={[styles.blockToggle, { borderColor: colors.border, backgroundColor: alsoBlock ? colors.wrongSoft : 'transparent' }]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: alsoBlock }}
+            accessibilityLabel="Also block this user"
+          >
+            <View style={[styles.checkbox, { borderColor: alsoBlock ? colors.wrong : colors.borderStrong, backgroundColor: alsoBlock ? colors.wrong : 'transparent' }]}>
+              {alsoBlock && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.blockToggleLabel, { color: colors.text }]}>Also block this user</Text>
+              <Text style={[styles.blockToggleDesc, { color: colors.textLight }]}>
+                They won't be able to send friend requests or challenges. You can unblock anytime from your profile.
+              </Text>
+            </View>
+          </Pressable>
+
           <View style={styles.actionRow}>
             <Pressable
               onPress={handleClose}
@@ -170,6 +205,10 @@ const styles = StyleSheet.create({
   reasonLabel: { fontSize: 14, fontWeight: '700' },
   reasonDesc: { fontSize: 12, marginTop: 1 },
   detailsInput: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, minHeight: 60, textAlignVertical: 'top', marginBottom: 12 },
+  blockToggle: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  blockToggleLabel: { fontSize: 13, fontWeight: '700' },
+  blockToggleDesc: { fontSize: 11, marginTop: 2, lineHeight: 15 },
   actionRow: { flexDirection: 'row', gap: 10 },
   btn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   btnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },

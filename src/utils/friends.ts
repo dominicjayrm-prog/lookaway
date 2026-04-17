@@ -2,6 +2,7 @@ import { supabase } from '@/src/lib/supabase';
 import { notifyFriendRequest } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
 import { notifyFriendRequestAccepted } from '@/src/utils/notifications';
+import { getHiddenUserIds } from '@/src/utils/blockUser';
 import { log } from '@/src/lib/logger';
 
 // \u2500\u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -48,14 +49,22 @@ export interface Challenge {
 // \u2500\u2500\u2500 User search \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export async function searchUsers(query: string, currentUserId: string): Promise<FriendProfile[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg')
-    .ilike('username', `${query}%`)
-    .neq('id', currentUserId)
-    .limit(5);
+  // Fetch blocks in parallel with the search — blocks list is
+  // normally very small so the round-trip is cheap. We request 5+
+  // extra rows to compensate for the ones we'll filter out.
+  const [searchRes, hidden] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg')
+      .ilike('username', `${query}%`)
+      .neq('id', currentUserId)
+      .limit(15),
+    getHiddenUserIds(currentUserId),
+  ]);
+  const { data, error } = searchRes;
   if (log.supabaseError('friends', 'searchUsers', error, { query })) return [];
-  return (data ?? []) as FriendProfile[];
+  const rows = (data ?? []) as FriendProfile[];
+  return rows.filter((r) => !hidden.has(r.id)).slice(0, 5);
 }
 
 // \u2500\u2500\u2500 Friend requests \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -93,6 +102,14 @@ export async function addFriendById(myId: string, targetId: string): Promise<Add
   if (!myId || !targetId) return 'error';
   if (myId === targetId) return 'self';
   try {
+    // Refuse the request if either party has blocked the other.
+    // The DB-level guard is RLS (an insert from a blocked user will
+    // succeed since we don't RLS-gate friendships by block state —
+    // we enforce this purely client-side, which is fine because a
+    // blocked user has no UI path to type this code anyway; this
+    // guard just protects against deep-link / QR-scan edge cases).
+    const hidden = await getHiddenUserIds(myId);
+    if (hidden.has(targetId)) return 'error';
     const { data: existing, error: existingError } = await supabase
       .from('friendships')
       .select('id, status')
@@ -157,31 +174,43 @@ export async function removeFriend(friendshipId: string): Promise<boolean> {
 // \u2500\u2500\u2500 Friend lists \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
-  const { data, error } = await supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false });
+  const [reqRes, hidden] = await Promise.all([
+    supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false }),
+    getHiddenUserIds(userId),
+  ]);
+  const { data, error } = reqRes;
   if (log.supabaseError('friends', 'getFriendRequests', error, { userId })) return [];
   // Same defensive filter as getFriends / getRecentResults: skip
-  // rows where the requester profile failed to join.
+  // rows where the requester profile failed to join. Also drop any
+  // requester the current user has blocked (or who has blocked them).
   return (data ?? [])
     .map((row: Record<string, unknown>) => {
       const requester = row.requester as FriendProfile | null | undefined;
       if (!requester || typeof requester !== 'object' || !(requester as FriendProfile).username) return null;
+      if (hidden.has((requester as FriendProfile).id)) return null;
       return { id: row.id as string, requester: requester as FriendProfile, created_at: row.created_at as string };
     })
     .filter((r): r is FriendRequest => r !== null);
 }
 
 export async function getFriends(userId: string): Promise<Friend[]> {
-  const { data, error } = await supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+  const [friendsRes, hidden] = await Promise.all([
+    supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
+    getHiddenUserIds(userId),
+  ]);
+  const { data, error } = friendsRes;
   if (log.supabaseError('friends', 'getFriends', error, { userId })) return [];
   // Filter out rows whose other-side profile FK returned null
-  // (deleted account, RLS edge, or mid-cleanup row). Without this
-  // guard the FriendsListSection crashes on `profile.username`
+  // (deleted account, RLS edge, or mid-cleanup row) AND rows where
+  // the other party is blocked in either direction. Without the
+  // null guard the FriendsListSection crashes on `profile.username`
   // and bubbles up to the root error boundary.
   return (data ?? [])
     .map((row: Record<string, unknown>) => {
       const isRequester = row.requester_id === userId;
       const profile = (isRequester ? row.addressee : row.requester) as FriendProfile | null | undefined;
       if (!profile || typeof profile !== 'object' || !(profile as FriendProfile).username) return null;
+      if (hidden.has((profile as FriendProfile).id)) return null;
       return { friendshipId: row.id as string, profile: profile as FriendProfile };
     })
     .filter((f): f is Friend => f !== null);
