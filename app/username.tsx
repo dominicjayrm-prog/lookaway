@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, consumeUsernameSuggestion } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
+import { checkUsername } from '@/src/utils/profanityFilter';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { typography } from '@/src/theme/typography';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
@@ -18,7 +19,7 @@ const USERNAME_REGEX = /^[a-z0-9_]{3,16}$/;
  *  "change colour" screen can treat index as a selection id. */
 const AVATAR_COLORS = ['#6C5CE7', '#0984E3', '#00B894', '#FF6B6B', '#F9A825', '#E17055', '#1A1A18', '#A29BFE'] as const;
 
-type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'disallowed';
 
 /**
  * Makes Blink's pupils glance around the screen — center, right, left,
@@ -76,6 +77,8 @@ function UsernameScreen() {
   // get the previous user's suggestion.
   const [username, setUsername] = useState<string>(() => consumeUsernameSuggestion() ?? '');
   const [availability, setAvailability] = useState<Availability>('idle');
+  const [disallowedMessage, setDisallowedMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,6 +87,15 @@ function UsernameScreen() {
   const checkAvailability = useCallback(async (name: string) => {
     if (!USERNAME_REGEX.test(name)) {
       setAvailability('invalid');
+      return;
+    }
+    // Profanity / reserved-name gate. Synchronous — no network, so
+    // this fires instantly on every keystroke (the availability
+    // round-trip is what we debounce, not this).
+    const profanity = checkUsername(name);
+    if (!profanity.ok) {
+      setAvailability('disallowed');
+      setDisallowedMessage(profanity.message ?? "That name isn't allowed.");
       return;
     }
     setAvailability('checking');
@@ -98,8 +110,19 @@ function UsernameScreen() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    setDisallowedMessage(null);
+    setSaveError(null);
     if (username.length === 0) { setAvailability('idle'); return; }
     if (!USERNAME_REGEX.test(username)) { setAvailability('invalid'); return; }
+    // Immediate synchronous profanity/reserved check so the user sees
+    // the "not allowed" message the moment it's relevant — no
+    // debounce, the check has zero cost.
+    const profanity = checkUsername(username);
+    if (!profanity.ok) {
+      setAvailability('disallowed');
+      setDisallowedMessage(profanity.message ?? "That name isn't allowed.");
+      return;
+    }
     setAvailability('checking');
     debounceRef.current = setTimeout(() => checkAvailability(username), 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -118,7 +141,17 @@ function UsernameScreen() {
 
   const handleContinue = async () => {
     if (!user || availability !== 'available' || saving) return;
+    // Belt-and-braces final profanity check in case Apple's suggested
+    // slug was loaded straight into state and the user tapped
+    // Continue before the initial validation useEffect ran.
+    const finalCheck = checkUsername(username);
+    if (!finalCheck.ok) {
+      setAvailability('disallowed');
+      setDisallowedMessage(finalCheck.message ?? "That name isn't allowed.");
+      return;
+    }
     setSaving(true);
+    setSaveError(null);
     // Random avatar colour on first save — user can change later from
     // their profile screen. Keeps this picker singularly focused on
     // the one thing it's here for: picking a username.
@@ -129,6 +162,16 @@ function UsernameScreen() {
     setSaving(false);
     if (error) {
       log.error('auth', 'username save failed', error, { userId: user.id });
+      // Server trigger (username_is_clean) raises a check_violation
+      // when the name is still dirty — surface the hint rather than
+      // leaving the user stuck with an unexplained disabled button.
+      const code = (error as { code?: string }).code;
+      if (code === '23514' || /check_violation|username_is_clean/i.test(error.message ?? '')) {
+        setAvailability('disallowed');
+        setDisallowedMessage("That name isn't allowed. Please pick another.");
+      } else {
+        setSaveError("Couldn't save your username. Please try again.");
+      }
       return;
     }
     // Brand-new account — guarantee the spotlight tutorial fires
@@ -147,14 +190,16 @@ function UsernameScreen() {
 
   const hintColor =
     availability === 'available' ? colors.correct :
-    availability === 'taken' || availability === 'invalid' ? colors.wrong :
+    availability === 'taken' || availability === 'invalid' || availability === 'disallowed' || saveError ? colors.wrong :
     colors.textMid;
 
   const hintText =
+    saveError ? saveError :
     availability === 'idle' ? '3-16 characters \u00B7 letters, numbers, underscores' :
     availability === 'checking' ? 'Checking availability\u2026' :
     availability === 'available' ? '\u2713 Available' :
     availability === 'taken' ? 'Already taken' :
+    availability === 'disallowed' ? (disallowedMessage ?? "That name isn't allowed.") :
     '3-16 lowercase letters, numbers, or underscores';
 
   return (
@@ -190,7 +235,7 @@ function UsernameScreen() {
           {/* ── Username input ── Large, centred, big tap target. The
               @ prefix is non-selectable so the user only edits the
               part that matters. */}
-          <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: availability === 'available' ? colors.correct : availability === 'taken' || availability === 'invalid' ? colors.wrong : colors.border }]}>
+          <View style={[styles.inputRow, { backgroundColor: colors.card, borderColor: availability === 'available' ? colors.correct : availability === 'taken' || availability === 'invalid' || availability === 'disallowed' || saveError ? colors.wrong : colors.border }]}>
             <Text style={[styles.atSign, { color: colors.textMid }]}>@</Text>
             <TextInput
               style={[styles.input, { color: colors.text }]}

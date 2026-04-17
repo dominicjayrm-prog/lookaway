@@ -98,11 +98,11 @@ export function checkUsername(raw: string): UsernameCheckResult {
 
   const lower = trimmed.toLowerCase();
   if (RESERVED_NAMES.has(lower)) {
-    return { ok: false, error: 'reserved', message: 'That username is reserved. Please pick another.' };
+    return { ok: false, error: 'reserved', message: 'That name is reserved. Please pick another.' };
   }
 
   if (matcher.hasMatch(trimmed)) {
-    return { ok: false, error: 'profane', message: 'Please choose a different username.' };
+    return { ok: false, error: 'profane', message: "That name isn't allowed. Please pick another." };
   }
 
   return { ok: true };
