@@ -8,6 +8,7 @@ import { typography } from '@/src/theme/typography';
 import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useGameStore, LIFE_REGEN_MS } from '@/src/store/gameStore';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { track, EVENTS } from '@/src/lib/analytics';
 
 interface OutOfLivesModalProps {
   visible: boolean;
@@ -33,6 +34,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
     if (!visible) return;
     // Warning haptic on modal show — this is a "hey you're blocked" moment
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    track(EVENTS.OUT_OF_LIVES_SHOWN, { gems });
     function update() {
       if (!livesLastLostAt) { setCountdown('00:00'); return; }
       const remaining = livesLastLostAt + LIFE_REGEN_MS - Date.now();
@@ -48,12 +50,14 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
   const handleGemRefill = useCallback(() => {
     const ok = refillLivesWithGems();
     if (!ok) {
+      track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'gem_refill_insufficient', gems });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return;
     }
+    track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'gem_refill' });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onClose();
-  }, [refillLivesWithGems, onClose]);
+  }, [refillLivesWithGems, onClose, gems]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -77,7 +81,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
           {/* Option 1: Buy lives (shop) */}
           <Pressable
             style={({ pressed }) => [st.shopBtn, { borderColor: colors.accent }, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
-            onPress={onGoToShop}
+            onPress={() => { track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'go_to_shop' }); onGoToShop?.(); }}
           >
             <Ionicons name="heart" size={16} color={colors.accent} />
             <Text style={[st.shopBtnText, { color: colors.accent }]}>Tired of waiting?</Text>
@@ -102,7 +106,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
           {/* Option 3: Blanked+ upsell */}
           <Pressable
             style={({ pressed }) => [st.plusBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
-            onPress={onGoToBlankedPlus}
+            onPress={() => { track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'go_to_blanked_plus' }); onGoToBlankedPlus?.(); }}
           >
             <View style={st.plusIcon}>
               <Ionicons name="eye" size={14} color="#6C5CE7" />
@@ -115,7 +119,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
           </Pressable>
 
           {/* Dismiss */}
-          <Pressable style={st.waitBtn} onPress={onClose}>
+          <Pressable style={st.waitBtn} onPress={() => { track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'wait' }); onClose(); }}>
             <Text style={[st.waitText, { color: colors.textLight }]}>I'll wait</Text>
           </Pressable>
         </View>

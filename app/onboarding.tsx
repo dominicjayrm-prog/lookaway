@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { track, EVENTS } from '@/src/lib/analytics';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 
@@ -633,12 +634,19 @@ export default function OnboardingFlow() {
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0 && viewableItems[0].index != null) {
-      setVisibleIndex(viewableItems[0].index);
+      const idx = viewableItems[0].index;
+      setVisibleIndex(idx);
+      // Fires once per step the user actually looks at — this is the
+      // drop-off funnel ("90% see step 0, 60% see step 1, ..."). If
+      // a player swipes away without ever reaching the final step,
+      // the missing event tells us where they bailed.
+      track(EVENTS.ONBOARDING_STEP_VIEWED, { step: idx });
     }
   }).current;
 
   const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
+    track(EVENTS.ONBOARDING_COMPLETED);
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
