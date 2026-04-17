@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { StyleSheet, ScrollView, Share, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -358,6 +358,37 @@ function FriendsTab() {
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
+  // Hide search results for users the current player is already
+  // friends with. Without this, accepting an outgoing request left
+  // the target row in the search list with a stale "Sent" badge
+  // until the next remount — confusing because they were ALSO
+  // visible below in "YOUR FRIENDS". Keeps in sync automatically
+  // because `friends` updates via the realtime subscription above
+  // the moment the friendship row flips to 'accepted'.
+  const friendIdSet = useMemo(() => new Set(friends.map((f) => f.profile.id)), [friends]);
+  const visibleSearchResults = useMemo(
+    () => searchResults.filter((u) => !friendIdSet.has(u.id)),
+    [searchResults, friendIdSet],
+  );
+  // Mirror the cleanup in sentRequests too so the Set doesn't grow
+  // forever across a long session — purely memory hygiene; the
+  // filter above is what actually fixes the stale-badge bug.
+  useEffect(() => {
+    if (sentRequests.size === 0) return;
+    setSentRequests((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of prev) {
+        if (friendIdSet.has(id)) { next.delete(id); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+    // Intentionally omits sentRequests from deps — we only want this
+    // to run when the friend list itself changes, not when we add to
+    // the set (which would cause a self-retriggering loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friendIdSet]);
+
   return (
     <TabTransition>
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -382,7 +413,7 @@ function FriendsTab() {
             onChangeSearchText={setSearchText}
             searchFocused={searchFocused}
             onFocusChange={setSearchFocused}
-            searchResults={searchResults}
+            searchResults={visibleSearchResults}
             sentRequests={sentRequests}
             onSendRequest={handleSendRequest}
           />
