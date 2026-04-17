@@ -269,13 +269,29 @@ function ChallengeGameScreen() {
    *  other mode. No-ops in loading/ready/complete because there's
    *  nothing to warn about. */
   const handleAbandon = useCallback(() => {
-    if (phase === 'loading' || phase === 'error' || phase === 'ready' || phase === 'complete') {
+    if (phase === 'loading' || phase === 'error' || phase === 'complete') {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       router.back();
       return;
     }
+    if (phase === 'ready') {
+      // Pre-start screen (the "Challenge / 5 scenes, 25 questions /
+      // Start" card). Previously this just called router.back()
+      // without touching the challenge row, so a live opponent
+      // sitting on the waiting screen had no signal we'd left and
+      // hung there until the backend timeout. Fire abandon here
+      // too — same pathway used once the match is in-flight, just
+      // without the confirm dialog because tapping X before
+      // pressing Start is an unambiguous "not playing this one".
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (dbChallengeId && userId) {
+        abandonChallenge(dbChallengeId, userId).catch(() => {});
+      }
+      router.back();
+      return;
+    }
     setShowQuitConfirm(true);
-  }, [phase, router]);
+  }, [phase, router, dbChallengeId, userId]);
 
   const confirmLeave = useCallback(async () => {
     setShowQuitConfirm(false);
