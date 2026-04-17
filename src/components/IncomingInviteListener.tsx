@@ -24,6 +24,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { acceptInvite, declineInvite, expireInvite } from '@/src/utils/challengeFlow';
 import { CHALLENGE_MODES } from '@/src/data/challengeModes';
 import { sounds } from '@/src/lib/sounds';
+import { FriendAvatar } from '@/src/components/FriendAvatar';
 
 /** Cross-platform notification helper. Alert.alert does not render on
  *  React Native Web, so we fall back to window.alert there. Kept
@@ -64,6 +65,9 @@ interface InviteRow {
 interface ChallengerProfile {
   username: string;
   avatar_color: string;
+  avatar_url?: string | null;
+  equipped_frame?: string | null;
+  equipped_expression?: string | null;
 }
 
 export function IncomingInviteListener() {
@@ -118,10 +122,18 @@ export function IncomingInviteListener() {
           // against the UPDATE listener below re-firing).
           if (actedIdsRef.current.has(row.id)) return;
 
-          // Resolve challenger profile for the modal (avatar + name).
+          // Resolve challenger profile for the modal. Pull the full
+          // avatar cosmetic set (uploaded photo, equipped frame,
+          // equipped Blink expression) so the invite modal matches
+          // how the challenger shows up on every other social
+          // surface. Previously we only selected username +
+          // avatar_color and rendered a plain coloured square with
+          // the first letter — an ugly "I" for @idjpvp regardless
+          // of whether they had a selfie or a Blink cosmetic
+          // equipped.
           const { data: profile } = await supabase
             .from('profiles')
-            .select('username, avatar_color')
+            .select('username, avatar_color, avatar_url, equipped_frame, equipped_expression')
             .eq('id', row.challenger_id)
             .single();
           const resolvedChallenger = profile ?? { username: 'someone', avatar_color: '#6C5CE7' };
@@ -312,8 +324,20 @@ export function IncomingInviteListener() {
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={handleDecline}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <View style={[styles.avatar, { backgroundColor: challenger.avatar_color }]}>
-            <Text style={styles.avatarInitial}>{challenger.username[0]?.toUpperCase() ?? '?'}</Text>
+          {/* Shared FriendAvatar so the invite modal matches every
+              other social surface: uploaded photo > Blink mascot
+              with equipped expression > default ring. Falls back
+              gracefully when the challenger hasn't customised
+              anything. */}
+          <View style={styles.avatarWrap}>
+            <FriendAvatar
+              username={challenger.username}
+              avatarColor={challenger.avatar_color}
+              avatarUrl={challenger.avatar_url}
+              equippedFrame={challenger.equipped_frame}
+              equippedExpression={challenger.equipped_expression}
+              size={72}
+            />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>
             @{challenger.username} wants to play!
@@ -345,8 +369,7 @@ export function IncomingInviteListener() {
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: { width: '100%', maxWidth: 340, borderRadius: 24, padding: 22, alignItems: 'center', gap: 14 },
-  avatar: { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: '#FFF', fontSize: 28, fontWeight: '900' },
+  avatarWrap: { marginBottom: 4 },
   title: { fontSize: 22, fontWeight: '800', textAlign: 'center' },
   subtitle: { fontSize: 14, fontWeight: '600', marginTop: -4 },
   timerPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, marginTop: 2 },
