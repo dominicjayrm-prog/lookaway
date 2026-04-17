@@ -12,31 +12,30 @@
 -- Matching strategy:
 --   1. Format rule: 3-20 chars, [a-z0-9_], can't start or end with
 --      an underscore, can't be all digits.
---   2. Reserved list — hard-coded below.
---   3. Profanity list — stored in `public.banned_words` so non-devs
---      can extend it without a migration. Both exact matches AND
---      a normalised l33t-speak form are checked (replace 4→a, 0→o,
---      1→i, 3→e, $→s, 7→t, @→a; strip non-letters).
+--   2. Reserved list — stored in the same `banned_words` table as
+--      profanity (admin, blanked, support, etc.).
+--   3. Profanity — `banned_words` table with seed list. Can be
+--      extended at runtime without a new migration.
 --
--- Limitations:
---   - This is a belt-and-braces layer. It doesn't need to catch
---     every variant that obscenity catches on the client — the
---     client already handles most creative bypasses. The trigger
---     just needs to stop the obvious ones if the client was
---     skipped altogether.
---   - Non-English profanity isn't covered server-side. Add rows to
---     `banned_words` as needed.
+-- Two normalised forms are checked per candidate:
+--   a) `normalise_for_filter` — 4→a, 0→o, 1→i, 3→e, $→s, 7→t, @→' '.
+--      Catches visual l33t substitutions like 'sh1t' or '@sshole'.
+--   b) `normalise_strip_digits` — strips all non-letters. Catches
+--      bypasses like 'fu4ck' where the digit sits inside a word.
+--
+-- Both forms are needed because certain substitutions (e.g. '4'
+-- replacing a U-sound in 'f4ckface') work only when the digit is
+-- dropped rather than translated visually.
 
 -- 1. Banned-words table ------------------------------------------------
 create table if not exists public.banned_words (
   word text primary key
 );
 
--- Starter seed — curated lowercase list of common English slurs and
--- profanity that Apple reviewers are most likely to flag on a
--- leaderboard. Safe to extend via `insert into banned_words(word)`.
--- Intentionally short; the client-side `obscenity` dataset catches
--- the wide variant surface, this is just the server-side fallback.
+-- Starter seed — curated lowercase list of English slurs, common
+-- profanity, reserved impersonation vectors, and short
+-- consonant-skip bypass roots ('fck', 'btch', etc.). Extend by
+-- running `insert into banned_words(word) values (...)`.
 insert into public.banned_words (word) values
   ('fuck'), ('shit'), ('bitch'), ('bastard'), ('asshole'),
   ('dick'), ('cock'), ('pussy'), ('cunt'), ('whore'), ('slut'),
@@ -46,14 +45,16 @@ insert into public.banned_words (word) values
   ('hitler'), ('nazi'), ('isis'),
   ('porn'), ('sex'), ('anal'), ('boob'),
   ('admin'), ('administrator'), ('moderator'), ('support'),
-  ('staff'), ('official'), ('system'), ('blanked'), ('blankedapp')
+  ('staff'), ('official'), ('system'), ('blanked'), ('blankedapp'),
+  -- Consonant-skip bypass roots
+  ('fck'), ('fuk'), ('phuck'), ('phuk'),
+  ('sht'), ('shyt'),
+  ('btch'), ('biatch'),
+  ('n1g'), ('nigg'),
+  ('cnt'), ('cck')
 on conflict (word) do nothing;
 
--- 2. Normaliser --------------------------------------------------------
--- Collapse common l33t-speak to plain letters so we catch "f4ck",
--- "sh1t", "$hit", "h@t3". Strips any remaining non-letter chars
--- (numbers, underscores, symbols) after substitution, so we're
--- checking letter-only roots.
+-- 2. Normaliser A: visual l33t → letters -------------------------------
 create or replace function public.normalise_for_filter(input text)
 returns text language sql immutable as $$
   select regexp_replace(
@@ -64,12 +65,20 @@ returns text language sql immutable as $$
   );
 $$;
 
--- 3. Cleanliness check -------------------------------------------------
+-- 3. Normaliser B: strip digits entirely -------------------------------
+-- 'fu4ck' → 'fuck'. Complementary to normaliser A.
+create or replace function public.normalise_strip_digits(input text)
+returns text language sql immutable as $$
+  select regexp_replace(lower(input), '[^a-z]', '', 'g');
+$$;
+
+-- 4. Cleanliness check -------------------------------------------------
 create or replace function public.username_is_clean(candidate text)
 returns boolean language plpgsql immutable as $$
 declare
-  lowered text := lower(trim(candidate));
-  normed  text := public.normalise_for_filter(candidate);
+  lowered   text := lower(trim(candidate));
+  normed_a  text := public.normalise_for_filter(candidate);
+  normed_b  text := public.normalise_strip_digits(candidate);
   w record;
 begin
   -- Format
@@ -77,18 +86,20 @@ begin
   if lowered ~ '^_' or lowered ~ '_$' then return false; end if;
   if lowered ~ '^[0-9]+$' then return false; end if;
 
-  -- Exact match against banned list
+  -- Check banned list against original, translated, and
+  -- digit-stripped forms.
   for w in select word from public.banned_words loop
     if lowered = w.word then return false; end if;
     if position(w.word in lowered) > 0 then return false; end if;
-    if position(w.word in normed) > 0 then return false; end if;
+    if position(w.word in normed_a) > 0 then return false; end if;
+    if position(w.word in normed_b) > 0 then return false; end if;
   end loop;
 
   return true;
 end;
 $$;
 
--- 4. Trigger -----------------------------------------------------------
+-- 5. Trigger -----------------------------------------------------------
 create or replace function public.enforce_username_clean()
 returns trigger language plpgsql as $$
 begin
@@ -110,9 +121,7 @@ create trigger trg_enforce_username_clean
   for each row
   execute function public.enforce_username_clean();
 
--- 5. Bootstrap existing rows (optional, safe) --------------------------
--- If there are already-dirty usernames in prod, this query surfaces
--- them so they can be manually cleaned up. It doesn't modify data.
+-- 6. Surface any already-dirty usernames (read-only audit) -------------
 --
 --   select id, username from public.profiles
 --   where not public.username_is_clean(username);

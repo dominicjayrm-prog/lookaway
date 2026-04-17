@@ -38,21 +38,24 @@ alter table public.blocked_users enable row level security;
 -- Read: a user can see their own blocks. They can ALSO see
 -- rows where they are the blocked party — required so the client can
 -- answer "is this person hidden from me?" without a service key.
-create policy if not exists "Users can view blocks involving them"
+drop policy if exists "Users can view blocks involving them" on public.blocked_users;
+create policy "Users can view blocks involving them"
   on public.blocked_users
   for select
   to authenticated
   using (auth.uid() = blocker_id or auth.uid() = blocked_id);
 
 -- Insert: users can only block FROM their own account.
-create policy if not exists "Users can block others"
+drop policy if exists "Users can block others" on public.blocked_users;
+create policy "Users can block others"
   on public.blocked_users
   for insert
   to authenticated
   with check (auth.uid() = blocker_id);
 
 -- Delete (unblock): only the blocker can remove.
-create policy if not exists "Users can unblock"
+drop policy if exists "Users can unblock" on public.blocked_users;
+create policy "Users can unblock"
   on public.blocked_users
   for delete
   to authenticated
