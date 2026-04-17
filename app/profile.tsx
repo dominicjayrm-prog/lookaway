@@ -18,6 +18,7 @@ import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 import { uploadAvatar, removeAvatar } from '@/src/utils/avatarUpload';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CosmeticPicker } from '@/src/components/CosmeticPicker';
 import { PowerUpViewer } from '@/src/components/PowerUpViewer';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,9 +27,30 @@ import { log } from '@/src/lib/logger';
 import * as Haptics from 'expo-haptics';
 
 const isWeb = Platform.OS === 'web';
-
-function loadProfilePic(): string | null { try { if (typeof localStorage === 'undefined') return null; return localStorage.getItem('blanked-profile-pic'); } catch { return null; } }
-function saveProfilePic(uri: string | null) { try { if (typeof localStorage === 'undefined') return; if (uri) localStorage.setItem('blanked-profile-pic', uri); else localStorage.removeItem('blanked-profile-pic'); } catch {} }
+// Local cache key — purely a stopgap for the gap between "user picked a
+// photo" and "cloud upload finished + setAvatarUrl has landed in the
+// store". On web we read/write localStorage synchronously (so the value
+// is available in useState initialisers). On native localStorage doesn't
+// exist, so we fall back to AsyncStorage behind an async effect.
+const PROFILE_PIC_KEY = 'blanked-profile-pic';
+function loadProfilePicSync(): string | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage.getItem(PROFILE_PIC_KEY);
+  } catch { return null; }
+}
+function saveProfilePic(uri: string | null) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      if (uri) localStorage.setItem(PROFILE_PIC_KEY, uri);
+      else localStorage.removeItem(PROFILE_PIC_KEY);
+    }
+  } catch {}
+  if (Platform.OS !== 'web') {
+    if (uri) AsyncStorage.setItem(PROFILE_PIC_KEY, uri).catch(() => {});
+    else AsyncStorage.removeItem(PROFILE_PIC_KEY).catch(() => {});
+  }
+}
 
 function ProfileScreen() {
   const router = useRouter();
@@ -65,7 +87,23 @@ function ProfileScreen() {
   const initials = headerName.slice(0, 2).toUpperCase();
   // Profile pic priority: server avatar_url (works across devices) →
   // localStorage cached data URI (works offline / during upload).
-  const [profilePic, setProfilePic] = useState<string | null>(() => storeAvatarUrl ?? loadProfilePic());
+  const [profilePic, setProfilePic] = useState<string | null>(() => storeAvatarUrl ?? loadProfilePicSync());
+  // On native, localStorage doesn't exist — hydrate the cached pic
+  // from AsyncStorage on mount. This covers the narrow window where
+  // the user picked a photo, left the tab before the cloud upload
+  // finished, and comes back before storeAvatarUrl is set.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (storeAvatarUrl) return;
+    let cancelled = false;
+    AsyncStorage.getItem(PROFILE_PIC_KEY)
+      .then((cached) => {
+        if (!cancelled && cached && !profilePic) setProfilePic(cached);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Keep the local pic in sync with the store's avatarUrl whenever
   // cloud sync refreshes it — covers the "fresh Safari / iPhone" case
   // where localStorage is empty but the user already has a photo
@@ -146,20 +184,35 @@ function ProfileScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photo library.'); return; }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      // base64: true so we get the raw bytes back alongside the file:// URI.
+      // The previous path passed a naked file:// URI to uploadAvatar, which
+      // parses it as a data: URI, fails the regex, and silently returned
+      // null — so avatar_url never landed in Supabase and the photo
+      // disappeared the moment we left the profile screen.
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true });
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        setProfilePic(uri);
-        saveProfilePic(uri);
+        const asset = result.assets[0];
+        // Reconstruct a data: URI the upload helper understands. JPEG
+        // works for both camera photos and gallery picks with quality:
+        // 0.8; explicit PNG detection via the file extension handles
+        // screenshots / transparent images.
+        const mime = asset.uri?.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        const dataUri = asset.base64 ? `data:${mime};base64,${asset.base64}` : asset.uri;
+        // Show the local file immediately — upload runs in the
+        // background and swaps to the cloud URL once complete.
+        setProfilePic(asset.uri);
+        saveProfilePic(asset.uri);
         if (user?.id) {
-          uploadAvatar(user.id, uri)
+          uploadAvatar(user.id, dataUri)
             .then((publicUrl) => {
               if (publicUrl) {
                 setAvatarUrl(publicUrl);
                 setProfilePic(publicUrl);
+              } else {
+                Alert.alert('Upload failed', "Your photo was saved on this device but couldn't sync to the cloud. It will retry next time.");
               }
             })
-            .catch(() => {});
+            .catch(() => Alert.alert('Upload failed', "Your photo was saved on this device but couldn't sync to the cloud. It will retry next time."));
         }
       }
     }

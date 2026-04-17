@@ -179,12 +179,24 @@ function PlayTab() {
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
-  // Profile pic priority: cloud avatar_url (cross-device) → localStorage
-  // cached data URI (offline / during upload).
-  let profilePic: string | null = storeAvatarUrl ?? null;
-  if (!profilePic) {
-    try { profilePic = typeof window !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
+  // Profile pic priority: cloud avatar_url (cross-device) → locally
+  // cached URI (offline / during upload). localStorage only exists on
+  // web; on native we read the cached pic from AsyncStorage via a
+  // small effect below.
+  let profilePicSync: string | null = storeAvatarUrl ?? null;
+  if (!profilePicSync) {
+    try { profilePicSync = typeof window !== 'undefined' && typeof localStorage !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
   }
+  const [cachedProfilePic, setCachedProfilePic] = useState<string | null>(null);
+  useEffect(() => {
+    if (storeAvatarUrl) { setCachedProfilePic(null); return; }
+    let cancelled = false;
+    AsyncStorage.getItem('blanked-profile-pic')
+      .then((v) => { if (!cancelled) setCachedProfilePic(v ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [storeAvatarUrl]);
+  const profilePic = profilePicSync ?? cachedProfilePic;
 
   // Tutorial overlay
   const [showTutorial, setShowTutorial] = useState(false);
