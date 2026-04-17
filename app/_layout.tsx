@@ -257,7 +257,14 @@ function CloudSyncLoader() {
     lastUserIdRef.current = user.id;
 
     setAuthUserId(user.id); // Store real auth ID for cloud sync
-    loadFromCloud(user.id);
+    loadFromCloud(user.id).then(() => {
+      // Cold-start check: if the user is an active Blanked+
+      // subscriber and their last monthly gem grant is >30 days
+      // ago (or they've never been granted), credit the 300 gems.
+      // The cooldown check inside the action makes this a no-op
+      // most of the time — safe to call on every launch.
+      useGameStore.getState().maybeGrantMonthlyPlusGems();
+    }).catch(() => {});
     updateOnlineStatus(user.id);
     expireOldChallenges();
     registerPushToken(user.id);
@@ -295,7 +302,19 @@ function CloudSyncLoader() {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && next === 'active') {
         // Returning to foreground — pull latest cloud data + update online status
-        if (user?.id) { loadFromCloud(user.id); updateOnlineStatus(user.id); }
+        if (user?.id) {
+          loadFromCloud(user.id).then(() => {
+            // After cloud sync settles, check if an active Blanked+
+            // subscriber is due their monthly 300-gem drop. This
+            // is the primary path for yearly subscribers: they pay
+            // once for the year, but open the app across 12 months
+            // and accrue the monthly gem drop on each 30-day
+            // anniversary. Safe to call unconditionally — the
+            // 30-day cooldown check lives inside the action.
+            useGameStore.getState().maybeGrantMonthlyPlusGems();
+          }).catch(() => {});
+          updateOnlineStatus(user.id);
+        }
         // Cancel any pending win-back notifications — the player came
         // back, so we don't want to nag them tomorrow.
         cancelWinBackReminders();

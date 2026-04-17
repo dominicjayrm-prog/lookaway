@@ -183,6 +183,10 @@ interface SavedState {
   localUpdatedAt?: number;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
+  /** ISO timestamp of the last time the user was credited their monthly
+   *  300 Blanked+ gems. null = never granted. Synced via profiles so
+   *  the 30-day cooldown is honoured across devices. */
+  lastPlusGemGrantAt?: string | null;
   totalStars?: number;
   highestWorld?: number;
   powerUps?: Partial<PowerUpInventory>;
@@ -238,6 +242,7 @@ function saveState(state: GameStore) {
       username: state.username, avatarUrl: state.avatarUrl,
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
+      lastPlusGemGrantAt: state.lastPlusGemGrantAt,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
@@ -312,6 +317,9 @@ export interface GameStore {
    *  Supabase — Postgres maintains its own `updated_at` via trigger. */
   localUpdatedAt: number;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
+  /** ISO timestamp of the most recent 300-gem Blanked+ grant. Null
+   *  = never granted. 30 days must elapse before the next grant. */
+  lastPlusGemGrantAt: string | null;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -398,6 +406,12 @@ export interface GameStore {
   isSubscribed: () => boolean;
   /** Paywall success path: flip local status to active, push to cloud. */
   activatePlus: () => void;
+  /** Credit the monthly Blanked+ 300-gem grant IF the user is an
+   *  active subscriber AND their last grant was more than ~30 days
+   *  ago (or they've never been granted). Safe to call liberally —
+   *  on app foreground, after purchase, after restore. Returns the
+   *  number of gems granted (0 if skipped). */
+  maybeGrantMonthlyPlusGems: () => number;
   /** Update the locally-cached avatar url after a successful upload so
    *  every surface that reads it from the store (profile header, home
    *  tab, etc.) refreshes immediately without waiting for the next
@@ -465,6 +479,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
     localUpdatedAt: saved.localUpdatedAt ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
+    lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
     highestWorld: saved.highestWorld ?? 1,
@@ -762,6 +777,34 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'activate plus sync failed', e, { uid }));
     },
 
+    maybeGrantMonthlyPlusGems: () => {
+      const state = get();
+      // Not subscribed? Nothing to grant.
+      if (state.subscriptionStatus !== 'active') return 0;
+      // 30 days expressed in ms — the same cadence Apple uses to
+      // roll monthly subscriptions. Yearly subscribers get grants
+      // every 30 days too, so the "£19.99/year" plan still rewards
+      // 12 x 300 gems = 3,600 gems across the year. This matches
+      // the paywall copy "300 gems every month".
+      const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+      const nowMs = Date.now();
+      const lastAt = state.lastPlusGemGrantAt ? Date.parse(state.lastPlusGemGrantAt) : 0;
+      // Bad ISO strings parse to NaN — treat them as "never granted".
+      const lastMs = Number.isFinite(lastAt) ? lastAt : 0;
+      if (lastMs > 0 && nowMs - lastMs < THIRTY_DAYS_MS) return 0;
+      // Atomic-ish: bump gems + timestamp together so a crash between
+      // the two can't leave us double-granting on the next open.
+      set({
+        gems: state.gems + 300,
+        lastPlusGemGrantAt: new Date(nowMs).toISOString(),
+      });
+      setTimeout(() => saveState(get()), 0);
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'plus gem grant sync failed', e, { uid }));
+      log.breadcrumb('purchases', 'monthly plus gems granted', { lastAt: state.lastPlusGemGrantAt });
+      return 300;
+    },
+
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
     hydrate: () => {
       if (get()._hydrated) return;
@@ -786,6 +829,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           localUpdatedAt: saved.localUpdatedAt ?? 0,
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
+          lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
           totalStars: saved.totalStars ?? 0,
           highestWorld: saved.highestWorld ?? 1,
           powerUps: { ...DEFAULT_POWERUPS, ...(saved.powerUps ?? {}) },
@@ -850,6 +894,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakShields: 0,
         streakMilestonesClaimed: [],
         lastPlayDate: null,
+        lastPlusGemGrantAt: null,
         // Progress
         totalStars: 0,
         highestWorld: 1,
@@ -972,6 +1017,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         powerUps: { ...DEFAULT_POWERUPS },
         streakMilestonesClaimed: [],
         lastPlayDate: null,
+        lastPlusGemGrantAt: null,
         loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
         localUpdatedAt: 0,
         username: null,
@@ -1113,6 +1159,18 @@ export const useGameStore = create<GameStore>((set, get) => {
         lastPlayDate: ((): string | null => {
           const a = safeLocal.lastPlayDate;
           const b = cloud.lastPlayDate;
+          if (!a) return b ?? null;
+          if (!b) return a;
+          return a > b ? a : b;
+        })(),
+        // Monthly gem grant timestamp: take the MOST RECENT of the
+        // two so a fresh grant on device A can't be "undone" by a
+        // stale cloud value and accidentally double-grant on
+        // device B. Both are ISO strings so lexicographic compare
+        // is chronological.
+        lastPlusGemGrantAt: ((): string | null => {
+          const a = safeLocal.lastPlusGemGrantAt;
+          const b = cloud.lastPlusGemGrantAt;
           if (!a) return b ?? null;
           if (!b) return a;
           return a > b ? a : b;

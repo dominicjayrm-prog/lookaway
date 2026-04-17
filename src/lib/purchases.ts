@@ -131,36 +131,82 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
 
 /** Buy a subscription via the RevenueCat offering. Uses the `default`
  *  offering's `$rc_monthly` or `$rc_annual` package. Returns whether
- *  the `plus` entitlement is now active. */
+ *  the `plus` entitlement is now active AND the `periodType` of the
+ *  resulting entitlement, so callers can tell whether the purchase
+ *  granted a free-trial / intro period or a full paid period. This
+ *  matters for the monthly-gem grant — we must NOT credit the 300
+ *  signup gems during a free trial, otherwise a user could start
+ *  and cancel the trial repeatedly for gems. */
 export async function purchaseSubscription(
   plan: 'monthly' | 'yearly',
-): Promise<{ result: PurchaseResult; isActive: boolean }> {
+): Promise<{ result: PurchaseResult; isActive: boolean; periodType: PeriodType }> {
   const Purchases = getPurchases();
-  if (!Purchases) return { result: 'error', isActive: false };
+  if (!Purchases) return { result: 'error', isActive: false, periodType: 'unknown' };
   try {
     const offerings = await Purchases.getOfferings();
     const current = offerings?.current;
     if (!current) {
       log.warn('purchases', 'no current offering');
-      return { result: 'error', isActive: false };
+      return { result: 'error', isActive: false, periodType: 'unknown' };
     }
     const pkg = plan === 'monthly' ? current.monthly : current.annual;
     if (!pkg) {
       log.warn('purchases', `no ${plan} package in current offering`);
-      return { result: 'error', isActive: false };
+      return { result: 'error', isActive: false, periodType: 'unknown' };
     }
     const { customerInfo } = await withTimeout(Purchases.purchasePackage(pkg), PURCHASE_TIMEOUT_MS, 'purchasePackage');
-    const isActive = !!customerInfo.entitlements?.active?.['plus'];
-    log.breadcrumb('purchases', 'subscription purchased', { plan, isActive });
-    return { result: 'success', isActive };
+    const plusEnt = customerInfo.entitlements?.active?.['plus'];
+    const isActive = !!plusEnt;
+    const periodType = normalisePeriodType(plusEnt?.periodType);
+    log.breadcrumb('purchases', 'subscription purchased', { plan, isActive, periodType });
+    return { result: 'success', isActive, periodType };
   } catch (e: any) {
     if (e.userCancelled) {
       log.breadcrumb('purchases', 'subscription cancelled by user', { plan });
-      return { result: 'cancelled', isActive: false };
+      return { result: 'cancelled', isActive: false, periodType: 'unknown' };
     }
     log.error('purchases', 'purchaseSubscription failed', e, { plan });
-    return { result: 'error', isActive: false };
+    return { result: 'error', isActive: false, periodType: 'unknown' };
   }
+}
+
+// ─── Trial eligibility ─────────────────────────────────────────────
+
+/**
+ * Whether the current Apple ID is eligible for the intro-offer free
+ * trial on the given product. Used by the paywall to only advertise
+ * "3 days free" to users who would actually receive it — Apple
+ * specifically calls out in guideline 2.1(b) that an advertised free
+ * trial must be offered in sandbox + production to the reviewer.
+ * Showing the trial banner to an ineligible reviewer (whose sandbox
+ * account already redeemed it) produces the exact "advertised but
+ * not in sandbox" rejection we're trying to avoid.
+ */
+export async function isTrialEligible(productId: string): Promise<boolean> {
+  const Purchases = getPurchases();
+  if (!Purchases) return false;
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
+    const entry = result?.[productId];
+    // RevenueCat returns: 0 = unknown, 1 = ineligible, 2 = eligible,
+    // 3 = no_intro_offer_exists.
+    const status = entry?.status;
+    return status === 2;
+  } catch (e) {
+    log.warn('purchases', 'trial eligibility check failed', { error: String(e), productId });
+    return false;
+  }
+}
+
+// ─── Period type helpers ───────────────────────────────────────────
+
+export type PeriodType = 'trial' | 'intro' | 'normal' | 'unknown';
+
+function normalisePeriodType(raw: string | undefined | null): PeriodType {
+  if (!raw) return 'unknown';
+  const lower = String(raw).toLowerCase();
+  if (lower === 'trial' || lower === 'intro' || lower === 'normal') return lower as PeriodType;
+  return 'unknown';
 }
 
 // ─── Restore + status ──────────────────────────────────────────────
@@ -168,24 +214,33 @@ export async function purchaseSubscription(
 export interface EntitlementStatus {
   plus: boolean;
   noAds: boolean;
+  /** Period of the `plus` entitlement if active. 'trial' = the user
+   *  is inside a free-trial intro offer, no money has changed hands
+   *  yet; 'intro' = a paid-but-discounted intro period; 'normal' =
+   *  full-price paid period; 'unknown' = entitlement inactive or
+   *  period couldn't be determined. Used by the home-tab foreground
+   *  check to credit the monthly gems once a trial converts. */
+  periodType: PeriodType;
 }
 
 /** Restore previously purchased products (non-consumables +
  *  subscriptions). Returns which entitlements are now active. */
 export async function restorePurchases(): Promise<EntitlementStatus> {
   const Purchases = getPurchases();
-  if (!Purchases) return { plus: false, noAds: false };
+  if (!Purchases) return { plus: false, noAds: false, periodType: 'unknown' };
   try {
     const customerInfo = await Purchases.restorePurchases();
+    const plusEnt = customerInfo.entitlements?.active?.['plus'];
     const status: EntitlementStatus = {
-      plus: !!customerInfo.entitlements?.active?.['plus'],
+      plus: !!plusEnt,
       noAds: !!customerInfo.entitlements?.active?.['no_ads'],
+      periodType: normalisePeriodType(plusEnt?.periodType),
     };
-    log.breadcrumb('purchases', 'purchases restored', { plus: status.plus, noAds: status.noAds });
+    log.breadcrumb('purchases', 'purchases restored', { ...status });
     return status;
   } catch (e) {
     log.error('purchases', 'restorePurchases failed', e);
-    return { plus: false, noAds: false };
+    return { plus: false, noAds: false, periodType: 'unknown' };
   }
 }
 
@@ -194,16 +249,18 @@ export async function restorePurchases(): Promise<EntitlementStatus> {
  *  happened outside the app (via iOS Settings → Subscriptions). */
 export async function getEntitlementStatus(): Promise<EntitlementStatus> {
   const Purchases = getPurchases();
-  if (!Purchases) return { plus: false, noAds: false };
+  if (!Purchases) return { plus: false, noAds: false, periodType: 'unknown' };
   try {
     const customerInfo = await Purchases.getCustomerInfo();
+    const plusEnt = customerInfo.entitlements?.active?.['plus'];
     return {
-      plus: !!customerInfo.entitlements?.active?.['plus'],
+      plus: !!plusEnt,
       noAds: !!customerInfo.entitlements?.active?.['no_ads'],
+      periodType: normalisePeriodType(plusEnt?.periodType),
     };
   } catch (e) {
     log.warn('purchases', 'getEntitlementStatus failed', { error: String(e) });
-    return { plus: false, noAds: false };
+    return { plus: false, noAds: false, periodType: 'unknown' };
   }
 }
 
