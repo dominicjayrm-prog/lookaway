@@ -15,13 +15,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.blanked.app",
-      "buildNumber": "21",
+      "buildNumber": "22",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:playblanked.com"
       ],
       "infoPlist": {
         "NSCameraUsageDescription": "Scan a friend's QR code to add them to your friends list instantly.",
+        "NSPhotoLibraryUsageDescription": "Blanked needs access to your photo library so you can pick a photo to use as your profile picture — for example, a selfie that shows up next to your username on leaderboards and friend challenges.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
