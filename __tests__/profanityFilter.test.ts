@@ -43,7 +43,10 @@ describe('checkUsername', () => {
   );
 
   // ── profanity (literal) ───────────────────────────────────────
-  it.each(['fuckface', 'shithead', 'bitch01', 'asshole99'])(
+  // Includes bare 4-letter words as well as suffixed variants — a
+  // user in testing got through with literal 'fuck' on an old
+  // build, so we pin the bare case explicitly.
+  it.each(['fuck', 'shit', 'bitch', 'cunt', 'fuckface', 'shithead', 'bitch01', 'asshole99'])(
     'rejects profanity %s',
     (name) => {
       expect(checkUsername(name).ok).toBe(false);

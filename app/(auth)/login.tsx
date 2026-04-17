@@ -137,11 +137,26 @@ function AuthScreen() {
           // Save username to profiles.
           const { data: session } = await supabase.auth.getSession();
           if (session?.session?.user?.id && username.trim()) {
-            await supabase.from('profiles').upsert({
+            const { error: upsertErr } = await supabase.from('profiles').upsert({
               id: session.session.user.id,
               username: username.trim(),
               display_name: username.trim(),
             }, { onConflict: 'id' });
+            // If the server-side username_is_clean trigger rejects
+            // the row (client got bypassed somehow, or the banned
+            // word list was extended after we cached the client
+            // dataset), surface the error instead of leaving the
+            // account in a broken state with a null username.
+            if (upsertErr) {
+              const code = (upsertErr as { code?: string }).code;
+              if (code === '23514' || /check_violation|username_is_clean/i.test(upsertErr.message ?? '')) {
+                setError("That name isn't allowed. Please pick a different username.");
+              } else {
+                setError("Couldn't save your username. Please try again.");
+              }
+              setLoading(false);
+              return;
+            }
           }
           // Explicitly redirect after signup
           router.replace('/');
