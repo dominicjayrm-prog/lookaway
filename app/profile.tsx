@@ -530,6 +530,20 @@ function ProfileScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>ACCOUNT</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/blocked-users'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Blocked users"
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}>
+                  <Ionicons name="ban-outline" size={18} color={colors.wrong} />
+                </View>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>Blocked users</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </Pressable>
             <Pressable style={styles.settingsRow} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
           </View>
 

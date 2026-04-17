@@ -43,7 +43,7 @@
         "react-native-google-mobile-ads",
         {
           "iosAppId": "ca-app-pub-9228812020612351~2660968331",
-          "userTrackingUsageDescription": "This identifier will be used to show you personalised ads."
+          "userTrackingUsageDescription": "Your data will be used to deliver personalised ads and measure ad performance across apps you use."
         }
       ],
       [
@@ -56,7 +56,7 @@
       [
         "expo-tracking-transparency",
         {
-          "userTrackingPermission": "This identifier will be used to show you personalised ads."
+          "userTrackingPermission": "Your data will be used to deliver personalised ads and measure ad performance across apps you use."
         }
       ],
       [
