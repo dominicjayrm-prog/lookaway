@@ -171,9 +171,9 @@ function ShopTab() {
 
   const visiblePowerups = getPowerupsForMode(selectedMode);
 
-  const handleSubscribe = async (plan: 'monthly' | 'yearly', trial: boolean = false) => {
+  const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
     setShowPaywall(false);
-    const { result, isActive } = await purchaseSubscription(plan);
+    const { result, periodType } = await purchaseSubscription(plan);
     if (result === 'cancelled') return;
     if (result === 'error') {
       Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
@@ -185,7 +185,17 @@ function ShopTab() {
     store.unlockCosmetic('frame_premium_gold');
     store.unlockCosmetic('expr_premium');
     store.unlockCosmetic('banner_premium_gold');
-    if (!trial) store.addGems(300);
+    // Credit the first monthly 300-gem grant immediately on a paid
+    // signup. `maybeGrantMonthlyPlusGems` enforces the 30-day
+    // cooldown, so this is a no-op for an already-current user
+    // restoring a second time. We skip if periodType is 'trial' or
+    // 'intro' — the foreground check will credit once the
+    // subscription converts to a paid period. Left in as a safety
+    // net in case Apple later enables the intro offer via App
+    // Store Connect without a code change.
+    if (periodType !== 'trial' && periodType !== 'intro') {
+      store.maybeGrantMonthlyPlusGems();
+    }
     setShowPremiumCelebration(true);
   };
 

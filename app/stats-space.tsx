@@ -13,7 +13,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Pressable, ScrollView, Dimensions,
-  Animated as RNAnimated,
+  Animated as RNAnimated, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
+import { purchaseSubscription } from '@/src/lib/purchases';
 import { Blink } from '@/src/components/Blink';
 import type { BlinkExpression } from '@/src/components/Blink';
 import { getExpressionById } from '@/src/data/cosmetics';
@@ -310,17 +311,27 @@ export default function StatsSpaceScreen() {
     return () => clearTimeout(t);
   }, [subscribed, blurOpacity]);
 
-  const handleSubscribe = (_plan: 'monthly' | 'yearly', trial: boolean) => {
+  const handleSubscribe = async (plan: 'monthly' | 'yearly') => {
     setShowPaywall(false);
+    // Previously this bypassed RevenueCat and just flipped the local
+    // `subscriptionStatus` flag — a dev stub that accidentally
+    // shipped. Users who tapped Subscribe from the Memory Analytics
+    // teaser got Blanked+ without being charged. Now routed through
+    // the real StoreKit purchase like shop.tsx.
+    const { result, periodType } = await purchaseSubscription(plan);
+    if (result === 'cancelled') return;
+    if (result === 'error') {
+      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      return;
+    }
     const s = useGameStore.getState();
-    // Mirrors the placeholder flow used elsewhere (shop.tsx) until RevenueCat
-    // takes over. `activatePlus` is what flips isSubscribed() true and
-    // pushes the new status to Supabase immediately.
     s.activatePlus();
     s.unlockCosmetic('frame_premium_gold');
     s.unlockCosmetic('expr_premium');
     s.unlockCosmetic('banner_premium_gold');
-    if (!trial) s.addGems(300);
+    if (periodType !== 'trial' && periodType !== 'intro') {
+      s.maybeGrantMonthlyPlusGems();
+    }
     // Fade the blur away so the real stats are revealed.
     RNAnimated.timing(blurOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
       setShowBlur(false);

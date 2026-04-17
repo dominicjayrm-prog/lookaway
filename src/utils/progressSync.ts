@@ -49,6 +49,7 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       power_ups: state.powerUps ?? {},
       streak_milestones_claimed: state.streakMilestonesClaimed ?? [],
       last_play_date: state.lastPlayDate ?? null,
+      last_plus_gem_grant_at: state.lastPlusGemGrantAt ?? null,
       completed_scores: state.completedScores ?? [],
       max_lives: state.maxLives ?? 5,
       login_reward_day: state.loginReward?.currentDay ?? 0,
@@ -114,6 +115,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   powerUps: Record<string, number>;
   streakMilestonesClaimed: number[];
   lastPlayDate: string | null;
+  lastPlusGemGrantAt: string | null;
   maxLives: number;
   loginReward: LoginRewardState;
   username: string | null;
@@ -172,6 +174,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       powerUps: profile.power_ups && typeof profile.power_ups === 'object' ? profile.power_ups : {},
       streakMilestonesClaimed: Array.isArray(profile.streak_milestones_claimed) ? profile.streak_milestones_claimed : [],
       lastPlayDate: profile.last_play_date ?? null,
+      lastPlusGemGrantAt: profile.last_plus_gem_grant_at ?? null,
       // completed_scores lives directly on the profile row — it's the
       // denormalized cache that saveProgressToSupabase writes back. We
       // used to also recompute it from user_progress here, but that

@@ -82,6 +82,7 @@ const cloudSnapshot = (overrides: Partial<NonNullable<CloudSnapshot>> = {}): Non
   powerUps: {},
   streakMilestonesClaimed: [],
   lastPlayDate: null,
+  lastPlusGemGrantAt: null,
   maxLives: 5,
   loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
   username: 'cloud-user',

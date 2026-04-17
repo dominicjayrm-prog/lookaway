@@ -11,6 +11,7 @@ import DailyLoginReward from '@/src/components/DailyLoginReward';
 import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { useGameStore } from '@/src/store';
+import { purchaseSubscription } from '@/src/lib/purchases';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -592,15 +593,22 @@ function PlayTab() {
         onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
         onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
       />
-      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={(plan: string, trial: boolean) => {
+      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={async (plan: 'monthly' | 'yearly') => {
         setShowPaywall(false);
+        // Route through the real StoreKit purchase so the home-tab
+        // entry path matches shop.tsx / stats-space.tsx. Previously
+        // this just flipped subscriptionStatus locally without
+        // charging the user — a dev stub that accidentally shipped.
+        const { result, periodType } = await purchaseSubscription(plan);
+        if (result !== 'success') return;
         const store = useGameStore.getState();
         store.activatePlus();
         store.unlockCosmetic('frame_premium_gold');
         store.unlockCosmetic('expr_premium');
         store.unlockCosmetic('banner_premium_gold');
-        // Only give gems on paid subscription, not free trial
-        if (!trial) store.addGems(300);
+        if (periodType !== 'trial' && periodType !== 'intro') {
+          store.maybeGrantMonthlyPlusGems();
+        }
         setShowPremiumCelebration(true);
       }} />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />

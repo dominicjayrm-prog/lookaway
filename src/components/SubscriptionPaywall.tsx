@@ -2,12 +2,16 @@
  * Blanked+ Subscription Paywall — Full-screen modal.
  * Stacked plan cards, shimmer CTA, staggered animations.
  *
- * Note: We deliberately do NOT expose a "Free trial" toggle. Apple's
- * April 2026 guidance prohibits toggles that enable/disable introductory
- * offers on the paywall (App Review Guideline 3.1.2). Instead, eligibility
- * is read via `trialEligible` and the CTA automatically reflects the
- * introductory offer when the user qualifies. RevenueCat / StoreKit will
- * apply the free trial automatically on purchase if the account is eligible.
+ * v1 intentionally ships WITHOUT a free trial. Apple rejected build
+ * 21 under guideline 2.1(b) because the paywall advertised a 3-day
+ * free trial while StoreKit offered no intro offer (no Introductory
+ * Offer was configured in App Store Connect for the yearly product,
+ * so the purchase sheet charged the full price immediately). Rather
+ * than configure the offer, the simpler fix was to drop the trial
+ * advertising entirely — the paywall now matches exactly what
+ * StoreKit will present. If the trial is reintroduced later, the
+ * `isTrialEligible` helper + periodType-aware gem grant are still
+ * in place as a safety net.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -100,13 +104,7 @@ const DARK: PaywallPalette = {
 interface Props {
   visible: boolean;
   onDismiss: () => void;
-  onSubscribe: (plan: 'monthly' | 'yearly', trial: boolean) => void;
-  /**
-   * Whether the current user is eligible for the 3-day intro offer on the
-   * yearly plan. Defaults to true; wire this to RevenueCat's
-   * `checkTrialOrIntroductoryPriceEligibility` in Phase 4.
-   */
-  trialEligible?: boolean;
+  onSubscribe: (plan: 'monthly' | 'yearly') => void;
 }
 
 // ── SVG Icons ─────────────────────────────────────────────────────────
@@ -153,7 +151,7 @@ function NoAdsSvg() {
 // ── Benefits data ─────────────────────────────────────────────────────
 const BENEFITS = [
   { Icon: HeartSvg, color: '#FF6B6B', title: 'Unlimited lives', desc: 'Never wait to play again' },
-  { Icon: GemSvg, color: ACCENT, title: '300 gems every month', desc: 'Deposited on renewal day' },
+  { Icon: GemSvg, color: ACCENT, title: '300 gems every month', desc: 'Credited automatically on monthly or yearly plans' },
   { Icon: StarSvg, color: '#D4A012', title: 'Free daily power-up', desc: 'Random boost every 24 hours' },
   { Icon: NoAdsSvg, color: '#0984E3', title: 'No ads', desc: 'Clean, uninterrupted play' },
 ];
@@ -208,28 +206,13 @@ function BenefitRow({ item, index, palette }: { item: typeof BENEFITS[number]; i
   );
 }
 
-// ── Trial Banner (replaces the banned toggle) ─────────────────────────
-// Apple disallows user-togglable intro offers on the paywall. Instead we
-// surface the trial as an always-on informational pill on the yearly card
-// whenever the user is eligible.
-function TrialBanner() {
-  return (
-    <View style={st.trialBanner}>
-      <Ionicons name="gift-outline" size={14} color="#00B894" />
-      <Text style={st.trialBannerText}>3-day free trial included — cancel anytime</Text>
-    </View>
-  );
-}
-
 // ── Main Component ────────────────────────────────────────────────────
-function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = true }: Props) {
+function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const palette: PaywallPalette = isDark ? DARK : LIGHT;
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
   const slideAnim = useRef(new RNAnimated.Value(SH)).current;
-  // Intro offer only applies to the yearly plan AND only if the user qualifies.
-  const showTrial = plan === 'yearly' && trialEligible;
 
   // Pulsing glow for selected plan
   const glowAnim = useRef(new RNAnimated.Value(0)).current;
@@ -272,6 +255,15 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
       if (status.noAds) store.setAdsRemoved();
 
       if (status.plus) {
+        // Re-entering a subscription (restore on a new device,
+        // after reinstall, etc.): if it's been >30 days since the
+        // last grant the cooldown check will credit the next
+        // month's 300 gems. Skipped during trial / intro — the
+        // next foreground-cycle check will pick it up once the
+        // subscription converts to a paid period.
+        if (status.periodType !== 'trial' && status.periodType !== 'intro') {
+          store.maybeGrantMonthlyPlusGems();
+        }
         handleDismiss();
         Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
       } else if (status.noAds) {
@@ -294,11 +286,9 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = showTrial
-    ? `Try 3 days free - then \u00A319.99/year`
-    : plan === 'yearly'
-      ? `Subscribe - \u00A319.99/year`
-      : `Subscribe - \u00A32.99/month`;
+  const ctaText = plan === 'yearly'
+    ? `Subscribe - \u00A319.99/year`
+    : `Subscribe - \u00A32.99/month`;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -353,7 +343,6 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
                   <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
                 </View>
                 <Text style={[st.planSub, { color: palette.planSubInactive }, plan === 'yearly' && { color: palette.planSubActive }]}>{'\u00A3'}1.66/month</Text>
-                {showTrial && <TrialBanner />}
               </View>
               <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
             </Pressable>
@@ -379,18 +368,11 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe, trialEligible = 
           </View>
 
           {/* Shimmer CTA */}
-          <ShimmerButton text={ctaText} onPress={() => onSubscribe(plan, showTrial)} />
+          <ShimmerButton text={ctaText} onPress={() => onSubscribe(plan)} />
 
           {/* Reassurance */}
           <View style={st.reassurance}>
-            {showTrial ? (
-              <View style={st.reassuranceRow}>
-                <Ionicons name="checkmark-circle" size={14} color="#00B894" />
-                <Text style={st.reassuranceGreen}>{`No charge for 3 days - cancel anytime`}</Text>
-              </View>
-            ) : (
-              <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>Cancel anytime in Settings</Text>
-            )}
+            <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>Cancel anytime in Settings</Text>
           </View>
 
           {/* Auto-renewal disclosure — required by Apple guideline 3.1.2.
@@ -449,14 +431,6 @@ const st = StyleSheet.create({
   benefitText: { flex: 1 },
   benefitTitle: { fontSize: 14, fontWeight: '700', color: '#1A1A18' },
   benefitDesc: { fontSize: 11, color: '#636E72', marginTop: 1 },
-
-  // Trial banner (informational, replaces the old toggle)
-  trialBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    marginTop: 6, paddingHorizontal: 8, paddingVertical: 4,
-    backgroundColor: '#00B8941A', borderRadius: 8, alignSelf: 'flex-start',
-  },
-  trialBannerText: { fontSize: 11, fontWeight: '700', color: '#00B894' },
 
   // Plans
   planSection: { gap: 8, marginTop: 14, marginBottom: 16 },
