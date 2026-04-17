@@ -29,6 +29,12 @@ const USER_SCOPED_STORAGE_KEYS = [
   'starter_pack_purchased',
   'starter_pack_offered_at',
   'mastermind_intro_seen',
+  // Legacy global profile-pic cache key — the new avatar cache
+  // lives under `blanked-profile-pic::<userId>` which is already
+  // account-isolated, but this old key caused the "test account
+  // shows main account's selfie" bug. Purge on every account
+  // switch so pre-fix installs clean up themselves.
+  'blanked-profile-pic',
 ];
 
 /** In-memory fallback for platforms where localStorage is unavailable */

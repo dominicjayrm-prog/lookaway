@@ -181,22 +181,29 @@ function PlayTab() {
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
   const initials = displayName.slice(0, 2).toUpperCase();
   // Profile pic priority: cloud avatar_url (cross-device) → locally
-  // cached URI (offline / during upload). localStorage only exists on
-  // web; on native we read the cached pic from AsyncStorage via a
-  // small effect below.
+  // cached URI for THIS user id (offline / during upload). The cache
+  // key is scoped per user so switching accounts on the same device
+  // never leaks one account's photo into another's UI.
+  const profilePicCacheKey = user?.id ? `blanked-profile-pic::${user.id}` : null;
   let profilePicSync: string | null = storeAvatarUrl ?? null;
-  if (!profilePicSync) {
-    try { profilePicSync = typeof window !== 'undefined' && typeof localStorage !== 'undefined' ? localStorage.getItem('blanked-profile-pic') : null; } catch {}
+  if (!profilePicSync && profilePicCacheKey) {
+    try { profilePicSync = typeof window !== 'undefined' && typeof localStorage !== 'undefined' ? localStorage.getItem(profilePicCacheKey) : null; } catch {}
   }
   const [cachedProfilePic, setCachedProfilePic] = useState<string | null>(null);
   useEffect(() => {
+    // Unconditionally wipe the legacy global key on every mount
+    // (pre-per-user-scoping), so the cached photo from a different
+    // account on the same device stops showing up top-right.
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem('blanked-profile-pic'); } catch {}
+    AsyncStorage.removeItem('blanked-profile-pic').catch(() => {});
     if (storeAvatarUrl) { setCachedProfilePic(null); return; }
+    if (!profilePicCacheKey) { setCachedProfilePic(null); return; }
     let cancelled = false;
-    AsyncStorage.getItem('blanked-profile-pic')
+    AsyncStorage.getItem(profilePicCacheKey)
       .then((v) => { if (!cancelled) setCachedProfilePic(v ?? null); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [storeAvatarUrl]);
+  }, [storeAvatarUrl, profilePicCacheKey]);
   const profilePic = profilePicSync ?? cachedProfilePic;
 
   // Tutorial overlay
