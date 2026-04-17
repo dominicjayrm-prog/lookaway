@@ -26,6 +26,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { restorePurchases } from '@/src/lib/purchases';
+import { track, EVENTS } from '@/src/lib/analytics';
 import { useGameStore } from '@/src/store';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -230,6 +231,8 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   useEffect(() => {
     if (visible) {
       RNAnimated.spring(slideAnim, { toValue: 0, friction: 10, tension: 55, useNativeDriver: true }).start();
+      // Fire once per open so we can measure impression → conversion.
+      track(EVENTS.PAYWALL_SHOWN);
     } else {
       slideAnim.setValue(SH);
     }
@@ -238,6 +241,9 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   const router = useRouter();
 
   function handleDismiss() {
+    // Track dismissal BEFORE animating out so the event goes even if
+    // the user force-closes the app mid-animation.
+    track(EVENTS.PAYWALL_DISMISSED, { plan });
     RNAnimated.timing(slideAnim, { toValue: SH, duration: 250, useNativeDriver: true }).start(() => onDismiss());
   }
 

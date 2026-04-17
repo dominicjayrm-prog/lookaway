@@ -23,6 +23,7 @@ import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
+import { track, EVENTS } from '@/src/lib/analytics';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { log } from '@/src/lib/logger';
 import { sounds } from '@/src/lib/sounds';
@@ -180,6 +181,7 @@ function ShopTab() {
       return;
     }
     // Purchase succeeded — activate locally + sync to Supabase.
+    track(EVENTS.SUBSCRIPTION_PURCHASED, { plan, periodType });
     const store = useGameStore.getState();
     store.activatePlus();
     store.unlockCosmetic('frame_premium_gold');

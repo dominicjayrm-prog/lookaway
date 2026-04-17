@@ -14,6 +14,7 @@ import { PowerUpBar } from '@/src/components/PowerUpBar';
 import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { useGameStore } from '@/src/store';
+import { track, EVENTS } from '@/src/lib/analytics';
 import { fetchLevelById } from '@/src/data/levels';
 import { mastermindToStandardLevel, getMastermindLevel, type MastermindLevel } from '@/src/data/mastermindLevels';
 import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
@@ -151,7 +152,11 @@ function GameScreen() {
   }, []);
   useEffect(() => { return clearTimeouts; }, [clearTimeouts]);
 
-  const handleStart = useCallback(() => { if (level) startLevel(level); }, [level, startLevel]);
+  const handleStart = useCallback(() => {
+    if (!level) return;
+    track(EVENTS.LEVEL_STARTED, { levelId: level.id, worldId: level.worldId, levelNumber: level.levelNumber });
+    startLevel(level);
+  }, [level, startLevel]);
   const handleMemoriseComplete = useCallback(() => { sounds.play('whoosh'); setGameState('TRANSITION'); clearTimeouts(); transitionTimeout.current = setTimeout(() => setGameState('QUESTION'), 1200); }, [setGameState, clearTimeouts]);
 
   const handleSelectOption = useCallback((index: number) => {
@@ -232,6 +237,10 @@ function GameScreen() {
   useEffect(() => {
     if (gameState === 'COMPLETE' || gameState === 'FAILED') {
       if (!isWeb) Haptics.notificationAsync(gameState === 'COMPLETE' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error);
+      if (level) {
+        const base = { levelId: level.id, worldId: level.worldId, levelNumber: level.levelNumber };
+        track(gameState === 'COMPLETE' ? EVENTS.LEVEL_COMPLETED : EVENTS.LEVEL_FAILED, base);
+      }
       router.replace('/game/result');
     }
   }, [gameState]);

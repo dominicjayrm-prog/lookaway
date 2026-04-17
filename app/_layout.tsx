@@ -29,6 +29,7 @@ import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { initAdsAndTracking } from '@/src/utils/adService';
+import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 import { OfflineScreen } from '@/src/components/OfflineScreen';
 
@@ -51,6 +52,14 @@ function SoundLoader() {
  *  consent". Idempotent — only runs once per app session. */
 function AdsInitialiser() {
   useEffect(() => { initAdsAndTracking(); }, []);
+  return null;
+}
+
+/** Fire-and-forget PostHog init. Called once on first mount. Safe
+ *  even when the API key is missing — the SDK wrapper no-ops and
+ *  the app still builds and runs. */
+function AnalyticsInitialiser() {
+  useEffect(() => { initAnalytics(); }, []);
   return null;
 }
 
@@ -222,6 +231,10 @@ function CloudSyncLoader() {
       // local state so the next sign-in doesn't leak the old account.
       if (lastUserIdRef.current) {
         resetForNewUser();
+        // Clear PostHog's identified user so the next anonymous
+        // session doesn't show up under the previous user's
+        // timeline.
+        resetAnalytics();
         lastUserIdRef.current = null;
       }
       return;
@@ -257,6 +270,11 @@ function CloudSyncLoader() {
     lastUserIdRef.current = user.id;
 
     setAuthUserId(user.id); // Store real auth ID for cloud sync
+    // Tie all subsequent PostHog events to this user row. Deliberately
+    // passes NO PII — just the Supabase UUID (which is already how the
+    // app references the user internally). App Privacy nutrition label:
+    // User ID, linked to user, not used for tracking.
+    analyticsIdentify(user.id);
     loadFromCloud(user.id).then(() => {
       // Cold-start check: if the user is an active Blanked+
       // subscriber and their last monthly gem grant is >30 days
@@ -475,6 +493,7 @@ function RootLayout() {
           <StoreHydrator />
           <SoundLoader />
           <AdsInitialiser />
+          <AnalyticsInitialiser />
           <LevelCacheLoader />
           <DeepLinkHandler />
           <LifeRegenChecker />
