@@ -27,29 +27,53 @@ import { log } from '@/src/lib/logger';
 import * as Haptics from 'expo-haptics';
 
 const isWeb = Platform.OS === 'web';
-// Local cache key — purely a stopgap for the gap between "user picked a
-// photo" and "cloud upload finished + setAvatarUrl has landed in the
-// store". On web we read/write localStorage synchronously (so the value
-// is available in useState initialisers). On native localStorage doesn't
-// exist, so we fall back to AsyncStorage behind an async effect.
-const PROFILE_PIC_KEY = 'blanked-profile-pic';
-function loadProfilePicSync(): string | null {
+// Local cache key — stopgap between "user picked a photo" and
+// "cloud upload finished + setAvatarUrl has landed in the store".
+// SCOPED PER USER (`blanked-profile-pic::<userId>`) so switching
+// accounts doesn't leak one user's cached photo into another's
+// UI. Previously a single global key was used and accounts on the
+// same device shared the cache — a test account would see the
+// main account's selfie top-right until the cloud URL hydrated,
+// which is exactly the bug you saw.
+const PROFILE_PIC_KEY_PREFIX = 'blanked-profile-pic::';
+function profilePicKey(userId: string | null | undefined): string | null {
+  if (!userId) return null;
+  return `${PROFILE_PIC_KEY_PREFIX}${userId}`;
+}
+function loadProfilePicSync(userId: string | null | undefined): string | null {
+  const key = profilePicKey(userId);
+  if (!key) return null;
   try {
     if (typeof localStorage === 'undefined') return null;
-    return localStorage.getItem(PROFILE_PIC_KEY);
+    return localStorage.getItem(key);
   } catch { return null; }
 }
-function saveProfilePic(uri: string | null) {
+function saveProfilePic(userId: string | null | undefined, uri: string | null) {
+  const key = profilePicKey(userId);
+  if (!key) return;
   try {
     if (typeof localStorage !== 'undefined') {
-      if (uri) localStorage.setItem(PROFILE_PIC_KEY, uri);
-      else localStorage.removeItem(PROFILE_PIC_KEY);
+      if (uri) localStorage.setItem(key, uri);
+      else localStorage.removeItem(key);
     }
   } catch {}
   if (Platform.OS !== 'web') {
-    if (uri) AsyncStorage.setItem(PROFILE_PIC_KEY, uri).catch(() => {});
-    else AsyncStorage.removeItem(PROFILE_PIC_KEY).catch(() => {});
+    if (uri) AsyncStorage.setItem(key, uri).catch(() => {});
+    else AsyncStorage.removeItem(key).catch(() => {});
   }
+}
+/**
+ * Migrate the legacy global cache key the first time we see a
+ * logged-in user. Any value there belongs to "whoever used this
+ * device last" and must not follow a fresh account — so we
+ * unconditionally DELETE it rather than copying it to the new
+ * scoped key. This is how we stop the cross-account leak for
+ * existing installs (new installs won't have the old key at all).
+ */
+function purgeLegacyProfilePicCache() {
+  const LEGACY_KEY = 'blanked-profile-pic';
+  try { if (typeof localStorage !== 'undefined') localStorage.removeItem(LEGACY_KEY); } catch {}
+  if (Platform.OS !== 'web') AsyncStorage.removeItem(LEGACY_KEY).catch(() => {});
 }
 
 function ProfileScreen() {
@@ -86,24 +110,29 @@ function ProfileScreen() {
   const headerName = storeUsername ?? fetchedUsername ?? 'Player';
   const initials = headerName.slice(0, 2).toUpperCase();
   // Profile pic priority: server avatar_url (works across devices) →
-  // localStorage cached data URI (works offline / during upload).
-  const [profilePic, setProfilePic] = useState<string | null>(() => storeAvatarUrl ?? loadProfilePicSync());
-  // On native, localStorage doesn't exist — hydrate the cached pic
-  // from AsyncStorage on mount. This covers the narrow window where
-  // the user picked a photo, left the tab before the cloud upload
-  // finished, and comes back before storeAvatarUrl is set.
+  // locally cached data URI (works offline / during upload). The
+  // local cache is scoped per user id — see PROFILE_PIC_KEY_PREFIX
+  // and its comment for why.
+  const [profilePic, setProfilePic] = useState<string | null>(() => storeAvatarUrl ?? loadProfilePicSync(user?.id));
+  // On every mount: (1) unconditionally purge the legacy global key
+  // that predates per-user scoping, and (2) on native where
+  // localStorage doesn't exist, hydrate the cached pic from
+  // AsyncStorage under the scoped key.
   useEffect(() => {
+    purgeLegacyProfilePicCache();
     if (Platform.OS === 'web') return;
     if (storeAvatarUrl) return;
+    const key = profilePicKey(user?.id);
+    if (!key) return;
     let cancelled = false;
-    AsyncStorage.getItem(PROFILE_PIC_KEY)
+    AsyncStorage.getItem(key)
       .then((cached) => {
         if (!cancelled && cached && !profilePic) setProfilePic(cached);
       })
       .catch(() => {});
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
   // Keep the local pic in sync with the store's avatarUrl whenever
   // cloud sync refreshes it — covers the "fresh Safari / iPhone" case
   // where localStorage is empty but the user already has a photo
@@ -162,20 +191,22 @@ function ProfileScreen() {
         reader.onload = () => {
           const uri = reader.result as string;
           setProfilePic(uri);
-          saveProfilePic(uri);
+          saveProfilePic(user?.id, uri);
           if (user?.id) {
             uploadAvatar(user.id, uri)
-              .then((publicUrl) => {
-                if (publicUrl) {
+              .then((result) => {
+                if (result.ok && result.publicUrl) {
                   // Push the cloud URL into the store so every surface
                   // that reads avatarUrl (home greeting, friends list
                   // lookup fallbacks, etc.) updates without waiting
                   // for the next loadFromCloud.
-                  setAvatarUrl(publicUrl);
-                  setProfilePic(publicUrl);
+                  setAvatarUrl(result.publicUrl);
+                  setProfilePic(result.publicUrl);
+                } else {
+                  Alert.alert('Upload failed', result.error ?? "We couldn't sync your photo to the cloud. Please try again.");
                 }
               })
-              .catch(() => Alert.alert('Upload failed', 'Your photo was saved locally but couldn\'t sync to the cloud. It will retry next time.'));
+              .catch((e) => Alert.alert('Upload failed', e?.message ?? "We couldn't sync your photo to the cloud. Please try again."));
           }
         };
         reader.readAsDataURL(file);
@@ -201,18 +232,22 @@ function ProfileScreen() {
         // Show the local file immediately — upload runs in the
         // background and swaps to the cloud URL once complete.
         setProfilePic(asset.uri);
-        saveProfilePic(asset.uri);
+        saveProfilePic(user?.id, asset.uri);
         if (user?.id) {
           uploadAvatar(user.id, dataUri)
-            .then((publicUrl) => {
-              if (publicUrl) {
-                setAvatarUrl(publicUrl);
-                setProfilePic(publicUrl);
+            .then((result) => {
+              if (result.ok && result.publicUrl) {
+                setAvatarUrl(result.publicUrl);
+                setProfilePic(result.publicUrl);
+                // Overwrite the cached URI with the cloud URL so
+                // the next cold start on this device reads the
+                // permanent URL, not the ephemeral file:// path.
+                saveProfilePic(user.id, result.publicUrl);
               } else {
-                Alert.alert('Upload failed', "Your photo was saved on this device but couldn't sync to the cloud. It will retry next time.");
+                Alert.alert('Upload failed', result.error ?? "We couldn't sync your photo to the cloud. Please try again.");
               }
             })
-            .catch(() => Alert.alert('Upload failed', "Your photo was saved on this device but couldn't sync to the cloud. It will retry next time."));
+            .catch((e) => Alert.alert('Upload failed', e?.message ?? "We couldn't sync your photo to the cloud. Please try again."));
         }
       }
     }
@@ -638,7 +673,7 @@ function ProfileScreen() {
             </Pressable>
             {profilePic && (
               <Pressable
-                onPress={() => { setProfilePic(null); saveProfilePic(null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }}
+                onPress={() => { setProfilePic(null); saveProfilePic(user?.id, null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }}
                 style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}
                 accessibilityRole="button"
                 accessibilityLabel="Remove profile photo"
