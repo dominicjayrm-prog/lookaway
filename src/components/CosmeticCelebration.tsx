@@ -4,11 +4,11 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from './Blink';
 import { AvatarFrame } from './AvatarFrame';
+import { ProfileBanner } from './ProfileBanner';
 import { getFrameById } from '@/src/data/cosmetics';
-import type { Cosmetic } from '@/src/data/cosmetics';
+import type { Cosmetic, BannerCosmetic } from '@/src/data/cosmetics';
 
 const CONFETTI_COLORS = ['#6C5CE7', '#A29BFE', '#D4A012', '#00B894', '#FF6B6B', '#0984E3', '#FD79A8', '#FDCB6E'];
 
@@ -129,12 +129,15 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message }: Pro
             <Blink expression={(item as any).blinkExpression ?? 'normal'} size={80} />
           )}
           {item.type === 'banner' && (
-            <LinearGradient
-              colors={(item as any).gradientColors ?? ['#6C5CE7', '#A29BFE']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ width: 120, height: 60, borderRadius: 14 }}
-            />
+            // Use the same ProfileBanner component the profile
+            // header uses so what the user sees here is exactly
+            // what will appear on their profile. Sized at
+            // 260x90 — big enough that the gradient + optional
+            // star pattern are immediately readable, proportioned
+            // like a real banner rather than a squat rectangle.
+            <View style={{ width: 260, height: 90 }}>
+              <ProfileBanner banner={item as BannerCosmetic} height={90} />
+            </View>
           )}
         </RNAnimated.View>
 
