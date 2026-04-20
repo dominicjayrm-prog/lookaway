@@ -49,21 +49,52 @@ import { Platform } from 'react-native';
 export const USE_TEST_ADS = false;
 
 // ─── Ad unit IDs ───────────────────────────────────────────────────
+//
+// AdMob uses separate ad unit IDs per platform even for the same
+// "purpose" (an iOS interstitial and an Android interstitial are
+// registered as distinct units in the AdMob dashboard). Google's
+// test IDs follow the same rule — iOS and Android have different
+// always-filling test units.
 
 // Google's always-filling test IDs. Docs:
 // https://developers.google.com/admob/ios/test-ads
-const TEST_IDS = {
+// https://developers.google.com/admob/android/test-ads
+const TEST_IDS_IOS = {
   INTERSTITIAL: 'ca-app-pub-3940256099942544/4411468910',
   REWARDED: 'ca-app-pub-3940256099942544/1712485313',
 };
+const TEST_IDS_ANDROID = {
+  INTERSTITIAL: 'ca-app-pub-3940256099942544/1033173712',
+  REWARDED: 'ca-app-pub-3940256099942544/5224354917',
+};
 
-// Real production ad unit IDs from your AdMob account.
-const PRODUCTION_IDS = {
+// Real production ad unit IDs from the Blanked AdMob account.
+const PRODUCTION_IDS_IOS = {
   INTERSTITIAL: 'ca-app-pub-9228812020612351/4576685235',
   REWARDED: 'ca-app-pub-9228812020612351/9386158787',
 };
+// Real Android unit IDs from AdMob Console. Registered against the
+// Blanked Android app (AdMob app ID ca-app-pub-9228812020612351
+// ~4594272197, see app.json). AdMob's fill rate for brand-new
+// apps is near-zero for the first 1-2 weeks, so expect "no ad
+// available" responses until Google builds traffic history — the
+// `USE_TEST_ADS` toggle above remains the fastest way to confirm
+// the pipeline works during Internal Testing.
+const PRODUCTION_IDS_ANDROID = {
+  INTERSTITIAL: 'ca-app-pub-9228812020612351/5177573588',
+  REWARDED: 'ca-app-pub-9228812020612351/2954734922',
+};
 
-export const AD_UNIT_IDS = USE_TEST_ADS ? TEST_IDS : PRODUCTION_IDS;
+function pickAdUnitIds(): { INTERSTITIAL: string; REWARDED: string } {
+  if (Platform.OS === 'android') {
+    return USE_TEST_ADS ? TEST_IDS_ANDROID : PRODUCTION_IDS_ANDROID;
+  }
+  // iOS (and web fallback — ADS_SUPPORTED gates web separately so
+  // the fallback value is harmless there).
+  return USE_TEST_ADS ? TEST_IDS_IOS : PRODUCTION_IDS_IOS;
+}
+
+export const AD_UNIT_IDS = pickAdUnitIds();
 
 // ─── Placement rules ───────────────────────────────────────────────
 
@@ -80,5 +111,5 @@ export const INTERSTITIAL_GRACE_LEVELS = 5;
 export const INTERSTITIAL_SESSION_CAP = 3;
 
 /** Whether the current platform supports ads at all. Web doesn't
- *  have the native AdMob module. */
-export const ADS_SUPPORTED = Platform.OS === 'ios';
+ *  have the native AdMob module. iOS + Android both do. */
+export const ADS_SUPPORTED = Platform.OS !== 'web';

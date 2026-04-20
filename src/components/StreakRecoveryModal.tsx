@@ -102,12 +102,24 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
   const canAffordCombo = shields > 0 && daysMissed <= 3 && comboPrice >= 0 && (comboPrice === 0 || gems >= comboPrice);
   const shortfall = gemPrice > 0 ? Math.max(0, gemPrice - gems) : 0;
 
-  // Handlers
-  const onGemRecover = async () => {
+  // Handlers.
+  //
+  // All three paths below are deliberately OPTIMISTIC — we apply the
+  // local store change AND dismiss the modal the moment the user
+  // taps, then fire the Supabase writes in the background. Previously
+  // these awaited 2-3 sequential round-trips (SELECT gems → UPDATE
+  // profile → INSERT economy_events) before the UI responded, which
+  // froze the home screen for 1-3 seconds on slow connections. The
+  // client-side affordability checks (canAffordGems / canAffordCombo)
+  // already guarantee the write will succeed; on the rare failure
+  // path (offline, RLS quirk) we log and move on — worst case the
+  // user keeps their recovered streak but loses the gems, which is
+  // generous rather than punishing, and the next cloud sync
+  // reconciles either way.
+  const onGemRecover = () => {
     if (!user?.id || gemPrice < 0) return;
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     if (!canAffordGems) {
-      // Insufficient — route to shop with a returnTo hint
       animateDismiss(() => {
         router.push({
           pathname: '/(tabs)/shop',
@@ -116,34 +128,29 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
       });
       return;
     }
-    const ok = await recoverWithGems(user.id, gemPrice, streak);
-    if (ok) {
-      applyLocal(-gemPrice, 0);
-      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      animateDismiss();
-    }
+    // Optimistic: local store + modal dismissal now; Supabase writes
+    // chase in the background.
+    applyLocal(-gemPrice, 0);
+    if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    animateDismiss();
+    recoverWithGems(user.id, gemPrice, streak).catch(() => {});
   };
 
-  const onComboRecover = async () => {
+  const onComboRecover = () => {
     if (!user?.id || !canAffordCombo) return;
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    const ok = await recoverWithShield(user.id, comboPrice);
-    if (ok) {
-      applyLocal(-comboPrice, -1);
-      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      animateDismiss();
-    }
+    applyLocal(-comboPrice, -1);
+    if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    animateDismiss();
+    recoverWithShield(user.id, comboPrice).catch(() => {});
   };
 
-  const onLetReset = async () => {
-    if (!user?.id) {
-      resetLocal();
-      animateDismiss();
-      return;
-    }
-    await letStreakReset(user.id);
+  const onLetReset = () => {
     resetLocal();
     animateDismiss();
+    if (user?.id) {
+      letStreakReset(user.id).catch(() => {});
+    }
   };
 
   if (!visible) return null;

@@ -68,6 +68,11 @@ web_modules/
 # dotenv environment variable files
 .env
 .env.*
+
+# Google Play service account — grants write access to our Play
+# Console release slot. Never commit. EAS reads it locally when
+# `eas submit --platform android` runs; CI uses secrets instead.
+play-service-account.json
 !.env.example
 
 # parcel-bundler cache (https://parceljs.org/)

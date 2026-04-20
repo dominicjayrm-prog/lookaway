@@ -35,25 +35,39 @@ function getAdMob(): any {
   }
 }
 
-// ─── ATT + AdMob initialization (App Store guideline 5.1.2) ────────
+// ─── ATT + UMP + AdMob initialization ──────────────────────────────
+//
+// Two platform-specific consent gates, same end goal: tell AdMob
+// whether we're allowed to serve personalised ads before the SDK's
+// first ad request goes out.
+//
+//  - iOS: App Tracking Transparency (ATT). Apple guideline 5.1.2 —
+//    reject on sight if AdMob loads before the ATT prompt on iOS
+//    14.5+. Covered below.
+//  - Android: Google's User Messaging Platform (UMP) form, required
+//    for EU/UK users under GDPR. Play policy rejects ads served
+//    without a consent signal to EU/UK users. Covered below.
+//
+// Both must fire BEFORE `mobileAds().initialize()`.
 
 let _initStarted = false;
 
 /**
- * Request App Tracking Transparency permission and then initialize
- * AdMob with the right consent state. Apple REJECTS apps that load
- * AdMob before showing the ATT prompt on iOS 14.5+ — this is the
- * single most common rejection for indie game apps using ads.
+ * Request tracking/consent per platform, then initialize AdMob with
+ * the correct consent signals. Idempotent — only runs once per app
+ * session.
  *
- * Idempotent: only runs once per app session.
- *
- * Permission outcomes:
+ * iOS ATT outcomes:
  *  - 'granted' → AdMob can use IDFA, personalised ads
  *  - 'denied' / 'restricted' → AdMob serves non-personalised ads
  *  - 'not-determined' → user dismissed before deciding; treat as denied
  *
- * Web + Android no-op (ATT is iOS-only). Android uses GDPR consent
- * via a different flow not addressed here.
+ * Android UMP outcomes:
+ *  - status 'REQUIRED' → show the consent form, user chooses
+ *  - status 'NOT_REQUIRED' → outside EU/UK, no form needed
+ *  - status 'OBTAINED' → user already chose on a previous launch
+ *
+ * Web no-ops cleanly — the AdMob module itself isn't available.
  */
 export async function initAdsAndTracking(): Promise<void> {
   if (_initStarted) return;
@@ -64,35 +78,79 @@ export async function initAdsAndTracking(): Promise<void> {
 
   try {
     if (Platform.OS === 'ios') {
-      // Lazy-import ATT so it doesn't bloat the JS bundle on Android.
-      const TT = require('expo-tracking-transparency');
-      const { status: existing } = await TT.getTrackingPermissionsAsync();
-      let status = existing;
-      if (existing === 'undetermined') {
-        const result = await TT.requestTrackingPermissionsAsync();
-        status = result.status;
-      }
-      // Tell AdMob whether we have IDFA permission BEFORE the SDK
-      // boots, so the very first ad request goes out with the right
-      // signals.
-      const granted = status === 'granted';
-      try {
-        await admob.default().setRequestConfiguration({
-          // When ATT is denied, AdMob must serve only non-
-          // personalised ads. tagForChildDirectedTreatment stays
-          // unset because BLANKED is rated 4+ but not strictly
-          // child-directed.
-          maxAdContentRating: admob.MaxAdContentRating?.PG ?? 'PG',
-          tagForUnderAgeOfConsent: !granted,
-        });
-      } catch (e) {
-        log.warn('ads', 'setRequestConfiguration failed', { error: String(e) });
-      }
+      await runIosAttFlow(admob);
+    } else if (Platform.OS === 'android') {
+      await runAndroidUmpFlow(admob);
     }
-    // Boot the SDK. Safe to call after setRequestConfiguration.
+    // Boot the SDK. Safe to call after consent flows above — they
+    // set the request-configuration signals AdMob needs for the very
+    // first ad request.
     await admob.default().initialize();
   } catch (e) {
     log.warn('ads', 'initAdsAndTracking failed', { error: String(e) });
+  }
+}
+
+async function runIosAttFlow(admob: any): Promise<void> {
+  // Lazy-import ATT so it doesn't bloat the JS bundle on Android.
+  const TT = require('expo-tracking-transparency');
+  const { status: existing } = await TT.getTrackingPermissionsAsync();
+  let status = existing;
+  if (existing === 'undetermined') {
+    const result = await TT.requestTrackingPermissionsAsync();
+    status = result.status;
+  }
+  // Tell AdMob whether we have IDFA permission BEFORE the SDK boots,
+  // so the very first ad request goes out with the right signals.
+  const granted = status === 'granted';
+  try {
+    await admob.default().setRequestConfiguration({
+      // When ATT is denied, AdMob must serve only non-personalised
+      // ads. tagForChildDirectedTreatment stays unset because BLANKED
+      // is rated 4+ but not strictly child-directed.
+      maxAdContentRating: admob.MaxAdContentRating?.PG ?? 'PG',
+      tagForUnderAgeOfConsent: !granted,
+    });
+  } catch (e) {
+    log.warn('ads', 'setRequestConfiguration (iOS) failed', { error: String(e) });
+  }
+}
+
+async function runAndroidUmpFlow(admob: any): Promise<void> {
+  // `AdsConsent` lives inside react-native-google-mobile-ads — the
+  // same package already used for iOS. No extra install required.
+  const { AdsConsent, AdsConsentStatus } = admob;
+  if (!AdsConsent) {
+    log.warn('ads', 'UMP unavailable — AdsConsent export missing from react-native-google-mobile-ads');
+    return;
+  }
+  try {
+    // Request the latest consent info from Google's servers. This
+    // determines whether a form needs to be shown based on the
+    // user's geo (EU/UK users see a form, everyone else skips).
+    const info = await AdsConsent.requestInfoUpdate();
+    // For EU/UK users on first run, show the consent form. If they
+    // already consented on a previous launch, status is OBTAINED and
+    // this is a no-op.
+    if (info.status === AdsConsentStatus.REQUIRED) {
+      await AdsConsent.loadAndShowConsentFormIfRequired();
+    }
+  } catch (e) {
+    // UMP form can fail on emulators or in-flight network issues —
+    // not fatal. AdMob will still serve non-personalised ads in
+    // that case, which is the compliant fallback.
+    log.warn('ads', 'Android UMP flow failed', { error: String(e) });
+  }
+  // Request configuration matching the iOS path — non-personalised
+  // baseline + family-friendly content rating. If the user granted
+  // consent via the UMP form above, AdMob reads that separately and
+  // can still serve personalised ads; this is the safety floor.
+  try {
+    await admob.default().setRequestConfiguration({
+      maxAdContentRating: admob.MaxAdContentRating?.PG ?? 'PG',
+    });
+  } catch (e) {
+    log.warn('ads', 'setRequestConfiguration (Android) failed', { error: String(e) });
   }
 }
 

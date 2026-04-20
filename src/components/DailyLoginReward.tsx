@@ -124,13 +124,25 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     });
   }
 
-  if (!visible) return null;
+  // IMPORTANT: we can't return null when `visible` flips false, because
+  // cosmetic rewards schedule a CosmeticCelebration AFTER the parent
+  // sets visible=false. If we unmounted here, the celebration modal
+  // (which lives nested below) would get torn down and the user would
+  // see no reveal at all — the exact "random banner didn't show me
+  // which one I got" bug. Instead we keep the component mounted as
+  // long as EITHER the daily modal is visible OR a celebration is
+  // queued, and let the inner <Modal>'s own `visible` prop control
+  // show/hide.
+  if (!visible && !celebrationItem) return null;
 
   var todayReward = REWARDS[rewardDay - 1];
 
   return (
     <>
-    <Modal visible transparent animationType="none">
+    {/* Gate the inner Modal on `visible` so when the daily reward
+        dismisses the backdrop actually goes away, even though the
+        outer component stays mounted until celebrationItem clears. */}
+    <Modal visible={visible} transparent animationType="none">
       <View style={st.container}>
         <RNAnimated.View style={[StyleSheet.absoluteFill, {
           backgroundColor: backdrop.interpolate({ inputRange: [0, 1], outputRange: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)'] }),
