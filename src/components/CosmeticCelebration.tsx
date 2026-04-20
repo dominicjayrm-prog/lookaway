@@ -138,9 +138,21 @@ function CosmeticCelebrationComponent({ visible, item, onDismiss, message }: Pro
           )}
         </RNAnimated.View>
 
-        {/* Message */}
-        <RNAnimated.View style={{ opacity: textOpacity, marginTop: 20 }}>
+        {/* Message + cosmetic name. The name is the whole point of
+            this modal — for a "random banner" reward, showing a
+            gradient rectangle without telling the user it's called
+            "Aurora" / "Ocean Wave" / whatever meant they walked away
+            not knowing what they just unlocked. Now we surface the
+            item.name prominently on its own line beneath the
+            top-level message. */}
+        <RNAnimated.View style={{ opacity: textOpacity, marginTop: 20, alignItems: 'center' }}>
           <Text style={st.message}>{displayMessage}</Text>
+          {item?.name && (
+            <Text style={st.itemName}>{item.name}</Text>
+          )}
+          {rarityLabel && (
+            <Text style={st.itemRarity}>{rarityLabel} {typeLabel}</Text>
+          )}
         </RNAnimated.View>
       </RNAnimated.View>
     </Pressable>
@@ -169,5 +181,22 @@ const st = StyleSheet.create({
     fontWeight: '700',
     color: 'white',
     textAlign: 'center',
+  },
+  itemName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 6,
+    letterSpacing: 0.3,
+  },
+  itemRarity: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginTop: 4,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });
