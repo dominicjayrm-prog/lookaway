@@ -26,6 +26,30 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+    "android": {
+      "package": "com.blanked.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#6C5CE7"
+      },
+      "permissions": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "playblanked.com"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
@@ -50,6 +74,7 @@
         "react-native-google-mobile-ads",
         {
           "iosAppId": "ca-app-pub-9228812020612351~2660968331",
+          "androidAppId": "ca-app-pub-9228812020612351~ANDROID_APP_ID_TBD",
           "userTrackingUsageDescription": "Your data will be used to deliver personalised ads and measure ad performance across apps you use."
         }
       ],
