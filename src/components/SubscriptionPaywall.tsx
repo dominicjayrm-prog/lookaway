@@ -283,10 +283,11 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
     }
   }
 
-  // Legal links need real handlers for Apple 3.1.2. They open the
-  // in-app WebView viewers which host the same URLs referenced in the
-  // App Store listing.
-  function openTerms() { handleDismiss(); setTimeout(() => router.push('/terms'), 260); }
+  // Legal links need real handlers for Apple 3.1.2(c). Terms of Use
+  // opens Apple's standard EULA (the agreement declared in App Store
+  // Connect) so the in-app link matches the store listing. Privacy
+  // opens the app's own privacy policy.
+  function openTerms() { handleDismiss(); setTimeout(() => router.push('/eula'), 260); }
   function openPrivacy() { handleDismiss(); setTimeout(() => router.push('/privacy'), 260); }
 
   if (!visible) return null;
@@ -391,11 +392,11 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           {/* Legal — functional links that route to the in-app WebView
               viewers. Restore is wired to the purchases library. */}
           <View style={st.legalRow}>
-            <Pressable onPress={openTerms}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms</Text></Pressable>
+            <Pressable onPress={openTerms} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms of Use</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable onPress={openPrivacy}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy</Text></Pressable>
+            <Pressable onPress={openPrivacy} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy Policy</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable onPress={handleRestore}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
+            <Pressable onPress={handleRestore} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
           </View>
         </ScrollView>
       </RNAnimated.View>
@@ -484,9 +485,10 @@ const st = StyleSheet.create({
 
   // Legal
   // Auto-renewal disclosure sits above the Terms/Privacy/Restore row.
-  // Small but legible — Apple explicitly wants this near the CTA.
-  renewalDisclosure: { fontSize: 10, lineHeight: 14, textAlign: 'center', paddingHorizontal: 12, marginBottom: 10, marginTop: 6 },
-  legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 4 },
-  legalLink: { fontSize: 10, color: '#B2BEC3' },
-  legalDot: { fontSize: 10, color: '#D0CEC8' },
+  // Apple's reviewer screen-records the paywall, so the disclosure +
+  // links must be large enough to read at recording resolution.
+  renewalDisclosure: { fontSize: 11, lineHeight: 15, textAlign: 'center', paddingHorizontal: 12, marginBottom: 10, marginTop: 6 },
+  legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 4 },
+  legalLink: { fontSize: 12, fontWeight: '500', textDecorationLine: 'underline' },
+  legalDot: { fontSize: 12 },
 });
