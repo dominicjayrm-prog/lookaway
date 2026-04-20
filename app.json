@@ -74,7 +74,7 @@
         "react-native-google-mobile-ads",
         {
           "iosAppId": "ca-app-pub-9228812020612351~2660968331",
-          "androidAppId": "ca-app-pub-9228812020612351~ANDROID_APP_ID_TBD",
+          "androidAppId": "ca-app-pub-9228812020612351~4594272197",
           "userTrackingUsageDescription": "Your data will be used to deliver personalised ads and measure ad performance across apps you use."
         }
       ],

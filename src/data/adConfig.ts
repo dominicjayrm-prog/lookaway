@@ -73,14 +73,16 @@ const PRODUCTION_IDS_IOS = {
   INTERSTITIAL: 'ca-app-pub-9228812020612351/4576685235',
   REWARDED: 'ca-app-pub-9228812020612351/9386158787',
 };
-// TODO: Swap these placeholders for the real Android unit IDs once
-// we register an Android app in AdMob Console. Until then, builds
-// using these values will fail to load ads on Android in
-// production (test IDs still work). `USE_TEST_ADS = true` during
-// the Android internal-testing phase keeps things operational.
+// Real Android unit IDs from AdMob Console. Registered against the
+// Blanked Android app (AdMob app ID ca-app-pub-9228812020612351
+// ~4594272197, see app.json). AdMob's fill rate for brand-new
+// apps is near-zero for the first 1-2 weeks, so expect "no ad
+// available" responses until Google builds traffic history — the
+// `USE_TEST_ADS` toggle above remains the fastest way to confirm
+// the pipeline works during Internal Testing.
 const PRODUCTION_IDS_ANDROID = {
-  INTERSTITIAL: 'ca-app-pub-9228812020612351/ANDROID_INTERSTITIAL_TBD',
-  REWARDED: 'ca-app-pub-9228812020612351/ANDROID_REWARDED_TBD',
+  INTERSTITIAL: 'ca-app-pub-9228812020612351/5177573588',
+  REWARDED: 'ca-app-pub-9228812020612351/2954734922',
 };
 
 function pickAdUnitIds(): { INTERSTITIAL: string; REWARDED: string } {
