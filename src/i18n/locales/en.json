@@ -194,6 +194,69 @@
     "starter_pack_title": "Starter Pack",
     "starter_pack_no_thanks": "No thanks"
   },
+  "achievements_page": {
+    "title": "Achievements"
+  },
+  "blocked": {
+    "title": "Blocked users",
+    "empty": "No blocked users"
+  },
+  "auth": {
+    "tagline": "Don't blank.",
+    "back_to_signin": "Back to sign in",
+    "check_email": "Check your email",
+    "username": "Username",
+    "email": "Email",
+    "available": "Available",
+    "taken": "Already taken",
+    "checking": "Checking...",
+    "forgot_title": "Forgot password?",
+    "send_reset": "Send reset link",
+    "send_different": "Send to a different email",
+    "password_updated": "Password updated",
+    "set_new_password": "Set a new password",
+    "new_password": "New password",
+    "confirm_password": "Confirm password",
+    "update_password": "Update password"
+  },
+  "world_map": {
+    "play": "Play",
+    "start_marker": "START",
+    "finale_marker": "FINALE",
+    "play_label": "PLAY",
+    "replay": "Replay",
+    "close": "Close",
+    "mastermind_title": "Mastermind",
+    "enter_mastermind": "Enter Mastermind"
+  },
+  "notif_settings": {
+    "title": "Notifications",
+    "daily_section": "DAILY REMINDER",
+    "daily_play": "Daily play reminder",
+    "daily_help": "One local nudge at the time you choose",
+    "remind_at": "Remind me at",
+    "picker_title": "Remind me at",
+    "picker_close": "Close"
+  },
+  "sound_settings": {
+    "all_sounds": "All sounds",
+    "categories_section": "CATEGORIES",
+    "haptics_section": "HAPTICS",
+    "haptic_feedback": "Haptic feedback"
+  },
+  "streak_rewards": {
+    "title": "Your Streak",
+    "this_week": "THIS WEEK",
+    "shields_title": "Streak Shields",
+    "shields_desc": "Protects your streak if you miss a day",
+    "rewards_section": "STREAK REWARDS",
+    "claimed": "CLAIMED"
+  },
+  "stats_space": {
+    "title": "Memory Analytics",
+    "memory_score_label": "MEMORY SCORE",
+    "conversion_title": "Like what you see?"
+  },
   "challenge": {
     "loading_setup": "Setting up challenge...",
     "loading_result": "Loading result...",
@@ -278,7 +341,33 @@
     "remove_title": "Remove friend?",
     "remove_body": "You can always add them back later.",
     "remove_cta": "Remove",
-    "leaderboard": "LEADERBOARD"
+    "leaderboard": "LEADERBOARD",
+    "title": "Friends",
+    "share_aria": "Share invite link",
+    "last_3_results": "LAST 3 RESULTS",
+    "active_challenges": "ACTIVE CHALLENGES",
+    "friend_requests": "FRIEND REQUESTS",
+    "invite_friends": "INVITE FRIENDS",
+    "your_friends": "YOUR FRIENDS ({count})",
+    "wants_to_be_friends": "Wants to be friends",
+    "accept": "Accept",
+    "play": "Play",
+    "pending": "Pending",
+    "done": "Done",
+    "sent": "Sent",
+    "add": "Add",
+    "send_request_aria": "Send friend request",
+    "search_placeholder": "Add friend by username...",
+    "search_aria": "Search friends by username",
+    "clear_search_aria": "Clear search",
+    "add_by_username": "Add by username",
+    "add_by_username_aria": "Add friend by username",
+    "scan_qr": "Scan QR code",
+    "scan_qr_aria": "Scan friend QR code",
+    "show_qr": "Show my QR code",
+    "show_qr_aria": "Show my QR code",
+    "share_link": "Share invite link",
+    "share_link_aria": "Share invite link"
   },
   "shop": {
     "title": "Shop",

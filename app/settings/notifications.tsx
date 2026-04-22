@@ -28,6 +28,7 @@
  *    notification via scheduleDailyReminder()
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Switch, ScrollView, Pressable, Platform, Linking, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -225,7 +226,7 @@ export default function NotificationSettingsScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('notif_settings.title')}</Text>
         <View style={styles.spacer} />
       </View>
 
@@ -252,13 +253,13 @@ export default function NotificationSettingsScreen() {
           </Pressable>
         )}
 
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>DAILY REMINDER</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('notif_settings.daily_section')}</Text>
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.emojiIcon}>{'\u23F0'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Daily play reminder</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>One local nudge at the time you choose</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('notif_settings.daily_play')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('notif_settings.daily_help')}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
@@ -275,7 +276,7 @@ export default function NotificationSettingsScreen() {
           >
             <Text style={styles.emojiIcon}>{'\uD83D\uDD52'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Remind me at</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('notif_settings.remind_at')}</Text>
             </View>
             <Text style={[styles.timeValue, { color: colors.accent }]}>{formatTimeHM(reminderHour, reminderMinute)}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
@@ -287,7 +288,7 @@ export default function NotificationSettingsScreen() {
           <View style={styles.pickerBackdrop}>
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPicker(false)} />
             <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
-              <Text style={[styles.pickerTitle, { color: colors.text }]}>Remind me at</Text>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('notif_settings.picker_title')}</Text>
               <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
                 {TIME_PRESETS.map((t) => {
                   const isSelected = t.hour === reminderHour && t.minute === reminderMinute;
@@ -314,7 +315,7 @@ export default function NotificationSettingsScreen() {
                 onPress={() => setShowPicker(false)}
                 style={[styles.pickerCloseBtn, { backgroundColor: colors.surface }]}
               >
-                <Text style={[styles.pickerCloseText, { color: colors.textMid }]}>Close</Text>
+                <Text style={[styles.pickerCloseText, { color: colors.textMid }]}>{t('notif_settings.picker_close')}</Text>
               </Pressable>
             </View>
           </View>

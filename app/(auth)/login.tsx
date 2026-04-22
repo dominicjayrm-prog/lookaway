@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import {
   View,
   Text,
@@ -211,7 +212,7 @@ function AuthScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.successContainer}>
           <BlankedLogo size={64} />
-          <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
+          <Text style={[styles.successTitle, { color: colors.text }]}>{t('auth.check_email')}</Text>
           <Text style={[styles.successBody, { color: colors.textMid }]}>
             We sent a confirmation link to {email}. Tap the link to activate
             your account, then come back and sign in.
@@ -226,7 +227,7 @@ function AuthScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to sign in"
           >
-            <Text style={styles.primaryButtonText}>Back to sign in</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.back_to_signin')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -249,7 +250,7 @@ function AuthScreen() {
             <View style={styles.wordmarkWrap}>
               <Wordmark size={28} />
             </View>
-            <Text style={[styles.tagline, { color: colors.textMid }]}>Don't blank.</Text>
+            <Text style={[styles.tagline, { color: colors.textMid }]}>{t('auth.tagline')}</Text>
           </View>
 
           <View style={[styles.formCard, { backgroundColor: colors.card }]}>
@@ -337,7 +338,7 @@ function AuthScreen() {
 
             {mode === 'signup' && (
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth.username')}</Text>
                 <View style={[styles.usernameRow, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.atPrefix, { color: colors.textMid }]}>@</Text>
                   <TextInput
@@ -351,16 +352,16 @@ function AuthScreen() {
                     returnKeyType="next"
                   />
                 </View>
-                {usernameStatus === 'available' && <Text style={styles.usernameAvailable}>Available</Text>}
-                {usernameStatus === 'taken' && <Text style={styles.usernameTaken}>Already taken</Text>}
+                {usernameStatus === 'available' && <Text style={styles.usernameAvailable}>{t('auth.available')}</Text>}
+                {usernameStatus === 'taken' && <Text style={styles.usernameTaken}>{t('auth.taken')}</Text>}
                 {usernameStatus === 'invalid' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>3-16 chars, lowercase letters, numbers, underscores</Text>}
                 {usernameStatus === 'disallowed' && <Text style={styles.usernameTaken}>{usernameDisallowedMessage ?? 'Please choose a different username.'}</Text>}
-                {usernameStatus === 'checking' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>Checking...</Text>}
+                {usernameStatus === 'checking' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>{t('auth.checking')}</Text>}
               </View>
             )}
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth.email')}</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: focusedField === 'email' ? colors.accent : 'transparent' }]}
                 placeholder="your@email.com"

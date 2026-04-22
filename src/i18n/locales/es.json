@@ -313,6 +313,69 @@
     "starter_pack_title": "Pack de inicio",
     "starter_pack_no_thanks": "No, gracias"
   },
+  "achievements_page": {
+    "title": "Logros"
+  },
+  "blocked": {
+    "title": "Usuarios bloqueados",
+    "empty": "No hay usuarios bloqueados"
+  },
+  "auth": {
+    "tagline": "No te quedes en blanco.",
+    "back_to_signin": "Volver a iniciar sesión",
+    "check_email": "Revisa tu correo",
+    "username": "Nombre de usuario",
+    "email": "Correo",
+    "available": "Disponible",
+    "taken": "No disponible",
+    "checking": "Comprobando...",
+    "forgot_title": "¿Olvidaste tu contraseña?",
+    "send_reset": "Enviar enlace de restablecimiento",
+    "send_different": "Enviar a otro correo",
+    "password_updated": "Contraseña actualizada",
+    "set_new_password": "Establece una nueva contraseña",
+    "new_password": "Nueva contraseña",
+    "confirm_password": "Confirmar contraseña",
+    "update_password": "Actualizar contraseña"
+  },
+  "world_map": {
+    "play": "Jugar",
+    "start_marker": "INICIO",
+    "finale_marker": "FINAL",
+    "play_label": "JUGAR",
+    "replay": "Repetir",
+    "close": "Cerrar",
+    "mastermind_title": "Mente Maestra",
+    "enter_mastermind": "Entrar en Mente Maestra"
+  },
+  "notif_settings": {
+    "title": "Notificaciones",
+    "daily_section": "RECORDATORIO DIARIO",
+    "daily_play": "Recordatorio de juego diario",
+    "daily_help": "Un aviso local a la hora que elijas",
+    "remind_at": "Recordarme a las",
+    "picker_title": "Recordarme a las",
+    "picker_close": "Cerrar"
+  },
+  "sound_settings": {
+    "all_sounds": "Todos los sonidos",
+    "categories_section": "CATEGORÍAS",
+    "haptics_section": "VIBRACIÓN",
+    "haptic_feedback": "Vibración"
+  },
+  "streak_rewards": {
+    "title": "Tu Racha",
+    "this_week": "ESTA SEMANA",
+    "shields_title": "Escudos de Racha",
+    "shields_desc": "Protegen tu racha si un día no juegas",
+    "rewards_section": "RECOMPENSAS DE RACHA",
+    "claimed": "RECLAMADA"
+  },
+  "stats_space": {
+    "title": "Análisis de Memoria",
+    "memory_score_label": "PUNTUACIÓN DE MEMORIA",
+    "conversion_title": "¿Te gusta lo que ves?"
+  },
   "challenge": {
     "loading_setup": "Preparando el reto...",
     "loading_result": "Cargando resultado...",
@@ -397,7 +460,33 @@
     "remove_title": "¿Eliminar amigo?",
     "remove_body": "Siempre puedes volver a añadirlo más tarde.",
     "remove_cta": "Eliminar",
-    "leaderboard": "CLASIFICACIÓN"
+    "leaderboard": "CLASIFICACIÓN",
+    "title": "Amigos",
+    "share_aria": "Compartir enlace de invitación",
+    "last_3_results": "ÚLTIMOS 3 RESULTADOS",
+    "active_challenges": "RETOS ACTIVOS",
+    "friend_requests": "SOLICITUDES DE AMISTAD",
+    "invite_friends": "INVITAR AMIGOS",
+    "your_friends": "TUS AMIGOS ({count})",
+    "wants_to_be_friends": "Quiere ser tu amigo",
+    "accept": "Aceptar",
+    "play": "Jugar",
+    "pending": "Pendiente",
+    "done": "Hecho",
+    "sent": "Enviada",
+    "add": "Añadir",
+    "send_request_aria": "Enviar solicitud de amistad",
+    "search_placeholder": "Añadir amigo por nombre de usuario...",
+    "search_aria": "Buscar amigos por nombre de usuario",
+    "clear_search_aria": "Borrar búsqueda",
+    "add_by_username": "Añadir por nombre de usuario",
+    "add_by_username_aria": "Añadir amigo por nombre de usuario",
+    "scan_qr": "Escanear código QR",
+    "scan_qr_aria": "Escanear código QR de amigo",
+    "show_qr": "Mostrar mi código QR",
+    "show_qr_aria": "Mostrar mi código QR",
+    "share_link": "Compartir enlace de invitación",
+    "share_link_aria": "Compartir enlace de invitación"
   },
   "shop": {
     "title": "Tienda",

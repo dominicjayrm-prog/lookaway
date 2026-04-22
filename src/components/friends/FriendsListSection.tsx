@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -25,7 +26,7 @@ export function FriendsListSection({ friends, onSelectFriend }: FriendsListSecti
   const { colors } = useTheme();
   return (
     <>
-      <SectionLabel label={`YOUR FRIENDS (${friends.length})`} />
+      <SectionLabel label={t('friends.your_friends', { count: friends.length })} />
       {friends.length === 0 ? (
         <View style={[styles.emptySection, { backgroundColor: colors.card }]}>
           <Blink expression="sad" size={48} />

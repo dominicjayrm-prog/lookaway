@@ -15,6 +15,7 @@
  * (mounted in _layout.tsx) plays the standard reward celebration.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, ScrollView, Pressable, Animated as RNAnimated, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -117,7 +118,7 @@ export default function StreakRewardsScreen() {
         >
           <Ionicons name="chevron-back" size={20} color={colors.textMid} />
         </Pressable>
-        <Text style={[st.title, { color: colors.text }]}>Your Streak</Text>
+        <Text style={[st.title, { color: colors.text }]}>{t('streak_rewards.title')}</Text>
         <View style={[st.bestPill, { backgroundColor: colors.goldSoft }]}>
           <Text style={[st.bestPillText, { color: colors.gold }]}>{TROPHY} Best: {bestStreak}d</Text>
         </View>
@@ -150,7 +151,7 @@ export default function StreakRewardsScreen() {
 
         {/* This week calendar */}
         <View style={[st.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[st.cardLabel, { color: colors.textLight }]}>THIS WEEK</Text>
+          <Text style={[st.cardLabel, { color: colors.textLight }]}>{t('streak_rewards.this_week')}</Text>
           <WeekRow playedToday={playedToday} colors={colors} />
         </View>
 
@@ -159,8 +160,8 @@ export default function StreakRewardsScreen() {
           <View style={st.shieldRow}>
             <Text style={st.shieldEmoji}>{SHIELD}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[st.shieldTitle, { color: colors.text }]}>Streak Shields</Text>
-              <Text style={[st.shieldDesc, { color: colors.textMid }]}>Protects your streak if you miss a day</Text>
+              <Text style={[st.shieldTitle, { color: colors.text }]}>{t('streak_rewards.shields_title')}</Text>
+              <Text style={[st.shieldDesc, { color: colors.textMid }]}>{t('streak_rewards.shields_desc')}</Text>
             </View>
             <View style={[st.shieldCountPill, { backgroundColor: streakShields > 0 ? colors.correctSoft : colors.wrongSoft }]}>
               <Text style={[st.shieldCount, { color: streakShields > 0 ? colors.correct : colors.wrong }]}>{streakShields}</Text>
@@ -170,7 +171,7 @@ export default function StreakRewardsScreen() {
 
         {/* Rewards timeline */}
         <View style={st.sectionHeader}>
-          <Text style={[st.sectionLabel, { color: colors.textLight }]}>STREAK REWARDS</Text>
+          <Text style={[st.sectionLabel, { color: colors.textLight }]}>{t('streak_rewards.rewards_section')}</Text>
           {reachableUnclaimed.length > 1 && (
             <Pressable
               onPress={claimAll}
@@ -481,7 +482,7 @@ function MilestoneNode({
           )}
           {claimed && (
             <View style={[st.nodeBadge, { backgroundColor: colors.correctSoft }]}>
-              <Text style={[st.nodeBadgeText, { color: colors.correct }]}>CLAIMED</Text>
+              <Text style={[st.nodeBadgeText, { color: colors.correct }]}>{t('streak_rewards.claimed')}</Text>
             </View>
           )}
         </View>

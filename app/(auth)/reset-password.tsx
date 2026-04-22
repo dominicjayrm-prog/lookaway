@@ -17,6 +17,7 @@
  *     them to the login screen
  */
 import React, { useEffect, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -98,7 +99,7 @@ function ResetPasswordScreen() {
           <View style={[styles.successIcon, { backgroundColor: colors.correctSoft }]}>
             <Ionicons name="checkmark" size={40} color={colors.correct} />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Password updated</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('auth.password_updated')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>Signing you back in…</Text>
         </View>
       </SafeAreaView>
@@ -112,7 +113,7 @@ function ResetPasswordScreen() {
           <View style={{ alignSelf: 'center' }}>
             <AnimatedBlink expression="thinking" size={96} entrance="spring" />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Set a new password</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('auth.set_new_password')}</Text>
           {email ? (
             <Text style={[styles.subtitle, { color: colors.textMid }]}>for {email}</Text>
           ) : (
@@ -122,7 +123,7 @@ function ResetPasswordScreen() {
           )}
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>New password</Text>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth.new_password')}</Text>
             <View style={[styles.inputWrap, { backgroundColor: colors.surface }]}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -147,7 +148,7 @@ function ResetPasswordScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Confirm password</Text>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth.confirm_password')}</Text>
             {/* The shared `input` style is `flex: 1, paddingVertical: 0`
                 because it was designed to sit inside an `inputWrap`
                 container (see the new-password field above). Applying
@@ -187,7 +188,7 @@ function ResetPasswordScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.primaryButtonText}>Update password</Text>
+              <Text style={styles.primaryButtonText}>{t('auth.update_password')}</Text>
             )}
           </Pressable>
         </View>

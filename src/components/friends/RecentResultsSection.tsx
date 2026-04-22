@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { borderRadius } from '@/src/theme/spacing';
@@ -21,7 +22,7 @@ export function RecentResultsSection({ results, onSelectResult }: RecentResultsS
 
   return (
     <>
-      <SectionLabel label="LAST 3 RESULTS" />
+      <SectionLabel label={t('friends.last_3_results')} />
       {results.map((r) => {
         const won = (r.my_score ?? 0) > (r.their_score ?? 0);
         const tied = r.my_score === r.their_score;

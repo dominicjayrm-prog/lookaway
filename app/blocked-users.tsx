@@ -9,6 +9,7 @@
  * screen.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, FlatList, Alert, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -108,7 +109,7 @@ export default function BlockedUsersScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Blocked users</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('blocked.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -119,7 +120,7 @@ export default function BlockedUsersScreen() {
       ) : blocked.length === 0 ? (
         <Animated.View entering={isWeb ? undefined : FadeIn.duration(300)} style={styles.emptyWrap}>
           <AnimatedBlink expression="normal" size={80} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No blocked users</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('blocked.empty')}</Text>
           <Text style={[styles.emptyBody, { color: colors.textMid }]}>
             When you block someone, they'll show up here. You can block a user from their profile in the Friends tab — they won't be able to send you friend requests or challenges.
           </Text>

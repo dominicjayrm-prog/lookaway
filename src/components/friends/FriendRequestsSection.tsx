@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -24,7 +25,7 @@ export function FriendRequestsSection({ requests, onAccept, onDecline }: FriendR
 
   return (
     <>
-      <SectionLabel label="FRIEND REQUESTS" />
+      <SectionLabel label={t('friends.friend_requests')} />
       {requests.map((r) => (
         <View key={r.id} style={[styles.requestCard, { backgroundColor: colors.card }]}>
           <FriendAvatar
@@ -37,7 +38,7 @@ export function FriendRequestsSection({ requests, onAccept, onDecline }: FriendR
           />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={[styles.requestName, { color: colors.text }]}>@{r.requester.username}</Text>
-            <Text style={{ fontSize: 12, color: colors.textMid }}>Wants to be friends</Text>
+            <Text style={{ fontSize: 12, color: colors.textMid }}>{t('friends.wants_to_be_friends')}</Text>
           </View>
           <Pressable
             style={[styles.acceptBtn, { backgroundColor: colors.accent }]}
@@ -45,7 +46,7 @@ export function FriendRequestsSection({ requests, onAccept, onDecline }: FriendR
             accessibilityRole="button"
             accessibilityLabel={`Accept friend request from ${r.requester.username}`}
           >
-            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Accept</Text>
+            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{t('friends.accept')}</Text>
           </Pressable>
           <Pressable
             style={styles.declineBtn}

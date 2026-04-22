@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -19,14 +20,14 @@ export function FriendsHeader({ username, onShare }: FriendsHeaderProps) {
   return (
     <View style={styles.header}>
       <View>
-        <Text style={[styles.title, { color: colors.text }]}>Friends</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('friends.title')}</Text>
         <Text style={[styles.subtitle, { color: colors.textMid }]}>@{username || 'player'}</Text>
       </View>
       <Pressable
         style={[styles.addButton, { backgroundColor: colors.accentSoft }]}
         onPress={onShare}
         accessibilityRole="button"
-        accessibilityLabel="Share invite link"
+        accessibilityLabel={t('friends.share_aria')}
       >
         <Ionicons name="person-add-outline" size={20} color={colors.accent} />
       </Pressable>

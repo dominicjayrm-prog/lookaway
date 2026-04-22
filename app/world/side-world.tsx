@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Animated as RNAnimated } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -194,10 +195,10 @@ function SideWorldMap() {
             <RNAnimated.View key={levelNum} style={[st.nodeWrapper, { left: px, top: pos.y - nodeSize / 2, width: nodeSize, height: nodeSize + 30, opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }, { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] }]}>
               <Pressable onPress={() => onNodeTap(levelNum)} style={{ alignItems: 'center' }}>
                 {checkpoint && <View style={[st.checkpointBadge, { backgroundColor: state === 'completed' || state === 'boss-completed' ? worldColor + '15' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'completed' || state === 'boss-completed' ? worldColor : '#B2BEC3' }]}>{checkpoint}</Text></View>}
-                {isBoss && <View style={[st.checkpointBadge, { backgroundColor: state === 'boss-completed' ? 'rgba(212,160,18,0.1)' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>FINALE</Text></View>}
+                {isBoss && <View style={[st.checkpointBadge, { backgroundColor: state === 'boss-completed' ? 'rgba(212,160,18,0.1)' : 'rgba(0,0,0,0.04)' }]}><Text style={[st.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>{t('world_map.finale_marker')}</Text></View>}
                 {renderNode(state, levelNum, worldColor, nodeSize, isBoss)}
                 {(state === 'completed' || state === 'boss-completed') && <View style={[st.starsRow, stars === 3 && { shadowColor: '#D4A012', shadowOpacity: 0.4, shadowRadius: 4, elevation: 2 }]}>{[1, 2, 3].map(s => <StarSvg key={s} size={13} filled={stars >= s} />)}</View>}
-                {state === 'current' && <Text style={[st.playLabel, { color: worldColor }]}>PLAY</Text>}
+                {state === 'current' && <Text style={[st.playLabel, { color: worldColor }]}>{t('world_map.play_label')}</Text>}
               </Pressable>
             </RNAnimated.View>
           );
@@ -215,7 +216,7 @@ function SideWorldMap() {
           pointerEvents="none"
         >
           <View style={st.markerPill}>
-            <Text style={[st.markerText, { color: worldColor }]}>START</Text>
+            <Text style={[st.markerText, { color: worldColor }]}>{t('world_map.start_marker')}</Text>
           </View>
         </View>
         {/* FINISH marker — anchored under the final level */}
@@ -241,7 +242,7 @@ function SideWorldMap() {
           <Text style={[st.bottomTitle, { color: themeColors.text }]}>Level {currentLevel}</Text>
           <Text style={[st.bottomSub, { color: themeColors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
         </View>
-        {currentLevel <= totalLevels && <Pressable style={[st.playButton, { backgroundColor: worldColor }]} onPress={() => goToLevel(currentLevel)}><Text style={st.playButtonText}>Play</Text></Pressable>}
+        {currentLevel <= totalLevels && <Pressable style={[st.playButton, { backgroundColor: worldColor }]} onPress={() => goToLevel(currentLevel)}><Text style={st.playButtonText}>{t('world_map.play')}</Text></Pressable>}
       </RNAnimated.View>
 
       {/* Popup */}
@@ -260,8 +261,8 @@ function SideWorldMap() {
               <Text style={[st.popupSub, { color: themeColors.textMid }]}>{campaign?.name} — {wName}</Text>
               <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={starCount(popupLevel) >= s} />)}</View>
               <View style={st.popupButtons}>
-                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); goToLevel(popupLevel); }}><Text style={st.popupPlayText}>Replay</Text></Pressable>
-                <Pressable style={[st.popupCloseBtn, { backgroundColor: themeColors.surface }]} onPress={() => setPopup(null)}><Text style={[st.popupCloseText, { color: themeColors.textMid }]}>Close</Text></Pressable>
+                <Pressable style={[st.popupPlayBtn, { backgroundColor: worldColor }]} onPress={() => { setPopup(null); goToLevel(popupLevel); }}><Text style={st.popupPlayText}>{t('world_map.replay')}</Text></Pressable>
+                <Pressable style={[st.popupCloseBtn, { backgroundColor: themeColors.surface }]} onPress={() => setPopup(null)}><Text style={[st.popupCloseText, { color: themeColors.textMid }]}>{t('world_map.close')}</Text></Pressable>
               </View>
             </View>
           </View>
