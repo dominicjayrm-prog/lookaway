@@ -73,6 +73,71 @@
       "failed_body": "Could not delete your account. Please try again or contact support."
     }
   },
+  "onboarding": {
+    "skip": "Skip",
+    "next_first": "Tell me more",
+    "next": "Continue",
+    "screen1": {
+      "title": "Your memory is\nmore powerful\nthan you think",
+      "subtitle": "You just need to train it."
+    },
+    "screen2": {
+      "label": "BACKED BY SCIENCE",
+      "title": "Memory training\nactually works",
+      "benefit_1_label": "faster recall",
+      "benefit_1_desc": "Memory training improves how quickly you retrieve information",
+      "benefit_2_label": "better focus",
+      "benefit_2_desc": "Visual memory exercises strengthen attention and concentration",
+      "benefit_3_label": "sharper with age",
+      "benefit_3_desc": "Consistent brain training helps maintain cognitive function long-term"
+    },
+    "screen3": {
+      "title": "Just 2 minutes a day",
+      "subtitle": "That's all it takes to build a sharper memory",
+      "first_week": "YOUR FIRST WEEK",
+      "streak_complete": "🔥 7-day streak - you did it!",
+      "day_1": "M",
+      "day_2": "T",
+      "day_3": "W",
+      "day_4": "T",
+      "day_5": "F",
+      "day_6": "S",
+      "day_7": "S",
+      "stat_session_value": "2 min",
+      "stat_session_label": "per session",
+      "stat_week_value": "14 min",
+      "stat_week_label": "per week",
+      "stat_year_value": "12 hrs",
+      "stat_year_label": "per year"
+    },
+    "screen4": {
+      "label": "HOW IT WORKS",
+      "title": "Simple, fun,\nsurprisingly addictive",
+      "gone": "Gone!",
+      "sample_q": "How many shapes?",
+      "step_1_title": "Memorise",
+      "step_1_desc": "Study the shapes and colours",
+      "step_2_title": "Go blank",
+      "step_2_desc": "The scene disappears",
+      "step_3_title": "Answer",
+      "step_3_desc": "Test your memory"
+    },
+    "screen5": {
+      "rating": "4.8 out of 5 · App Store",
+      "streak_days": "{count} day streak",
+      "testimonial_1_text": "I play every morning with my coffee. It's become my favourite way to wake up my brain.",
+      "testimonial_2_text": "Started to improve my focus at work. Now I'm addicted to getting 3 stars on every level.",
+      "testimonial_3_text": "My memory has genuinely improved. I remember shopping lists without writing them down now!"
+    },
+    "screen6": {
+      "title": "Ready to train\nyour memory?",
+      "subtitle": "Free to play. 2 minutes a day.\nYour brain will thank you.",
+      "feature_levels": "380+ levels",
+      "feature_modes": "6 game modes",
+      "feature_friends": "Challenge friends",
+      "cta": "Play Now"
+    }
+  },
   "profile": {
     "title": "Profile",
     "change_banner_aria": "Change banner",

@@ -73,6 +73,71 @@
       "failed_body": "No hemos podido eliminar tu cuenta. Inténtalo de nuevo o contacta con soporte."
     }
   },
+  "onboarding": {
+    "skip": "Saltar",
+    "next_first": "Cuéntame más",
+    "next": "Continuar",
+    "screen1": {
+      "title": "Tu memoria es\nmás poderosa\nde lo que crees",
+      "subtitle": "Solo tienes que entrenarla."
+    },
+    "screen2": {
+      "label": "RESPALDADO POR LA CIENCIA",
+      "title": "Entrenar la memoria\nde verdad funciona",
+      "benefit_1_label": "recuerdo más rápido",
+      "benefit_1_desc": "Entrenar la memoria mejora la rapidez con la que recuperas información",
+      "benefit_2_label": "mejor concentración",
+      "benefit_2_desc": "Los ejercicios de memoria visual refuerzan la atención y la concentración",
+      "benefit_3_label": "más agilidad con la edad",
+      "benefit_3_desc": "Entrenar el cerebro con constancia ayuda a mantener la función cognitiva a largo plazo"
+    },
+    "screen3": {
+      "title": "Solo 2 minutos al día",
+      "subtitle": "Es todo lo que necesitas para una memoria más ágil",
+      "first_week": "TU PRIMERA SEMANA",
+      "streak_complete": "🔥 ¡Racha de 7 días conseguida!",
+      "day_1": "L",
+      "day_2": "M",
+      "day_3": "X",
+      "day_4": "J",
+      "day_5": "V",
+      "day_6": "S",
+      "day_7": "D",
+      "stat_session_value": "2 min",
+      "stat_session_label": "por sesión",
+      "stat_week_value": "14 min",
+      "stat_week_label": "por semana",
+      "stat_year_value": "12 h",
+      "stat_year_label": "al año"
+    },
+    "screen4": {
+      "label": "CÓMO FUNCIONA",
+      "title": "Sencillo, divertido y\nsorprendentemente adictivo",
+      "gone": "¡Desaparecida!",
+      "sample_q": "¿Cuántas formas hay?",
+      "step_1_title": "Memoriza",
+      "step_1_desc": "Observa las formas y los colores",
+      "step_2_title": "En blanco",
+      "step_2_desc": "La escena desaparece",
+      "step_3_title": "Responde",
+      "step_3_desc": "Pon a prueba tu memoria"
+    },
+    "screen5": {
+      "rating": "4,8 sobre 5 · App Store",
+      "streak_days": "Racha de {count} días",
+      "testimonial_1_text": "Juego cada mañana con mi café. Se ha vuelto mi forma favorita de despertar el cerebro.",
+      "testimonial_2_text": "He empezado a concentrarme mejor en el trabajo. Ahora me obsesiona sacar 3 estrellas en cada nivel.",
+      "testimonial_3_text": "Mi memoria ha mejorado de verdad. Ya recuerdo la lista de la compra sin apuntarla."
+    },
+    "screen6": {
+      "title": "¿Listo para entrenar\ntu memoria?",
+      "subtitle": "Gratis. 2 minutos al día.\nTu cerebro te lo agradecerá.",
+      "feature_levels": "Más de 380 niveles",
+      "feature_modes": "6 modos de juego",
+      "feature_friends": "Retar a amigos",
+      "cta": "Jugar ahora"
+    }
+  },
   "profile": {
     "title": "Perfil",
     "change_banner_aria": "Cambiar banner",

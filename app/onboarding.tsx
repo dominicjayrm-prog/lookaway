@@ -18,6 +18,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import type { BlinkExpression } from '@/src/components/AnimatedBlink';
+import { t } from '@/src/i18n';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -146,13 +147,11 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
       </FadeIn>
 
       <FadeIn delay={500}>
-        <Text style={[s.heroTitle, { color: tc.text }]}>
-          Your memory is{'\n'}more powerful{'\n'}than you think
-        </Text>
+        <Text style={[s.heroTitle, { color: tc.text }]}>{t('onboarding.screen1.title')}</Text>
       </FadeIn>
 
       <FadeIn delay={800}>
-        <Text style={[s.heroSub, { color: tc.textMid }]}>You just need to train it.</Text>
+        <Text style={[s.heroSub, { color: tc.textMid }]}>{t('onboarding.screen1.subtitle')}</Text>
       </FadeIn>
     </View>
   );
@@ -162,9 +161,9 @@ function Screen1({ isVisible }: { isVisible: boolean }) {
 function Screen2({ isVisible }: { isVisible: boolean }) {
   const { colors: tc } = useTheme();
   const benefits = [
-    { stat: 23, label: 'faster recall', desc: 'Memory training improves how quickly you retrieve information', color: C.blue },
-    { stat: 31, label: 'better focus', desc: 'Visual memory exercises strengthen attention and concentration', color: C.green },
-    { stat: 40, label: 'sharper with age', desc: 'Consistent brain training helps maintain cognitive function long-term', color: C.accent },
+    { stat: 23, label: t('onboarding.screen2.benefit_1_label'), desc: t('onboarding.screen2.benefit_1_desc'), color: C.blue },
+    { stat: 31, label: t('onboarding.screen2.benefit_2_label'), desc: t('onboarding.screen2.benefit_2_desc'), color: C.green },
+    { stat: 40, label: t('onboarding.screen2.benefit_3_label'), desc: t('onboarding.screen2.benefit_3_desc'), color: C.accent },
   ];
 
   return (
@@ -172,9 +171,9 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
       <FadeIn delay={200}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <AnimatedBlink expression="memorise" size={36} entrance="fade" />
-          <Text style={s.sectionLabel}>BACKED BY SCIENCE</Text>
+          <Text style={s.sectionLabel}>{t('onboarding.screen2.label')}</Text>
         </View>
-        <Text style={[s.sectionTitle, { color: tc.text }]}>Memory training{'\n'}actually works</Text>
+        <Text style={[s.sectionTitle, { color: tc.text }]}>{t('onboarding.screen2.title')}</Text>
       </FadeIn>
 
       {benefits.map((b, i) => (
@@ -219,7 +218,16 @@ function Screen2({ isVisible }: { isVisible: boolean }) {
 // ═══ SCREEN 3: THE COMMITMENT ═══════════════════════════════
 function Screen3({ isVisible }: { isVisible: boolean }) {
   const { colors: tc } = useTheme();
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  // Week-day letters localise — Spanish uses L/M/X/J/V/S/D, not M/T/W/T/F/S/S.
+  const days = [
+    t('onboarding.screen3.day_1'),
+    t('onboarding.screen3.day_2'),
+    t('onboarding.screen3.day_3'),
+    t('onboarding.screen3.day_4'),
+    t('onboarding.screen3.day_5'),
+    t('onboarding.screen3.day_6'),
+    t('onboarding.screen3.day_7'),
+  ];
   const [filledDays, setFilledDays] = useState(0);
   const hasRunDays = useRef(false);
   useEffect(() => {
@@ -244,14 +252,14 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
   return (
     <View style={s.screenCenter}>
       <FadeIn delay={200}>
-        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>Just 2 minutes a day</Text>
-        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>That's all it takes to build a sharper memory</Text>
+        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>{t('onboarding.screen3.title')}</Text>
+        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>{t('onboarding.screen3.subtitle')}</Text>
       </FadeIn>
 
       <FadeIn delay={500}>
         <View style={[s.weekCard, { backgroundColor: tc.card }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <Text style={[s.weekLabel, { marginBottom: 0, color: tc.textLight }]}>YOUR FIRST WEEK</Text>
+            <Text style={[s.weekLabel, { marginBottom: 0, color: tc.textLight }]}>{t('onboarding.screen3.first_week')}</Text>
             <AnimatedBlink expression="streak" size={32} entrance="fade" />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -286,7 +294,7 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
           {filledDays >= 7 && (
             <ScaleIn delay={0} active={true}>
               <View style={s.streakBanner}>
-                <Text style={s.streakText}>{'🔥 7-day streak - you did it!'}</Text>
+                <Text style={s.streakText}>{t('onboarding.screen3.streak_complete')}</Text>
               </View>
             </ScaleIn>
           )}
@@ -296,9 +304,9 @@ function Screen3({ isVisible }: { isVisible: boolean }) {
       <FadeIn delay={900}>
         <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
           {[
-            { value: '2 min', label: 'per session', color: C.accent },
-            { value: '14 min', label: 'per week', color: C.blue },
-            { value: '12 hrs', label: 'per year', color: C.green },
+            { value: t('onboarding.screen3.stat_session_value'), label: t('onboarding.screen3.stat_session_label'), color: C.accent },
+            { value: t('onboarding.screen3.stat_week_value'), label: t('onboarding.screen3.stat_week_label'), color: C.blue },
+            { value: t('onboarding.screen3.stat_year_value'), label: t('onboarding.screen3.stat_year_label'), color: C.green },
           ].map((stat, i) => (
             <View key={i} style={[s.microStat, { backgroundColor: tc.card }]}>
               <Text style={{ fontSize: 16, fontWeight: '800', color: stat.color }}>{stat.value}</Text>
@@ -340,9 +348,9 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
   // pagination dots. Previously "The scene disappears completely"
   // wrapped to 3 lines and spilled over the bottom bar.
   const steps = [
-    { num: '1', title: 'Memorise', desc: 'Study the shapes and colours' },
-    { num: '2', title: 'Go blank', desc: 'The scene disappears' },
-    { num: '3', title: 'Answer', desc: 'Test your memory' },
+    { num: '1', title: t('onboarding.screen4.step_1_title'), desc: t('onboarding.screen4.step_1_desc') },
+    { num: '2', title: t('onboarding.screen4.step_2_title'), desc: t('onboarding.screen4.step_2_desc') },
+    { num: '3', title: t('onboarding.screen4.step_3_title'), desc: t('onboarding.screen4.step_3_desc') },
   ];
 
   return (
@@ -350,9 +358,9 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
       <FadeIn delay={200}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <AnimatedBlink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
-          <Text style={s.sectionLabel}>HOW IT WORKS</Text>
+          <Text style={s.sectionLabel}>{t('onboarding.screen4.label')}</Text>
         </View>
-        <Text style={[s.sectionTitle, { color: tc.text }]}>Simple, fun,{'\n'}surprisingly addictive</Text>
+        <Text style={[s.sectionTitle, { color: tc.text }]}>{t('onboarding.screen4.title')}</Text>
       </FadeIn>
 
       <FadeIn delay={400}>
@@ -387,13 +395,13 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
           <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
             <View style={[s.stepVisual, { height: 140, alignItems: 'center', justifyContent: 'center', backgroundColor: tc.card }]}>
               <AnimatedBlink expression="blank" size={56} />
-              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>Gone!</Text>
+              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{t('onboarding.screen4.gone')}</Text>
             </View>
           </RNAnimated.View>
           {/* Step 2: Answer */}
           <RNAnimated.View style={{ opacity: step2Opacity, position: 'absolute', width: '100%' }}>
             <View style={[s.stepVisual, { height: 140, padding: 14, backgroundColor: tc.card }]}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: tc.text, marginBottom: 8 }}>How many shapes?</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: tc.text, marginBottom: 8 }}>{t('onboarding.screen4.sample_q')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
                 {['4', '5', '6', '3'].map((v, i) => (
                   <View key={i} style={[
@@ -438,10 +446,14 @@ function Screen4({ isVisible }: { isVisible: boolean }) {
 // ═══ SCREEN 5: SOCIAL PROOF ═════════════════════════════════
 function Screen5({ isVisible }: { isVisible: boolean }) {
   const { colors: tc } = useTheme();
+  // Names stay in their native form across locales — "Sarah M." is
+  // a marketing proof point, not copy. Streak counts interpolate
+  // into a localised template because Spanish reads as "Racha de
+  // 42 días" rather than "42 day streak".
   const testimonials = [
-    { name: 'Sarah M.', streak: '42 day streak', text: "I play every morning with my coffee. It's become my favourite way to wake up my brain.", avatar: 'S', color: C.coral },
-    { name: 'James K.', streak: '28 day streak', text: "Started to improve my focus at work. Now I'm addicted to getting 3 stars on every level.", avatar: 'J', color: C.blue },
-    { name: 'Maria L.', streak: '67 day streak', text: 'My memory has genuinely improved. I remember shopping lists without writing them down now!', avatar: 'M', color: C.green },
+    { name: 'Sarah M.', streak: t('onboarding.screen5.streak_days', { count: 42 }), text: t('onboarding.screen5.testimonial_1_text'), avatar: 'S', color: C.coral },
+    { name: 'James K.', streak: t('onboarding.screen5.streak_days', { count: 28 }), text: t('onboarding.screen5.testimonial_2_text'), avatar: 'J', color: C.blue },
+    { name: 'Maria L.', streak: t('onboarding.screen5.streak_days', { count: 67 }), text: t('onboarding.screen5.testimonial_3_text'), avatar: 'M', color: C.green },
   ];
 
   return (
@@ -470,26 +482,26 @@ function Screen5({ isVisible }: { isVisible: boolean }) {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <AnimatedBlink expression="love" size={32} entrance="fade" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textMid }}>{'4.8 out of 5 \u00b7 App Store'}</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textMid }}>{t('onboarding.screen5.rating')}</Text>
           </View>
         </View>
       </FadeIn>
 
-      {testimonials.map((t, i) => (
+      {testimonials.map((item, i) => (
         <FadeIn key={i} delay={400 + i * 200}>
           <View style={[s.testimonialCard, { backgroundColor: tc.card }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <ScaleIn delay={500 + i * 200} active={isVisible}>
-                <View style={[s.avatar, { backgroundColor: `${t.color}15` }]}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: t.color }}>{t.avatar}</Text>
+                <View style={[s.avatar, { backgroundColor: `${item.color}15` }]}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: item.color }}>{item.avatar}</Text>
                 </View>
               </ScaleIn>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: tc.text }}>{t.name}</Text>
-                <Text style={{ fontSize: 9, color: t.color, fontWeight: '600' }}>{'🔥 '}{t.streak}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: tc.text }}>{item.name}</Text>
+                <Text style={{ fontSize: 9, color: item.color, fontWeight: '600' }}>{'🔥 '}{item.streak}</Text>
               </View>
             </View>
-            <Text style={{ fontSize: 12, color: tc.textMid, lineHeight: 18 }}>{`\u201c${t.text}\u201d`}</Text>
+            <Text style={{ fontSize: 12, color: tc.textMid, lineHeight: 18 }}>{`\u201c${item.text}\u201d`}</Text>
           </View>
         </FadeIn>
       ))}
@@ -536,18 +548,16 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
       </FadeIn>
 
       <FadeIn delay={400}>
-        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>Ready to train{'\n'}your memory?</Text>
-        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>
-          Free to play. 2 minutes a day.{'\n'}Your brain will thank you.
-        </Text>
+        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>{t('onboarding.screen6.title')}</Text>
+        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>{t('onboarding.screen6.subtitle')}</Text>
       </FadeIn>
 
       <FadeIn delay={600}>
         <View style={{ flexDirection: 'row', gap: 16, marginBottom: 28 }}>
           {[
-            { icon: '🎮', label: '380+ levels' },
-            { icon: '🧠', label: '6 game modes' },
-            { icon: '👥', label: 'Challenge friends' },
+            { icon: '🎮', label: t('onboarding.screen6.feature_levels') },
+            { icon: '🧠', label: t('onboarding.screen6.feature_modes') },
+            { icon: '👥', label: t('onboarding.screen6.feature_friends') },
           ].map((f, i) => (
             <ScaleIn key={i} delay={700 + i * 100} active={isVisible}>
               <View style={{ alignItems: 'center' }}>
@@ -587,7 +597,7 @@ function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean
                     style={{ flex: 1 }}
                   />
                 </RNAnimated.View>
-                <Text style={s.ctaText}>Play Now</Text>
+                <Text style={s.ctaText}>{t('onboarding.screen6.cta')}</Text>
               </LinearGradient>
             </RNAnimated.View>
           </Pressable>
@@ -683,7 +693,7 @@ export default function OnboardingFlow() {
       {/* Skip button */}
       {!isLast && (
         <Pressable onPress={() => goTo(TOTAL_SCREENS - 1)} style={[s.skipBtn, { top: insets.top + 12 }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>Skip</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{t('onboarding.skip')}</Text>
         </Pressable>
       )}
 
@@ -712,7 +722,7 @@ export default function OnboardingFlow() {
             style={s.continueBtn}
           >
             <Text style={{ fontSize: 15, fontWeight: '700', color: 'white' }}>
-              {current === 0 ? 'Tell me more' : 'Continue'}
+              {current === 0 ? t('onboarding.next_first') : t('onboarding.next')}
             </Text>
           </Pressable>
         </View>
