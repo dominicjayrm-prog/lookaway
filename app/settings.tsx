@@ -29,8 +29,8 @@ function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <Button title="Back" variant="ghost" onPress={() => router.back()} />
-        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        <Button title={t('common.back')} variant="ghost" onPress={() => router.back()} />
+        <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
         <View style={styles.spacer} />
       </View>
 
@@ -40,7 +40,7 @@ function SettingsScreen() {
           style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
           onPress={() => setShowPaywall(true)}
           accessibilityRole="button"
-          accessibilityLabel="Open Blanked Plus subscription"
+          accessibilityLabel={t('settings.plus.open_aria')}
         >
           <LinearGradient
             colors={['#6C5CE7', '#5B4CC8']}
@@ -54,7 +54,7 @@ function SettingsScreen() {
               </View>
               <View>
                 <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
-                <Text style={styles.plusSub}>Unlimited lives, no ads, and more</Text>
+                <Text style={styles.plusSub}>{t('settings.plus.tagline')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
@@ -64,20 +64,20 @@ function SettingsScreen() {
         {/* Preferences section — notification + sound toggles now each
             get their own dedicated screen so players can configure
             per-category without crowding this main page. */}
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>PREFERENCES</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('settings.preferences.section')}</Text>
         <Card style={styles.card}>
           <Pressable
             style={styles.navRow}
             onPress={() => router.push('/settings/notifications')}
             accessibilityRole="button"
-            accessibilityLabel="Open notification settings"
+            accessibilityLabel={t('settings.preferences.notifications.aria')}
           >
             <View style={[styles.navIcon, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="notifications-outline" size={18} color={colors.accent} />
             </View>
             <View style={styles.navText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Notifications</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>Streaks, challenges, friends, achievements</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.preferences.notifications.title')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('settings.preferences.notifications.help')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
@@ -86,14 +86,14 @@ function SettingsScreen() {
             style={styles.navRow}
             onPress={() => router.push('/settings/sounds')}
             accessibilityRole="button"
-            accessibilityLabel="Open sound and haptics settings"
+            accessibilityLabel={t('settings.preferences.sounds.aria')}
           >
             <View style={[styles.navIcon, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="volume-high-outline" size={18} color={colors.accent} />
             </View>
             <View style={styles.navText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Sound & haptics</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>Sound categories, haptic feedback</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.preferences.sounds.title')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('settings.preferences.sounds.help')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
@@ -115,7 +115,7 @@ function SettingsScreen() {
           </Pressable>
         </Card>
 
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>PURCHASES</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('settings.purchases.section')}</Text>
         <Card style={styles.card}>
           <Pressable
             style={styles.row}
@@ -130,17 +130,17 @@ function SettingsScreen() {
               if (status.noAds) store.setAdsRemoved();
 
               if (status.plus) {
-                Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
+                Alert.alert(t('settings.purchases.restored_title'), t('settings.purchases.restored_plus'));
               } else if (status.noAds) {
-                Alert.alert('Restored', 'Your ad-free purchase has been restored.');
+                Alert.alert(t('settings.purchases.restored_title'), t('settings.purchases.restored_ads'));
               } else {
-                Alert.alert('Nothing to restore', 'No previous purchases were found for this account.');
+                Alert.alert(t('settings.purchases.nothing_title'), t('settings.purchases.nothing_body'));
               }
             }}
             accessibilityRole="button"
-            accessibilityLabel="Restore purchases"
+            accessibilityLabel={t('settings.purchases.restore_aria')}
           >
-            <Text style={[styles.rowLabel, { color: colors.text }]}>Restore purchases</Text>
+            <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.purchases.restore')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
         </Card>
@@ -168,46 +168,46 @@ function SettingsScreen() {
                 } catch {}
               }
               Alert.alert(
-                'Tutorial reset',
-                'Tap the Play tab to see the quick tour again.',
+                t('settings.tutorial.reset_title'),
+                t('settings.tutorial.reset_body'),
               );
             }}
             accessibilityRole="button"
-            accessibilityLabel="Replay tutorial"
+            accessibilityLabel={t('settings.tutorial.replay_aria')}
           >
-            <Text style={[styles.rowLabel, { color: colors.text }]}>Replay tutorial</Text>
+            <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.tutorial.replay')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: colors.text }]}>Version</Text>
+            <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.version_label')}</Text>
             <Text style={[styles.rowValue, { color: colors.textMid }]}>1.0.0</Text>
           </View>
         </Card>
 
         {/* Delete account - required by Apple guideline 5.1.1(v) */}
-        <Text style={[styles.sectionLabel, { color: colors.textMid, marginTop: 24 }]}>DANGER ZONE</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid, marginTop: 24 }]}>{t('settings.danger.section')}</Text>
         <Card style={{ ...styles.card, borderColor: colors.wrong + '20', borderWidth: 1 } as any}>
           <Pressable
             style={styles.row}
             onPress={() => {
               Alert.alert(
-                'Delete your account?',
-                'This will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
+                t('settings.danger.confirm_title'),
+                t('settings.danger.confirm_body'),
                 [
-                  { text: 'Cancel', style: 'cancel' },
+                  { text: t('common.cancel'), style: 'cancel' },
                   {
-                    text: 'Delete permanently',
+                    text: t('settings.danger.confirm_cta'),
                     style: 'destructive',
                     onPress: () => {
                       // Second confirmation for safety
                       Alert.alert(
-                        'Are you absolutely sure?',
-                        'All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
+                        t('settings.danger.final_title'),
+                        t('settings.danger.final_body'),
                         [
-                          { text: 'Cancel', style: 'cancel' },
+                          { text: t('common.cancel'), style: 'cancel' },
                           {
-                            text: 'Yes, delete everything',
+                            text: t('settings.danger.final_cta'),
                             style: 'destructive',
                             onPress: async () => {
                               try {
@@ -236,7 +236,7 @@ function SettingsScreen() {
                                 router.replace('/(auth)/login');
                               } catch (e) {
                                 log.error('settings', 'account deletion failed', e);
-                                Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
+                                Alert.alert(t('common.error'), t('settings.danger.failed_body'));
                               }
                             },
                           },
@@ -248,10 +248,10 @@ function SettingsScreen() {
               );
             }}
             accessibilityRole="button"
-            accessibilityLabel="Delete account"
+            accessibilityLabel={t('settings.danger.delete_account_aria')}
           >
             <Ionicons name="trash-outline" size={18} color={colors.wrong} style={{ marginRight: 8 }} />
-            <Text style={[styles.rowLabel, { color: colors.wrong, flex: 1 }]}>Delete account</Text>
+            <Text style={[styles.rowLabel, { color: colors.wrong, flex: 1 }]}>{t('settings.danger.delete_account')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.wrong + '60'} />
           </Pressable>
         </Card>
@@ -278,7 +278,10 @@ function SettingsScreen() {
         visible={showPaywall}
         onDismiss={() => setShowPaywall(false)}
         onSubscribe={(plan) => {
-          Alert.alert('Blanked+', `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. IAP available when RevenueCat is configured.`);
+          Alert.alert(
+            t('settings.plus.plan_alert_title'),
+            plan === 'yearly' ? t('settings.plus.plan_alert_body_yearly') : t('settings.plus.plan_alert_body_monthly'),
+          );
           setShowPaywall(false);
         }}
       />

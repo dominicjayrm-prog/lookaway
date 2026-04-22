@@ -1,6 +1,37 @@
 {
+  "common": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "error": "Error",
+    "done": "Listo",
+    "close": "Cerrar",
+    "yes": "Sí",
+    "no": "No",
+    "player": "Jugador",
+    "go_back_aria": "Volver"
+  },
   "settings": {
+    "title": "Ajustes",
+    "plus": {
+      "open_aria": "Abrir la suscripción Blanked Plus",
+      "tagline": "Vidas ilimitadas, sin anuncios y mucho más",
+      "plan_alert_title": "Blanked+",
+      "plan_alert_body_monthly": "Plan mensual seleccionado. La compra integrada estará disponible cuando RevenueCat esté configurado.",
+      "plan_alert_body_yearly": "Plan anual seleccionado. La compra integrada estará disponible cuando RevenueCat esté configurado."
+    },
     "preferences": {
+      "section": "PREFERENCIAS",
+      "notifications": {
+        "title": "Notificaciones",
+        "help": "Rachas, retos, amigos y logros",
+        "aria": "Abrir ajustes de notificaciones"
+      },
+      "sounds": {
+        "title": "Sonido y vibración",
+        "help": "Categorías de sonido y vibración",
+        "aria": "Abrir ajustes de sonido y vibración"
+      },
       "language": {
         "title": "Idioma",
         "help": "English, Español",
@@ -11,6 +42,119 @@
         "option_en": "English",
         "option_es": "Español"
       }
+    },
+    "purchases": {
+      "section": "COMPRAS",
+      "restore": "Restaurar compras",
+      "restore_aria": "Restaurar compras",
+      "restored_title": "Restaurado",
+      "restored_plus": "Tu suscripción a Blanked+ se ha restaurado.",
+      "restored_ads": "Tu compra sin anuncios se ha restaurado.",
+      "nothing_title": "Nada que restaurar",
+      "nothing_body": "No se encontraron compras anteriores en esta cuenta."
+    },
+    "tutorial": {
+      "replay": "Repetir tutorial",
+      "replay_aria": "Repetir tutorial",
+      "reset_title": "Tutorial reiniciado",
+      "reset_body": "Toca la pestaña Jugar para volver a ver la introducción."
+    },
+    "version_label": "Versión",
+    "danger": {
+      "section": "ZONA DE PELIGRO",
+      "delete_account": "Eliminar cuenta",
+      "delete_account_aria": "Eliminar cuenta",
+      "confirm_title": "¿Eliminar tu cuenta?",
+      "confirm_body": "Esto eliminará de forma permanente tu perfil, progreso, amigos, cosméticos y todos los datos asociados a tu cuenta. Esta acción no se puede deshacer.",
+      "confirm_cta": "Eliminar de forma permanente",
+      "final_title": "¿Estás totalmente seguro?",
+      "final_body": "Todo tu progreso, gemas, rachas, cosméticos y conexiones con amigos se perderán para siempre.",
+      "final_cta": "Sí, eliminar todo",
+      "failed_body": "No hemos podido eliminar tu cuenta. Inténtalo de nuevo o contacta con soporte."
+    }
+  },
+  "profile": {
+    "title": "Perfil",
+    "change_banner_aria": "Cambiar banner",
+    "change_photo_aria": "Cambiar foto de perfil",
+    "frame_label": "Marco",
+    "expression_label": "Expresión",
+    "change_frame_aria": "Cambiar marco",
+    "change_expression_aria": "Cambiar expresión",
+    "change_frame_title": "Cambiar marco",
+    "change_expression_title": "Cambiar expresión",
+    "change_banner_title": "Cambiar banner",
+    "division_to_next": "{count} para el siguiente",
+    "divisions": {
+      "master": "Maestro",
+      "diamond": "Diamante",
+      "platinum": "Platino",
+      "gold": "Oro",
+      "silver": "Plata",
+      "bronze": "Bronce"
+    },
+    "stats": {
+      "memory": "Memoria",
+      "stars": "Estrellas",
+      "streak": "Racha",
+      "levels": "Niveles"
+    },
+    "cards": {
+      "achievements": "Logros",
+      "achievements_progress": "{unlocked}/{total} desbloqueados",
+      "achievements_aria": "Abrir logros",
+      "analytics": "Análisis de memoria",
+      "analytics_help": "Tu perfil cerebral y estadísticas",
+      "analytics_aria": "Abrir análisis de memoria",
+      "power_ups": "Potenciadores",
+      "power_ups_none": "Ninguno, cómpralos en la tienda",
+      "power_ups_one": "{count} potenciador disponible",
+      "power_ups_many": "{count} potenciadores disponibles",
+      "power_ups_aria": "Ver inventario de potenciadores",
+      "game_stats": "Estadísticas de juego",
+      "game_stats_detail": "Mejor: {best}% · {perfect} perfectos · {attempts} intentos",
+      "cosmetics": "Cosméticos",
+      "cosmetics_count": "{count} recolectados",
+      "cosmetics_aria": "Abrir tienda"
+    },
+    "sections": {
+      "appearance": "APARIENCIA",
+      "settings": "AJUSTES",
+      "legal": "LEGAL",
+      "account": "CUENTA",
+      "language": "IDIOMA"
+    },
+    "appearance": {
+      "dark_mode": "Modo oscuro",
+      "manual": "Manual",
+      "following_system": "Siguiendo el sistema",
+      "reset_label": "Restablecer al valor predeterminado",
+      "reset_aria": "Restablecer el tema al valor predeterminado del sistema"
+    },
+    "settings_rows": {
+      "sound": "Efectos de sonido",
+      "haptics": "Vibración",
+      "notifications": "Notificaciones"
+    },
+    "legal": {
+      "privacy": "Política de privacidad",
+      "terms": "Términos de uso"
+    },
+    "account": {
+      "blocked": "Usuarios bloqueados",
+      "sign_out": "Cerrar sesión"
+    },
+    "version_footer": "BLANKED v1.0.0",
+    "photo": {
+      "dismiss_aria": "Descartar opciones de foto",
+      "upload": "Subir foto",
+      "upload_aria": "Subir una foto de perfil",
+      "remove": "Eliminar foto",
+      "remove_aria": "Eliminar foto de perfil",
+      "permission_title": "Permiso necesario",
+      "permission_body": "Permite el acceso a tu galería de fotos.",
+      "upload_failed_title": "Error al subir",
+      "upload_failed_body": "No hemos podido sincronizar tu foto con la nube. Inténtalo de nuevo."
     }
   }
 }

@@ -1,6 +1,37 @@
 {
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "error": "Error",
+    "done": "Done",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "player": "Player",
+    "go_back_aria": "Go back"
+  },
   "settings": {
+    "title": "Settings",
+    "plus": {
+      "open_aria": "Open Blanked Plus subscription",
+      "tagline": "Unlimited lives, no ads, and more",
+      "plan_alert_title": "Blanked+",
+      "plan_alert_body_monthly": "Monthly plan selected. IAP available when RevenueCat is configured.",
+      "plan_alert_body_yearly": "Yearly plan selected. IAP available when RevenueCat is configured."
+    },
     "preferences": {
+      "section": "PREFERENCES",
+      "notifications": {
+        "title": "Notifications",
+        "help": "Streaks, challenges, friends, achievements",
+        "aria": "Open notification settings"
+      },
+      "sounds": {
+        "title": "Sound & haptics",
+        "help": "Sound categories, haptic feedback",
+        "aria": "Open sound and haptics settings"
+      },
       "language": {
         "title": "Language",
         "help": "English, Español",
@@ -11,6 +42,119 @@
         "option_en": "English",
         "option_es": "Español"
       }
+    },
+    "purchases": {
+      "section": "PURCHASES",
+      "restore": "Restore purchases",
+      "restore_aria": "Restore purchases",
+      "restored_title": "Restored",
+      "restored_plus": "Your Blanked+ subscription has been restored.",
+      "restored_ads": "Your ad-free purchase has been restored.",
+      "nothing_title": "Nothing to restore",
+      "nothing_body": "No previous purchases were found for this account."
+    },
+    "tutorial": {
+      "replay": "Replay tutorial",
+      "replay_aria": "Replay tutorial",
+      "reset_title": "Tutorial reset",
+      "reset_body": "Tap the Play tab to see the quick tour again."
+    },
+    "version_label": "Version",
+    "danger": {
+      "section": "DANGER ZONE",
+      "delete_account": "Delete account",
+      "delete_account_aria": "Delete account",
+      "confirm_title": "Delete your account?",
+      "confirm_body": "This will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.",
+      "confirm_cta": "Delete permanently",
+      "final_title": "Are you absolutely sure?",
+      "final_body": "All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.",
+      "final_cta": "Yes, delete everything",
+      "failed_body": "Could not delete your account. Please try again or contact support."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "change_banner_aria": "Change banner",
+    "change_photo_aria": "Change profile photo",
+    "frame_label": "Frame",
+    "expression_label": "Expression",
+    "change_frame_aria": "Change frame",
+    "change_expression_aria": "Change expression",
+    "change_frame_title": "Change Frame",
+    "change_expression_title": "Change Expression",
+    "change_banner_title": "Change Banner",
+    "division_to_next": "{count} to next",
+    "divisions": {
+      "master": "Master",
+      "diamond": "Diamond",
+      "platinum": "Platinum",
+      "gold": "Gold",
+      "silver": "Silver",
+      "bronze": "Bronze"
+    },
+    "stats": {
+      "memory": "Memory",
+      "stars": "Stars",
+      "streak": "Streak",
+      "levels": "Levels"
+    },
+    "cards": {
+      "achievements": "Achievements",
+      "achievements_progress": "{unlocked}/{total} unlocked",
+      "achievements_aria": "Open achievements",
+      "analytics": "Memory Analytics",
+      "analytics_help": "Your brain profile & stats",
+      "analytics_aria": "Open memory analytics",
+      "power_ups": "Power-ups",
+      "power_ups_none": "None, buy in the shop",
+      "power_ups_one": "{count} boost available",
+      "power_ups_many": "{count} boosts available",
+      "power_ups_aria": "View power-ups inventory",
+      "game_stats": "Game Stats",
+      "game_stats_detail": "Best: {best}% · {perfect} perfect · {attempts} attempts",
+      "cosmetics": "Cosmetics",
+      "cosmetics_count": "{count} collected",
+      "cosmetics_aria": "Open shop"
+    },
+    "sections": {
+      "appearance": "APPEARANCE",
+      "settings": "SETTINGS",
+      "legal": "LEGAL",
+      "account": "ACCOUNT",
+      "language": "LANGUAGE"
+    },
+    "appearance": {
+      "dark_mode": "Dark mode",
+      "manual": "Manual",
+      "following_system": "Following system",
+      "reset_label": "Reset to system default",
+      "reset_aria": "Reset theme to system default"
+    },
+    "settings_rows": {
+      "sound": "Sound effects",
+      "haptics": "Haptic feedback",
+      "notifications": "Notifications"
+    },
+    "legal": {
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Use"
+    },
+    "account": {
+      "blocked": "Blocked users",
+      "sign_out": "Sign out"
+    },
+    "version_footer": "BLANKED v1.0.0",
+    "photo": {
+      "dismiss_aria": "Dismiss photo options",
+      "upload": "Upload photo",
+      "upload_aria": "Upload a profile photo",
+      "remove": "Remove photo",
+      "remove_aria": "Remove profile photo",
+      "permission_title": "Permission needed",
+      "permission_body": "Please allow access to your photo library.",
+      "upload_failed_title": "Upload failed",
+      "upload_failed_body": "We couldn't sync your photo to the cloud. Please try again."
     }
   }
 }

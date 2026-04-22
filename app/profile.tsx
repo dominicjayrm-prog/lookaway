@@ -21,6 +21,8 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CosmeticPicker } from '@/src/components/CosmeticPicker';
 import { PowerUpViewer } from '@/src/components/PowerUpViewer';
+import { LanguagePicker } from '@/src/components/LanguagePicker';
+import { t } from '@/src/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
@@ -84,7 +86,7 @@ function ProfileScreen() {
   const hasBlankedPlus = isSubscribed();
   const completedCount = getCompletedLevelCount();
   const memoryScore = getMemoryScore();
-  const email = user?.email || 'Guest';
+  const email = user?.email || t('common.player');
   // Header handle: prefer the game store's username (hydrates from
   // cloud on sign-in). If for any reason the store hasn't caught up
   // yet — e.g. Apple sign-in where the username was set on another
@@ -107,7 +109,7 @@ function ProfileScreen() {
     })();
     return () => { cancelled = true; };
   }, [storeUsername, user?.id]);
-  const headerName = storeUsername ?? fetchedUsername ?? 'Player';
+  const headerName = storeUsername ?? fetchedUsername ?? t('common.player');
   const initials = headerName.slice(0, 2).toUpperCase();
   // Profile pic priority: server avatar_url (works across devices) →
   // locally cached data URI (works offline / during upload). The
@@ -150,12 +152,12 @@ function ProfileScreen() {
 
   // Division badge
   const divisionThresholds = [
-    { name: 'Master', emoji: '👑', color: '#D4A012', min: 800, next: null },
-    { name: 'Diamond', emoji: '⭐', color: '#74B9FF', min: 500, next: 800 },
-    { name: 'Platinum', emoji: '💎', color: '#A29BFE', min: 300, next: 500 },
-    { name: 'Gold', emoji: '🥇', color: '#D4A012', min: 150, next: 300 },
-    { name: 'Silver', emoji: '🥈', color: '#B2BEC3', min: 50, next: 150 },
-    { name: 'Bronze', emoji: '🥉', color: '#CD7F32', min: 0, next: 50 },
+    { name: t('profile.divisions.master'), emoji: '👑', color: '#D4A012', min: 800, next: null },
+    { name: t('profile.divisions.diamond'), emoji: '⭐', color: '#74B9FF', min: 500, next: 800 },
+    { name: t('profile.divisions.platinum'), emoji: '💎', color: '#A29BFE', min: 300, next: 500 },
+    { name: t('profile.divisions.gold'), emoji: '🥇', color: '#D4A012', min: 150, next: 300 },
+    { name: t('profile.divisions.silver'), emoji: '🥈', color: '#B2BEC3', min: 50, next: 150 },
+    { name: t('profile.divisions.bronze'), emoji: '🥉', color: '#CD7F32', min: 0, next: 50 },
   ];
   const division = divisionThresholds.find(d => totalStars >= d.min) ?? divisionThresholds[5];
   const toNext = division.next ? division.next - totalStars : 0;
@@ -173,6 +175,15 @@ function ProfileScreen() {
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [showPowerUpViewer, setShowPowerUpViewer] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const preferredLanguage = useGameStore((s) => s.preferredLanguage);
+  // Show the user what locale they're effectively on. 'system' stays
+  // labelled "Automatic" because they haven't pinned a choice — the
+  // picker sheet shows the same label on its first option.
+  const languageRowValue =
+    preferredLanguage === 'en' ? 'English' :
+    preferredLanguage === 'es' ? 'Español' :
+    t('settings.preferences.language.option_system');
 
   const frameData = getAvailableFrames(ownedCosmetics);
   const bannerData = getAvailableBanners(ownedCosmetics);
@@ -203,10 +214,10 @@ function ProfileScreen() {
                   setAvatarUrl(result.publicUrl);
                   setProfilePic(result.publicUrl);
                 } else {
-                  Alert.alert('Upload failed', result.error ?? "We couldn't sync your photo to the cloud. Please try again.");
+                  Alert.alert(t('profile.photo.upload_failed_title'), result.error ?? t('profile.photo.upload_failed_body'));
                 }
               })
-              .catch((e) => Alert.alert('Upload failed', e?.message ?? "We couldn't sync your photo to the cloud. Please try again."));
+              .catch((e) => Alert.alert(t('profile.photo.upload_failed_title'), e?.message ?? t('profile.photo.upload_failed_body')));
           }
         };
         reader.readAsDataURL(file);
@@ -214,7 +225,7 @@ function ProfileScreen() {
       input.click();
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow access to your photo library.'); return; }
+      if (status !== 'granted') { Alert.alert(t('profile.photo.permission_title'), t('profile.photo.permission_body')); return; }
       // base64: true so we get the raw bytes back alongside the file:// URI.
       // The previous path passed a naked file:// URI to uploadAvatar, which
       // parses it as a data: URI, fails the regex, and silently returned
@@ -284,9 +295,9 @@ function ProfileScreen() {
     } catch (e) {
       log.error('profile', 'account deletion failed', e);
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert('Could not delete your account. Please try again or contact support.');
+        window.alert(t('settings.danger.failed_body'));
       } else {
-        Alert.alert('Error', 'Could not delete your account. Please try again or contact support.');
+        Alert.alert(t('common.error'), t('settings.danger.failed_body'));
       }
     }
   }, [user?.id, router]);
@@ -297,11 +308,11 @@ function ProfileScreen() {
     // there. Native iOS/Android keep the prettier Alert chain.
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const first = window.confirm(
-        'Delete your account?\n\nThis will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
+        `${t('settings.danger.confirm_title')}\n\n${t('settings.danger.confirm_body')}`,
       );
       if (!first) return;
       const second = window.confirm(
-        'Are you absolutely sure?\n\nAll your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
+        `${t('settings.danger.final_title')}\n\n${t('settings.danger.final_body')}`,
       );
       if (!second) return;
       performAccountDeletion();
@@ -309,20 +320,20 @@ function ProfileScreen() {
     }
 
     Alert.alert(
-      'Delete your account?',
-      'This will permanently delete your profile, progress, friends, cosmetics, and all data associated with your account. This action cannot be undone.',
+      t('settings.danger.confirm_title'),
+      t('settings.danger.confirm_body'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete permanently',
+          text: t('settings.danger.confirm_cta'),
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Are you absolutely sure?',
-              'All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.',
+              t('settings.danger.final_title'),
+              t('settings.danger.final_body'),
               [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Yes, delete everything', style: 'destructive', onPress: performAccountDeletion },
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('settings.danger.final_cta'), style: 'destructive', onPress: performAccountDeletion },
               ],
             );
           },
@@ -338,9 +349,9 @@ function ProfileScreen() {
           onPress={() => { Haptics.selectionAsync().catch(() => {}); router.back(); }}
           style={styles.backButton}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('common.go_back_aria')}
         ><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile.title')}</Text>
         <View style={styles.headerSpacer} />
       </Animated.View>
 
@@ -353,7 +364,7 @@ function ProfileScreen() {
               onPress={() => setShowBannerPicker(true)}
               style={styles.bannerEditBtn}
               accessibilityRole="button"
-              accessibilityLabel="Change banner"
+              accessibilityLabel={t('profile.change_banner_aria')}
             >
               <Ionicons name="pencil" size={12} color="#FFF" />
             </Pressable>
@@ -363,7 +374,7 @@ function ProfileScreen() {
               onPress={() => setShowPhotoOptions(true)}
               style={styles.avatarContainer}
               accessibilityRole="button"
-              accessibilityLabel="Change profile photo"
+              accessibilityLabel={t('profile.change_photo_aria')}
             >
               <AvatarFrame frame={frame ?? null} size={80}>
                 {profilePic ? (
@@ -380,7 +391,7 @@ function ProfileScreen() {
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30', shadowColor: division.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
-              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` - ${toNext} to next` : ''}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` - ${t('profile.division_to_next', { count: toNext })}` : ''}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
 
@@ -390,19 +401,19 @@ function ProfileScreen() {
                 onPress={() => setShowFramePicker(true)}
                 style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}
                 accessibilityRole="button"
-                accessibilityLabel="Change frame"
+                accessibilityLabel={t('profile.change_frame_aria')}
               >
                 <Ionicons name="ellipse-outline" size={14} color={colors.accent} />
-                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Frame</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>{t('profile.frame_label')}</Text>
               </Pressable>
               <Pressable
                 onPress={() => setShowExprPicker(true)}
                 style={[styles.customPill, { backgroundColor: colors.card, borderColor: colors.border }]}
                 accessibilityRole="button"
-                accessibilityLabel="Change expression"
+                accessibilityLabel={t('profile.change_expression_aria')}
               >
                 <Ionicons name="happy-outline" size={14} color={colors.accent} />
-                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>Expression</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }}>{t('profile.expression_label')}</Text>
               </Pressable>
             </View>
           </View>
@@ -410,13 +421,13 @@ function ProfileScreen() {
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(200)}>
           <View style={[styles.statsRow, { backgroundColor: colors.card }]}>
-            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.accent }]}>{completedCount > 0 ? `${memoryScore}%` : '--'}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>Memory</Text></View>
+            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.accent }]}>{completedCount > 0 ? `${memoryScore}%` : '--'}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>{t('profile.stats.memory')}</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.gold }]}>{totalStars}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>Stars</Text></View>
+            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.gold }]}>{totalStars}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>{t('profile.stats.stars')}</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.wrong }]}>{streakCount}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>Streak</Text></View>
+            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.wrong }]}>{streakCount}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>{t('profile.stats.streak')}</Text></View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.correct }]}>{completedCount}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>Levels</Text></View>
+            <View style={styles.statItem}><Text style={[styles.statValue, { color: colors.correct }]}>{completedCount}</Text><Text style={[styles.statLabel, { color: colors.textMid }]}>{t('profile.stats.levels')}</Text></View>
           </View>
         </Animated.View>
 
@@ -427,15 +438,15 @@ function ProfileScreen() {
               style={styles.settingsRow}
               onPress={() => router.push('/achievements')}
               accessibilityRole="button"
-              accessibilityLabel="Open achievements"
+              accessibilityLabel={t('profile.cards.achievements_aria')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.goldSoft }]}>
                   <Ionicons name="medal" size={18} color={colors.gold} />
                 </View>
                 <View>
-                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Achievements</Text>
-                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{unlockedCount}/{totalTiers} unlocked</Text>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.cards.achievements')}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{t('profile.cards.achievements_progress', { unlocked: unlockedCount, total: totalTiers })}</Text>
                 </View>
               </View>
               <View style={styles.settingsRowRight}>
@@ -455,15 +466,15 @@ function ProfileScreen() {
               style={styles.settingsRow}
               onPress={() => router.push('/stats-space')}
               accessibilityRole="button"
-              accessibilityLabel="Open memory analytics"
+              accessibilityLabel={t('profile.cards.analytics_aria')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
                   <Ionicons name="analytics" size={18} color={colors.accent} />
                 </View>
                 <View>
-                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Memory Analytics</Text>
-                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>Your brain profile & stats</Text>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.cards.analytics')}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{t('profile.cards.analytics_help')}</Text>
                 </View>
               </View>
               <View style={styles.settingsRowRight}>
@@ -485,19 +496,22 @@ function ProfileScreen() {
               style={styles.settingsRow}
               onPress={() => setShowPowerUpViewer(true)}
               accessibilityRole="button"
-              accessibilityLabel="View power-ups inventory"
+              accessibilityLabel={t('profile.cards.power_ups_aria')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
                   <Ionicons name="flash" size={18} color={colors.blue} />
                 </View>
                 <View>
-                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Power-ups</Text>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.cards.power_ups')}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
                     {(() => {
                       const p = useGameStore.getState().powerUps;
                       const total = (p.slowTime ?? 0) + (p.peek ?? 0) + (p.fiftyFifty ?? 0) + (p.skip ?? 0) + (p.extra_life ?? 0);
-                      return total > 0 ? `${total} boost${total !== 1 ? 's' : ''} available` : 'None, buy in the shop';
+                      if (total === 0) return t('profile.cards.power_ups_none');
+                      return total === 1
+                        ? t('profile.cards.power_ups_one', { count: total })
+                        : t('profile.cards.power_ups_many', { count: total });
                     })()}
                   </Text>
                 </View>
@@ -510,24 +524,24 @@ function ProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(300)}>
-          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>APPEARANCE</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>{t('profile.sections.appearance')}</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <View style={styles.settingsRow}>
-              <View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: isDark ? 'rgba(124,108,247,0.12)' : colors.accentSoft }]}><Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.accent} /></View><View><Text style={[styles.settingsLabel, { color: colors.text }]}>Dark mode</Text><Text style={{ fontSize: 10, color: colors.textLight, marginTop: 1 }}>{isManual ? 'Manual' : 'Following system'}</Text></View></View>
+              <View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: isDark ? 'rgba(124,108,247,0.12)' : colors.accentSoft }]}><Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.accent} /></View><View><Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.appearance.dark_mode')}</Text><Text style={{ fontSize: 10, color: colors.textLight, marginTop: 1 }}>{isManual ? t('profile.appearance.manual') : t('profile.appearance.following_system')}</Text></View></View>
               <Switch value={isDark} onValueChange={(v) => { Haptics.selectionAsync().catch(() => {}); toggleTheme(); }} trackColor={{ true: colors.accent, false: colors.surface }} thumbColor="#FFFFFF" />
             </View>
-            {isManual && (<><View style={[styles.divider, { backgroundColor: colors.border }]} /><Pressable style={styles.settingsRow} onPress={resetToSystem} accessibilityRole="button" accessibilityLabel="Reset theme to system default"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}><Ionicons name="sync" size={16} color={colors.textMid} /></View><Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>Reset to system default</Text></View></Pressable></>)}
+            {isManual && (<><View style={[styles.divider, { backgroundColor: colors.border }]} /><Pressable style={styles.settingsRow} onPress={resetToSystem} accessibilityRole="button" accessibilityLabel={t('profile.appearance.reset_aria')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.surface }]}><Ionicons name="sync" size={16} color={colors.textMid} /></View><Text style={[styles.settingsLabel, { color: colors.textMid, fontSize: 13 }]}>{t('profile.appearance.reset_label')}</Text></View></Pressable></>)}
           </View>
         </Animated.View>
 
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(400)}>
-          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>SETTINGS</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>{t('profile.sections.settings')}</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
-            <SettingsRow icon="volume-high" label="Sound effects" colors={colors} storageKey="sound" />
+            <SettingsRow icon="volume-high" label={t('profile.settings_rows.sound')} colors={colors} storageKey="sound" />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SettingsRow icon="phone-portrait" label="Haptic feedback" colors={colors} storageKey="haptics" />
+            <SettingsRow icon="phone-portrait" label={t('profile.settings_rows.haptics')} colors={colors} storageKey="haptics" />
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <SettingsRow icon="notifications" label="Notifications" colors={colors} storageKey="notifications" />
+            <SettingsRow icon="notifications" label={t('profile.settings_rows.notifications')} colors={colors} storageKey="notifications" />
           </View>
         </Animated.View>
 
@@ -540,7 +554,7 @@ function ProfileScreen() {
                   <Ionicons name="bar-chart" size={18} color={colors.accent} />
                 </View>
                 <View>
-                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Game Stats</Text>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.cards.game_stats')}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
                     {(() => {
                       const lp = useGameStore.getState().levelProgress;
@@ -548,7 +562,7 @@ function ProfileScreen() {
                       const perfectLevels = entries.filter(e => e.stars === 3).length;
                       const totalAttempts = entries.reduce((sum, e) => sum + (e.attempts ?? 0), 0);
                       const bestScore = entries.length > 0 ? Math.max(...entries.map(e => e.bestScore ?? 0)) : 0;
-                      return `Best: ${bestScore}% · ${perfectLevels} perfect · ${totalAttempts} attempts`;
+                      return t('profile.cards.game_stats_detail', { best: bestScore, perfect: perfectLevels, attempts: totalAttempts });
                     })()}
                   </Text>
                 </View>
@@ -563,7 +577,7 @@ function ProfileScreen() {
             onPress={() => router.push('/(tabs)/shop')}
             style={[styles.settingsCard, { backgroundColor: colors.card }]}
             accessibilityRole="button"
-            accessibilityLabel="Open shop"
+            accessibilityLabel={t('profile.cards.cosmetics_aria')}
           >
             <View style={styles.settingsRow}>
               <View style={styles.settingsRowLeft}>
@@ -571,9 +585,9 @@ function ProfileScreen() {
                   <Ionicons name="sparkles" size={18} color={colors.gold} />
                 </View>
                 <View>
-                  <Text style={[styles.settingsLabel, { color: colors.text }]}>Cosmetics</Text>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.cards.cosmetics')}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>
-                    {ownedCosmetics.length} collected
+                    {t('profile.cards.cosmetics_count', { count: ownedCosmetics.length })}
                   </Text>
                 </View>
               </View>
@@ -582,21 +596,44 @@ function ProfileScreen() {
           </Pressable>
         </Animated.View>
 
+        <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(575)}>
+          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>{t('profile.sections.language')}</Text>
+          <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
+            <Pressable
+              style={styles.settingsRow}
+              onPress={() => { Haptics.selectionAsync().catch(() => {}); setShowLanguagePicker(true); }}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.preferences.language.title')}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="globe-outline" size={18} color={colors.accent} />
+                </View>
+                <View>
+                  <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('settings.preferences.language.title')}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{languageRowValue}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+            </Pressable>
+          </View>
+        </Animated.View>
+
         <Animated.View entering={isWeb ? undefined : FadeInDown.duration(400).delay(600)}>
           {/* Legal — privacy + terms open as in-app WebView screens */}
-          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>LEGAL</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMid }]}>{t('profile.sections.legal')}</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable
               style={styles.settingsRow}
               onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/privacy'); }}
               accessibilityRole="button"
-              accessibilityLabel="Privacy Policy"
+              accessibilityLabel={t('profile.legal.privacy')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.blueSoft }]}>
                   <Ionicons name="shield-checkmark-outline" size={18} color={colors.blue} />
                 </View>
-                <Text style={[styles.settingsLabel, { color: colors.text }]}>Privacy Policy</Text>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.legal.privacy')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
             </Pressable>
@@ -604,53 +641,53 @@ function ProfileScreen() {
               style={styles.settingsRow}
               onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/terms'); }}
               accessibilityRole="button"
-              accessibilityLabel="Terms of Use"
+              accessibilityLabel={t('profile.legal.terms')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.accentSoft }]}>
                   <Ionicons name="document-text-outline" size={18} color={colors.accent} />
                 </View>
-                <Text style={[styles.settingsLabel, { color: colors.text }]}>Terms of Use</Text>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.legal.terms')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
             </Pressable>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>ACCOUNT</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>{t('profile.sections.account')}</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card }]}>
             <Pressable
               style={styles.settingsRow}
               onPress={() => { if (!isWeb) { try { require('expo-haptics').selectionAsync(); } catch {} } router.push('/blocked-users'); }}
               accessibilityRole="button"
-              accessibilityLabel="Blocked users"
+              accessibilityLabel={t('profile.account.blocked')}
             >
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}>
                   <Ionicons name="ban-outline" size={18} color={colors.wrong} />
                 </View>
-                <Text style={[styles.settingsLabel, { color: colors.text }]}>Blocked users</Text>
+                <Text style={[styles.settingsLabel, { color: colors.text }]}>{t('profile.account.blocked')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
             </Pressable>
-            <Pressable style={styles.settingsRow} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out"><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>Sign out</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
+            <Pressable style={styles.settingsRow} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel={t('profile.account.sign_out')}><View style={styles.settingsRowLeft}><View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}><Ionicons name="log-out" size={18} color={colors.wrong} /></View><Text style={[styles.settingsLabel, { color: colors.wrong }]}>{t('profile.account.sign_out')}</Text></View><Ionicons name="chevron-forward" size={16} color={colors.textLight} /></Pressable>
           </View>
 
           {/* Danger zone — Delete account (Apple guideline 5.1.1(v)) */}
-          <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>DANGER ZONE</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textMid, marginTop: spacing.xl }]}>{t('settings.danger.section')}</Text>
           <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.wrong + '20', borderWidth: 1 }]}>
-            <Pressable style={styles.settingsRow} onPress={handleDeleteAccount} accessibilityRole="button" accessibilityLabel="Delete account">
+            <Pressable style={styles.settingsRow} onPress={handleDeleteAccount} accessibilityRole="button" accessibilityLabel={t('settings.danger.delete_account_aria')}>
               <View style={styles.settingsRowLeft}>
                 <View style={[styles.settingsIcon, { backgroundColor: colors.wrongSoft }]}>
                   <Ionicons name="trash-outline" size={18} color={colors.wrong} />
                 </View>
-                <Text style={[styles.settingsLabel, { color: colors.wrong }]}>Delete account</Text>
+                <Text style={[styles.settingsLabel, { color: colors.wrong }]}>{t('settings.danger.delete_account')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.wrong + '60'} />
             </Pressable>
           </View>
         </Animated.View>
 
-        <Text style={[styles.version, { color: colors.textLight }]}>BLANKED v1.0.0</Text>
+        <Text style={[styles.version, { color: colors.textLight }]}>{t('profile.version_footer')}</Text>
       </ScrollView>
 
       {/* Photo Options Modal (simple) */}
@@ -659,27 +696,27 @@ function ProfileScreen() {
           style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}
           onPress={() => setShowPhotoOptions(false)}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss photo options"
+          accessibilityLabel={t('profile.photo.dismiss_aria')}
         >
           <View style={[styles.photoSheet, { backgroundColor: colors.card, maxWidth: Platform.OS === 'web' ? 360 : undefined, width: '85%' }]}>
             <Pressable
               onPress={() => { handlePickPhoto(); setShowPhotoOptions(false); }}
               style={[styles.pickerUploadBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
               accessibilityRole="button"
-              accessibilityLabel="Upload a profile photo"
+              accessibilityLabel={t('profile.photo.upload_aria')}
             >
               <Ionicons name="camera" size={18} color={colors.accent} />
-              <Text style={[styles.pickerUploadText, { color: colors.text }]}>Upload photo</Text>
+              <Text style={[styles.pickerUploadText, { color: colors.text }]}>{t('profile.photo.upload')}</Text>
             </Pressable>
             {profilePic && (
               <Pressable
                 onPress={() => { setProfilePic(null); saveProfilePic(user?.id, null); setAvatarUrl(null); setShowPhotoOptions(false); if (user?.id) removeAvatar(user.id).catch(() => {/* cleanup is best-effort */}); }}
                 style={[styles.pickerUploadBtn, { backgroundColor: colors.wrongSoft, borderColor: colors.wrong + '30' }]}
                 accessibilityRole="button"
-                accessibilityLabel="Remove profile photo"
+                accessibilityLabel={t('profile.photo.remove_aria')}
               >
                 <Ionicons name="close-circle" size={18} color={colors.wrong} />
-                <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>Remove photo</Text>
+                <Text style={[styles.pickerUploadText, { color: colors.wrong }]}>{t('profile.photo.remove')}</Text>
               </Pressable>
             )}
           </View>
@@ -690,7 +727,7 @@ function ProfileScreen() {
       <CosmeticPicker
         visible={showFramePicker}
         onDismiss={() => setShowFramePicker(false)}
-        title="Change Frame"
+        title={t('profile.change_frame_title')}
         ownedItems={frameData.owned}
         lockedItems={frameData.locked}
         equippedId={eqFrame}
@@ -706,7 +743,7 @@ function ProfileScreen() {
       <CosmeticPicker
         visible={showExprPicker}
         onDismiss={() => setShowExprPicker(false)}
-        title="Change Expression"
+        title={t('profile.change_expression_title')}
         ownedItems={exprData.owned}
         lockedItems={exprData.locked}
         equippedId={eqExpr}
@@ -722,7 +759,7 @@ function ProfileScreen() {
       <CosmeticPicker
         visible={showBannerPicker}
         onDismiss={() => setShowBannerPicker(false)}
-        title="Change Banner"
+        title={t('profile.change_banner_title')}
         ownedItems={bannerData.owned}
         lockedItems={bannerData.locked}
         equippedId={equippedBanner}
@@ -739,6 +776,9 @@ function ProfileScreen() {
 
       {/* Power-up Viewer */}
       <PowerUpViewer visible={showPowerUpViewer} onDismiss={() => setShowPowerUpViewer(false)} />
+
+      {/* Language Picker */}
+      <LanguagePicker visible={showLanguagePicker} onDismiss={() => setShowLanguagePicker(false)} />
     </SafeAreaView>
   );
 }
