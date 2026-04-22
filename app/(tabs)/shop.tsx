@@ -246,14 +246,14 @@ function ShopTab() {
         return;
       }
       Alert.alert(
-        store.isSubscribed() ? `Unlock ${item.name}?` : `Watch a 30s ad to unlock ${item.name}?`,
+        store.isSubscribed() ? t('shop.unlock_plus_title', { name: item.name }) : t('shop.unlock_ad_title', { name: item.name }),
         store.isSubscribed()
-          ? 'Blanked+ members skip the ad and claim commons for free.'
-          : `You\u2019ll get it for free. ${remaining} ad unlock${remaining === 1 ? '' : 's'} left today.`,
+          ? t('shop.unlock_plus_body')
+          : (remaining === 1 ? t('shop.unlock_ad_body_one') : t('shop.unlock_ad_body_many', { count: remaining })),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: store.isSubscribed() ? 'Claim free' : 'Watch ad',
+            text: store.isSubscribed() ? t('shop.claim_free') : t('shop.watch_ad'),
             onPress: async () => {
               setAdLoadingId(item.id);
               const result = await showRewardedAd();
@@ -678,7 +678,7 @@ function ShopTab() {
                   <Pressable
                     onPress={() => handleBuyPowerUp(p, 3)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Buy 3 ${p.name} for ${p.bundleCost} gems`}
+                    accessibilityLabel={t('shop.bundle_aria', { name: p.name, cost: p.bundleCost })}
                   >
                     <Text style={{ fontSize: 10, fontWeight: '700', color: p.color, marginTop: 6 }}>
                       3 for {GEM} {p.bundleCost}
