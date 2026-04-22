@@ -55,7 +55,7 @@ function LanguagePickerComponent({ visible, onDismiss }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss} statusBarTranslucent>
-      <Pressable style={st.backdrop} onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Close language picker" />
+      <Pressable style={st.backdrop} onPress={onDismiss} accessibilityRole="button" accessibilityLabel={t('modals.close_language')} />
       <View style={[st.sheetWrap, { backgroundColor: colors.card }]} pointerEvents="box-none">
         <SafeAreaView edges={['bottom']}>
           <View style={st.handle} />

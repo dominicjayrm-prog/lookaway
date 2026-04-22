@@ -10,6 +10,7 @@
  *                     → denied  → PERMISSION_DENIED (with "Open Settings")
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View,
   Text,
@@ -210,7 +211,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
           <View style={st.permissionCard}>
             <View style={[st.permissionInner, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Ionicons name="camera-outline" size={32} color={colors.accent} />
-              <Text style={[st.permTitle, { color: colors.text }]}>Camera access needed</Text>
+              <Text style={[st.permTitle, { color: colors.text }]}>{t('modals.camera_needed')}</Text>
               <Text style={[st.permBody, { color: colors.textMid }]}>
                 {'Blanked needs camera access so you can scan a friend\u2019s QR code. You can enable it in Settings.'}
               </Text>
@@ -218,7 +219,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
                 onPress={() => Linking.openSettings()}
                 style={[st.permBtn, { backgroundColor: colors.accent }]}
               >
-                <Text style={st.permBtnText}>Open Settings</Text>
+                <Text style={st.permBtnText}>{t('modals.open_settings')}</Text>
               </Pressable>
             </View>
           </View>

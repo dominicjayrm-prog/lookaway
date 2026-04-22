@@ -2,8 +2,8 @@
  * Starter Pack Paywall — Bottom sheet modal.
  * One-time £0.99 purchase. Bouncing gift, shimmer CTA, item list.
  */
-import React
-import { t } from '@/src/i18n';, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal,
   Animated as RNAnimated, Dimensions, Platform,

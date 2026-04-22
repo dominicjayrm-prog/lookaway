@@ -3,8 +3,8 @@
  * "Welcome to Blanked! Your journey begins."
  * Only shows once ever, tracked by localStorage.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Circle as SvgCircle, Polygon } from 'react-native-svg';
 

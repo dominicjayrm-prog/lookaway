@@ -180,7 +180,7 @@ export default function MastermindIntroScreen() {
             onPress={handleEnter}
             style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
             accessibilityRole="button"
-            accessibilityLabel="Enter Mastermind"
+            accessibilityLabel={t('world_map.enter_mastermind')}
           >
             <LinearGradient
               colors={['#D4A012', '#B8860B'] as any}

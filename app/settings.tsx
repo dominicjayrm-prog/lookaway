@@ -264,7 +264,7 @@ function SettingsScreen() {
                 style={[styles.row, { paddingHorizontal: spacing.md }]}
                 onPress={() => useGameStore.getState().setReviewPromptVisible(true)}
                 accessibilityRole="button"
-                accessibilityLabel="Force review prompt"
+                accessibilityLabel={t('modals.force_review_aria')}
               >
                 <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>Force review prompt</Text>
                 <Ionicons name="star" size={18} color={colors.gold} />

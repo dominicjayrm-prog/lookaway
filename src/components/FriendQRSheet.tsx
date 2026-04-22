@@ -10,6 +10,7 @@
  * the feel is consistent with the rest of the app.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View,
   Text,
@@ -145,11 +146,11 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
               hitSlop={20}
               style={[st.closeBtn, { backgroundColor: colors.surface }]}
               accessibilityRole="button"
-              accessibilityLabel="Close QR code"
+              accessibilityLabel={t('modals.close_qr')}
             >
               <Ionicons name="close" size={22} color={colors.textMid} />
             </Pressable>
-            <Text style={[st.headerTitle, { color: colors.text }]}>Your QR code</Text>
+            <Text style={[st.headerTitle, { color: colors.text }]}>{t('modals.your_qr')}</Text>
             <View style={st.closePlaceholder} />
           </View>
 
@@ -192,7 +193,7 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
               ]}
             >
               <Ionicons name="share-outline" size={18} color="#FFFFFF" />
-              <Text style={st.shareText}>Share invite link instead</Text>
+              <Text style={st.shareText}>{t('modals.share_link_instead')}</Text>
             </Pressable>
           </View>
         </SafeAreaView>

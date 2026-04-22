@@ -239,7 +239,7 @@ function WorldMapScreen() {
           style={styles.backButton}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel="Back to journey"
+          accessibilityLabel={t('modals.back_to_journey_aria')}
         >
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
@@ -549,7 +549,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
           style={styles.popupBackdropTouchable}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss level info"
+          accessibilityLabel={t('modals.dismiss_level_info_aria')}
         />
         <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={[styles.popupCircle, { backgroundColor: worldColor }]}>
@@ -581,7 +581,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
               style={[styles.popupCloseBtn, { backgroundColor: colors.surface }]}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close_aria')}
             >
               <Text style={[styles.popupCloseText, { color: colors.textMid }]}>{t('world_map.close')}</Text>
             </Pressable>

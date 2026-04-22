@@ -12,8 +12,8 @@
  *
  * No Blink mascot on this modal — the mode letter icon is the hero.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal, Dimensions,
   Animated as RNAnimated,
@@ -205,7 +205,7 @@ export function ModeUnlockCelebration({ visible, modeId, onDismiss }: Props) {
               onPress={onDismiss}
               style={st.dismissBtn}
               accessibilityRole="button"
-              accessibilityLabel="Dismiss"
+              accessibilityLabel={t('common.dismiss_aria')}
             >
               <Text style={st.dismissText}>{t('celebrations.mode_unlock_dismiss')}</Text>
             </Pressable>

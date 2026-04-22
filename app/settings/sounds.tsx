@@ -81,7 +81,7 @@ export default function SoundSettingsScreen() {
           onPress={() => router.back()}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Back to settings"
+          accessibilityLabel={t('modals.back_to_settings_aria')}
           style={styles.backBtn}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />

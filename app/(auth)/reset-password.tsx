@@ -127,7 +127,7 @@ function ResetPasswordScreen() {
             <View style={[styles.inputWrap, { backgroundColor: colors.surface }]}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="At least 6 characters"
+                placeholder={t('common.password_placeholder')}
                 placeholderTextColor={colors.textLight}
                 value={password}
                 onChangeText={setPassword}

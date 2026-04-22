@@ -2,8 +2,8 @@
  * Cinematic celebration shown when the player completes the final level of a world.
  * Full-screen modal with expanding rings, particle burst, crown icon, stats summary.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon, Path } from 'react-native-svg';
 import { CELEBRATION_COLORS } from '@/src/utils/animations';

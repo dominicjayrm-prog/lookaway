@@ -2,8 +2,8 @@
  * PremiumCelebration — Cinematic gold celebration when subscribing to Blanked+.
  * 5-second sequence with gold rings, Blink star-eyes, cosmetic previews, confetti.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from './Blink';

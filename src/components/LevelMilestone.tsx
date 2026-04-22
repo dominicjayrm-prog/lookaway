@@ -3,8 +3,8 @@
  * Shows at 10, 25, 50, 100, 150, 200 levels completed.
  * Auto-dismisses after 2.5 seconds.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 

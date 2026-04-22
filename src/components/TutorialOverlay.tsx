@@ -1,5 +1,5 @@
-import React
-import { t } from '@/src/i18n';, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Dimensions, Pressable, Modal, Animated as RNAnimated } from 'react-native';
 import Svg, { Circle as SvgCircle, Polygon } from 'react-native-svg';
 

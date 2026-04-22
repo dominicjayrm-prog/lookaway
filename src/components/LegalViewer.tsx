@@ -11,6 +11,7 @@
  * Both paths show a spinner until the page finishes loading.
  */
 import React, { useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -41,7 +42,7 @@ export function LegalViewer({ url, title }: LegalViewerProps) {
           hitSlop={12}
           style={[st.backBtn, { backgroundColor: colors.surface }]}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('common.back_aria')}
         >
           <Ionicons name="chevron-back" size={20} color={colors.textMid} />
         </Pressable>

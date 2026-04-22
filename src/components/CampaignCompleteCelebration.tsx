@@ -2,8 +2,8 @@
  * The ultimate celebration — shown when the player completes ALL 200 classic levels.
  * Cinematic 4-second sequence with all 6 world colors bursting in sequence.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon, Path } from 'react-native-svg';
 

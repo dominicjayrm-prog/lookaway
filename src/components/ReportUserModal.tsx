@@ -11,6 +11,7 @@
  *    Alert.alert on both native and web (web uses our fallback)
  */
 import React, { useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, Alert, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -96,7 +97,7 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
             <View style={[styles.headerIcon, { backgroundColor: colors.wrongSoft }]}>
               <Ionicons name="flag-outline" size={22} color={colors.wrong} />
             </View>
-            <Text style={[styles.title, { color: colors.text }]}>Report user</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('modals.report_user')}</Text>
             <Text style={[styles.subtitle, { color: colors.textMid }]}>
               {reportedUsername ? `Why are you reporting @${reportedUsername}?` : 'Why are you reporting this user?'}
             </Text>
@@ -132,7 +133,7 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
           <TextInput
             value={details}
             onChangeText={(t) => setDetails(t.slice(0, 200))}
-            placeholder="Optional details (max 200 chars)"
+            placeholder={t('modals.report_details_placeholder')}
             placeholderTextColor={colors.textLight}
             multiline
             maxLength={200}
@@ -144,13 +145,13 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
             style={[styles.blockToggle, { borderColor: colors.border, backgroundColor: alsoBlock ? colors.wrongSoft : 'transparent' }]}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: alsoBlock }}
-            accessibilityLabel="Also block this user"
+            accessibilityLabel={t('modals.also_block_aria')}
           >
             <View style={[styles.checkbox, { borderColor: alsoBlock ? colors.wrong : colors.borderStrong, backgroundColor: alsoBlock ? colors.wrong : 'transparent' }]}>
               {alsoBlock && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.blockToggleLabel, { color: colors.text }]}>Also block this user</Text>
+              <Text style={[styles.blockToggleLabel, { color: colors.text }]}>{t('modals.also_block')}</Text>
               <Text style={[styles.blockToggleDesc, { color: colors.textLight }]}>
                 They won't be able to send friend requests or challenges. You can unblock anytime from your profile.
               </Text>
@@ -163,9 +164,9 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
               style={[styles.btn, { backgroundColor: colors.surface }]}
               disabled={submitting}
               accessibilityRole="button"
-              accessibilityLabel="Cancel report"
+              accessibilityLabel={t('modals.cancel_report_aria')}
             >
-              <Text style={[styles.btnText, { color: colors.textMid }]}>Cancel</Text>
+              <Text style={[styles.btnText, { color: colors.textMid }]}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
               onPress={handleSubmit}
@@ -175,7 +176,7 @@ export function ReportUserModal({ visible, reporterId, reportedId, reportedUsern
                 { backgroundColor: colors.wrong, opacity: !reason || submitting ? 0.5 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Submit report"
+              accessibilityLabel={t('modals.submit_report_aria')}
             >
               <Text style={styles.btnText}>{submitting ? 'Sending…' : 'Submit report'}</Text>
             </Pressable>

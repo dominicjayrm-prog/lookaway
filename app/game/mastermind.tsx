@@ -145,7 +145,7 @@ export default function MastermindGameScreen() {
             style={[st.playButton, { backgroundColor: GOLD }]}
             onPress={handleStart}
             accessibilityRole="button"
-            accessibilityLabel="Start level"
+            accessibilityLabel={t('modals.start_level_aria')}
           >
             <Text style={st.playButtonText}>{t('challenge.play')}</Text>
           </Pressable>

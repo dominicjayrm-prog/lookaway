@@ -274,7 +274,7 @@ function AuthScreen() {
                 style={styles.consentRow}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: consent }}
-                accessibilityLabel="I agree to the Terms of Use and Privacy Policy"
+                accessibilityLabel={t('modals.i_agree_tos_aria')}
               >
                 <View
                   style={[
@@ -394,7 +394,7 @@ function AuthScreen() {
               </View>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: focusedField === 'password' ? colors.accent : 'transparent' }]}
-                placeholder="At least 6 characters"
+                placeholder={t('common.password_placeholder')}
                 placeholderTextColor={colors.textLight}
                 value={password}
                 onChangeText={setPassword}

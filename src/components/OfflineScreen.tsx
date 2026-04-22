@@ -18,6 +18,7 @@
  * simplest honest UX given almost nothing works offline.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Blink } from '@/src/components/Blink';
@@ -52,9 +53,9 @@ export function OfflineScreen() {
           style={[styles.button, { backgroundColor: colors.accent }]}
           onPress={recheck}
           accessibilityRole="button"
-          accessibilityLabel="Check connection"
+          accessibilityLabel={t('modals.check_connection')}
         >
-          <Text style={styles.buttonText}>Try again</Text>
+          <Text style={styles.buttonText}>{t('common.try_again')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

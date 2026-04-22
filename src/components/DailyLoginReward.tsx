@@ -2,8 +2,8 @@
  * Daily Login Reward popup — shows a 7-day calendar with today's reward highlighted.
  * Beautiful on-brand design with animations.
  */
-import React
-import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';

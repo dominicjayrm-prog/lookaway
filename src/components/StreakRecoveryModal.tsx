@@ -16,6 +16,7 @@
  * only orchestrates the UI.
  */
 import React, { useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Platform, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -208,9 +209,9 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
                 { backgroundColor: colors.accent, opacity: pressed ? 0.9 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Start fresh"
+              accessibilityLabel={t('modals.start_fresh_aria')}
             >
-              <Text style={st.resetBtnText}>Start Fresh</Text>
+              <Text style={st.resetBtnText}>{t('modals.start_fresh')}</Text>
             </Pressable>
           ) : (
             // ── Recoverable: option cards + dismiss link ──
@@ -261,8 +262,8 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
                 <PriceBreakdownCard streak={streak} daysMissed={daysMissed} total={gemPrice} colors={colors} />
               )}
 
-              <Pressable onPress={onLetReset} style={st.dismissBtn} accessibilityRole="button" accessibilityLabel="Let my streak reset">
-                <Text style={[st.dismissText, { color: colors.accent }]}>Let it reset</Text>
+              <Pressable onPress={onLetReset} style={st.dismissBtn} accessibilityRole="button" accessibilityLabel={t('modals.let_streak_reset_aria')}>
+                <Text style={[st.dismissText, { color: colors.accent }]}>{t('modals.let_it_reset')}</Text>
               </Pressable>
             </>
           )}
@@ -365,7 +366,7 @@ function PriceBreakdownCard({
       </View>
       <View style={[st.breakdownDivider, { backgroundColor: colors.border }]} />
       <View style={st.breakdownRow}>
-        <Text style={[st.breakdownLabel, { color: colors.text, fontWeight: '700' }]}>Recovery cost</Text>
+        <Text style={[st.breakdownLabel, { color: colors.text, fontWeight: '700' }]}>{t('modals.recovery_cost')}</Text>
         <Text style={[st.breakdownTotal, { color: colors.accent }]}>{total} gems</Text>
       </View>
     </View>

@@ -114,7 +114,7 @@ export default function StreakRewardsScreen() {
           onPress={() => { Haptics.selectionAsync().catch(() => {}); router.back(); }}
           hitSlop={12}
           style={[st.backBtn, { backgroundColor: colors.surface }]}
-          accessibilityLabel="Back"
+          accessibilityLabel={t('common.back_aria')}
         >
           <Ionicons name="chevron-back" size={20} color={colors.textMid} />
         </Pressable>

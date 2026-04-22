@@ -105,7 +105,7 @@ export default function BlockedUsersScreen() {
           hitSlop={10}
           style={styles.backButton}
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('common.back_aria')}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
