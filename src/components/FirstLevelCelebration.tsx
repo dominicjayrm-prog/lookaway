@@ -164,7 +164,7 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
         </RNAnimated.View>
 
         <RNAnimated.View style={{ position: 'absolute', left: 20, right: 20, top: cy + 110, alignItems: 'center', opacity: bodyOpacity }}>
-          <Text style={st.body}>Welcome to Blanked.{'\n'}Your memory journey has begun.</Text>
+          <Text style={st.body}>{t('celebrations.first_level_body')}</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{

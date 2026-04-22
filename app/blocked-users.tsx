@@ -49,17 +49,17 @@ export default function BlockedUsersScreen() {
       if (ok) {
         setBlocked((prev) => (prev ?? []).filter((b) => b.id !== row.id));
       } else {
-        const msg = `Could not unblock @${row.username}. Please try again.`;
+        const msg = t('blocked.unblock_failed_body', { username: row.username });
         if (isWeb && typeof window !== 'undefined') (window as any).alert?.(msg);
-        else Alert.alert('Unblock failed', msg);
+        else Alert.alert(t('blocked.unblock_failed_title'), msg);
       }
     };
-    const confirmMsg = `Unblock @${row.username}? They'll be able to send you friend requests and challenges again.`;
+    const confirmMsg = t('blocked.unblock_confirm_body', { username: row.username });
     if (isWeb && typeof window !== 'undefined') {
       if ((window as any).confirm?.(confirmMsg)) run();
       return;
     }
-    Alert.alert('Unblock user', confirmMsg, [
+    Alert.alert(t('blocked.unblock_confirm_title'), confirmMsg, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('blocked.unblock'), onPress: run },
     ]);
@@ -80,14 +80,14 @@ export default function BlockedUsersScreen() {
         />
         <View style={{ flex: 1 }}>
           <Text style={[styles.username, { color: colors.text }]}>@{item.username}</Text>
-          <Text style={[styles.since, { color: colors.textLight }]}>Blocked {formatDate(item.created_at)}</Text>
+          <Text style={[styles.since, { color: colors.textLight }]}>{t('blocked.blocked_on', { date: formatDate(item.created_at) })}</Text>
         </View>
         <Pressable
           onPress={() => handleUnblock(item)}
           disabled={isUnblocking}
           style={[styles.unblockBtn, { backgroundColor: colors.surface, opacity: isUnblocking ? 0.5 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel={`Unblock ${item.username}`}
+          accessibilityLabel={t('blocked.unblock_aria', { username: item.username })}
         >
           <Text style={[styles.unblockText, { color: colors.text }]}>
             {isUnblocking ? t('blocked.unblocking') : t('blocked.unblock')}
@@ -122,7 +122,7 @@ export default function BlockedUsersScreen() {
           <AnimatedBlink expression="normal" size={80} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('blocked.empty')}</Text>
           <Text style={[styles.emptyBody, { color: colors.textMid }]}>
-            When you block someone, they'll show up here. You can block a user from their profile in the Friends tab — they won't be able to send you friend requests or challenges.
+            {t('blocked.empty_hint')}
           </Text>
         </Animated.View>
       ) : (

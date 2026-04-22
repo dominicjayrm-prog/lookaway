@@ -155,7 +155,22 @@
     "add_friends_hint": "Add friends to see rankings!",
     "no_players_yet": "No players yet.",
     "you": "You",
-    "stars_suffix": "stars"
+    "stars_suffix": "stars",
+    "qr_scanner_hint": "Point the camera at a friend's QR code",
+    "qr_invalid": "That's not a Blanked invite code",
+    "qr_own_title": "That's your own QR 😄",
+    "qr_own_body": "Show it to a friend so they can scan it.",
+    "qr_sent_title": "Request sent!",
+    "qr_sent_body": "They will see your request in their Friends tab.",
+    "qr_sent_cta": "Nice",
+    "qr_already_friends_title": "Already friends",
+    "qr_already_friends_body": "You're already connected with this player.",
+    "qr_pending_title": "Request pending",
+    "qr_pending_body": "A friend request between you two is already waiting.",
+    "qr_error_title": "Couldn't send request",
+    "qr_error_body": "Check your connection and try again.",
+    "qr_camera_loading": "Loading camera…",
+    "qr_camera_body": "Blanked needs camera access so you can scan a friend's QR code. You can enable it in Settings."
   },
   "time_ago": {
     "just_now": "Just now",
@@ -434,7 +449,8 @@
     "notif_prompt_enable": "Enable notifications",
     "notif_prompt_later": "Maybe later",
     "starter_pack_title": "Starter Pack",
-    "starter_pack_no_thanks": "No thanks"
+    "starter_pack_no_thanks": "No thanks",
+    "first_level_body": "Welcome to Blanked.\nYour memory journey has begun."
   },
   "achievements_page": {
     "title": "Achievements"
@@ -444,7 +460,14 @@
     "empty": "No blocked users",
     "unblock": "Unblock",
     "unblocking": "Unblocking…",
-    "unblock_title": "Unblock this user?"
+    "unblock_title": "Unblock this user?",
+    "unblock_confirm_title": "Unblock user",
+    "unblock_confirm_body": "Unblock @{username}? They'll be able to send you friend requests and challenges again.",
+    "unblock_failed_title": "Unblock failed",
+    "unblock_failed_body": "Could not unblock @{username}. Please try again.",
+    "empty_hint": "When you block someone, they'll show up here. You can block a user from their profile in the Friends tab — they won't be able to send you friend requests or challenges.",
+    "blocked_on": "Blocked {date}",
+    "unblock_aria": "Unblock {username}"
   },
   "username_page": {
     "disallowed": "That name isn't allowed.",
@@ -500,7 +523,10 @@
     "hide_password": "Hide password",
     "show_password": "Show password",
     "confirm_placeholder": "Type it again",
-    "update_password_aria": "Update password"
+    "update_password_aria": "Update password",
+    "update_password_failed": "Could not update password. Please try again.",
+    "password_too_short": "Password must be at least 6 characters",
+    "passwords_dont_match": "Passwords don't match"
   },
   "world_map": {
     "play": "Play",
@@ -523,9 +549,18 @@
   },
   "sound_settings": {
     "all_sounds": "All sounds",
+    "all_sounds_help": "Master toggle — turns every sound off",
     "categories_section": "CATEGORIES",
     "haptics_section": "HAPTICS",
-    "haptic_feedback": "Haptic feedback"
+    "haptic_feedback": "Haptic feedback",
+    "haptic_feedback_help": "Subtle vibration on taps, correct/wrong answers, and level complete",
+    "cat_ui_label": "Interface sounds",
+    "cat_ui_desc": "Button taps, transitions, menu navigation",
+    "cat_gameplay_label": "Gameplay feedback",
+    "cat_gameplay_desc": "Correct / wrong answers, timers, power-ups",
+    "cat_rewards_label": "Rewards & celebrations",
+    "cat_rewards_desc": "Stars, gems, level complete, streak milestones",
+    "preview_aria": "Preview {label}"
   },
   "streak_rewards": {
     "title": "Your Streak",
@@ -543,7 +578,12 @@
     "best_streak": "Best Streak",
     "levels_done": "Levels Done",
     "avg_speed": "Avg Speed",
-    "days_active": "Days Active"
+    "days_active": "Days Active",
+    "sample_data": "SAMPLE DATA",
+    "unlock_analytics_body": "Unlock Memory Analytics with Blanked+ and track your real brain performance over time.",
+    "upgrade_cta": "Upgrade to Blanked+",
+    "upgrade_sub": "Includes unlimited lives, 300 gems/month, and more",
+    "welcome_plus": "Welcome to Blanked+! Your real stats are loading…"
   },
   "challenge": {
     "loading_setup": "Setting up challenge...",
@@ -678,6 +718,57 @@
     "share_link": "Share invite link",
     "share_link_aria": "Share invite link"
   },
+  "buy_powerup_popup": {
+    "remaining_zero": "You have 0 remaining",
+    "buy_one": "Buy 1"
+  },
+  "game_indicators": {
+    "second_chance_armed": "Second Chance armed — one free retry if you miss by a lot",
+    "paused_count_now": "PAUSED — COUNT NOW",
+    "where_was_color_shape": "Where was the {color} {shape}?",
+    "shape_progress": "Shape {index}/{total}",
+    "points_suffix": "{count} pts",
+    "tap_in_order_next": "Tap in order — Next: #{n}",
+    "correct_progress": "{done}/{total} correct",
+    "scene_a_memorise": "SCENE A — Memorise!",
+    "scene_b_tap_changed": "SCENE B — Tap what changed!",
+    "safety_net_armed": "Safety Net armed — first wrong tap is free",
+    "offline_banner": "Offline — your progress will sync when you reconnect",
+    "you_need_pass": "You need 50% to pass",
+    "average_time": "Average time: {seconds}s",
+    "signing_you_back_in": "Signing you back in…",
+    "checking_opponent": "Checking your opponent's progress…",
+    "next_milestone": "Next milestone: {days} days (+{gems} gems)",
+    "notifications_get_when": "Get notified when:",
+    "notif_bullet_streak": "Your streak is at risk",
+    "notif_bullet_challenge": "A friend challenges you",
+    "notif_bullet_lives": "Your lives are full",
+    "tutorial_intro_body": "Your memory journey starts now.\nLet's see what you can remember.",
+    "replay_for_stars_one": "Replay to earn 1 more star",
+    "replay_for_stars_many": "Replay to earn {count} more stars"
+  },
+  "achievement_toast": {
+    "more_one": "And 1 more achievement!",
+    "more_many": "And {count} more achievements!"
+  },
+  "starter_pack": {
+    "cta_with_price": "Get Starter Pack - {price}",
+    "badge": "75% OFF — ONE TIME PURCHASE",
+    "green_banner": "200 gems, 3 boosts, and unlimited play for 1 hour!",
+    "item_gems_name": "200 Gems",
+    "item_gems_desc": "For power-ups & extras",
+    "item_slow_time_name": "Slow Time",
+    "item_slow_time_desc": "Extra seconds to memorise",
+    "item_peek_name": "Peek",
+    "item_peek_desc": "Glance back at the scene",
+    "item_5050_name": "50/50",
+    "item_5050_desc": "Remove 2 wrong answers",
+    "item_unlimited_name": "Unlimited lives",
+    "item_unlimited_desc": "Play without stopping",
+    "item_value_hour": "1hr",
+    "time_left_hours": "{h}h {m}m left",
+    "time_left_minutes": "{m}m left"
+  },
   "shop": {
     "title": "Shop",
     "plus_open_aria": "Open Blanked Plus subscription",
@@ -731,6 +822,7 @@
     "alert_starter_body": "200 gems, 3 boosts, and unlimited play for 1 hour.",
     "alert_ads_title": "Ads removed!",
     "alert_ads_body": "No more interstitial or banner ads. Enjoy!",
+    "loading_label": "LOADING…",
     "need_gems_banner_one": "You need 1 more gem to save your streak",
     "need_gems_banner_many": "You need {count} more gems to save your streak",
     "unlock_plus_title": "Unlock {name}?",

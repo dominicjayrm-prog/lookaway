@@ -155,7 +155,22 @@
     "add_friends_hint": "¡Añade amigos para ver la clasificación!",
     "no_players_yet": "Aún no hay jugadores.",
     "you": "Tú",
-    "stars_suffix": "estrellas"
+    "stars_suffix": "estrellas",
+    "qr_scanner_hint": "Apunta la cámara al código QR de un amigo",
+    "qr_invalid": "Ese no es un código de invitación de Blanked",
+    "qr_own_title": "Ese es tu propio QR 😄",
+    "qr_own_body": "Muéstraselo a un amigo para que pueda escanearlo.",
+    "qr_sent_title": "¡Solicitud enviada!",
+    "qr_sent_body": "Verá tu solicitud en su pestaña de Amigos.",
+    "qr_sent_cta": "Genial",
+    "qr_already_friends_title": "Ya sois amigos",
+    "qr_already_friends_body": "Ya estás conectado con este jugador.",
+    "qr_pending_title": "Solicitud pendiente",
+    "qr_pending_body": "Ya hay una solicitud de amistad en curso entre vosotros.",
+    "qr_error_title": "No se pudo enviar la solicitud",
+    "qr_error_body": "Comprueba tu conexión e inténtalo de nuevo.",
+    "qr_camera_loading": "Cargando cámara…",
+    "qr_camera_body": "Blanked necesita acceso a la cámara para que puedas escanear el QR de un amigo. Puedes activarlo en Ajustes."
   },
   "time_ago": {
     "just_now": "Ahora mismo",
@@ -553,7 +568,8 @@
     "notif_prompt_enable": "Activar notificaciones",
     "notif_prompt_later": "Quizá más tarde",
     "starter_pack_title": "Pack de inicio",
-    "starter_pack_no_thanks": "No, gracias"
+    "starter_pack_no_thanks": "No, gracias",
+    "first_level_body": "Bienvenido a Blanked.\nTu aventura de memoria ha comenzado."
   },
   "achievements_page": {
     "title": "Logros"
@@ -563,7 +579,14 @@
     "empty": "No hay usuarios bloqueados",
     "unblock": "Desbloquear",
     "unblocking": "Desbloqueando…",
-    "unblock_title": "¿Desbloquear a este usuario?"
+    "unblock_title": "¿Desbloquear a este usuario?",
+    "unblock_confirm_title": "Desbloquear usuario",
+    "unblock_confirm_body": "¿Desbloquear a @{username}? Podrá enviarte de nuevo solicitudes de amistad y retos.",
+    "unblock_failed_title": "No se pudo desbloquear",
+    "unblock_failed_body": "No se pudo desbloquear a @{username}. Inténtalo de nuevo.",
+    "empty_hint": "Cuando bloquees a alguien, aparecerá aquí. Puedes bloquear a un usuario desde su perfil en la pestaña de Amigos — no podrá enviarte solicitudes de amistad ni retos.",
+    "blocked_on": "Bloqueado el {date}",
+    "unblock_aria": "Desbloquear a {username}"
   },
   "username_page": {
     "disallowed": "Ese nombre no está permitido.",
@@ -619,7 +642,10 @@
     "hide_password": "Ocultar contraseña",
     "show_password": "Mostrar contraseña",
     "confirm_placeholder": "Escríbela de nuevo",
-    "update_password_aria": "Actualizar contraseña"
+    "update_password_aria": "Actualizar contraseña",
+    "update_password_failed": "No se pudo actualizar la contraseña. Inténtalo de nuevo.",
+    "password_too_short": "La contraseña debe tener al menos 6 caracteres",
+    "passwords_dont_match": "Las contraseñas no coinciden"
   },
   "world_map": {
     "play": "Jugar",
@@ -642,9 +668,18 @@
   },
   "sound_settings": {
     "all_sounds": "Todos los sonidos",
+    "all_sounds_help": "Interruptor general — apaga todos los sonidos",
     "categories_section": "CATEGORÍAS",
     "haptics_section": "VIBRACIÓN",
-    "haptic_feedback": "Vibración"
+    "haptic_feedback": "Vibración",
+    "haptic_feedback_help": "Vibración sutil al tocar, al acertar o fallar y al completar un nivel",
+    "cat_ui_label": "Sonidos de interfaz",
+    "cat_ui_desc": "Toques de botón, transiciones, navegación",
+    "cat_gameplay_label": "Sonidos del juego",
+    "cat_gameplay_desc": "Aciertos/fallos, temporizadores, potenciadores",
+    "cat_rewards_label": "Recompensas y celebraciones",
+    "cat_rewards_desc": "Estrellas, gemas, nivel completado, hitos de racha",
+    "preview_aria": "Escuchar {label}"
   },
   "streak_rewards": {
     "title": "Tu Racha",
@@ -662,7 +697,12 @@
     "best_streak": "Mejor racha",
     "levels_done": "Niveles hechos",
     "avg_speed": "Velocidad media",
-    "days_active": "Días activos"
+    "days_active": "Días activos",
+    "sample_data": "DATOS DE EJEMPLO",
+    "unlock_analytics_body": "Desbloquea el análisis de memoria con Blanked+ y sigue tu rendimiento cerebral real a lo largo del tiempo.",
+    "upgrade_cta": "Pásate a Blanked+",
+    "upgrade_sub": "Incluye vidas ilimitadas, 300 gemas/mes y más",
+    "welcome_plus": "¡Bienvenido a Blanked+! Cargando tus estadísticas reales…"
   },
   "challenge": {
     "loading_setup": "Preparando el reto...",
@@ -797,6 +837,57 @@
     "share_link": "Compartir enlace de invitación",
     "share_link_aria": "Compartir enlace de invitación"
   },
+  "buy_powerup_popup": {
+    "remaining_zero": "Te quedan 0",
+    "buy_one": "Comprar 1"
+  },
+  "game_indicators": {
+    "second_chance_armed": "Segunda oportunidad activa — un reintento gratis si fallas por mucho",
+    "paused_count_now": "EN PAUSA — CUENTA AHORA",
+    "where_was_color_shape": "¿Dónde estaba el {shape} {color}?",
+    "shape_progress": "Forma {index}/{total}",
+    "points_suffix": "{count} pts",
+    "tap_in_order_next": "Toca en orden — Siguiente: n.º{n}",
+    "correct_progress": "{done}/{total} correctas",
+    "scene_a_memorise": "ESCENA A — ¡Memoriza!",
+    "scene_b_tap_changed": "ESCENA B — ¡Toca lo que cambió!",
+    "safety_net_armed": "Red de seguridad activa — el primer fallo es gratis",
+    "offline_banner": "Sin conexión — tu progreso se sincronizará cuando vuelvas",
+    "you_need_pass": "Necesitas un 50% para pasar",
+    "average_time": "Tiempo medio: {seconds}s",
+    "signing_you_back_in": "Volviendo a iniciar sesión…",
+    "checking_opponent": "Comprobando el progreso de tu oponente…",
+    "next_milestone": "Próximo hito: {days} días (+{gems} gemas)",
+    "notifications_get_when": "Recibe notificaciones cuando:",
+    "notif_bullet_streak": "Tu racha esté en peligro",
+    "notif_bullet_challenge": "Un amigo te rete",
+    "notif_bullet_lives": "Tus vidas estén al máximo",
+    "tutorial_intro_body": "Tu aventura de memoria empieza ahora.\nA ver qué recuerdas.",
+    "replay_for_stars_one": "Vuelve a jugar para ganar 1 estrella más",
+    "replay_for_stars_many": "Vuelve a jugar para ganar {count} estrellas más"
+  },
+  "achievement_toast": {
+    "more_one": "¡Y 1 logro más!",
+    "more_many": "¡Y {count} logros más!"
+  },
+  "starter_pack": {
+    "cta_with_price": "Consigue el Pack de Inicio - {price}",
+    "badge": "75% DE DESCUENTO — PAGO ÚNICO",
+    "green_banner": "¡200 gemas, 3 potenciadores y juego ilimitado durante 1 hora!",
+    "item_gems_name": "200 Gemas",
+    "item_gems_desc": "Para potenciadores y extras",
+    "item_slow_time_name": "Tiempo Lento",
+    "item_slow_time_desc": "Segundos extra para memorizar",
+    "item_peek_name": "Ojear",
+    "item_peek_desc": "Echa otro vistazo a la escena",
+    "item_5050_name": "50/50",
+    "item_5050_desc": "Elimina 2 respuestas incorrectas",
+    "item_unlimited_name": "Vidas ilimitadas",
+    "item_unlimited_desc": "Juega sin parar",
+    "item_value_hour": "1h",
+    "time_left_hours": "Quedan {h}h {m}m",
+    "time_left_minutes": "Quedan {m}m"
+  },
   "shop": {
     "title": "Tienda",
     "plus_open_aria": "Abrir la suscripción Blanked Plus",
@@ -850,6 +941,7 @@
     "alert_starter_body": "200 gemas, 3 potenciadores y juego ilimitado durante 1 hora.",
     "alert_ads_title": "¡Anuncios eliminados!",
     "alert_ads_body": "Se acabaron los anuncios intersticiales y banners. ¡A disfrutar!",
+    "loading_label": "CARGANDO…",
     "need_gems_banner_one": "Te falta 1 gema para salvar tu racha",
     "need_gems_banner_many": "Te faltan {count} gemas para salvar tu racha",
     "unlock_plus_title": "¿Desbloquear {name}?",

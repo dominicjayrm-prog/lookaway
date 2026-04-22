@@ -240,7 +240,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
             {colourFilterActive && (
               <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(108,92,231,0.08)', alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
                 <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20, borderWidth: 2, borderColor: '#6C5CE7' }}>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#6C5CE7', letterSpacing: 1 }}>PAUSED — COUNT NOW</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#6C5CE7', letterSpacing: 1 }}>{t('game_indicators.paused_count_now')}</Text>
                 </View>
               </View>
             )}

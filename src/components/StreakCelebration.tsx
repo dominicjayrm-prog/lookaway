@@ -173,7 +173,7 @@ export const StreakCelebration = React.memo(function StreakCelebration({ visible
             {/* Next milestone */}
             <RNAnimated.View style={{ opacity: nextOpacity }}>
               {nextMilestone ? (
-                <Text style={[styles.nextText, { color: colors.textMid }]}>Next milestone: {nextMilestone.days} days (+{nextMilestone.gems} gems)</Text>
+                <Text style={[styles.nextText, { color: colors.textMid }]}>{t('game_indicators.next_milestone', { days: nextMilestone.days, gems: nextMilestone.gems })}</Text>
               ) : (
                 <Text style={[styles.nextText, { color: colors.gold }]}>{t('celebrations.streak_max')}</Text>
               )}

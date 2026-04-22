@@ -389,7 +389,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
 
       {/* Second Chance indicator so the player knows it's armed. */}
       {phase === 'recall' && secondChanceArmed && (
-        <Text style={[s.scoreText, { color: '#E17055', fontSize: 11 }]}>Second Chance armed — one free retry if you miss by a lot</Text>
+        <Text style={[s.scoreText, { color: '#E17055', fontSize: 11 }]}>{t('game_indicators.second_chance_armed')}</Text>
       )}
 
       {/* Mode power-ups — render below canvas during viewing + recall. */}

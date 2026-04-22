@@ -255,10 +255,10 @@ function ProfileScreen() {
                 // permanent URL, not the ephemeral file:// path.
                 saveProfilePic(user.id, result.publicUrl);
               } else {
-                Alert.alert('Upload failed', result.error ?? "We couldn't sync your photo to the cloud. Please try again.");
+                Alert.alert(t('profile.photo.upload_failed_title'), result.error ?? t('profile.photo.upload_failed_body'));
               }
             })
-            .catch((e) => Alert.alert('Upload failed', e?.message ?? "We couldn't sync your photo to the cloud. Please try again."));
+            .catch((e) => Alert.alert(t('profile.photo.upload_failed_title'), e?.message ?? t('profile.photo.upload_failed_body')));
         }
       }
     }

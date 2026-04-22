@@ -1,3 +1,4 @@
+import { t } from '@/src/i18n';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 
@@ -37,7 +38,7 @@ function OfflineBanner() {
   return (
     <View style={st.banner}>
       <View style={st.dot} />
-      <Text style={st.text}>Offline — your progress will sync when you reconnect</Text>
+      <Text style={st.text}>{t('game_indicators.offline_banner')}</Text>
     </View>
   );
 }

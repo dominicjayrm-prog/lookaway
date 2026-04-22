@@ -115,7 +115,7 @@ function SpotGameScreen() {
           <Text style={s.modeIcon}>{mag}</Text>
           <Text style={s.title}>{t('challenge.complete')}</Text>
           <Text style={s.scoreText}>{correctCount}/5</Text>
-          <Text style={s.sub}>Average time: {avgTime}s</Text>
+          <Text style={s.sub}>{t('game_indicators.average_time', { seconds: avgTime })}</Text>
           <View style={s.resultsRow}>
             {state.results.map((r,i)=>(<View key={i} style={[s.resultDot, {backgroundColor:r.correct?colors.correct:colors.wrong}]}/>))}
           </View>

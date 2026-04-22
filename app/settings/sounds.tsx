@@ -34,10 +34,19 @@ interface CategoryRow {
   previewSound: 'tap' | 'correct' | 'starPop';
 }
 
-const CATEGORIES: CategoryRow[] = [
-  { key: 'ui', icon: '\u270B', label: 'Interface sounds', description: 'Button taps, transitions, menu navigation', previewSound: 'tap' },
-  { key: 'gameplay', icon: '\uD83C\uDFAE', label: 'Gameplay feedback', description: 'Correct / wrong answers, timers, power-ups', previewSound: 'correct' },
-  { key: 'rewards', icon: '\u2728', label: 'Rewards & celebrations', description: 'Stars, gems, level complete, streak milestones', previewSound: 'starPop' },
+// Labels + descriptions are resolved at render time in the component
+// so the active locale is picked up without requiring module reload.
+interface CategorySeed {
+  key: keyof Omit<SoundPreferences, 'master'>;
+  icon: string;
+  labelKey: string;
+  descKey: string;
+  previewSound: 'tap' | 'correct' | 'starPop';
+}
+const CATEGORY_SEEDS: CategorySeed[] = [
+  { key: 'ui', icon: '\u270B', labelKey: 'sound_settings.cat_ui_label', descKey: 'sound_settings.cat_ui_desc', previewSound: 'tap' },
+  { key: 'gameplay', icon: '\uD83C\uDFAE', labelKey: 'sound_settings.cat_gameplay_label', descKey: 'sound_settings.cat_gameplay_desc', previewSound: 'correct' },
+  { key: 'rewards', icon: '\u2728', labelKey: 'sound_settings.cat_rewards_label', descKey: 'sound_settings.cat_rewards_desc', previewSound: 'starPop' },
 ];
 
 export default function SoundSettingsScreen() {
@@ -100,7 +109,7 @@ export default function SoundSettingsScreen() {
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: colors.text, fontWeight: '700' }]}>{t('sound_settings.all_sounds')}</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>Master toggle — turns every sound off</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('sound_settings.all_sounds_help')}</Text>
             </View>
             <Switch
               value={prefs.master}
@@ -113,15 +122,17 @@ export default function SoundSettingsScreen() {
         {/* Category toggles */}
         <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('sound_settings.categories_section')}</Text>
         <Card style={styles.card}>
-          {CATEGORIES.map((cat, i) => {
+          {CATEGORY_SEEDS.map((cat, i) => {
             const enabled = prefs.master && prefs[cat.key];
+            const label = t(cat.labelKey);
+            const description = t(cat.descKey);
             return (
               <React.Fragment key={cat.key}>
                 <View style={[styles.row, !prefs.master && { opacity: 0.4 }]}>
                   <Text style={styles.catIcon}>{cat.icon}</Text>
                   <View style={styles.catText}>
-                    <Text style={[styles.rowLabel, { color: colors.text }]}>{cat.label}</Text>
-                    <Text style={[styles.rowHelp, { color: colors.textLight }]}>{cat.description}</Text>
+                    <Text style={[styles.rowLabel, { color: colors.text }]}>{label}</Text>
+                    <Text style={[styles.rowHelp, { color: colors.textLight }]}>{description}</Text>
                   </View>
                   <Pressable
                     onPress={() => preview(cat.previewSound)}
@@ -129,7 +140,7 @@ export default function SoundSettingsScreen() {
                     disabled={!enabled}
                     style={[styles.previewBtn, { backgroundColor: enabled ? colors.accentSoft : colors.surface, opacity: enabled ? 1 : 0.5 }]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Preview ${cat.label}`}
+                    accessibilityLabel={t('sound_settings.preview_aria', { label })}
                   >
                     <Ionicons name="play" size={12} color={enabled ? colors.accent : colors.textLight} />
                   </Pressable>
@@ -140,7 +151,7 @@ export default function SoundSettingsScreen() {
                     trackColor={{ true: colors.accent, false: colors.surface }}
                   />
                 </View>
-                {i < CATEGORIES.length - 1 && (
+                {i < CATEGORY_SEEDS.length - 1 && (
                   <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 )}
               </React.Fragment>
@@ -155,7 +166,7 @@ export default function SoundSettingsScreen() {
             <Text style={styles.catIcon}>{'\uD83D\uDCF3'}</Text>
             <View style={styles.catText}>
               <Text style={[styles.rowLabel, { color: colors.text }]}>{t('sound_settings.haptic_feedback')}</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>Subtle vibration on taps, correct/wrong answers, and level complete</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('sound_settings.haptic_feedback_help')}</Text>
             </View>
             <Switch
               value={hapticsOn}

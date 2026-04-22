@@ -173,13 +173,13 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
       {phase === 'pause' && <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.tap_in_order')}</Text>}
       {phase === 'recall' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order — Next: #{nextExpected}</Text>
-          <Text style={[s.progressText, { color: colors.textLight }]}>{tappedOrder.length}/{shapes.length} correct</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('game_indicators.tap_in_order_next', { n: nextExpected })}</Text>
+          <Text style={[s.progressText, { color: colors.textLight }]}>{t('game_indicators.correct_progress', { done: tappedOrder.length, total: shapes.length })}</Text>
         </>
       )}
       {phase === 'wrong' && <Text style={[s.phaseLabel, { color: colors.wrong }]}>{t('modes.sequence_wrong')}</Text>}
       {phase === 'recall' && safetyNetArmed && (
-        <Text style={[s.progressText, { color: colors.correct }]}>Safety Net armed — first wrong tap is free</Text>
+        <Text style={[s.progressText, { color: colors.correct }]}>{t('game_indicators.safety_net_armed')}</Text>
       )}
 
       {phase !== 'round_done' && (

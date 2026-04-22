@@ -564,7 +564,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
               </View>
               {label ? <Text style={[styles.popupLabel, { color: colors.textMid }]}>{label}</Text> : null}
               {starsNeeded > 0 && (
-                <Text style={[styles.popupHint, { color: colors.accent }]}>Replay to earn {starsNeeded} more star{starsNeeded > 1 ? 's' : ''}</Text>
+                <Text style={[styles.popupHint, { color: colors.accent }]}>{starsNeeded === 1 ? t('game_indicators.replay_for_stars_one') : t('game_indicators.replay_for_stars_many', { count: starsNeeded })}</Text>
               )}
             </>
           )}

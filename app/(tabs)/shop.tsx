@@ -79,7 +79,7 @@ function CosmeticStatus({
     return <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>{t('shop_misc.owned')}</Text>;
   }
   if (isLoading) {
-    return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>LOADING…</Text>;
+    return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>{t('shop.loading_label')}</Text>;
   }
   if (item.adEligible) {
     return (
@@ -174,6 +174,7 @@ function ShopTab() {
       IAP_PRODUCT_IDS.GEMS_500,
       IAP_PRODUCT_IDS.GEMS_1200,
       IAP_PRODUCT_IDS.REMOVE_ADS,
+      IAP_PRODUCT_IDS.STARTER_PACK,
     ];
     getProductPrices(ids).then(setIapPrices).catch(() => {});
   }, []);
@@ -196,7 +197,7 @@ function ShopTab() {
           if (left <= 0) { setStarterPackAvailable(false); return; }
           const h = Math.floor(left / 3600000);
           const m = Math.floor((left % 3600000) / 60000);
-          setStarterPackTimeLeft(h > 0 ? `${h}h ${m}m left` : `${m}m left`);
+          setStarterPackTimeLeft(h > 0 ? t('starter_pack.time_left_hours', { h, m }) : t('starter_pack.time_left_minutes', { m }));
         };
         update();
         const interval = setInterval(update, 60000);
@@ -451,7 +452,7 @@ function ShopTab() {
               </View>
               <Text style={[styles.starterTimer, { color: colors.wrong }]}>{starterPackTimeLeft}</Text>
             </View>
-            <Text style={[styles.starterPrice, { color: colors.accent }]}>{'\u00A3'}0.99</Text>
+            <Text style={[styles.starterPrice, { color: colors.accent }]}>{iapPrices[IAP_PRODUCT_IDS.STARTER_PACK] ?? '\u00A30.99'}</Text>
           </Pressable>
         )}
 
@@ -634,7 +635,7 @@ function ShopTab() {
                 accessibilityLabel={t('shop.mode_filter_aria', { name: m.name })}
                 accessibilityState={{ selected: isActive }}
               >
-                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
+                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]} numberOfLines={1}>{m.name}</Text>
               </Pressable>
             );
           })}
