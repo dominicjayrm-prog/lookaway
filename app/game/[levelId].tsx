@@ -13,6 +13,7 @@ import { Badge } from '@/src/components/Badge';
 import { PowerUpBar } from '@/src/components/PowerUpBar';
 import { SlowTimeButton } from '@/src/components/SlowTimeButton';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
+import { t } from '@/src/i18n';
 import { useGameStore } from '@/src/store';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { fetchLevelById } from '@/src/data/levels';
@@ -263,20 +264,20 @@ function GameScreen() {
             else { clearTimeouts(); resetGame(); router.back(); }
           }}
           accessibilityRole="button"
-          accessibilityLabel="Quit level"
+          accessibilityLabel={t('game.quit_aria')}
           hitSlop={12}
         >
           <Text style={[styles.closeButton, { color: tc.textMid }]}>{String.fromCharCode(10005)}</Text>
         </Pressable>
-        <Badge label={`LEVEL ${level.levelNumber}`} />
+        <Badge label={t('game.level_badge', { number: level.levelNumber })} />
         <View style={styles.headerSpacer} />
       </View>
 
       {gameState === 'READY' && (
         <AnimatedOrView entering={enterFade} style={styles.centered}>
           <Text style={[styles.levelTitle, { color: tc.text }]}>{level.title}</Text>
-          <Text style={[styles.levelSubtitle, { color: tc.textMid }]}>{level.scenes.length} scene{level.scenes.length > 1 ? 's' : ''}</Text>
-          <Button title="Start" onPress={handleStart} style={styles.startButton} />
+          <Text style={[styles.levelSubtitle, { color: tc.textMid }]}>{level.scenes.length === 1 ? t('game.scenes_one') : t('game.scenes_many', { count: level.scenes.length })}</Text>
+          <Button title={t('game.start')} onPress={handleStart} style={styles.startButton} />
         </AnimatedOrView>
       )}
 
@@ -299,7 +300,7 @@ function GameScreen() {
             </>
           ) : (
             <>
-              <Text style={[styles.memoriseText, { color: tc.textMid }]}>Memorise this scene!</Text>
+              <Text style={[styles.memoriseText, { color: tc.textMid }]}>{t('game.memorise_prompt')}</Text>
               <SceneRenderer objects={currentScene.objects} visible={true} viewTime={currentScene.viewTime} />
             </>
           )}
@@ -311,8 +312,8 @@ function GameScreen() {
         <AnimatedOrView entering={enterFade} style={styles.centered}>
           <AnimatedBlink expression="blank" size={80} entrance="spring" />
           <View style={[styles.blankContainer, { marginTop: 16 }]}>
-            <Text style={[styles.blankText, { color: tc.accent }]}>Go blank!</Text>
-            <Text style={[styles.blankSubtext, { color: tc.textLight }]}>What do you remember?</Text>
+            <Text style={[styles.blankText, { color: tc.accent }]}>{t('game.go_blank')}</Text>
+            <Text style={[styles.blankSubtext, { color: tc.textLight }]}>{t('game.go_blank_sub')}</Text>
           </View>
         </AnimatedOrView>
       )}
@@ -337,9 +338,9 @@ function GameScreen() {
 
       {gameState === 'SCENE_SCORE' && (
         <AnimatedOrView entering={enterFade} style={styles.centered}>
-          <Text style={[styles.sceneScoreTitle, { color: tc.text }]}>Scene complete!</Text>
-          <Text style={[styles.sceneScoreBody, { color: tc.textMid }]}>{answers.filter((a) => a.isCorrect).length} / {answers.length} correct</Text>
-          <Button title="Next scene" onPress={handleNextScene} style={styles.startButton} />
+          <Text style={[styles.sceneScoreTitle, { color: tc.text }]}>{t('game.scene_complete')}</Text>
+          <Text style={[styles.sceneScoreBody, { color: tc.textMid }]}>{t('game.scene_score_body', { correct: answers.filter((a) => a.isCorrect).length, total: answers.length })}</Text>
+          <Button title={t('game.next_scene')} onPress={handleNextScene} style={styles.startButton} />
         </AnimatedOrView>
       )}
 
@@ -358,12 +359,12 @@ function GameScreen() {
               style={styles.quitBackdropTouch}
               onPress={() => setShowQuitConfirm(false)}
               accessibilityRole="button"
-              accessibilityLabel="Dismiss quit dialog"
+              accessibilityLabel={t('game.quit_dismiss_aria')}
             />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
-              <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[styles.quitTitle, { color: colors.text }]}>{t('game.quit_title')}</Text>
               <Text style={[styles.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
               </Text>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]}
@@ -376,17 +377,17 @@ function GameScreen() {
                   router.back();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={isSubscribed ? 'Leave the level' : 'Leave the level and lose a life'}
+                accessibilityLabel={isSubscribed ? t('game.quit_leave_aria_plus') : t('game.quit_leave_aria_free')}
               >
-                <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
+                <Text style={styles.quitBtnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]}
                 onPress={() => setShowQuitConfirm(false)}
                 accessibilityRole="button"
-                accessibilityLabel="Keep playing"
+                accessibilityLabel={t('game.keep_playing_aria')}
               >
-                <Text style={styles.quitBtnText}>Keep playing</Text>
+                <Text style={styles.quitBtnText}>{t('game.keep_playing')}</Text>
               </Pressable>
             </View>
           </View>

@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 
 import { TabTransition } from '@/src/components/TabTransition';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useGameStore } from '@/src/store';
 import {
@@ -129,27 +130,27 @@ function FriendsTab() {
         setSentRequests((prev) => new Set(prev).add(addresseeId));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         setToast({
-          title: `Request sent to @${addresseeUsername}`,
-          subtitle: 'They will see it in their Friends tab',
+          title: t('friends.request_sent_title', { username: addresseeUsername }),
+          subtitle: t('friends.request_sent_sub'),
           tone: 'success',
         });
       } else if (outcome === 'already_friends') {
         setSentRequests((prev) => new Set(prev).add(addresseeId));
-        setToast({ title: `You and @${addresseeUsername} are already friends`, tone: 'info' });
+        setToast({ title: t('friends.already_friends', { username: addresseeUsername }), tone: 'info' });
       } else if (outcome === 'request_pending') {
         setSentRequests((prev) => new Set(prev).add(addresseeId));
         setToast({
-          title: `Request to @${addresseeUsername} is pending`,
-          subtitle: 'Hold tight, they haven\u2019t responded yet',
+          title: t('friends.request_pending_title', { username: addresseeUsername }),
+          subtitle: t('friends.request_pending_sub'),
           tone: 'info',
         });
       } else if (outcome === 'self') {
-        setToast({ title: 'You can\u2019t add yourself', tone: 'error' });
+        setToast({ title: t('friends.self_error'), tone: 'error' });
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         setToast({
-          title: 'Couldn\u2019t send request',
-          subtitle: 'Check your connection and try again',
+          title: t('friends.request_failed_title'),
+          subtitle: t('friends.request_failed_sub'),
           tone: 'error',
         });
       }
@@ -188,7 +189,7 @@ function FriendsTab() {
       if (ok) {
         setToast({ title: `Declined @${opponentUsername}'s challenge`, tone: 'info' });
       } else {
-        setToast({ title: 'Couldn\u2019t decline challenge', subtitle: 'Try again in a moment', tone: 'error' });
+        setToast({ title: t('friends.decline_failed_title'), subtitle: t('friends.decline_failed_sub'), tone: 'error' });
         loadData();
       }
     },
@@ -203,9 +204,9 @@ function FriendsTab() {
       setChallenges((prev) => prev.filter((c) => c.id !== challengeId));
       const ok = await cancelOutgoingChallenge(challengeId, userId);
       if (ok) {
-        setToast({ title: 'Challenge cancelled', tone: 'info' });
+        setToast({ title: t('friends.challenge_cancelled'), tone: 'info' });
       } else {
-        setToast({ title: 'Couldn\u2019t cancel challenge', subtitle: 'Try again in a moment', tone: 'error' });
+        setToast({ title: t('friends.cancel_failed_title'), subtitle: t('friends.cancel_failed_sub'), tone: 'error' });
         loadData();
       }
     },
@@ -235,10 +236,10 @@ function FriendsTab() {
   const handleRemoveFriend = useCallback(
     async (friendshipId: string) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-      Alert.alert('Remove friend?', 'You can always add them back later.', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('friends.remove_title'), t('friends.remove_body'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('friends.remove_cta'),
           style: 'destructive',
           onPress: async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
@@ -434,7 +435,7 @@ function FriendsTab() {
 
           <FriendsListSection friends={friends} onSelectFriend={setSelectedFriend} />
 
-          <SectionLabel label="LEADERBOARD" />
+          <SectionLabel label={t('friends.leaderboard')} />
           <LeaderboardSection />
 
           <RecentResultsSection results={results} onSelectResult={handleSelectResult} />
