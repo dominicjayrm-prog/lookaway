@@ -90,7 +90,30 @@ export function applyLanguage(preference: LanguagePreference): ResolvedLanguage 
 
 /** Render a key. Thin wrapper so components never touch `i18n-js`
  *  directly — if we swap libraries (or roll our own) this is the
- *  single migration point. */
+ *  single migration point.
+ *
+ *  CRITICAL — we do our OWN interpolation rather than delegating to
+ *  i18n-js. The library's default placeholder regex matches `%{name}`
+ *  (Rails-style) or `{{name}}` (mustache-style), NOT the `{name}`
+ *  single-brace syntax our translation files use. Without this local
+ *  substitution every t('key', { foo: 1 }) would render the raw token
+ *  `{foo}` on screen — the bug a TestFlight user hit in v1.1.0
+ *  build 24 where "Day {count}! Keep it going 🔥" showed up
+ *  literally. We keep single-brace syntax in the JSON because it's
+ *  what most modern i18n tooling expects and it reads cleaner in
+ *  both languages; pre-processing here means none of the ~1000
+ *  existing translations need to change.
+ *
+ *  If a token in the string isn't found in `params`, the raw
+ *  `{token}` is preserved (visible to the developer, acceptable
+ *  fallback rather than i18n-js's "[missing …]" marker that makes
+ *  the app look broken). */
 export function t(key: string, params?: Record<string, string | number>): string {
-  return i18n.t(key, params);
+  const raw = i18n.t(key);
+  if (!params) return raw;
+  return raw.replace(/\{(\w+)\}/g, (match, token) => (
+    Object.prototype.hasOwnProperty.call(params, token)
+      ? String(params[token])
+      : match
+  ));
 }
