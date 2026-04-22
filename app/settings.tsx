@@ -16,7 +16,6 @@ import { typography } from '@/src/theme/typography';
 import { useGameStore } from '@/src/store';
 import { spacing } from '@/src/theme/spacing';
 import { restorePurchases } from '@/src/lib/purchases';
-import { useGameStore } from '@/src/store';
 
 function SettingsScreen() {
   const router = useRouter();
