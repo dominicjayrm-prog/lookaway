@@ -73,6 +73,39 @@
       "failed_body": "Could not delete your account. Please try again or contact support."
     }
   },
+  "paywall": {
+    "restore": "Restore",
+    "header_sub": "Train your memory without limits",
+    "benefits": {
+      "lives_title": "Unlimited lives",
+      "lives_desc": "Never wait to play again",
+      "gems_title": "300 gems every month",
+      "gems_desc": "Credited automatically on monthly or yearly plans",
+      "powerup_title": "Free daily power-up",
+      "powerup_desc": "Random boost every 24 hours",
+      "no_ads_title": "No ads",
+      "no_ads_desc": "Clean, uninterrupted play"
+    },
+    "plans": {
+      "yearly": "Yearly (Save £17)",
+      "best_value": "BEST VALUE",
+      "yearly_sub": "£1.66/month",
+      "yearly_price_suffix": "/year",
+      "monthly": "Monthly",
+      "monthly_price_suffix": "/month"
+    },
+    "cta_yearly": "Subscribe - £19.99/year",
+    "cta_monthly": "Subscribe - £2.99/month",
+    "cancel_anytime": "Cancel anytime in Settings",
+    "renewal_yearly": "Subscription auto-renews at £19.99/year unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.",
+    "renewal_monthly": "Subscription auto-renews at £2.99/month unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "restore_failed_title": "Could not restore",
+    "restore_failed_body": "Please try again later or contact support.",
+    "nothing_title": "Nothing to restore",
+    "nothing_body": "No previous purchases were found for this Apple ID."
+  },
   "out_of_lives": {
     "title": "Out of lives!",
     "countdown": "Next free life in ",

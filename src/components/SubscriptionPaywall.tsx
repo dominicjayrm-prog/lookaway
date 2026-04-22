@@ -28,6 +28,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { restorePurchases } from '@/src/lib/purchases';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { useGameStore } from '@/src/store';
+import { t } from '@/src/i18n';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const ACCENT = '#6C5CE7';
@@ -150,12 +151,14 @@ function NoAdsSvg() {
 }
 
 // ── Benefits data ─────────────────────────────────────────────────────
-const BENEFITS = [
-  { Icon: HeartSvg, color: '#FF6B6B', title: 'Unlimited lives', desc: 'Never wait to play again' },
-  { Icon: GemSvg, color: ACCENT, title: '300 gems every month', desc: 'Credited automatically on monthly or yearly plans' },
-  { Icon: StarSvg, color: '#D4A012', title: 'Free daily power-up', desc: 'Random boost every 24 hours' },
-  { Icon: NoAdsSvg, color: '#0984E3', title: 'No ads', desc: 'Clean, uninterrupted play' },
-];
+// Benefits resolve t() at render time — each row's title + desc
+// re-read on locale flip without a remount.
+const BENEFIT_KEYS = [
+  { Icon: HeartSvg, color: '#FF6B6B', titleKey: 'paywall.benefits.lives_title', descKey: 'paywall.benefits.lives_desc' },
+  { Icon: GemSvg, color: ACCENT, titleKey: 'paywall.benefits.gems_title', descKey: 'paywall.benefits.gems_desc' },
+  { Icon: StarSvg, color: '#D4A012', titleKey: 'paywall.benefits.powerup_title', descKey: 'paywall.benefits.powerup_desc' },
+  { Icon: NoAdsSvg, color: '#0984E3', titleKey: 'paywall.benefits.no_ads_title', descKey: 'paywall.benefits.no_ads_desc' },
+] as const;
 
 // ── Shimmer Button ────────────────────────────────────────────────────
 function ShimmerButton({ text, onPress }: { text: string; onPress: () => void }) {
@@ -177,7 +180,7 @@ function ShimmerButton({ text, onPress }: { text: string; onPress: () => void })
 }
 
 // ── Animated Benefit Row ──────────────────────────────────────────────
-function BenefitRow({ item, index, palette }: { item: typeof BENEFITS[number]; index: number; palette: PaywallPalette }) {
+function BenefitRow({ item, index, palette }: { item: typeof BENEFIT_KEYS[number]; index: number; palette: PaywallPalette }) {
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
   const slideAnim = useRef(new RNAnimated.Value(16)).current;
   const checkScale = useRef(new RNAnimated.Value(0)).current;
@@ -197,8 +200,8 @@ function BenefitRow({ item, index, palette }: { item: typeof BENEFITS[number]; i
         <item.Icon />
       </View>
       <View style={st.benefitText}>
-        <Text style={[st.benefitTitle, { color: palette.benefitTitle }]}>{item.title}</Text>
-        <Text style={[st.benefitDesc, { color: palette.benefitDesc }]}>{item.desc}</Text>
+        <Text style={[st.benefitTitle, { color: palette.benefitTitle }]}>{t(item.titleKey)}</Text>
+        <Text style={[st.benefitDesc, { color: palette.benefitDesc }]}>{t(item.descKey)}</Text>
       </View>
       <RNAnimated.View style={{ transform: [{ scale: checkScale }] }}>
         <Ionicons name="checkmark-circle" size={18} color="#00B894" />
@@ -271,15 +274,15 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           store.maybeGrantMonthlyPlusGems();
         }
         handleDismiss();
-        Alert.alert('Restored', 'Your Blanked+ subscription has been restored.');
+        Alert.alert(t('settings.purchases.restored_title'), t('settings.purchases.restored_plus'));
       } else if (status.noAds) {
         handleDismiss();
-        Alert.alert('Restored', 'Your ad-free purchase has been restored.');
+        Alert.alert(t('settings.purchases.restored_title'), t('settings.purchases.restored_ads'));
       } else {
-        Alert.alert('Nothing to restore', 'No previous purchases were found for this Apple ID.');
+        Alert.alert(t('paywall.nothing_title'), t('paywall.nothing_body'));
       }
     } catch {
-      Alert.alert('Could not restore', 'Please try again later or contact support.');
+      Alert.alert(t('paywall.restore_failed_title'), t('paywall.restore_failed_body'));
     }
   }
 
@@ -293,9 +296,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = plan === 'yearly'
-    ? `Subscribe - \u00A319.99/year`
-    : `Subscribe - \u00A32.99/month`;
+  const ctaText = plan === 'yearly' ? t('paywall.cta_yearly') : t('paywall.cta_monthly');
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -310,7 +311,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
           style={[st.header, { paddingTop: Math.max(insets.top + 8, 24) }]}
         >
           <Pressable style={st.restoreBtn} onPress={handleRestore} hitSlop={12}>
-            <Text style={st.restoreText}>Restore</Text>
+            <Text style={st.restoreText}>{t('paywall.restore')}</Text>
           </Pressable>
           <Pressable style={st.closeBtn} onPress={handleDismiss} hitSlop={12}>
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.6)" />
@@ -321,13 +322,13 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
             <AnimatedBlink expression="celebrate" size={50} entrance="spring" />
           </View>
           <Text style={st.headerTitle}>Blanked<Text style={{ fontWeight: '400', opacity: 0.75 }}>+</Text></Text>
-          <Text style={st.headerSub}>Train your memory without limits</Text>
+          <Text style={st.headerSub}>{t('paywall.header_sub')}</Text>
         </LinearGradient>
 
         {/* Content */}
         <ScrollView style={[st.content, { backgroundColor: palette.contentBg }]} contentContainerStyle={[st.contentInner, { paddingBottom: Math.max(insets.bottom + 12, 28) }]} showsVerticalScrollIndicator={false} bounces={false}>
           {/* Benefits */}
-          {BENEFITS.map((b, i) => <BenefitRow key={i} item={b} index={i} palette={palette} />)}
+          {BENEFIT_KEYS.map((b, i) => <BenefitRow key={i} item={b} index={i} palette={palette} />)}
 
           {/* Plan cards — stacked */}
           <View style={st.planSection}>
@@ -346,12 +347,12 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]}>Yearly (Save £17)</Text>
-                  <View style={st.bestValueBadge}><Text style={st.bestValueText}>BEST VALUE</Text></View>
+                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]}>{t('paywall.plans.yearly')}</Text>
+                  <View style={st.bestValueBadge}><Text style={st.bestValueText}>{t('paywall.plans.best_value')}</Text></View>
                 </View>
-                <Text style={[st.planSub, { color: palette.planSubInactive }, plan === 'yearly' && { color: palette.planSubActive }]}>{'\u00A3'}1.66/month</Text>
+                <Text style={[st.planSub, { color: palette.planSubInactive }, plan === "yearly" && { color: palette.planSubActive }]}>{t("paywall.plans.yearly_sub")}</Text>
               </View>
-              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{'\u00A3'}19.99<Text style={st.planPricePer}>/year</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{'\u00A3'}19.99<Text style={st.planPricePer}>{t('paywall.plans.yearly_price_suffix')}</Text></Text>
             </Pressable>
 
             {/* Monthly */}
@@ -368,9 +369,9 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
                 {plan === 'monthly' && <View style={st.planRadioDot} />}
               </View>
               <View style={st.planLeft}>
-                <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'monthly' && { color: palette.planNameActive }]}>Monthly</Text>
+                <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'monthly' && { color: palette.planNameActive }]}>{t('paywall.plans.monthly')}</Text>
               </View>
-              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'monthly' && { color: palette.planPriceActive }]}>{'\u00A3'}2.99<Text style={st.planPricePer}>/month</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'monthly' && { color: palette.planPriceActive }]}>{'\u00A3'}2.99<Text style={st.planPricePer}>{t('paywall.plans.monthly_price_suffix')}</Text></Text>
             </Pressable>
           </View>
 
@@ -379,24 +380,24 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
           {/* Reassurance */}
           <View style={st.reassurance}>
-            <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>Cancel anytime in Settings</Text>
+            <Text style={[st.reassuranceGrey, { color: palette.reassuranceMuted }]}>{t('paywall.cancel_anytime')}</Text>
           </View>
 
           {/* Auto-renewal disclosure — required by Apple guideline 3.1.2.
               Must be near the purchase CTA and clearly state: length of
               subscription, price per period, auto-renewal, how to cancel. */}
           <Text style={[st.renewalDisclosure, { color: palette.legalMuted }]}>
-            Subscription auto-renews at {plan === 'yearly' ? '\u00A319.99/year' : '\u00A32.99/month'} unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.
+            {plan === 'yearly' ? t('paywall.renewal_yearly') : t('paywall.renewal_monthly')}
           </Text>
 
           {/* Legal — functional links that route to the in-app WebView
               viewers. Restore is wired to the purchases library. */}
           <View style={st.legalRow}>
-            <Pressable onPress={openTerms} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Terms of Use</Text></Pressable>
+            <Pressable onPress={openTerms} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>{t('paywall.terms')}</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable onPress={openPrivacy} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Privacy Policy</Text></Pressable>
+            <Pressable onPress={openPrivacy} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>{t('paywall.privacy')}</Text></Pressable>
             <Text style={[st.legalDot, { color: palette.legalDot }]}>{'\u00B7'}</Text>
-            <Pressable onPress={handleRestore} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>Restore</Text></Pressable>
+            <Pressable onPress={handleRestore} hitSlop={8}><Text style={[st.legalLink, { color: palette.legalMuted }]}>{t('paywall.restore')}</Text></Pressable>
           </View>
         </ScrollView>
       </RNAnimated.View>
