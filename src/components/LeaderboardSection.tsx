@@ -94,10 +94,10 @@ function LeaderboardSection() {
         <View style={[st.divisionRow, { backgroundColor: myDivision.color + '10', borderColor: myDivision.color + '25' }]}>
           <Text style={st.divisionIcon}>{myDivision.icon}</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[st.divisionName, { color: myDivision.color }]}>{myDivision.name} Division</Text>
+            <Text style={[st.divisionName, { color: myDivision.color }]}>{t('social.division_label', { name: myDivision.name })}</Text>
             {nextDiv ? (
               <Text style={[st.divisionSub, { color: colors.textMid }]}>
-                {starsToNext} stars to {nextDiv.name}
+                {t('social.stars_to_next', { count: starsToNext, name: nextDiv.name })}
               </Text>
             ) : (
               <Text style={[st.divisionSub, { color: colors.textMid }]}>{t('social.top_division')}</Text>
@@ -122,7 +122,7 @@ function LeaderboardSection() {
       {!loading && entries.length === 0 && (
         <View style={st.emptyBox}>
           <Text style={[st.emptyText, { color: colors.textLight }]}>
-            {tab === 'friends' ? 'Add friends to see rankings!' : 'No players yet.'}
+            {tab === 'friends' ? t('social.add_friends_hint') : t('social.no_players_yet')}
           </Text>
         </View>
       )}
@@ -194,7 +194,7 @@ function LeaderboardRow({ entry, isMe, colors, isLast }: RowProps) {
       />
       <View style={st.nameCol}>
         <Text style={[st.username, { color: colors.text }, isMe && { fontWeight: '800' }]} numberOfLines={1}>
-          {isMe ? 'You' : `@${entry.username}`}
+          {isMe ? t('social.you') : `@${entry.username}`}
         </Text>
         <Text style={[st.divisionLabel, { color: entry.division.color }]}>
           {entry.division.icon} {entry.division.name}
@@ -202,7 +202,7 @@ function LeaderboardRow({ entry, isMe, colors, isLast }: RowProps) {
       </View>
       <View style={st.starsCol}>
         <Text style={[st.starsValue, { color: colors.gold }]}>{entry.total_stars}</Text>
-        <Text style={[st.starsLabel, { color: colors.textLight }]}>stars</Text>
+        <Text style={[st.starsLabel, { color: colors.textLight }]}>{t('social.stars_suffix')}</Text>
       </View>
     </View>
   );

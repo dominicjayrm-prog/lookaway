@@ -16,6 +16,35 @@ import {
   type WeeklyGoal,
 } from '@/src/utils/weeklyChallenges';
 
+/** Map a WeeklyGoal id to its translation keys. The goal records are
+ *  persisted to AsyncStorage with their English title/description burned
+ *  in, so we resolve localised copy at render time via this table. */
+const WEEKLY_KEY_MAP: Record<string, { titleKey: string; descKey: string }> = {
+  challenge_friend:     { titleKey: 'weekly.challenge_friend_title',    descKey: 'weekly.challenge_friend_desc' },
+  play_5_days:          { titleKey: 'weekly.play_5_days_title',         descKey: 'weekly.play_5_days_desc' },
+  play_every_day:       { titleKey: 'weekly.play_every_day_title',      descKey: 'weekly.play_every_day_desc' },
+  play_3_modes:         { titleKey: 'weekly.three_modes_title',         descKey: 'weekly.three_modes_desc' },
+  complete_15_levels:   { titleKey: 'weekly.complete_15_title',         descKey: 'weekly.complete_15_desc' },
+  complete_25_levels:   { titleKey: 'weekly.complete_25_title',         descKey: 'weekly.complete_25_desc' },
+  correct_streak_5:     { titleKey: 'weekly.streak_5_title',            descKey: 'weekly.streak_5_desc' },
+  earn_25_stars:        { titleKey: 'weekly.earn_25_stars_title',       descKey: 'weekly.earn_25_stars_desc' },
+  answer_75_correct:    { titleKey: 'weekly.answer_75_title',           descKey: 'weekly.answer_75_desc' },
+  no_powerups_10:       { titleKey: 'weekly.no_powerups_title',         descKey: 'weekly.no_powerups_desc' },
+  no_life_loss_5:       { titleKey: 'weekly.no_life_loss_title',        descKey: 'weekly.no_life_loss_desc' },
+  perfect_3_levels:     { titleKey: 'weekly.perfect_3_title',           descKey: 'weekly.perfect_3_desc' },
+  improve_5_stars:      { titleKey: 'weekly.improve_stars_5_title',     descKey: 'weekly.improve_stars_5_desc' },
+  speed_accuracy_10:    { titleKey: 'weekly.fast_10_title',             descKey: 'weekly.fast_10_desc' },
+  flawless_3:           { titleKey: 'weekly.flawless_3_title',          descKey: 'weekly.flawless_3_desc' },
+  score_95_on_5:        { titleKey: 'weekly.score_95_5_title',          descKey: 'weekly.score_95_5_desc' },
+  correct_streak_20:    { titleKey: 'weekly.streak_20_title',           descKey: 'weekly.streak_20_desc' },
+  endurance_8:          { titleKey: 'weekly.endurance_8_title',         descKey: 'weekly.endurance_8_desc' },
+};
+
+function localisedTitle(goal: WeeklyGoal): string {
+  const m = WEEKLY_KEY_MAP[goal.id];
+  return m ? t(m.titleKey) : goal.title;
+}
+
 function WeeklyChallengesCard() {
   const { colors } = useTheme();
   const addGems = useGameStore(s => s.addGems);
@@ -37,10 +66,10 @@ function WeeklyChallengesCard() {
   // Update reset timer every minute
   useEffect(() => {
     function updateTimer() {
-      const t = getTimeUntilReset();
-      if (t.days > 0) setResetTimer(`${t.days}d ${t.hours}h`);
-      else if (t.hours > 0) setResetTimer(`${t.hours}h ${t.minutes}m`);
-      else setResetTimer(`${t.minutes}m`);
+      const tm = getTimeUntilReset();
+      if (tm.days > 0) setResetTimer(`${tm.days}${t('common.day_short')} ${tm.hours}${t('common.hour_short')}`);
+      else if (tm.hours > 0) setResetTimer(`${tm.hours}${t('common.hour_short')} ${tm.minutes}${t('common.minute_short')}`);
+      else setResetTimer(`${tm.minutes}${t('common.minute_short')}`);
     }
     updateTimer();
     const interval = setInterval(updateTimer, 60000);
@@ -74,7 +103,7 @@ function WeeklyChallengesCard() {
           <View>
             <Text style={[st.headerTitle, { color: colors.text }]}>{t('modals.weekly_challenges')}</Text>
             <Text style={[st.headerSub, { color: colors.textMid }]}>
-              {completedCount}/3 done {allClaimed ? '' : `\u00B7 Resets in ${resetTimer}`}
+              {t('common.done_count', { count: completedCount, total: 3 })}{allClaimed ? '' : ` \u00B7 ${t('common.resets_in', { time: resetTimer })}`}
             </Text>
           </View>
         </View>
@@ -133,7 +162,7 @@ function GoalRow({ goal, progress, claimed, colors, onClaim, isLast }: GoalRowPr
       </View>
       <View style={st.goalContent}>
         <View style={st.goalTitleRow}>
-          <Text style={[st.goalTitle, { color: colors.text }]} numberOfLines={1}>{goal.title}</Text>
+          <Text style={[st.goalTitle, { color: colors.text }]} numberOfLines={1}>{localisedTitle(goal)}</Text>
           <View style={[st.rewardPill, { backgroundColor: tint + '15' }]}>
             <Ionicons name="diamond" size={10} color={tint} />
             <Text style={[st.rewardText, { color: tint }]}>{goal.gems}</Text>

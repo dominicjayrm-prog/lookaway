@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '@/src/i18n';
 
 export interface ActivityEvent {
   id: string;
@@ -43,11 +44,11 @@ export function getTimeAgo(timestamp: string): string {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  if (minutes < 1) return t('time_ago.just_now');
+  if (minutes < 60) return t('time_ago.minutes', { count: minutes });
+  if (hours < 24) return t('time_ago.hours', { count: hours });
+  if (days === 1) return t('time_ago.yesterday');
+  if (days < 7) return t('time_ago.days', { count: days });
+  if (days < 30) return t('time_ago.weeks', { count: Math.floor(days / 7) });
+  return t('time_ago.months', { count: Math.floor(days / 30) });
 }

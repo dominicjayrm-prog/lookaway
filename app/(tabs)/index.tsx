@@ -89,7 +89,12 @@ function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: 
           : t('home.activity.level_complete_sub_many', { world: d.worldId, stars, time }),
       };
     }
-    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: d.worldName }), sub: t('home.activity.world_complete_sub', { time }) };
+    case 'world_complete': {
+      const wid = typeof d.worldId === 'number' ? d.worldId : 0;
+      const key = WORLD_NAME_KEYS[wid - 1];
+      const localisedWorldName = key ? t(key) : (d.worldName as string) ?? '';
+      return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: localisedWorldName }), sub: t('home.activity.world_complete_sub', { time }) };
+    }
     case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: t('home.activity.streak_milestone_main', { days: d.days }), sub: t('home.activity.streak_milestone_sub', { gems: d.gems, time }) };
     case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.challenge_won_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
     case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: t('home.activity.challenge_lost_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
@@ -605,7 +610,12 @@ function PlayTab() {
                   opacity: isLocked ? 0.7 : 1,
                 }]}>
                   <Text style={[styles.worldPillNum, { color: isCurrentWorld || isCompleted ? wc : wc + '80' }]}>{i + 1}</Text>
-                  <Text style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}>{name}</Text>
+                  <Text
+                    style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >{name}</Text>
                 </View>
               );
             })}

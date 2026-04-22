@@ -181,7 +181,7 @@ export function FriendQRSheet({ visible, onDismiss }: Props) {
                 <Text style={[st.username, { color: colors.text }]}>@{username}</Text>
               )}
               <Text style={[st.subtitle, { color: colors.textMid }]}>
-                Let a friend scan this to add you instantly
+                {t('social.qr_hint')}
               </Text>
             </View>
 

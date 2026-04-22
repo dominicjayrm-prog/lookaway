@@ -31,13 +31,13 @@ interface Props {
   theme: Theme;
 }
 
-const DIMENSIONS: { key: BrainProfileKey; label: string }[] = [
-  { key: 'visual',      label: 'Visual' },
-  { key: 'spatial',     label: 'Spatial' },
-  { key: 'sequence',    label: 'Sequence' },
-  { key: 'speed',       label: 'Speed' },
-  { key: 'focus',       label: 'Focus' },
-  { key: 'consistency', label: 'Consistency' },
+const DIMENSIONS: { key: BrainProfileKey; labelKey: string }[] = [
+  { key: 'visual',      labelKey: 'analytics.dimension.visual' },
+  { key: 'spatial',     labelKey: 'analytics.dimension.spatial' },
+  { key: 'sequence',    labelKey: 'analytics.dimension.sequence' },
+  { key: 'speed',       labelKey: 'analytics.dimension.speed' },
+  { key: 'focus',       labelKey: 'analytics.dimension.focus' },
+  { key: 'consistency', labelKey: 'analytics.dimension.consistency' },
 ];
 
 export function BrainRadarChart({ profile, size = 260, accent = '#6C5CE7', theme }: Props) {
@@ -142,7 +142,7 @@ export function BrainRadarChart({ profile, size = 260, accent = '#6C5CE7', theme
               pointerEvents="none"
             >
               <Text style={[styles.label, { color: theme.radarLabel }]} numberOfLines={1}>
-                {dim.label}
+                {t(dim.labelKey)}
               </Text>
             </View>
           );

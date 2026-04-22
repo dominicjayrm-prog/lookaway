@@ -249,25 +249,40 @@ interface Insight {
   body: string;
 }
 
-const DIMENSION_LABEL: Record<BrainProfileKey, string> = {
-  visual: 'Visual',
-  spatial: 'Spatial',
-  sequence: 'Sequence',
-  speed: 'Speed',
-  focus: 'Focus',
-  consistency: 'Consistency',
+/** Translation-key map for each brain-profile dimension's display
+ *  label. Resolved at render time so `generateInsight` picks up the
+ *  active locale without us having to recompute on language toggle. */
+const DIMENSION_LABEL_KEYS: Record<BrainProfileKey, string> = {
+  visual: 'analytics.dimension.visual',
+  spatial: 'analytics.dimension.spatial',
+  sequence: 'analytics.dimension.sequence',
+  speed: 'analytics.dimension.speed',
+  focus: 'analytics.dimension.focus',
+  consistency: 'analytics.dimension.consistency',
 };
 
-const MODE_FOR_DIMENSION: Record<BrainProfileKey, string> = {
-  visual: 'Classic',
-  spatial: 'Speed Recall',
-  sequence: 'Sequence',
-  speed: 'Snap Match',
-  focus: 'Counting Blitz',
-  consistency: 'daily challenges',
+const DIMENSION_LABEL_LOWER_KEYS: Record<BrainProfileKey, string> = {
+  visual: 'analytics.dimension_lower.visual',
+  spatial: 'analytics.dimension_lower.spatial',
+  sequence: 'analytics.dimension_lower.sequence',
+  speed: 'analytics.dimension_lower.speed',
+  focus: 'analytics.dimension_lower.focus',
+  consistency: 'analytics.dimension_lower.consistency',
+};
+
+const MODE_FOR_DIMENSION_KEYS: Record<BrainProfileKey, string> = {
+  visual: 'analytics.mode.classic',
+  spatial: 'analytics.mode.speed_recall',
+  sequence: 'analytics.mode.sequence',
+  speed: 'analytics.mode.snap_match',
+  focus: 'analytics.mode.counting_blitz',
+  consistency: 'analytics.mode.daily_challenges',
 };
 
 export function generateInsight(profile: BrainProfile): Insight {
+  // Lazy import to keep memoryAnalytics pure in test contexts without
+  // needing to mock the i18n module.
+  const { t } = require('@/src/i18n') as typeof import('@/src/i18n');
   const entries = Object.entries(profile) as [BrainProfileKey, number][];
 
   // If the player has zero data everywhere, show a welcome prompt instead of
@@ -275,21 +290,27 @@ export function generateInsight(profile: BrainProfile): Insight {
   const hasAnyData = entries.some(([, v]) => v > 0);
   if (!hasAnyData) {
     return {
-      title: 'Build your brain profile',
-      body: 'Play a few levels in any game mode and your memory profile will start to take shape.',
+      title: t('analytics.insight.empty_title'),
+      body: t('analytics.insight.empty_body'),
     };
   }
 
   const strongest = entries.reduce((a, b) => (a[1] > b[1] ? a : b));
   const weakest = entries.reduce((a, b) => (a[1] < b[1] ? a : b));
 
-  const strongestLabel = DIMENSION_LABEL[strongest[0]];
-  const weakestLabel = DIMENSION_LABEL[weakest[0]].toLowerCase();
-  const suggestedMode = MODE_FOR_DIMENSION[weakest[0]];
+  const strongestLabel = t(DIMENSION_LABEL_KEYS[strongest[0]]);
+  const weakestLabelLower = t(DIMENSION_LABEL_LOWER_KEYS[weakest[0]]);
+  const strongestLabelLower = t(DIMENSION_LABEL_LOWER_KEYS[strongest[0]]);
+  const suggestedMode = t(MODE_FOR_DIMENSION_KEYS[weakest[0]]);
 
   return {
-    title: `Your strongest area: ${strongestLabel}`,
-    body: `You score ${strongest[1]} in ${strongestLabel.toLowerCase()} memory. Try ${suggestedMode} to sharpen your ${weakestLabel} skills.`,
+    title: t('analytics.insight.strongest_title', { label: strongestLabel }),
+    body: t('analytics.insight.strongest_body', {
+      score: strongest[1],
+      area: strongestLabelLower,
+      mode: suggestedMode,
+      weak: weakestLabelLower,
+    }),
   };
 }
 
@@ -303,6 +324,17 @@ export interface SampleAnalytics {
   insight: Insight;
 }
 
+const SAMPLE_BRAIN_PROFILE: BrainProfile = {
+  visual: 82,
+  spatial: 74,
+  sequence: 68,
+  speed: 88,
+  focus: 76,
+  consistency: 91,
+};
+
+/** Sample analytics shown in the free-user preview. `insight` is a
+ *  live getter so the preview text respects the active locale. */
 export const SAMPLE_ANALYTICS: SampleAnalytics = {
   memoryScore: 82,
   percentile: 8,
@@ -314,16 +346,6 @@ export const SAMPLE_ANALYTICS: SampleAnalytics = {
     avgSpeed: 1.4,
     daysActive: 23,
   },
-  brainProfile: {
-    visual: 82,
-    spatial: 74,
-    sequence: 68,
-    speed: 88,
-    focus: 76,
-    consistency: 91,
-  },
-  insight: {
-    title: 'Your strongest area: Consistency',
-    body: 'You score 91 in consistency memory. Try Sequence to sharpen your sequence skills.',
-  },
+  brainProfile: SAMPLE_BRAIN_PROFILE,
+  get insight() { return generateInsight(SAMPLE_BRAIN_PROFILE); },
 };

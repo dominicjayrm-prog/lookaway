@@ -398,7 +398,7 @@ export default function StatsSpaceScreen() {
               entering={FadeIn.duration(400).delay(800)}
               style={[styles.scoreSub, { color: theme.scoreSub }]}
             >
-              Top {analytics.percentile}% of players
+              {t('analytics.top_percentile', { pct: analytics.percentile })}
             </Animated.Text>
           </View>
 
