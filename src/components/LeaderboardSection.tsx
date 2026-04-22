@@ -3,6 +3,7 @@
  * Rendered on the Friends tab.
  */
 import React, { useEffect, useState, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
@@ -69,7 +70,7 @@ function LeaderboardSection() {
         <View style={[st.headerIconBg, { backgroundColor: colors.goldSoft }]}>
           <Ionicons name="podium-outline" size={15} color={colors.gold} />
         </View>
-        <Text style={[st.headerTitle, { color: colors.text }]}>Leaderboard</Text>
+        <Text style={[st.headerTitle, { color: colors.text }]}>{t('social.leaderboard')}</Text>
       </View>
 
       {/* Tab toggle */}
@@ -78,13 +79,13 @@ function LeaderboardSection() {
           style={[st.tabBtn, tab === 'friends' && [st.tabActive, { backgroundColor: colors.card }]]}
           onPress={() => setTab('friends')}
         >
-          <Text style={[st.tabText, { color: tab === 'friends' ? colors.accent : colors.textMid }]}>Friends</Text>
+          <Text style={[st.tabText, { color: tab === 'friends' ? colors.accent : colors.textMid }]}>{t('social.friends_tab')}</Text>
         </Pressable>
         <Pressable
           style={[st.tabBtn, tab === 'global' && [st.tabActive, { backgroundColor: colors.card }]]}
           onPress={() => setTab('global')}
         >
-          <Text style={[st.tabText, { color: tab === 'global' ? colors.accent : colors.textMid }]}>Global</Text>
+          <Text style={[st.tabText, { color: tab === 'global' ? colors.accent : colors.textMid }]}>{t('social.global_tab')}</Text>
         </Pressable>
       </View>
 
@@ -99,7 +100,7 @@ function LeaderboardSection() {
                 {starsToNext} stars to {nextDiv.name}
               </Text>
             ) : (
-              <Text style={[st.divisionSub, { color: colors.textMid }]}>Top division reached!</Text>
+              <Text style={[st.divisionSub, { color: colors.textMid }]}>{t('social.top_division')}</Text>
             )}
           </View>
           {myRank && (

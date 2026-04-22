@@ -257,17 +257,17 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
             <View style={styles.secondaryRow}>
               <Pressable style={styles.secondaryBtn} onPress={() => onRemove(friend.friendshipId)}>
                 <Ionicons name="person-remove-outline" size={14} color={colors.textMid} />
-                <Text style={[styles.secondaryText, { color: colors.textMid }]}>Remove</Text>
+                <Text style={[styles.secondaryText, { color: colors.textMid }]}>{t('social.remove')}</Text>
               </Pressable>
               <View style={[styles.secondaryDivider, { backgroundColor: colors.border }]} />
               <Pressable style={styles.secondaryBtn} onPress={() => setShowReport(true)} accessibilityRole="button" accessibilityLabel={`Report @${profile.username}`}>
                 <Ionicons name="flag-outline" size={14} color={colors.wrong} />
-                <Text style={[styles.secondaryText, { color: colors.wrong }]}>Report</Text>
+                <Text style={[styles.secondaryText, { color: colors.wrong }]}>{t('social.report')}</Text>
               </Pressable>
               <View style={[styles.secondaryDivider, { backgroundColor: colors.border }]} />
               <Pressable style={styles.secondaryBtn} onPress={handleBlock} disabled={blocking} accessibilityRole="button" accessibilityLabel={`Block @${profile.username}`}>
                 <Ionicons name="ban-outline" size={14} color={colors.wrong} />
-                <Text style={[styles.secondaryText, { color: colors.wrong }]}>Block</Text>
+                <Text style={[styles.secondaryText, { color: colors.wrong }]}>{t('social.block')}</Text>
               </Pressable>
             </View>
           </View>

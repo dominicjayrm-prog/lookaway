@@ -201,12 +201,12 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
       {phase === 'transition' && (
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}>
           <AnimatedBlink expression="blank" size={56} entrance="spring" />
-          <Text style={[s.phaseLabel, { color: colors.textMid, marginTop: 8 }]}>Get ready...</Text>
+          <Text style={[s.phaseLabel, { color: colors.textMid, marginTop: 8 }]}>{t('modes.get_ready')}</Text>
         </View>
       )}
       {(phase === 'recall' || phase === 'feedback') && currentRound && (
         <>
-          <Text style={[s.phaseLabel, { color: colors.textMid }]}>Where was this colour?</Text>
+          <Text style={[s.phaseLabel, { color: colors.textMid }]}>{t('modes.where_was_colour')}</Text>
           <View style={s.promptRow}>
             <View style={[s.askSwatch, { backgroundColor: currentRound.askColor.hex }]} />
             <Text style={[s.askName, { color: currentRound.askColor.hex }]}>{currentRound.askColor.name}</Text>

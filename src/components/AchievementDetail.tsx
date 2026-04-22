@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
 import { AchievementIcon } from './AchievementIcon';
 import { TIER_COLORS, getHighestUnlockedTier, type Achievement, type PlayerAchievement, type AchievementTier } from '@/src/utils/achievements';
@@ -75,7 +76,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
           </View>
 
           <Pressable style={[styles.closeBtn, { backgroundColor: colors.surface }]} onPress={onClose}>
-            <Text style={[styles.closeBtnText, { color: colors.textMid }]}>Close</Text>
+            <Text style={[styles.closeBtnText, { color: colors.textMid }]}>{t('achievement_detail.close')}</Text>
           </Pressable>
         </View>
       </View>

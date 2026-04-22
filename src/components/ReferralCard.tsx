@@ -68,7 +68,7 @@ function ReferralCard() {
           <Ionicons name="gift-outline" size={16} color={colors.correct} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[st.title, { color: colors.text }]}>Invite friends, earn gems</Text>
+          <Text style={[st.title, { color: colors.text }]}>{t('social.invite_earn')}</Text>
           <Text style={[st.subtitle, { color: colors.textMid }]}>
             You both get {REFERRAL_REWARD} gems
           </Text>
@@ -78,7 +78,7 @@ function ReferralCard() {
       {/* Code display */}
       <View style={[st.codeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View>
-          <Text style={[st.codeLabel, { color: colors.textLight }]}>YOUR CODE</Text>
+          <Text style={[st.codeLabel, { color: colors.textLight }]}>{t('social.your_code')}</Text>
           <Text style={[st.codeText, { color: colors.text }]}>{code}</Text>
         </View>
         <Pressable

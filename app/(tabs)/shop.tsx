@@ -64,7 +64,7 @@ function CosmeticStatus({
   colors: Record<string, string>;
 }) {
   if (owned) {
-    return <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text>;
+    return <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>{t('shop_misc.owned')}</Text>;
   }
   if (isLoading) {
     return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>LOADING…</Text>;
@@ -472,7 +472,7 @@ function ShopTab() {
                     {c.type === 'banner' && <LinearGradient colors={('gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']) as unknown as readonly [string, string, ...string[]]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{c.name}</Text>
                     <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
-                    {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>OWNED</Text> : (
+                    {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>{t('shop_misc.owned')}</Text> : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                         {dailyOnSale && <Text style={{ fontSize: 9, color: colors.textLight, textDecorationLine: 'line-through' }}>{originalPrice}</Text>}
                         <Text style={{ fontSize: 11, fontWeight: '800', color: colors.accent }}>{discountedPrice}</Text>
