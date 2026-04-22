@@ -1,5 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
+import { resolveLanguage, getDeviceLanguage } from '@/src/i18n';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -111,13 +112,35 @@ function calculateProgressUpdates(
 
 // ─── Main Check Function ────────────────────────────────────────────
 
-let _cachedAchievements: Achievement[] | null = null;
+// Cache keyed by locale. A language swap in settings returns a fresh
+// Spanish-or-English copy without re-hitting Supabase.
+let _cachedAchievements: Record<'en' | 'es', Achievement[] | null> = { en: null, es: null };
+
+function currentLocale(): 'en' | 'es' {
+  try {
+    const { useGameStore } = require('@/src/store');
+    const pref = useGameStore.getState().preferredLanguage ?? 'system';
+    return resolveLanguage(pref, getDeviceLanguage());
+  } catch {
+    return 'en';
+  }
+}
 
 async function getAchievements(): Promise<Achievement[]> {
-  if (_cachedAchievements) return _cachedAchievements;
+  const locale = currentLocale();
+  if (_cachedAchievements[locale]) return _cachedAchievements[locale]!;
   const { data } = await supabase.from('achievements').select('*');
-  _cachedAchievements = (data ?? []) as Achievement[];
-  return _cachedAchievements;
+  // Map the ES columns onto the shared Achievement shape when locale
+  // is Spanish, falling back to English per-field so untranslated
+  // rows still render (NULL-safe). This keeps downstream consumers
+  // (AchievementDetail, notifications) locale-agnostic.
+  const mapped = (data ?? []).map((row: any) => ({
+    ...row,
+    name: locale === 'es' && row.name_es ? row.name_es : row.name,
+    description: locale === 'es' && row.description_es ? row.description_es : row.description,
+  })) as Achievement[];
+  _cachedAchievements[locale] = mapped;
+  return mapped;
 }
 
 export async function checkAchievements(

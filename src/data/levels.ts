@@ -1,5 +1,6 @@
 import type { Level, Scene, SceneObject, Question } from '@/src/types/game';
 import { supabase } from '@/src/lib/supabase';
+import { resolveLanguage, getDeviceLanguage } from '@/src/i18n';
 
 /** Convert a Supabase campaign_levels row to the game's Level format */
 interface CampaignLevelRow {
@@ -8,13 +9,37 @@ interface CampaignLevelRow {
   level_number: number;
   title: string;
   scene_data: { objects?: unknown[]; questions?: unknown[] } | null;
+  // Spanish translation — populated by translate_scene_data_to_es in
+  // Supabase. NULL for any level not yet translated; we fall back to
+  // scene_data (English) in that case.
+  scene_data_es?: { objects?: unknown[]; questions?: unknown[] } | null;
   view_time?: number;
   required_score?: number;
   par_score?: number;
 }
 
+/** Resolve the current UI locale from the gameStore. Requires the
+ *  store to have hydrated — safe once the app has booted. Falls back
+ *  to device locale if the store isn't ready. */
+function currentLocale(): 'en' | 'es' {
+  try {
+    // Avoid a circular import — inline require keeps this file's
+    // test-friendly shape (levels.ts is imported by the scene
+    // renderer, which is itself imported by the store's init).
+    const { useGameStore } = require('@/src/store');
+    const pref = useGameStore.getState().preferredLanguage ?? 'system';
+    return resolveLanguage(pref, getDeviceLanguage());
+  } catch {
+    return 'en';
+  }
+}
+
 function dbRowToLevel(row: CampaignLevelRow): Level {
-  const raw = row.scene_data;
+  // Pick the right scene_data blob for the active locale. Spanish
+  // falls back to English when scene_data_es is NULL — never leaves
+  // the user with an empty scene.
+  const locale = currentLocale();
+  const raw = (locale === 'es' && row.scene_data_es) ? row.scene_data_es : row.scene_data;
   // Handle both single-scene object and multi-scene array from DB
   let scenes: Scene[];
   if (Array.isArray(raw)) {

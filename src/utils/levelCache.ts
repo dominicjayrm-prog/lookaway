@@ -10,7 +10,10 @@ import { log } from '@/src/lib/logger';
 var CLASSIC_CACHE_KEY = 'blanked_levels_classic';
 var SIDE_CACHE_KEY = 'blanked_levels_side';
 var CACHE_VERSION_KEY = 'blanked_levels_version';
-var CURRENT_VERSION = '2'; // Bump this to force re-download
+// Bumped to 3 when scene_data_es was added — forces existing
+// installs to re-download so Spanish users get the translated
+// columns instead of the pre-translation cached blobs.
+var CURRENT_VERSION = '3';
 
 interface CachedLevel {
   id: string;
@@ -22,7 +25,9 @@ interface CachedLevel {
   world_name?: string;
   difficulty?: number;
   scene_data?: any;
+  scene_data_es?: any;
   level_data?: any;
+  level_data_es?: any;
   view_time?: number;
   status?: string;
 }
