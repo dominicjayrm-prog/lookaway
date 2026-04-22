@@ -816,7 +816,7 @@ function ShopTab() {
       <InfoCard
         visible={showUnavailable}
         icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
-        title="Not Available Yet"
+        title={t('shop.not_available_title')}
         description="This item isn't in today's shop. Check back tomorrow - the featured items rotate daily with 20% off!"
         tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
@@ -825,9 +825,9 @@ function ShopTab() {
       <InfoCard
         visible={!!earnOnlyInfo}
         icon={<Ionicons name="gift-outline" size={20} color="#D4A012" />}
-        title={earnOnlyInfo?.name ?? 'Milestone Reward'}
+        title={earnOnlyInfo?.name ?? t('shop.milestone_default')}
         description={`This cosmetic can only be unlocked by completing: ${earnOnlyInfo?.description ?? 'a gameplay milestone'}`}
-        tip="Head to the Journey tab and keep playing to earn it!"
+        tip={t('shop.milestone_tip')}
         accentColor="#D4A012"
         onClose={() => setEarnOnlyInfo(null)}
       />
@@ -842,9 +842,9 @@ function ShopTab() {
       <InfoCard
         visible={gemShortfall !== null}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" style={{ opacity: 0.4 }} />}
-        title="Not Enough Gems"
+        title={t('shop.not_enough_title')}
         description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems, every level gives 1-3 gems based on your stars.` : ''}
-        tip="Play levels to earn gems, or check gem packs below"
+        tip={t('shop.not_enough_tip')}
         accentColor="#6C5CE7"
         onClose={() => setGemShortfall(null)}
       />

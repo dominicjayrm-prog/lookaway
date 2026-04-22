@@ -420,7 +420,7 @@ export default function StatsSpaceScreen() {
                 icon="🎯"
                 value={cards.accuracy}
                 suffix="%"
-                label="Accuracy"
+                label={t('stats_space.accuracy')}
                 color="#00B894"
                 theme={theme}
                 delay={1000}
@@ -429,7 +429,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="🔥"
                 value={cards.bestStreak}
-                label="Best Streak"
+                label={t('stats_space.best_streak')}
                 color="#FF6B6B"
                 theme={theme}
                 delay={1150}
@@ -449,7 +449,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="🧩"
                 value={cards.levelsDone}
-                label="Levels Done"
+                label={t('stats_space.levels_done')}
                 color="#0984E3"
                 theme={theme}
                 delay={1450}
@@ -460,7 +460,7 @@ export default function StatsSpaceScreen() {
                 value={cards.avgSpeed}
                 suffix="s"
                 decimals={1}
-                label="Avg Speed"
+                label={t('stats_space.avg_speed')}
                 color="#00CEC9"
                 theme={theme}
                 delay={1600}
@@ -469,7 +469,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="📅"
                 value={cards.daysActive}
-                label="Days Active"
+                label={t('stats_space.days_active')}
                 color="#FD79A8"
                 theme={theme}
                 delay={1750}

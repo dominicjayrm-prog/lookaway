@@ -60,8 +60,8 @@ export default function BlockedUsersScreen() {
       return;
     }
     Alert.alert('Unblock user', confirmMsg, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Unblock', onPress: run },
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('blocked.unblock'), onPress: run },
     ]);
   }, [user?.id]);
 
@@ -90,7 +90,7 @@ export default function BlockedUsersScreen() {
           accessibilityLabel={`Unblock ${item.username}`}
         >
           <Text style={[styles.unblockText, { color: colors.text }]}>
-            {isUnblocking ? 'Unblocking…' : 'Unblock'}
+            {isUnblocking ? t('blocked.unblocking') : t('blocked.unblock')}
           </Text>
         </Pressable>
       </View>

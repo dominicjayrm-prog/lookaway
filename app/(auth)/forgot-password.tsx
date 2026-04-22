@@ -46,7 +46,7 @@ function ForgotPasswordScreen() {
     setError(null);
     const trimmed = email.trim();
     if (!trimmed) {
-      setError('Please enter your email address');
+      setError(t('auth.enter_email'));
       return;
     }
     // Loose shape check — a proper email regex isn't worth the noise.
@@ -94,7 +94,7 @@ function ForgotPasswordScreen() {
             style={[styles.primaryButton, { backgroundColor: colors.accent }]}
             onPress={() => router.replace('/(auth)/login')}
             accessibilityRole="button"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.back_to_signin_aria')}
           >
             <Text style={styles.primaryButtonText}>{t('auth.back_to_signin')}</Text>
           </Pressable>
@@ -102,7 +102,7 @@ function ForgotPasswordScreen() {
             onPress={() => { setSent(false); setEmail(''); }}
             style={styles.secondaryButton}
             accessibilityRole="button"
-            accessibilityLabel="Send to a different email"
+            accessibilityLabel={t('auth.send_different_aria')}
           >
             <Text style={[styles.secondaryButtonText, { color: colors.textMid }]}>{t('auth.send_different')}</Text>
           </Pressable>
@@ -122,7 +122,7 @@ function ForgotPasswordScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.back_to_signin_aria')}
           >
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </Pressable>
@@ -163,7 +163,7 @@ function ForgotPasswordScreen() {
             onPress={handleSubmit}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Send reset link"
+            accessibilityLabel={t('auth.send_reset_aria')}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />

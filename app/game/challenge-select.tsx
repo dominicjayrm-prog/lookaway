@@ -32,8 +32,8 @@ function confirm(title: string, body: string, onConfirm: () => void) {
     return;
   }
   Alert.alert(title, body, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Send anyway', onPress: onConfirm },
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('challenge.send_anyway'), onPress: onConfirm },
   ]);
 }
 function notify(title: string, body: string) {
@@ -89,7 +89,7 @@ function ChallengeSelectScreen() {
     try {
       const { modeData, levelIds } = await buildSharedSeed(user.id, friendId);
       if (selectedMode === 'classic' && levelIds.length === 0) {
-        notify('Cannot create challenge', 'No levels match this difficulty. Try a different one.');
+        notify(t('challenge.cannot_create_title'), t('challenge.cannot_create_body'));
         setSending(false);
         return;
       }
@@ -102,7 +102,7 @@ function ChallengeSelectScreen() {
         difficulty,
       });
       if (!id) {
-        notify('Could not send invite', 'Please try again in a moment.');
+        notify(t('challenge.could_not_send_title'), t('challenge.could_not_send_body'));
         setSending(false);
         return;
       }
@@ -132,7 +132,7 @@ function ChallengeSelectScreen() {
         if (online) { setFriendOnline(true); startInstantInvite(); return; }
         notify(
           '@' + (friendUsername || 'friend') + ' is offline',
-          'You can only send a challenge when your friend has the app open. Ask them to hop on and try again.',
+          t('challenge.offline_body'),
         );
       });
     } else {

@@ -237,7 +237,7 @@ export default function ChallengeWaitingScreen() {
       ? `@${friend?.username ?? 'they'} declined the challenge.`
       : terminal === 'expired'
         ? `@${friend?.username ?? 'they'} didn\u2019t respond in time.`
-        : 'Invite cancelled.';
+        : t('challenge.invite_cancelled');
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.centered}>
@@ -245,14 +245,14 @@ export default function ChallengeWaitingScreen() {
             <Ionicons name={terminal === 'declined' ? 'close-circle-outline' : 'time-outline'} size={32} color={colors.wrong} />
           </View>
           <Text style={[styles.terminalTitle, { color: colors.text }]}>
-            {terminal === 'declined' ? 'Challenge declined' : terminal === 'expired' ? 'Invite expired' : 'Cancelled'}
+            {terminal === 'declined' ? t('challenge.challenge_declined') : terminal === 'expired' ? t('challenge.invite_expired') : t('challenge.cancelled')}
           </Text>
           <Text style={[styles.terminalBody, { color: colors.textMid }]}>{message}</Text>
           <Pressable
             style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
             onPress={() => router.replace('/(tabs)/friends')}
             accessibilityRole="button"
-            accessibilityLabel="Back to friends"
+            accessibilityLabel={t('challenge.back_to_friends_aria')}
           >
             <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
@@ -300,7 +300,7 @@ export default function ChallengeWaitingScreen() {
           style={[styles.cancelBtn, { borderColor: colors.border }]}
           onPress={handleCancel}
           accessibilityRole="button"
-          accessibilityLabel="Cancel the invite"
+          accessibilityLabel={t('challenge.cancel_invite_aria')}
         >
           <Text style={[styles.cancelText, { color: colors.textMid }]}>{t('challenge.cancel_invite')}</Text>
         </Pressable>

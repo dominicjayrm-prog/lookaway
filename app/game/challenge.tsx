@@ -455,7 +455,7 @@ function ChallengeGameScreen() {
         visible={showQuitConfirm}
         costsLife={false}
         nonPremiumBody={isChallenger
-          ? "Your progress will be lost and no challenge will be sent to your friend."
+          ? t('challenge.abandon_warning')
           : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
         onLeave={confirmLeave}
         onKeepPlaying={() => setShowQuitConfirm(false)}

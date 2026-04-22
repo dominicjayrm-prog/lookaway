@@ -140,7 +140,7 @@ function ResetPasswordScreen() {
                 onPress={() => setShowPwd((v) => !v)}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={showPwd ? 'Hide password' : 'Show password'}
+                accessibilityLabel={showPwd ? t('auth.hide_password') : t('auth.show_password')}
               >
                 <Ionicons name={showPwd ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMid} />
               </Pressable>
@@ -159,7 +159,7 @@ function ResetPasswordScreen() {
             <View style={[styles.inputWrap, { backgroundColor: colors.surface }]}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="Type it again"
+                placeholder={t('auth.confirm_placeholder')}
                 placeholderTextColor={colors.textLight}
                 value={confirm}
                 onChangeText={setConfirm}
@@ -183,7 +183,7 @@ function ResetPasswordScreen() {
             onPress={handleSubmit}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Update password"
+            accessibilityLabel={t('auth.update_password_aria')}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />

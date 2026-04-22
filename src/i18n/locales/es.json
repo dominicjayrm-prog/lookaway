@@ -318,7 +318,24 @@
   },
   "blocked": {
     "title": "Usuarios bloqueados",
-    "empty": "No hay usuarios bloqueados"
+    "empty": "No hay usuarios bloqueados",
+    "unblock": "Desbloquear",
+    "unblocking": "Desbloqueando…",
+    "unblock_title": "¿Desbloquear a este usuario?"
+  },
+  "username_page": {
+    "disallowed": "Ese nombre no está permitido.",
+    "disallowed_retry": "Ese nombre no está permitido. Elige otro.",
+    "save_failed": "No se pudo guardar tu nombre de usuario. Inténtalo de nuevo.",
+    "taken": "No disponible",
+    "username_aria": "Nombre de usuario",
+    "continue_aria": "Continuar con este nombre de usuario"
+  },
+  "reset_link": {
+    "invalid_title": "Enlace de restablecimiento no válido",
+    "invalid_body": "{msg} Toca «¿Olvidaste?» en la pantalla de inicio de sesión para enviar uno nuevo.",
+    "expired": "Ese enlace de restablecimiento ha caducado o ya se ha usado.",
+    "missing_token": "A ese enlace de restablecimiento le falta el token de seguridad."
   },
   "auth": {
     "tagline": "No te quedes en blanco.",
@@ -336,7 +353,31 @@
     "set_new_password": "Establece una nueva contraseña",
     "new_password": "Nueva contraseña",
     "confirm_password": "Confirmar contraseña",
-    "update_password": "Actualizar contraseña"
+    "update_password": "Actualizar contraseña",
+    "welcome_back": "Bienvenido de nuevo",
+    "create_account": "Crear cuenta",
+    "subtitle_login": "Inicia sesión para continuar tu aventura",
+    "subtitle_signup": "Empieza a entrenar tu memoria hoy",
+    "sign_in": "Iniciar sesión",
+    "sign_up": "Regístrate",
+    "switch_to_signup_aria": "Cambiar a registro",
+    "switch_to_signin_aria": "Cambiar a inicio de sesión",
+    "no_account_q": "¿No tienes cuenta?",
+    "have_account_q": "¿Ya tienes cuenta?",
+    "back_to_signin_aria": "Volver a iniciar sesión",
+    "forgot_aria": "Olvidé mi contraseña",
+    "choose_different_username": "Elige un nombre de usuario diferente.",
+    "fill_all_fields": "Rellena todos los campos",
+    "choose_available_username": "Elige un nombre de usuario disponible",
+    "accept_tos": "Acepta los Términos de uso y la Política de privacidad para continuar",
+    "generic_error": "Algo ha salido mal",
+    "enter_email": "Introduce tu dirección de correo",
+    "send_reset_aria": "Enviar enlace de restablecimiento",
+    "send_different_aria": "Enviar a otro correo",
+    "hide_password": "Ocultar contraseña",
+    "show_password": "Mostrar contraseña",
+    "confirm_placeholder": "Escríbela de nuevo",
+    "update_password_aria": "Actualizar contraseña"
   },
   "world_map": {
     "play": "Jugar",
@@ -374,7 +415,12 @@
   "stats_space": {
     "title": "Análisis de Memoria",
     "memory_score_label": "PUNTUACIÓN DE MEMORIA",
-    "conversion_title": "¿Te gusta lo que ves?"
+    "conversion_title": "¿Te gusta lo que ves?",
+    "accuracy": "Precisión",
+    "best_streak": "Mejor racha",
+    "levels_done": "Niveles hechos",
+    "avg_speed": "Velocidad media",
+    "days_active": "Días activos"
   },
   "challenge": {
     "loading_setup": "Preparando el reto...",
@@ -418,7 +464,28 @@
     "go_blank": "¡En blanco!",
     "spot_title": "Detecta el Cambio",
     "tap_change": "TOCA EL CAMBIO",
-    "sent_waiting": "¡Reto enviado! Esperando a tu amigo."
+    "sent_waiting": "¡Reto enviado! Esperando a tu amigo.",
+    "abandon_warning": "Perderás tu progreso y no se enviará el reto a tu amigo.",
+    "invite_cancelled": "Invitación cancelada.",
+    "challenge_declined": "Reto rechazado",
+    "invite_expired": "Invitación caducada",
+    "cancelled": "Cancelado",
+    "back_to_friends_aria": "Volver a amigos",
+    "cancel_invite_aria": "Cancelar la invitación",
+    "you_left": "Has abandonado la partida",
+    "opponent_left": "@{username} abandonó",
+    "you_abandoned_body": "Volverás directamente a amigos. No se ha guardado ningún resultado.",
+    "opponent_abandoned_body": "Tu oponente cerró el juego antes de terminar. La partida se ha cancelado.",
+    "waiting_body": "Los resultados aparecerán cuando hayáis jugado los dos.",
+    "tied": "¡Es un empate!",
+    "you_won": "¡Has ganado!",
+    "they_won": "¡Han ganado!",
+    "send_anyway": "Enviar igualmente",
+    "cannot_create_title": "No se puede crear el reto",
+    "cannot_create_body": "No hay niveles con esta dificultad. Prueba con otra.",
+    "could_not_send_title": "No se pudo enviar la invitación",
+    "could_not_send_body": "Inténtalo de nuevo en un momento.",
+    "offline_body": "Solo puedes enviar un reto cuando tu amigo tiene la app abierta. Pídele que entre y vuelve a intentarlo."
   },
   "game": {
     "level_badge": "NIVEL {number}",
@@ -549,7 +616,12 @@
     "unlock_ad_body_one": "Lo obtendrás gratis. Te queda 1 desbloqueo por anuncio hoy.",
     "unlock_ad_body_many": "Lo obtendrás gratis. Te quedan {count} desbloqueos por anuncio hoy.",
     "claim_free": "Reclamar gratis",
-    "bundle_aria": "Comprar 3 {name} por {cost} gemas"
+    "bundle_aria": "Comprar 3 {name} por {cost} gemas",
+    "not_available_title": "Aún no disponible",
+    "milestone_default": "Recompensa de hito",
+    "milestone_tip": "¡Ve a la pestaña Aventura y sigue jugando para conseguirlo!",
+    "not_enough_title": "No tienes gemas suficientes",
+    "not_enough_tip": "Juega niveles para ganar gemas, o mira los packs de gemas abajo"
   },
   "journey": {
     "title": "Aventura",

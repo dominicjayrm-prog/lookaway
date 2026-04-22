@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -95,7 +96,7 @@ function UsernameScreen() {
     const profanity = checkUsername(name);
     if (!profanity.ok) {
       setAvailability('disallowed');
-      setDisallowedMessage(profanity.message ?? "That name isn't allowed.");
+      setDisallowedMessage(profanity.message ?? t('username_page.disallowed'));
       return;
     }
     setAvailability('checking');
@@ -120,7 +121,7 @@ function UsernameScreen() {
     const profanity = checkUsername(username);
     if (!profanity.ok) {
       setAvailability('disallowed');
-      setDisallowedMessage(profanity.message ?? "That name isn't allowed.");
+      setDisallowedMessage(profanity.message ?? t('username_page.disallowed'));
       return;
     }
     setAvailability('checking');
@@ -147,7 +148,7 @@ function UsernameScreen() {
     const finalCheck = checkUsername(username);
     if (!finalCheck.ok) {
       setAvailability('disallowed');
-      setDisallowedMessage(finalCheck.message ?? "That name isn't allowed.");
+      setDisallowedMessage(finalCheck.message ?? t('username_page.disallowed'));
       return;
     }
     setSaving(true);
@@ -168,9 +169,9 @@ function UsernameScreen() {
       const code = (error as { code?: string }).code;
       if (code === '23514' || /check_violation|username_is_clean/i.test(error.message ?? '')) {
         setAvailability('disallowed');
-        setDisallowedMessage("That name isn't allowed. Please pick another.");
+        setDisallowedMessage(t('username_page.disallowed_retry'));
       } else {
-        setSaveError("Couldn't save your username. Please try again.");
+        setSaveError(t('username_page.save_failed'));
       }
       return;
     }
@@ -198,8 +199,8 @@ function UsernameScreen() {
     availability === 'idle' ? '3-16 characters \u00B7 letters, numbers, underscores' :
     availability === 'checking' ? 'Checking availability\u2026' :
     availability === 'available' ? '\u2713 Available' :
-    availability === 'taken' ? 'Already taken' :
-    availability === 'disallowed' ? (disallowedMessage ?? "That name isn't allowed.") :
+    availability === 'taken' ? t('username_page.taken') :
+    availability === 'disallowed' ? (disallowedMessage ?? t('username_page.disallowed')) :
     '3-16 lowercase letters, numbers, or underscores';
 
   return (
@@ -249,7 +250,7 @@ function UsernameScreen() {
               maxLength={16}
               returnKeyType="done"
               onSubmitEditing={handleContinue}
-              accessibilityLabel="Username"
+              accessibilityLabel={t('username_page.username_aria')}
             />
             {availability === 'checking' && <ActivityIndicator size="small" color={colors.accent} />}
           </View>
@@ -263,7 +264,7 @@ function UsernameScreen() {
             disabled={!canContinue}
             style={[styles.button, { backgroundColor: canContinue ? colors.accent : colors.surface }]}
             accessibilityRole="button"
-            accessibilityLabel="Continue with this username"
+            accessibilityLabel={t('username_page.continue_aria')}
             accessibilityState={{ disabled: !canContinue, busy: saving }}
           >
             {saving ? (

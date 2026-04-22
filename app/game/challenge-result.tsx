@@ -230,12 +230,12 @@ function ChallengeResultScreen() {
             </Svg>
           </View>
           <Text style={[styles.title, { color: colors.text }]}>
-            {iAbandoned ? 'You left the match' : `@${data.them.username} left`}
+            {iAbandoned ? t('challenge.you_left') : t('challenge.opponent_left', { username: data.them.username })}
           </Text>
           <Text style={[styles.waitingBody, { color: colors.textMid }]}>
             {iAbandoned
-              ? "You'll skip straight back to friends. No result recorded."
-              : 'Your opponent closed the game before finishing. The match has been cancelled.'}
+              ? t('challenge.you_abandoned_body')
+              : t('challenge.opponent_abandoned_body')}
           </Text>
           <View style={styles.buttons}>
             {!iAbandoned && (
@@ -277,7 +277,7 @@ function ChallengeResultScreen() {
               ? `You've finished. ${data.them.username} is still playing — results unlock when they're done.`
               : !mySubmitted && theirSubmitted
                 ? `${data.them.username} finished first. Your score will reveal once you play.`
-                : 'Results will appear once both of you have played.'}
+                : t('challenge.waiting_body')}
           </Text>
           <View style={[styles.waitingRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.waitingPlayer}>
@@ -343,7 +343,7 @@ function RevealScreen({
   const won = data.myScore > data.theirScore;
   const lost = data.theirScore > data.myScore;
   const tied = data.myScore === data.theirScore;
-  const resultText = tied ? "It's a tie!" : won ? 'You won!' : 'They won!';
+  const resultText = tied ? t('challenge.tied') : won ? t('challenge.you_won') : t('challenge.they_won');
   const resultColor = tied ? colors.gold : won ? colors.correct : colors.wrong;
 
   const winnerScale = useRef(new Animated.Value(0.6)).current;

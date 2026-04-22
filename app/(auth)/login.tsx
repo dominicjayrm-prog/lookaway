@@ -71,7 +71,7 @@ function AuthScreen() {
     const profanityCheck = checkUsername(sanitized);
     if (!profanityCheck.ok) {
       setUsernameStatus('disallowed');
-      setUsernameDisallowedMessage(profanityCheck.message ?? 'Please choose a different username.');
+      setUsernameDisallowedMessage(profanityCheck.message ?? t('auth.choose_different_username'));
       return;
     }
     setUsernameStatus('checking');
@@ -85,7 +85,7 @@ function AuthScreen() {
     setError(null);
 
     if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields');
+      setError(t('auth.fill_all_fields'));
       return;
     }
 
@@ -96,9 +96,9 @@ function AuthScreen() {
 
     if (mode === 'signup' && usernameStatus !== 'available') {
       if (usernameStatus === 'disallowed') {
-        setError(usernameDisallowedMessage ?? 'Please choose a different username.');
+        setError(usernameDisallowedMessage ?? t('auth.choose_different_username'));
       } else {
-        setError('Please choose an available username');
+        setError(t('auth.choose_available_username'));
       }
       return;
     }
@@ -108,13 +108,13 @@ function AuthScreen() {
     if (mode === 'signup') {
       const finalCheck = checkUsername(username.trim());
       if (!finalCheck.ok) {
-        setError(finalCheck.message ?? 'Please choose a different username.');
+        setError(finalCheck.message ?? t('auth.choose_different_username'));
         return;
       }
     }
 
     if (mode === 'signup' && !consent) {
-      setError('Please accept the Terms of Use and Privacy Policy to continue');
+      setError(t('auth.accept_tos'));
       return;
     }
 
@@ -151,9 +151,9 @@ function AuthScreen() {
             if (upsertErr) {
               const code = (upsertErr as { code?: string }).code;
               if (code === '23514' || /check_violation|username_is_clean/i.test(upsertErr.message ?? '')) {
-                setError("That name isn't allowed. Please pick a different username.");
+                setError(t('username_page.disallowed') + ' ' + t('auth.choose_different_username'));
               } else {
-                setError("Couldn't save your username. Please try again.");
+                setError(t('username_page.save_failed'));
               }
               setLoading(false);
               return;
@@ -164,7 +164,7 @@ function AuthScreen() {
         }
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Something went wrong';
+      const message = e instanceof Error ? e.message : t('auth.generic_error');
       setError(message);
     }
 
@@ -178,7 +178,7 @@ function AuthScreen() {
     // already agreed will only hit this in the rare case they sign out
     // and back in; a fresh tick isn't a burden).
     if (mode === 'signup' && !consent) {
-      setError('Please accept the Terms of Use and Privacy Policy to continue');
+      setError(t('auth.accept_tos'));
       return;
     }
     setError(null);
@@ -225,7 +225,7 @@ function AuthScreen() {
               setPassword('');
             }}
             accessibilityRole="button"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.back_to_signin_aria')}
           >
             <Text style={styles.primaryButtonText}>{t('auth.back_to_signin')}</Text>
           </Pressable>
@@ -255,12 +255,12 @@ function AuthScreen() {
 
           <View style={[styles.formCard, { backgroundColor: colors.card }]}>
             <Text style={[styles.formTitle, { color: colors.text }]}>
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
+              {mode === 'login' ? t('auth.welcome_back') : t('auth.create_account')}
             </Text>
             <Text style={[styles.formSubtitle, { color: colors.textMid }]}>
               {mode === 'login'
-                ? 'Sign in to continue your journey'
-                : 'Start training your memory today'}
+                ? t('auth.subtitle_login')
+                : t('auth.subtitle_signup')}
             </Text>
 
             {/* Consent checkbox (signup only). Placed above the social +
@@ -355,7 +355,7 @@ function AuthScreen() {
                 {usernameStatus === 'available' && <Text style={styles.usernameAvailable}>{t('auth.available')}</Text>}
                 {usernameStatus === 'taken' && <Text style={styles.usernameTaken}>{t('auth.taken')}</Text>}
                 {usernameStatus === 'invalid' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>3-16 chars, lowercase letters, numbers, underscores</Text>}
-                {usernameStatus === 'disallowed' && <Text style={styles.usernameTaken}>{usernameDisallowedMessage ?? 'Please choose a different username.'}</Text>}
+                {usernameStatus === 'disallowed' && <Text style={styles.usernameTaken}>{usernameDisallowedMessage ?? t('auth.choose_different_username')}</Text>}
                 {usernameStatus === 'checking' && <Text style={[styles.usernameHint, { color: colors.textLight }]}>{t('auth.checking')}</Text>}
               </View>
             )}
@@ -386,7 +386,7 @@ function AuthScreen() {
                     onPress={() => router.push('/(auth)/forgot-password')}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel="Forgot password"
+                    accessibilityLabel={t('auth.forgot_aria')}
                   >
                     <Text style={[styles.forgotLink, { color: colors.accent }]}>Forgot?</Text>
                   </Pressable>
@@ -423,14 +423,14 @@ function AuthScreen() {
               onPress={handleSubmit}
               disabled={loading || (mode === 'signup' && !consent)}
               accessibilityRole="button"
-              accessibilityLabel={mode === 'login' ? 'Sign in' : 'Create account'}
+              accessibilityLabel={mode === 'login' ? t('auth.sign_in') : t('auth.create_account')}
               accessibilityState={{ disabled: loading, busy: loading }}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.primaryButtonText}>
-                  {mode === 'login' ? 'Sign in' : 'Create account'}
+                  {mode === 'login' ? t('auth.sign_in') : t('auth.create_account')}
                 </Text>
               )}
             </Pressable>
@@ -439,17 +439,17 @@ function AuthScreen() {
           <View style={styles.toggleRow}>
             <Text style={[styles.toggleText, { color: colors.textMid }]}>
               {mode === 'login'
-                ? "Don't have an account?"
-                : 'Already have an account?'}
+                ? t('auth.no_account_q')
+                : t('auth.have_account_q')}
             </Text>
             <Pressable
               onPress={toggleMode}
               style={{ padding: 4 }}
               accessibilityRole="button"
-              accessibilityLabel={mode === 'login' ? 'Switch to sign up' : 'Switch to sign in'}
+              accessibilityLabel={mode === 'login' ? t('auth.switch_to_signup_aria') : t('auth.switch_to_signin_aria')}
             >
               <Text style={[styles.toggleLink, { color: colors.accent }]}>
-                {mode === 'login' ? 'Sign up' : 'Sign in'}
+                {mode === 'login' ? t('auth.sign_up') : t('auth.sign_in')}
               </Text>
             </Pressable>
           </View>
