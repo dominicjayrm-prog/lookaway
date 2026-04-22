@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
@@ -191,7 +192,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
     <View style={s.container}>
       {phase === 'memorise' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>Memorise the colours!</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.memorise_colours')}</Text>
           <View style={[s.timerTrack, { backgroundColor: colors.border }]}>
             <View style={[s.timerFill, { width: `${Math.round(memoriseProgress * 100)}%`, backgroundColor: timerColor }]} />
           </View>

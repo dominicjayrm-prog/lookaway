@@ -442,10 +442,10 @@ function JourneyTab() {
                     {/* Info */}
                     <View style={st.worldInfo}>
                       <View style={st.worldNameRow}>
-                        <Text style={[st.worldName, { color: w.unlocked ? colors.text : colors.textLight }]}>{w.name}</Text>
+                        <Text style={[st.worldName, { color: w.unlocked ? colors.text : colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{w.name}</Text>
                         {almostDone && (
                           <View style={[st.almostBadge, { backgroundColor: GREEN + '15' }]}>
-                            <Text style={[st.almostText, { color: GREEN }]}>{t('journey.almost')}</Text>
+                            <Text style={[st.almostText, { color: GREEN }]} numberOfLines={1}>{t('journey.almost')}</Text>
                           </View>
                         )}
                         {w.isComplete && (

@@ -325,14 +325,14 @@ function ResultScreen() {
             {isLastLevelOfWorld && (
               <View style={st.worldCompleteBanner}>
                 <Text style={st.worldCompleteEmoji}>{PARTY}</Text>
-                <Text style={[st.worldCompleteTitle, { color: colors.accent }]}>{t('result.world_complete', { world: WORLD_NAMES[worldId] })}</Text>
+                <Text style={[st.worldCompleteTitle, { color: colors.accent }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('result.world_complete', { world: WORLD_NAMES[worldId] })}</Text>
                 {nextWorldName && <Text style={[st.worldCompleteSubtitle, { color: colors.textMid }]}>{t('result.world_unlocked', { world: nextWorldName })}</Text>}
               </View>
             )}
             <View style={st.buttons}>
               {isLastLevelOfWorld ? (
                 nextWorldId ? (
-                  <Pressable style={st.primaryButton} onPress={handleNextWorld} accessibilityRole="button" accessibilityLabel={t('result.continue_to_world_aria', { world: nextWorldName ?? '' })}><Text style={st.primaryButtonText}>{t('result.continue_to_world', { world: nextWorldName ?? '' })}</Text></Pressable>
+                  <Pressable style={st.primaryButton} onPress={handleNextWorld} accessibilityRole="button" accessibilityLabel={t('result.continue_to_world_aria', { world: nextWorldName ?? '' })}><Text style={st.primaryButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('result.continue_to_world', { world: nextWorldName ?? '' })}</Text></Pressable>
                 ) : (
                   <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
                 )

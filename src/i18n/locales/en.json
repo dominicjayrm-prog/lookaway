@@ -77,11 +77,31 @@
     "offline": "Offline",
     "spot_change_badge": "SPOT THE CHANGE",
     "speed_round_badge": "SPEED ROUND",
-    "stars_label": "Stars"
+    "stars_label": "Stars",
+    "friend_stat_stars": "Stars",
+    "friend_stat_world": "World",
+    "friend_stat_memory": "Memory",
+    "friend_stat_record": "Record",
+    "friend_stat_achievements": "Achievements",
+    "block_user_title": "Block user",
+    "block_user_confirm": "Block @{username}? They won't be able to send you friend requests or challenges, and they'll disappear from your search results. You can unblock them from your profile.",
+    "block_user_cta": "Block",
+    "block_failed_title": "Block failed",
+    "block_failed_body": "Could not block @{username}. Please try again."
   },
   "legal": {
     "privacy_title": "Privacy Policy",
     "terms_title": "Terms of Use"
+  },
+  "modes": {
+    "level_not_found": "Level not found",
+    "go_back": "Go back",
+    "watch_carefully": "Watch carefully...",
+    "tap_in_order": "Now tap them in order!",
+    "memorise_colours": "Memorise the colours!",
+    "memorise_positions": "Memorise the positions!",
+    "count_colours": "COUNT THE COLOURS!",
+    "brain_profile": "BRAIN PROFILE"
   },
   "settings": {
     "title": "Settings",

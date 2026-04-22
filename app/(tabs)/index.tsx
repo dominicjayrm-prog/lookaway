@@ -516,7 +516,7 @@ function PlayTab() {
             <View style={[styles.statIconBg, { backgroundColor: colors.accentSoft }]}>
               <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>{t('home.stat_brain')}</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_brain')}</Text>
             <Text style={[styles.statValue, { color: completedCount > 0 ? colors.accent : colors.textLight }]}>
               {completedCount > 0 ? `${memoryScore}%` : EMDASH}
             </Text>
@@ -525,7 +525,7 @@ function PlayTab() {
             <View style={[styles.statIconBg, { backgroundColor: colors.goldSoft }]}>
               <StarIcon size={13} color={colors.gold} />
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>{t('home.stat_stars')}</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_stars')}</Text>
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
           <Pressable
@@ -549,7 +549,7 @@ function PlayTab() {
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>{t('home.stat_streak')}</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_streak')}</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
             {inRecoveryWindow && (
               // Recovery countdown stays — it's a critical safety

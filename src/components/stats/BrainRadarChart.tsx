@@ -10,6 +10,7 @@
  * staggered layout animation.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Line, Polygon, G } from 'react-native-svg';
 import type { BrainProfile, BrainProfileKey } from '@/src/utils/memoryAnalytics';
@@ -69,7 +70,7 @@ export function BrainRadarChart({ profile, size = 260, accent = '#6C5CE7', theme
 
   return (
     <View style={styles.wrapper}>
-      <Text style={[styles.heading, { color: theme.muted }]}>BRAIN PROFILE</Text>
+      <Text style={[styles.heading, { color: theme.muted }]}>{t('modes.brain_profile')}</Text>
       <View style={{ width: size, height: size, alignSelf: 'center' }}>
         <Svg width={size} height={size}>
           {/* Grid polygons */}

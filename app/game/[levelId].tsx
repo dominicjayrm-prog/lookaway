@@ -251,7 +251,7 @@ function GameScreen() {
   }
 
   if (!level) {
-    return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><Text style={[styles.errorText, { color: tc.textMid }]}>Level not found</Text><Button title="Go back" onPress={() => router.back()} /></SafeAreaView>);
+    return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><Text style={[styles.errorText, { color: tc.textMid }]}>{t('modes.level_not_found')}</Text><Button title={t('modes.go_back')} onPress={() => router.back()} /></SafeAreaView>);
   }
 
   return (

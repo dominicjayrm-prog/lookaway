@@ -391,7 +391,7 @@ function ProfileScreen() {
             {/* Division badge */}
             <View style={[styles.divisionBadge, { backgroundColor: division.color + '18', borderColor: division.color + '30', shadowColor: division.color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 }]}>
               <Text style={{ fontSize: 12 }}>{division.emoji}</Text>
-              <Text style={[styles.divisionText, { color: division.color }]}>{division.name}{toNext > 0 ? ` - ${t('profile.division_to_next', { count: toNext })}` : ''}</Text>
+              <Text style={[styles.divisionText, { color: division.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{division.name}{toNext > 0 ? ` - ${t('profile.division_to_next', { count: toNext })}` : ''}</Text>
             </View>
             <Text style={[styles.email, { color: colors.textMid }]}>{email}</Text>
 

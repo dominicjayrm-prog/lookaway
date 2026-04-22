@@ -77,11 +77,31 @@
     "offline": "Desconectado",
     "spot_change_badge": "DETECTA EL CAMBIO",
     "speed_round_badge": "RONDA RÁPIDA",
-    "stars_label": "Estrellas"
+    "stars_label": "Estrellas",
+    "friend_stat_stars": "Estrellas",
+    "friend_stat_world": "Mundo",
+    "friend_stat_memory": "Memoria",
+    "friend_stat_record": "Récord",
+    "friend_stat_achievements": "Logros",
+    "block_user_title": "Bloquear usuario",
+    "block_user_confirm": "¿Bloquear a @{username}? No podrá enviarte solicitudes de amistad ni retos, y desaparecerá de tus resultados de búsqueda. Puedes desbloquearlo desde tu perfil.",
+    "block_user_cta": "Bloquear",
+    "block_failed_title": "No se pudo bloquear",
+    "block_failed_body": "No se pudo bloquear a @{username}. Inténtalo de nuevo."
   },
   "legal": {
     "privacy_title": "Política de privacidad",
     "terms_title": "Términos de uso"
+  },
+  "modes": {
+    "level_not_found": "Nivel no encontrado",
+    "go_back": "Volver",
+    "watch_carefully": "Observa con atención...",
+    "tap_in_order": "¡Ahora tócalas en orden!",
+    "memorise_colours": "¡Memoriza los colores!",
+    "memorise_positions": "¡Memoriza las posiciones!",
+    "count_colours": "¡CUENTA LOS COLORES!",
+    "brain_profile": "PERFIL CEREBRAL"
   },
   "settings": {
     "title": "Ajustes",
@@ -649,7 +669,7 @@
     "free_ad": "ANUNCIO GRATIS",
     "watch_ad": "Ver anuncio",
     "owned": "TIENES",
-    "all_modes": "TODOS LOS MODOS",
+    "all_modes": "TODO MODO",
     "mode_filter_aria": "Filtro del modo {name}",
     "buy_powerup_aria": "Comprar 1 {name} por {cost} gemas",
     "buy_pack_aria": "Comprar pack de 3 {name} por {cost} gemas",
@@ -789,7 +809,7 @@
     },
     "plans": {
       "yearly": "Anual (ahorra 17 £)",
-      "best_value": "MEJOR PRECIO",
+      "best_value": "MEJOR",
       "yearly_sub": "1,66 £/mes",
       "yearly_price_suffix": "/año",
       "monthly": "Mensual",

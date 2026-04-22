@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import Svg, { Path, Circle as SvgCircle, Rect, Polygon, Line, Ellipse } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -237,7 +238,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
       {/* Viewing phase */}
       {phase === 'viewing' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>Memorise the positions!</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.memorise_positions')}</Text>
           <View style={[s.timerTrack, { backgroundColor: colors.border }]}>
             <View style={[s.timerFill, { width: `${Math.round(timerProgress * 100)}%`, backgroundColor: timerColor }]} />
           </View>

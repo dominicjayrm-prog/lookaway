@@ -347,8 +347,8 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]}>{t('paywall.plans.yearly')}</Text>
-                  <View style={st.bestValueBadge}><Text style={st.bestValueText}>{t('paywall.plans.best_value')}</Text></View>
+                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('paywall.plans.yearly')}</Text>
+                  <View style={st.bestValueBadge}><Text style={st.bestValueText} numberOfLines={1}>{t('paywall.plans.best_value')}</Text></View>
                 </View>
                 <Text style={[st.planSub, { color: palette.planSubInactive }, plan === "yearly" && { color: palette.planSubActive }]}>{t("paywall.plans.yearly_sub")}</Text>
               </View>

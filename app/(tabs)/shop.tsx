@@ -412,7 +412,7 @@ function ShopTab() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.starterTitle, { color: colors.text }]}>{t('shop.starter_title')}</Text>
                 <View style={[styles.starterBadge, { backgroundColor: colors.wrong }]}>
-                  <Text style={styles.starterBadgeText}>{t('shop.starter_badge')}</Text>
+                  <Text style={styles.starterBadgeText} numberOfLines={1}>{t('shop.starter_badge')}</Text>
                 </View>
               </View>
               <Text style={[styles.starterTimer, { color: colors.wrong }]}>{starterPackTimeLeft}</Text>
@@ -639,7 +639,7 @@ function ShopTab() {
                   )}
                   {isUniversal && (
                     <View style={[styles.universalBadge, { backgroundColor: colors.goldSoft }]}>
-                      <Text style={[styles.universalBadgeText, { color: colors.gold }]}>{t('shop.all_modes')}</Text>
+                      <Text style={[styles.universalBadgeText, { color: colors.gold }]} numberOfLines={1}>{t('shop.all_modes')}</Text>
                     </View>
                   )}
                   <View
