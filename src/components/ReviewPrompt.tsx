@@ -38,6 +38,7 @@ const TEXT_MID = '#636E72';
 
 function ReviewPromptComponent() {
   const visible = useGameStore((s) => s.reviewPromptVisible);
+  const trigger = useGameStore((s) => s.reviewPromptTrigger);
   const setVisible = useGameStore((s) => s.setReviewPromptVisible);
   const recordOutcome = useGameStore((s) => s.recordReviewPrompted);
 
@@ -47,8 +48,17 @@ function ReviewPromptComponent() {
   const cardOpacity = useRef(new RNAnimated.Value(0)).current;
   const blinkScale = useRef(new RNAnimated.Value(0)).current;
 
+  // Double-tap guard. The "Sure" button fires native StoreReview,
+  // a state write AND an analytics event — a second tap during the
+  // close animation would fire all of those again. This ref flips
+  // true on the first tap and blocks subsequent taps until the next
+  // open cycle.
+  const responded = useRef(false);
+
   useEffect(() => {
     if (!visible) return;
+    // Reset the guard on each fresh open.
+    responded.current = false;
 
     // Reset to start positions (modal reused across multiple opens).
     backdropOpacity.setValue(0);
@@ -90,10 +100,12 @@ function ReviewPromptComponent() {
   }
 
   function handleAccept() {
+    if (responded.current) return;
+    responded.current = true;
     haptics.notify(Haptics.NotificationFeedbackType.Success);
     sounds.play('celebration');
     recordOutcome('accepted');
-    track(EVENTS.REVIEW_PROMPT_ACCEPTED);
+    track(EVENTS.REVIEW_PROMPT_ACCEPTED, { trigger: trigger ?? 'unknown' });
     // Let the close animation finish, then fire Apple's native sheet.
     // The 250ms gap prevents Apple's sheet from sliding up OVER our
     // modal — it looks jankier than waiting.
@@ -103,9 +115,11 @@ function ReviewPromptComponent() {
   }
 
   function handleDismiss() {
+    if (responded.current) return;
+    responded.current = true;
     haptics.selection();
     recordOutcome('dismissed');
-    track(EVENTS.REVIEW_PROMPT_DISMISSED);
+    track(EVENTS.REVIEW_PROMPT_DISMISSED, { trigger: trigger ?? 'unknown' });
     closeWithAnimation();
   }
 

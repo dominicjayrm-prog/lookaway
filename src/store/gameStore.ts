@@ -344,6 +344,12 @@ export interface GameStore {
    *  (never re-prompt). 'dismissed' = tapped Maybe later (prompt again
    *  after cooldown). null = never prompted yet. */
   reviewPromptOutcome: 'accepted' | 'dismissed' | null;
+  /** Which trigger opened the currently-visible (or last-visible)
+   *  Stage A modal. Read by the modal when the user responds so
+   *  ACCEPTED / DISMISSED analytics carry the same trigger prop as
+   *  the SHOWN event — lets us build a per-trigger funnel. Ephemeral,
+   *  NOT persisted. */
+  reviewPromptTrigger: 'level_3_star' | 'friend_win' | null;
   /** Ephemeral — true while the Stage A modal is mounted. NOT persisted.
    *  Flipped to true by `maybeShowReviewPrompt`, back to false by the
    *  modal's close animation. */
@@ -452,7 +458,7 @@ export interface GameStore {
    *  function itself decides whether it's actually OK to show. Returns
    *  true if the modal was triggered, false if gated (with the reason
    *  logged to analytics for post-launch tuning). */
-  maybeShowReviewPrompt: (trigger: 'level_3_star' | 'streak_milestone' | 'friend_win') => boolean;
+  maybeShowReviewPrompt: (trigger: 'level_3_star' | 'friend_win') => boolean;
   /** Update the locally-cached avatar url after a successful upload so
    *  every surface that reads it from the store (profile header, home
    *  tab, etc.) refreshes immediately without waiting for the next
@@ -524,6 +530,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
     reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
     reviewPromptVisible: false,
+    reviewPromptTrigger: null,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
     highestWorld: saved.highestWorld ?? 1,
@@ -849,7 +856,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       return 300;
     },
 
-    setReviewPromptVisible: (v: boolean) => set({ reviewPromptVisible: v }),
+    setReviewPromptVisible: (v: boolean) => {
+      // Clear the trigger when closing so stale values don't leak
+      // into the next prompt's analytics. The modal reads trigger
+      // BEFORE calling close, so it sees the correct value.
+      set(v ? { reviewPromptVisible: true } : { reviewPromptVisible: false, reviewPromptTrigger: null });
+    },
 
     recordReviewPrompted: (outcome) => {
       const nowIso = new Date().toISOString();
@@ -865,6 +877,11 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     maybeShowReviewPrompt: (trigger) => {
       const state = get();
+      // Bail if the modal's already up. Two triggers firing in the
+      // same moment (e.g. 3-star on a level that also won a friend
+      // challenge race) would otherwise double-stamp the timestamp
+      // and double-track SHOWN.
+      if (state.reviewPromptVisible) return false;
       const snapshot: ReviewPromptState = {
         reviewPromptOutcome: state.reviewPromptOutcome,
         lastReviewPromptedAt: state.lastReviewPromptedAt,
@@ -884,6 +901,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({
         lastReviewPromptedAt: nowIso,
         reviewPromptVisible: true,
+        reviewPromptTrigger: trigger,
       });
       setTimeout(() => saveState(get()), 0);
       track(EVENTS.REVIEW_PROMPT_SHOWN, { trigger });
@@ -985,6 +1003,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         lastReviewPromptedAt: null,
         reviewPromptOutcome: null,
         reviewPromptVisible: false,
+        reviewPromptTrigger: null,
         // Progress
         totalStars: 0,
         highestWorld: 1,
