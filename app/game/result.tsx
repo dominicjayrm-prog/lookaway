@@ -256,15 +256,19 @@ function ResultScreen() {
       // on a same-star replay). The store's own gate enforces the
       // level floor, cooldown, already-accepted etc., so we don't
       // duplicate those checks here. 3500ms puts the prompt AFTER
-      // the star pops (1200ms) + celebration sound (1500ms) + any
-      // streak celebration that's mid-animation.
+      // the star pops (1200ms) + celebration sound (1500ms).
+      //
+      // Important: if a streak milestone celebration is queued, SKIP
+      // this opportunity. StreakCelebration is its own <Modal> and
+      // stacking the review prompt on top of it is a visual mess
+      // (plus the streak celebration is already the peak-joy moment
+      // the user is processing). We'll catch them on the next 3-star.
       const isJoyful = stars === 3 && (!isReplay || didImprove);
       if (isJoyful) {
         safeTimeout(() => {
           const hasStreakCelebration = useGameStore.getState().streakRewardQueue.length > 0;
-          useGameStore.getState().maybeShowReviewPrompt(
-            hasStreakCelebration ? 'streak_milestone' : 'level_3_star',
-          );
+          if (hasStreakCelebration) return;
+          useGameStore.getState().maybeShowReviewPrompt('level_3_star');
         }, 3500);
       }
     } else {
