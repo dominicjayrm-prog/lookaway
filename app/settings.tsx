@@ -16,12 +16,15 @@ import { typography } from '@/src/theme/typography';
 import { useGameStore } from '@/src/store';
 import { spacing } from '@/src/theme/spacing';
 import { restorePurchases } from '@/src/lib/purchases';
+import { LanguagePicker } from '@/src/components/LanguagePicker';
+import { t } from '@/src/i18n';
 
 function SettingsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -91,6 +94,22 @@ function SettingsScreen() {
             <View style={styles.navText}>
               <Text style={[styles.rowLabel, { color: colors.text }]}>Sound & haptics</Text>
               <Text style={[styles.rowHelp, { color: colors.textLight }]}>Sound categories, haptic feedback</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Pressable
+            style={styles.navRow}
+            onPress={() => setShowLanguagePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.preferences.language.title')}
+          >
+            <View style={[styles.navIcon, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="globe-outline" size={18} color={colors.accent} />
+            </View>
+            <View style={styles.navText}>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.preferences.language.title')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('settings.preferences.language.help')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
           </Pressable>
@@ -262,6 +281,11 @@ function SettingsScreen() {
           Alert.alert('Blanked+', `${plan === 'yearly' ? 'Yearly' : 'Monthly'} plan selected. IAP available when RevenueCat is configured.`);
           setShowPaywall(false);
         }}
+      />
+
+      <LanguagePicker
+        visible={showLanguagePicker}
+        onDismiss={() => setShowLanguagePicker(false)}
       />
     </SafeAreaView>
   );

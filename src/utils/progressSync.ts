@@ -52,6 +52,7 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       last_plus_gem_grant_at: state.lastPlusGemGrantAt ?? null,
       last_review_prompted_at: state.lastReviewPromptedAt ?? null,
       review_prompt_outcome: state.reviewPromptOutcome ?? null,
+      preferred_language: state.preferredLanguage ?? 'system',
       completed_scores: state.completedScores ?? [],
       max_lives: state.maxLives ?? 5,
       login_reward_day: state.loginReward?.currentDay ?? 0,
@@ -120,6 +121,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   lastPlusGemGrantAt: string | null;
   lastReviewPromptedAt: string | null;
   reviewPromptOutcome: 'accepted' | 'dismissed' | null;
+  preferredLanguage: 'system' | 'en' | 'es';
   maxLives: number;
   loginReward: LoginRewardState;
   username: string | null;
@@ -183,6 +185,9 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       reviewPromptOutcome: profile.review_prompt_outcome === 'accepted' || profile.review_prompt_outcome === 'dismissed'
         ? profile.review_prompt_outcome
         : null,
+      preferredLanguage: (profile.preferred_language === 'en' || profile.preferred_language === 'es' || profile.preferred_language === 'system')
+        ? profile.preferred_language
+        : 'system',
       // completed_scores lives directly on the profile row — it's the
       // denormalized cache that saveProgressToSupabase writes back. We
       // used to also recompute it from user_progress here, but that

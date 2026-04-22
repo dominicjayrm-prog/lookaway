@@ -33,12 +33,26 @@ import { initAdsAndTracking } from '@/src/utils/adService';
 import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 import { OfflineScreen } from '@/src/components/OfflineScreen';
+import { applyLanguage } from '@/src/i18n';
 
 SplashScreen.preventAutoHideAsync();
 
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
   useEffect(() => { hydrate(); }, [hydrate]);
+  return null;
+}
+
+/** Keep the i18n layer's active locale in lockstep with the user's
+ *  preference. `applyLanguage` is also called synchronously from
+ *  `setPreferredLanguage` for instant tap-to-re-render, but this
+ *  effect handles cold-start + the loadFromCloud case where the
+ *  cloud value rides into local state via the hydrate merge. */
+function LocaleApplier() {
+  const preferred = useGameStore((s) => s.preferredLanguage);
+  useEffect(() => {
+    applyLanguage(preferred);
+  }, [preferred]);
   return null;
 }
 
@@ -492,6 +506,7 @@ function RootLayout() {
       <AuthProvider>
         <MobileContainer onLayout={onLayoutReady}>
           <StoreHydrator />
+          <LocaleApplier />
           <SoundLoader />
           <AdsInitialiser />
           <AnalyticsInitialiser />

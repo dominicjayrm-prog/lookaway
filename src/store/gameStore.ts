@@ -10,6 +10,7 @@ import { log } from '@/src/lib/logger';
 import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
 import { shouldShowReviewPrompt, type ReviewPromptState } from '@/src/lib/reviewPrompt';
 import { track, EVENTS } from '@/src/lib/analytics';
+import { applyLanguage, type LanguagePreference } from '@/src/i18n';
 
 /**
  * Every AsyncStorage key that belongs to ONE user and must be wiped
@@ -202,6 +203,10 @@ interface SavedState {
    *  to the native Apple sheet — once accepted, never re-prompt (Apple
    *  rate-limits the native sheet to 3/year anyway). */
   reviewPromptOutcome?: 'accepted' | 'dismissed' | null;
+  /** User's language choice. 'system' follows the device locale;
+   *  'en'/'es' pin explicitly. Synced via profiles so it follows
+   *  the user across devices. */
+  preferredLanguage?: LanguagePreference;
   totalStars?: number;
   highestWorld?: number;
   powerUps?: Partial<PowerUpInventory>;
@@ -260,6 +265,7 @@ function saveState(state: GameStore) {
       lastPlusGemGrantAt: state.lastPlusGemGrantAt,
       lastReviewPromptedAt: state.lastReviewPromptedAt,
       reviewPromptOutcome: state.reviewPromptOutcome,
+      preferredLanguage: state.preferredLanguage,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
@@ -354,6 +360,9 @@ export interface GameStore {
    *  Flipped to true by `maybeShowReviewPrompt`, back to false by the
    *  modal's close animation. */
   reviewPromptVisible: boolean;
+  /** 'system' = follow device locale; 'en'/'es' = explicit pin.
+   *  Default 'system'. Persisted locally + synced via profiles. */
+  preferredLanguage: LanguagePreference;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -459,6 +468,10 @@ export interface GameStore {
    *  true if the modal was triggered, false if gated (with the reason
    *  logged to analytics for post-launch tuning). */
   maybeShowReviewPrompt: (trigger: 'level_3_star' | 'friend_win') => boolean;
+  /** Persist the user's language choice, flip the active i18n
+   *  locale so the UI re-renders in the new language, then sync
+   *  to the cloud. */
+  setPreferredLanguage: (pref: LanguagePreference) => void;
   /** Update the locally-cached avatar url after a successful upload so
    *  every surface that reads it from the store (profile header, home
    *  tab, etc.) refreshes immediately without waiting for the next
@@ -531,6 +544,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
     reviewPromptVisible: false,
     reviewPromptTrigger: null,
+    preferredLanguage: saved.preferredLanguage ?? 'system',
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
     highestWorld: saved.highestWorld ?? 1,
@@ -863,6 +877,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       set(v ? { reviewPromptVisible: true } : { reviewPromptVisible: false, reviewPromptTrigger: null });
     },
 
+    setPreferredLanguage: (pref: LanguagePreference) => {
+      // Flip the active i18n locale first so the UI re-renders in
+      // the new language on the next frame — the store write that
+      // follows will trigger it anyway via the _layout effect, but
+      // doing it synchronously here means buttons don't flash the
+      // old language between tap and re-render.
+      applyLanguage(pref);
+      set({ preferredLanguage: pref });
+      setTimeout(() => saveState(get()), 0);
+      const uid = get()._authUserId;
+      if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'language pref sync failed', e, { uid, pref }));
+    },
+
     recordReviewPrompted: (outcome) => {
       const nowIso = new Date().toISOString();
       set({
@@ -935,6 +962,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
           lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
           reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
+          preferredLanguage: saved.preferredLanguage ?? 'system',
           totalStars: saved.totalStars ?? 0,
           highestWorld: saved.highestWorld ?? 1,
           powerUps: { ...DEFAULT_POWERUPS, ...(saved.powerUps ?? {}) },
@@ -1004,6 +1032,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         reviewPromptOutcome: null,
         reviewPromptVisible: false,
         reviewPromptTrigger: null,
+        // Language pref resets to 'system' — a new account follows
+        // the device locale until they explicitly pick one.
+        preferredLanguage: 'system' as LanguagePreference,
         // Progress
         totalStars: 0,
         highestWorld: 1,
@@ -1129,6 +1160,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         lastPlusGemGrantAt: null,
         lastReviewPromptedAt: null,
         reviewPromptOutcome: null,
+        preferredLanguage: 'system' as LanguagePreference,
         loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
         localUpdatedAt: 0,
         username: null,
@@ -1305,6 +1337,18 @@ export const useGameStore = create<GameStore>((set, get) => {
           const b = cloud.reviewPromptOutcome ?? null;
           if (a === 'accepted' || b === 'accepted') return 'accepted';
           return a ?? b ?? null;
+        })(),
+        // Language preference: explicit pick ('en' / 'es') always
+        // beats 'system' — if either device has been set to a
+        // specific language, honour it across all devices. When
+        // both sides are explicit, newer side wins via pickScalar.
+        preferredLanguage: ((): LanguagePreference => {
+          const a = safeLocal.preferredLanguage ?? 'system';
+          const b = cloud.preferredLanguage ?? 'system';
+          if (a !== 'system' && b !== 'system') return pickScalar(a, b);
+          if (a !== 'system') return a;
+          if (b !== 'system') return b;
+          return 'system';
         })(),
         // completedScores already merged above (line ~762) via mergedScores —
         // an older version of this block also wrote it here under a now-dead

@@ -1,0 +1,16 @@
+{
+  "settings": {
+    "preferences": {
+      "language": {
+        "title": "Idioma",
+        "help": "English, Español",
+        "picker_title": "Idioma",
+        "picker_body": "Elige el idioma que BLANKED usará para los menús, las preguntas y las notificaciones.",
+        "option_system": "Automático",
+        "option_system_help": "Seguir el idioma del dispositivo",
+        "option_en": "English",
+        "option_es": "Español"
+      }
+    }
+  }
+}
