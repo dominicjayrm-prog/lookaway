@@ -181,7 +181,7 @@ function SettingsScreen() {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <View style={styles.row}>
             <Text style={[styles.rowLabel, { color: colors.text }]}>{t('settings.version_label')}</Text>
-            <Text style={[styles.rowValue, { color: colors.textMid }]}>1.0.0</Text>
+            <Text style={[styles.rowValue, { color: colors.textMid }]}>1.1.0</Text>
           </View>
         </Card>
 
