@@ -73,6 +73,32 @@
       "failed_body": "No hemos podido eliminar tu cuenta. Inténtalo de nuevo o contacta con soporte."
     }
   },
+  "notifications": {
+    "streak_risk_title": "¡Tu racha está en peligro!",
+    "streak_risk_body": "Juega antes de medianoche para mantener tu racha de {count} días.",
+    "lives_full_title": "¡Vidas al máximo!",
+    "lives_full_body": "Tienes {max} vidas listas. ¡A jugar!",
+    "achievement_body": "Acabas de desbloquear «{name}» — +{gems} gemas.",
+    "daily_reminder_title": "Hora de entrenar la memoria",
+    "daily_reminder_body": "Un nivel rápido mantiene viva la racha.",
+    "winback_3_title": "Tu cerebro se está oxidando 🧠",
+    "winback_3_body": "Una partida de 2 minutos te pone al día.",
+    "winback_7_title": "¿Una semana sin Blanked?",
+    "winback_7_body": "Tus escudos de racha te están esperando.",
+    "winback_14_title": "¿Recuerdas tu puntuación de memoria?",
+    "winback_14_body": "Tu límite diario se ha reiniciado. Ven a reclamarlo.",
+    "weekly_challenge_title": "Los retos semanales acaban esta noche",
+    "weekly_challenge_body": "Última oportunidad para hacerte con las gemas de esta semana.",
+    "maybe_later": "¡Quizá en otro momento!"
+  },
+  "review_prompt": {
+    "title": "¿Te está gustando BLANKED?",
+    "body": "Si estás disfrutando, una valoración rápida en la App Store ayuda a que más jugadores descubran el juego. ¡Gracias!",
+    "accept": "Sí, con gusto",
+    "accept_aria": "Sí, me encantaría valorar Blanked",
+    "dismiss": "Quizá más tarde",
+    "dismiss_aria": "Quizá más tarde"
+  },
   "paywall": {
     "restore": "Restaurar",
     "header_sub": "Entrena tu memoria sin límites",

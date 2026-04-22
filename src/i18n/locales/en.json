@@ -73,6 +73,32 @@
       "failed_body": "Could not delete your account. Please try again or contact support."
     }
   },
+  "notifications": {
+    "streak_risk_title": "Your streak is at risk!",
+    "streak_risk_body": "Play before midnight to keep your {count}-day streak alive.",
+    "lives_full_title": "Lives are full!",
+    "lives_full_body": "You have {max} lives ready. Time to play!",
+    "achievement_body": "You just earned \"{name}\" — {gems} gems added.",
+    "daily_reminder_title": "Time to train your memory",
+    "daily_reminder_body": "A quick level keeps the streak alive.",
+    "winback_3_title": "Your brain's getting rusty 🧠",
+    "winback_3_body": "A 2-minute round brings you back.",
+    "winback_7_title": "A week without Blanked?",
+    "winback_7_body": "Your streak shields are waiting.",
+    "winback_14_title": "Remember that memory score?",
+    "winback_14_body": "Your daily limit reset. Come claim it.",
+    "weekly_challenge_title": "Weekly challenges end tonight",
+    "weekly_challenge_body": "Last chance to grab this week's gem rewards.",
+    "maybe_later": "Maybe another time!"
+  },
+  "review_prompt": {
+    "title": "Enjoying BLANKED?",
+    "body": "If you're having fun, a quick rating on the App Store helps new players discover the game. Thank you!",
+    "accept": "Sure, I'd love to",
+    "accept_aria": "Sure, I'd love to rate Blanked",
+    "dismiss": "Maybe later",
+    "dismiss_aria": "Maybe later"
+  },
   "paywall": {
     "restore": "Restore",
     "header_sub": "Train your memory without limits",

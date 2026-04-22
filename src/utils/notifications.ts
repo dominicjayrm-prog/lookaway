@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
+import { t } from '@/src/i18n';
 
 // ─── Push Token Registration ────────────────────────────────────────
 
@@ -160,8 +161,8 @@ export async function scheduleStreakReminder(currentStreak: number): Promise<voi
     await Notifications.scheduleNotificationAsync({
       identifier: 'streak-reminder',
       content: {
-        title: 'Your streak is at risk!',
-        body: `Play before midnight to keep your ${currentStreak}-day streak alive.`,
+        title: t('notifications.streak_risk_title'),
+        body: t('notifications.streak_risk_body', { count: currentStreak }),
         data: { type: 'streak_reminder', deepLink: 'blanked://home' },
       },
       trigger: { date: eightPm },
@@ -203,8 +204,8 @@ export async function scheduleLivesFullNotification(
     await Notifications.scheduleNotificationAsync({
       identifier: 'lives-full',
       content: {
-        title: 'Lives are full!',
-        body: `You have ${maxLives} lives ready. Time to play!`,
+        title: t('notifications.lives_full_title'),
+        body: t('notifications.lives_full_body', { max: maxLives }),
         data: { type: 'lives_full', deepLink: 'blanked://home' },
       },
       trigger: { seconds: secondsUntilFull },
@@ -250,7 +251,7 @@ export async function notifyChallengeDeclined(
   await notifyUser(
     challengerId,
     `${declinerUsername} declined your challenge`,
-    'Maybe another time!',
+    t('notifications.maybe_later'),
     { type: 'friend_challenge_declined', declinerUsername },
   );
 }
@@ -312,7 +313,7 @@ export async function notifyAchievementUnlocked(
   await notifyUser(
     userId,
     `${tierLabel} unlocked!`,
-    `You just earned "${achievementName}" — ${gemsAwarded} gems added.`,
+    t('notifications.achievement_body', { name: achievementName, gems: gemsAwarded }),
     { type: 'achievements', deepLink: 'blanked://achievements' },
   );
 }
@@ -354,8 +355,8 @@ export async function scheduleDailyReminder(time: string): Promise<void> {
     await Notifications.scheduleNotificationAsync({
       identifier: 'daily-reminder',
       content: {
-        title: 'Time to train your memory',
-        body: 'A quick level keeps the streak alive.',
+        title: t('notifications.daily_reminder_title'),
+        body: t('notifications.daily_reminder_body'),
         data: { type: 'daily_reminder', deepLink: 'blanked://home' },
       },
       // DAILY repeats without needing a fixed date — expo-notifications
@@ -392,9 +393,9 @@ export async function scheduleWinBackReminders(): Promise<void> {
     }
     const day = 86_400;
     const plans = [
-      { id: 'winback-3', secs: day * 3, title: "Your brain's getting rusty \u{1F9E0}", body: 'A 2-minute round brings you back.' },
-      { id: 'winback-7', secs: day * 7, title: 'A week without Blanked?', body: 'Your streak shields are waiting.' },
-      { id: 'winback-14', secs: day * 14, title: 'Remember that memory score?', body: 'Your daily limit reset. Come claim it.' },
+      { id: 'winback-3', secs: day * 3, title: t('notifications.winback_3_title'), body: t('notifications.winback_3_body') },
+      { id: 'winback-7', secs: day * 7, title: t('notifications.winback_7_title'), body: t('notifications.winback_7_body') },
+      { id: 'winback-14', secs: day * 14, title: t('notifications.winback_14_title'), body: t('notifications.winback_14_body') },
     ];
     for (const p of plans) {
       await Notifications.scheduleNotificationAsync({
@@ -443,8 +444,8 @@ export async function scheduleWeeklyChallengeReminder(): Promise<void> {
     await Notifications.scheduleNotificationAsync({
       identifier: 'weekly-reminder',
       content: {
-        title: 'Weekly challenges end tonight',
-        body: 'Last chance to grab this week\u2019s gem rewards.',
+        title: t('notifications.weekly_challenge_title'),
+        body: t('notifications.weekly_challenge_body'),
         data: { type: 'weekly_challenge', deepLink: 'blanked://home' },
       },
       trigger: { date: trigger },

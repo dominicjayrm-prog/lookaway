@@ -23,6 +23,7 @@ import { haptics } from '@/src/lib/haptics';
 import { sounds } from '@/src/lib/sounds';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { triggerNativeStoreReview } from '@/src/lib/reviewPrompt';
+import { t } from '@/src/i18n';
 
 const { width: SW } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(340, SW - 48);
@@ -147,28 +148,25 @@ function ReviewPromptComponent() {
             </RNAnimated.View>
           </View>
 
-          <Text style={st.title}>Enjoying BLANKED?</Text>
-          <Text style={st.body}>
-            If you're having fun, a quick rating on the App Store helps
-            new players discover the game. Thank you!
-          </Text>
+          <Text style={st.title}>{t('review_prompt.title')}</Text>
+          <Text style={st.body}>{t('review_prompt.body')}</Text>
 
           <Pressable
             onPress={handleAccept}
             style={({ pressed }) => [st.primaryBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
             accessibilityRole="button"
-            accessibilityLabel="Sure, I'd love to rate Blanked"
+            accessibilityLabel={t('review_prompt.accept_aria')}
           >
-            <Text style={st.primaryText}>Sure, I'd love to</Text>
+            <Text style={st.primaryText}>{t('review_prompt.accept')}</Text>
           </Pressable>
 
           <Pressable
             onPress={handleDismiss}
             style={({ pressed }) => [st.secondaryBtn, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
-            accessibilityLabel="Maybe later"
+            accessibilityLabel={t('review_prompt.dismiss_aria')}
           >
-            <Text style={st.secondaryText}>Maybe later</Text>
+            <Text style={st.secondaryText}>{t('review_prompt.dismiss')}</Text>
           </Pressable>
         </RNAnimated.View>
       </View>
