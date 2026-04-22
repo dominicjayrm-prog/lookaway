@@ -73,6 +73,50 @@
       "failed_body": "Could not delete your account. Please try again or contact support."
     }
   },
+  "out_of_lives": {
+    "title": "Out of lives!",
+    "countdown": "Next free life in ",
+    "shop_cta": "Tired of waiting?",
+    "refill_cta": "Refill with {cost} gems",
+    "plus_title": "Never lose a life again",
+    "plus_sub": "Unlimited lives with Blanked+",
+    "wait": "I'll wait"
+  },
+  "result": {
+    "level_complete": "Level complete!",
+    "perfect": "PERFECT!",
+    "correct_count": "{correct}/{total} correct",
+    "star_threshold_hint": "90%+ = 3 stars · 70%+ = 2 stars · 50%+ = pass",
+    "gem_earned_one": "+{count} gem",
+    "gem_earned_many": "+{count} gems",
+    "gem_earned_one_improved": "+{count} gem (star improvement!)",
+    "gem_earned_many_improved": "+{count} gems (star improvement!)",
+    "already_completed": "Already completed, improve your stars to earn more gems!",
+    "world_complete": "{world} Complete!",
+    "world_unlocked": "{world} unlocked!",
+    "continue_to_world": "Continue to {world}",
+    "continue_to_world_aria": "Continue to {world}",
+    "back_to_map": "Back to map",
+    "back_to_map_aria": "Back to map",
+    "next_level": "Next Level",
+    "next_level_aria": "Next level",
+    "failed_title": "Not quite...",
+    "extra_life_saved": "Extra Life saved you!",
+    "life_lost": "-1 life",
+    "need_to_pass": "You need {score}% to pass",
+    "try_again": "Try again",
+    "try_again_aria": "Try again",
+    "challenge_complete_title": "{icon} Challenge complete!",
+    "challenge_complete_sub": "{title} - +{gems} gems",
+    "starter_pack_title": "Starter Pack",
+    "starter_pack_body": "In-app purchases will be available when RevenueCat is configured."
+  },
+  "tabs": {
+    "play": "Play",
+    "journey": "Journey",
+    "friends": "Friends",
+    "shop": "Shop"
+  },
   "home": {
     "lives_aria": "{count} of 5 lives",
     "lives_hint": "Tap to see how lives work",

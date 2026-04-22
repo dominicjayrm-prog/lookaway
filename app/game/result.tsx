@@ -31,6 +31,7 @@ import { checkModeUnlock } from '@/src/data/modeUnlocks';
 import { getMilestonesForLevel, type MilestoneReward } from '@/src/data/milestoneRewards';
 import { sounds } from '@/src/lib/sounds';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
+import { t } from '@/src/i18n';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -120,8 +121,8 @@ function ResultScreen() {
     let mounted = true;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const safeTimeout = (fn: () => void, ms: number) => {
-      const t = setTimeout(() => { if (mounted) fn(); }, ms);
-      timers.push(t);
+      const handle = setTimeout(() => { if (mounted) fn(); }, ms);
+      timers.push(handle);
     };
 
     if (passed) {
@@ -292,8 +293,16 @@ function ResultScreen() {
 
   let gemText: string | null = null;
   if (passed && gemsEarned > 0) {
-    if (!wasReplay) gemText = `+${gemsEarned} gem${gemsEarned !== 1 ? 's' : ''}`;
-    else if (improved) gemText = `+${gemsEarned} gem${gemsEarned !== 1 ? 's' : ''} (star improvement!)`;
+    const isOne = gemsEarned === 1;
+    if (!wasReplay) {
+      gemText = isOne
+        ? t('result.gem_earned_one', { count: gemsEarned })
+        : t('result.gem_earned_many', { count: gemsEarned });
+    } else if (improved) {
+      gemText = isOne
+        ? t('result.gem_earned_one_improved', { count: gemsEarned })
+        : t('result.gem_earned_many_improved', { count: gemsEarned });
+    }
   }
 
   // ── Render ──
@@ -302,50 +311,50 @@ function ResultScreen() {
       <View style={st.content}>
         {passed ? (
           <>
-            <Text style={[st.completeTitle, { color: colors.correct }]}>Level complete!</Text>
-            {isPerfect && <View style={st.perfectBadge}><Text style={st.perfectText}>PERFECT!</Text></View>}
+            <Text style={[st.completeTitle, { color: colors.correct }]}>{t('result.level_complete')}</Text>
+            {isPerfect && <View style={st.perfectBadge}><Text style={st.perfectText}>{t('result.perfect')}</Text></View>}
             <View style={{ position: 'relative' }}>
               <StarRating stars={stars as 0 | 1 | 2 | 3} size={44} animate />
               <ThreeStarBurst trigger={passed} stars={stars} />
             </View>
             <AnimatedScore value={score} style={[st.scoreText, { color: colors.text }]} />
-            <Text style={[st.scoreLabel, { color: colors.textMid }]}>{correctCount}/{totalCount} correct</Text>
-            <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>90%+ = 3 stars · 70%+ = 2 stars · 50%+ = pass</Text>
+            <Text style={[st.scoreLabel, { color: colors.textMid }]}>{t('result.correct_count', { correct: correctCount, total: totalCount })}</Text>
+            <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>{t('result.star_threshold_hint')}</Text>
             {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
-            {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>Already completed, improve your stars to earn more gems!</Text>}
+            {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>{t('result.already_completed')}</Text>}
             {isLastLevelOfWorld && (
               <View style={st.worldCompleteBanner}>
                 <Text style={st.worldCompleteEmoji}>{PARTY}</Text>
-                <Text style={[st.worldCompleteTitle, { color: colors.accent }]}>{WORLD_NAMES[worldId]} Complete!</Text>
-                {nextWorldName && <Text style={[st.worldCompleteSubtitle, { color: colors.textMid }]}>{nextWorldName} unlocked!</Text>}
+                <Text style={[st.worldCompleteTitle, { color: colors.accent }]}>{t('result.world_complete', { world: WORLD_NAMES[worldId] })}</Text>
+                {nextWorldName && <Text style={[st.worldCompleteSubtitle, { color: colors.textMid }]}>{t('result.world_unlocked', { world: nextWorldName })}</Text>}
               </View>
             )}
             <View style={st.buttons}>
               {isLastLevelOfWorld ? (
                 nextWorldId ? (
-                  <Pressable style={st.primaryButton} onPress={handleNextWorld} accessibilityRole="button" accessibilityLabel={`Continue to ${nextWorldName}`}><Text style={st.primaryButtonText}>Continue to {nextWorldName}</Text></Pressable>
+                  <Pressable style={st.primaryButton} onPress={handleNextWorld} accessibilityRole="button" accessibilityLabel={t('result.continue_to_world_aria', { world: nextWorldName ?? '' })}><Text style={st.primaryButtonText}>{t('result.continue_to_world', { world: nextWorldName ?? '' })}</Text></Pressable>
                 ) : (
-                  <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={st.primaryButtonText}>Back to map</Text></Pressable>
+                  <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
                 )
               ) : (
-                <Pressable style={st.primaryButton} onPress={handleNextLevel} accessibilityRole="button" accessibilityLabel="Next level"><Text style={st.primaryButtonText}>Next Level</Text></Pressable>
+                <Pressable style={st.primaryButton} onPress={handleNextLevel} accessibilityRole="button" accessibilityLabel={t('result.next_level_aria')}><Text style={st.primaryButtonText}>{t('result.next_level')}</Text></Pressable>
               )}
-              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>{t('result.back_to_map')}</Text></Pressable>
             </View>
           </>
         ) : (
           <>
-            <Text style={[st.failedTitle, { color: colors.wrong }]}>Not quite...</Text>
-            <Text style={[st.scoreText, { color: colors.text }]}>{correctCount}/{totalCount} correct</Text>
+            <Text style={[st.failedTitle, { color: colors.wrong }]}>{t('result.failed_title')}</Text>
+            <Text style={[st.scoreText, { color: colors.text }]}>{t('result.correct_count', { correct: correctCount, total: totalCount })}</Text>
             {celeb.extraLifeSaved ? (
-              <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>Extra Life saved you!</Text></View>
+              <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>{t('result.extra_life_saved')}</Text></View>
             ) : (
-              <View style={[st.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.wrong }]}>-1 life</Text></View>
+              <View style={[st.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.wrong }]}>{t('result.life_lost')}</Text></View>
             )}
-            {level && <Text style={[st.requireText, { color: colors.textMid }]}>You need {level.requiredScore}% to pass</Text>}
+            {level && <Text style={[st.requireText, { color: colors.textMid }]}>{t('result.need_to_pass', { score: level.requiredScore })}</Text>}
             <View style={st.buttons}>
-              <Pressable style={st.primaryButton} onPress={handleRetry} accessibilityRole="button" accessibilityLabel="Try again"><Text style={st.primaryButtonText}>Try again</Text></Pressable>
-              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel="Back to map"><Text style={[st.secondaryLinkText, { color: colors.accent }]}>Back to map</Text></Pressable>
+              <Pressable style={st.primaryButton} onPress={handleRetry} accessibilityRole="button" accessibilityLabel={t('result.try_again_aria')}><Text style={st.primaryButtonText}>{t('result.try_again')}</Text></Pressable>
+              <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>{t('result.back_to_map')}</Text></Pressable>
             </View>
           </>
         )}
@@ -360,8 +369,8 @@ function ResultScreen() {
       <FriendRequestToast
         visible={!!challengeToast}
         tone="success"
-        title={`${challengeToast?.icon ?? '\u{1F3C6}'} Challenge complete!`}
-        subtitle={challengeToast ? `${challengeToast.title} - +${challengeToast.gems} gems` : undefined}
+        title={t('result.challenge_complete_title', { icon: challengeToast?.icon ?? '\u{1F3C6}' })}
+        subtitle={challengeToast ? t('result.challenge_complete_sub', { title: challengeToast.title, gems: challengeToast.gems }) : undefined}
         onDismiss={() => setChallengeToast(null)}
       />
 
@@ -430,7 +439,7 @@ function ResultScreen() {
         onDismiss={() => celeb.setShowCampaignComplete(false)}
       />
       {celeb.showMilestone && <LevelMilestone levelCount={Object.keys(levelProgress).length} onDone={() => celeb.setShowMilestone(false)} />}
-      <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert('Starter Pack', 'In-app purchases will be available when RevenueCat is configured.'); }} />
+      <StarterPackPopup visible={celeb.showStarterPack} onDismiss={() => celeb.setShowStarterPack(false)} onPurchase={() => { celeb.setShowStarterPack(false); Alert.alert(t('result.starter_pack_title'), t('result.starter_pack_body')); }} />
       <MilestoneGiftCelebration
         visible={!!milestoneToast}
         itemId={milestoneToast?.itemId ?? ''}

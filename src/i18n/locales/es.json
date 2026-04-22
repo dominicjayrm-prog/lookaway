@@ -73,6 +73,50 @@
       "failed_body": "No hemos podido eliminar tu cuenta. Inténtalo de nuevo o contacta con soporte."
     }
   },
+  "out_of_lives": {
+    "title": "¡Sin vidas!",
+    "countdown": "Próxima vida gratis en ",
+    "shop_cta": "¿Cansado de esperar?",
+    "refill_cta": "Recargar por {cost} gemas",
+    "plus_title": "No vuelvas a perder una vida",
+    "plus_sub": "Vidas ilimitadas con Blanked+",
+    "wait": "Esperaré"
+  },
+  "result": {
+    "level_complete": "¡Nivel completado!",
+    "perfect": "¡PERFECTO!",
+    "correct_count": "{correct}/{total} correctas",
+    "star_threshold_hint": "90%+ = 3 estrellas · 70%+ = 2 estrellas · 50%+ = aprobado",
+    "gem_earned_one": "+{count} gema",
+    "gem_earned_many": "+{count} gemas",
+    "gem_earned_one_improved": "+{count} gema (¡mejora de estrellas!)",
+    "gem_earned_many_improved": "+{count} gemas (¡mejora de estrellas!)",
+    "already_completed": "Ya completado, ¡mejora tus estrellas para ganar más gemas!",
+    "world_complete": "¡{world} completado!",
+    "world_unlocked": "¡{world} desbloqueado!",
+    "continue_to_world": "Continuar a {world}",
+    "continue_to_world_aria": "Continuar a {world}",
+    "back_to_map": "Volver al mapa",
+    "back_to_map_aria": "Volver al mapa",
+    "next_level": "Siguiente nivel",
+    "next_level_aria": "Siguiente nivel",
+    "failed_title": "Casi...",
+    "extra_life_saved": "¡Una vida extra te ha salvado!",
+    "life_lost": "-1 vida",
+    "need_to_pass": "Necesitas un {score}% para aprobar",
+    "try_again": "Intentar de nuevo",
+    "try_again_aria": "Intentar de nuevo",
+    "challenge_complete_title": "{icon} ¡Reto completado!",
+    "challenge_complete_sub": "{title} - +{gems} gemas",
+    "starter_pack_title": "Pack de inicio",
+    "starter_pack_body": "Las compras integradas estarán disponibles cuando RevenueCat esté configurado."
+  },
+  "tabs": {
+    "play": "Jugar",
+    "journey": "Aventura",
+    "friends": "Amigos",
+    "shop": "Tienda"
+  },
   "home": {
     "lives_aria": "{count} de 5 vidas",
     "lives_hint": "Toca para ver cómo funcionan las vidas",
