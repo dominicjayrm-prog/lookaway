@@ -360,16 +360,22 @@ function PlayTab() {
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
         return;
       }
-      // Wait a moment so cloud sync has a chance to merge the latest
-      // loginReward from Supabase before we decide whether to show the modal.
-      // This prevents a Day 1 prompt on a new device when the player is
-      // mid-streak on another device.
+      // Wait for cloud sync to merge the latest loginReward from
+      // Supabase before deciding whether to show the modal. On iOS
+      // native `localStorage` doesn't exist so loadState() returns an
+      // empty snapshot — the `lastClaimDate` starts as '' and looks
+      // like "never claimed" until the Supabase round-trip completes.
+      // Bumped 1200ms → 2500ms because on slower networks the merge
+      // was landing AFTER the old window, causing the modal to pop
+      // for users who'd already claimed today. The component itself
+      // ALSO re-checks on open and auto-dismisses if the reward is
+      // unavailable — belt-and-braces against a stuck modal.
       setTimeout(() => {
         if (cancelled) return;
         const latest = useGameStore.getState().loginReward;
         const check = checkDailyReward(latest);
         if (check.available) setShowDailyReward(true);
-      }, 1200);
+      }, 2500);
     })();
     return () => { cancelled = true; };
   }, [user?.id]);

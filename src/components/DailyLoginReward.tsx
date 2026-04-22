@@ -42,6 +42,17 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     if (!visible) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     var check = checkDailyReward(loginReward);
+    // Race-condition guard: the home-tab opener waits 1200ms for
+    // cloud sync to merge `lastClaimDate` from Supabase before
+    // deciding to show us, but on slow networks the merge can land
+    // AFTER that window. By the time we render, the cloud state may
+    // say "already claimed today" — don't trap the user with a
+    // zombie modal whose Claim button silently no-ops. Auto-dismiss
+    // the moment we detect the reward isn't actually available.
+    if (!check.available) {
+      onDismiss();
+      return;
+    }
     setRewardDay(check.currentDay);
     setStreak(check.streak);
     RNAnimated.parallel([
@@ -49,12 +60,19 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
       RNAnimated.spring(cardScale, { toValue: 1, friction: 5, tension: 120, useNativeDriver: false }),
       RNAnimated.timing(cardOpacity, { toValue: 1, duration: 250, useNativeDriver: false }),
     ]).start();
-  }, [visible, loginReward]);
+  }, [visible, loginReward, onDismiss]);
 
   function handleClaim() {
     if (claimed) return;
     var check = checkDailyReward(loginReward);
-    if (!check.available) return;
+    // If the reward turned out to be unavailable (e.g. cloud sync
+    // caught up between modal open and tap) dismiss cleanly instead
+    // of silently no-op'ing — the trap state where Claim does
+    // nothing and there's no visible way out is the actual bug.
+    if (!check.available) {
+      handleDismiss();
+      return;
+    }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     var reward = { ...check.reward, streak: check.streak };
@@ -143,9 +161,16 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     {/* Gate the inner Modal on `visible` so when the daily reward
         dismisses the backdrop actually goes away, even though the
         outer component stays mounted until celebrationItem clears. */}
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleDismiss}>
       <View style={st.container}>
-        <RNAnimated.View style={[StyleSheet.absoluteFill, {
+        {/* Backdrop is pressable so the player can always bail out if
+            something goes wrong — tapping outside the card dismisses
+            the modal before any claim runs. Pre-v1.1.1 there was no
+            escape hatch: the Claim button was the only affordance,
+            and if it ever no-op'd (see the race-condition guard
+            above) the user was stuck. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} accessibilityRole="button" accessibilityLabel={t('common.close_aria')} />
+        <RNAnimated.View pointerEvents="none" style={[StyleSheet.absoluteFill, {
           backgroundColor: backdrop.interpolate({ inputRange: [0, 1], outputRange: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)'] }),
         }]} />
 
