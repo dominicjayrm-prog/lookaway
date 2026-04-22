@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Polygon, Rect, Line } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, MODE_ORDER, EXCLUSIVE_MODES } from '@/src/data/challengeModes';
@@ -148,7 +149,7 @@ function ChallengeSelectScreen() {
         </Pressable>
         <View>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Challenge @{friendUsername || 'friend'}</Text>
-          <Text style={[styles.headerSub, { color: colors.textMid }]}>Select a mode</Text>
+          <Text style={[styles.headerSub, { color: colors.textMid }]}>{t('challenge.select_mode')}</Text>
         </View>
       </View>
 
@@ -162,7 +163,7 @@ function ChallengeSelectScreen() {
             <View style={styles.classicIconBg}><ModeIcon mode="classic" size={24} /></View>
             <View style={{ flex: 1 }}>
               <View style={styles.badgeRow}>
-                <View style={styles.originalBadge}><Text style={styles.badgeText}>ORIGINAL</Text></View>
+                <View style={styles.originalBadge}><Text style={styles.badgeText}>{t('challenge.original')}</Text></View>
               </View>
               <Text style={styles.classicName}>{CHALLENGE_MODES.classic.name}</Text>
               <Text style={styles.classicDesc}>{CHALLENGE_MODES.classic.description}</Text>
@@ -177,7 +178,7 @@ function ChallengeSelectScreen() {
             modes generate their own data and don't use worlds. */}
         {selectedMode === 'classic' && (
           <View style={styles.difficultySection}>
-            <Text style={[styles.difficultyLabel, { color: colors.textMid }]}>DIFFICULTY</Text>
+            <Text style={[styles.difficultyLabel, { color: colors.textMid }]}>{t('challenge.difficulty')}</Text>
             <View style={styles.difficultyRow}>
               {(Object.keys(DIFFICULTY_META) as ChallengeDifficulty[]).map((d) => {
                 const meta = DIFFICULTY_META[d];
@@ -206,7 +207,7 @@ function ChallengeSelectScreen() {
         {/* Divider */}
         <View style={styles.divider}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.textLight }]}>EXCLUSIVE MODES</Text>
+          <Text style={[styles.dividerText, { color: colors.textLight }]}>{t('challenge.exclusive_modes')}</Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
@@ -225,7 +226,7 @@ function ChallengeSelectScreen() {
                   <ModeIcon mode={id} size={20} />
                 </View>
                 <View style={[styles.exclusiveBadge, { backgroundColor: mode.color + '18' }]}>
-                  <Text style={[styles.exclusiveBadgeText, { color: mode.color }]}>EXCLUSIVE</Text>
+                  <Text style={[styles.exclusiveBadgeText, { color: mode.color }]}>{t('challenge.exclusive')}</Text>
                 </View>
                 <Text style={[styles.modeName, { color: colors.text }]}>{mode.name}</Text>
                 <Text style={[styles.modeDesc, { color: colors.textMid }]} numberOfLines={2}>{mode.description}</Text>

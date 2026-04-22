@@ -21,6 +21,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { abandonChallenge } from '@/src/utils/challengeFlow';
@@ -209,7 +210,7 @@ function ChallengeResultScreen() {
   if (loading || !data || !row) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-        <Text style={[styles.loadingText, { color: colors.textMid }]}>Loading result...</Text>
+        <Text style={[styles.loadingText, { color: colors.textMid }]}>{t('challenge.loading_result')}</Text>
       </SafeAreaView>
     );
   }
@@ -239,11 +240,11 @@ function ChallengeResultScreen() {
           <View style={styles.buttons}>
             {!iAbandoned && (
               <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={handleRematch}>
-                <Text style={styles.primaryBtnText}>Send a new challenge</Text>
+                <Text style={styles.primaryBtnText}>{t('challenge.send_new')}</Text>
               </Pressable>
             )}
             <Pressable style={styles.secondaryLink} onPress={() => router.replace('/(tabs)/friends')}>
-              <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to friends</Text>
+              <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>{t('challenge.back_to_friends')}</Text>
             </Pressable>
           </View>
         </View>
@@ -310,7 +311,7 @@ function ChallengeResultScreen() {
             } catch {}
             router.replace('/(tabs)/friends');
           }}>
-            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Leave for now</Text>
+            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>{t('challenge.leave_for_now')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -395,7 +396,7 @@ function RevealScreen({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.accent }]}>Challenge Complete!</Text>
+        <Text style={[styles.title, { color: colors.accent }]}>{t('challenge.complete')}</Text>
 
         {/* Avatars — winner springs up, loser fades in */}
         <View style={styles.avatarRow}>
@@ -416,7 +417,7 @@ function RevealScreen({
             matches the terminology used on the solo result screen
             and in the app's analytics. */}
         <View style={styles.scoreBlock}>
-          <Text style={[styles.scoreLabel, { color: colors.textMid }]}>Memory Score</Text>
+          <Text style={[styles.scoreLabel, { color: colors.textMid }]}>{t('challenge.memory_score')}</Text>
           <View style={styles.scoreRow}>
             <Text style={[styles.score, { color: won ? colors.correct : colors.text }]}>{data.myScore}%</Text>
             <View style={{ width: 40 }} />
@@ -432,10 +433,10 @@ function RevealScreen({
         {/* Buttons */}
         <View style={styles.buttons}>
           <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={onRematch}>
-            <Text style={styles.primaryBtnText}>Rematch</Text>
+            <Text style={styles.primaryBtnText}>{t('challenge.rematch')}</Text>
           </Pressable>
           <Pressable style={styles.secondaryLink} onPress={onBack}>
-            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Back to friends</Text>
+            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
         </View>
       </View>

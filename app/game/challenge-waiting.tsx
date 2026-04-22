@@ -19,6 +19,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { cancelInvite, expireInvite } from '@/src/utils/challengeFlow';
@@ -219,12 +220,12 @@ export default function ChallengeWaitingScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.centered}>
-          <Text style={[styles.terminalTitle, { color: colors.text }]}>Not your invite</Text>
+          <Text style={[styles.terminalTitle, { color: colors.text }]}>{t('challenge.not_your_invite')}</Text>
           <Text style={[styles.terminalBody, { color: colors.textMid }]}>
             This invite belongs to another player. Head back to see your active challenges.
           </Text>
           <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.replace('/(tabs)/friends')}>
-            <Text style={styles.primaryBtnText}>Back to friends</Text>
+            <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -253,7 +254,7 @@ export default function ChallengeWaitingScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to friends"
           >
-            <Text style={styles.primaryBtnText}>Back to friends</Text>
+            <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -301,7 +302,7 @@ export default function ChallengeWaitingScreen() {
           accessibilityRole="button"
           accessibilityLabel="Cancel the invite"
         >
-          <Text style={[styles.cancelText, { color: colors.textMid }]}>Cancel invite</Text>
+          <Text style={[styles.cancelText, { color: colors.textMid }]}>{t('challenge.cancel_invite')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

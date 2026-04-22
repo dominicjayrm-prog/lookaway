@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Polygon, Line } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { CHALLENGE_MODES, getScorePercentage } from '@/src/data/challengeModes';
@@ -176,7 +177,7 @@ function ChallengeModeScreen() {
   const isExternalMode = mode && ['speed_recall', 'snap_match', 'sequence', 'counting_blitz', 'colour_chain'].includes(mode);
 
   if (phase === 'loading') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.textMid }]}>Loading {modeConfig?.name}...</Text></SafeAreaView>;
-  if (phase === 'error') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.wrong }]}>Could not load challenge</Text><Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={s.btnText}>Go back</Text></Pressable></SafeAreaView>;
+  if (phase === 'error') return <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}><Text style={[s.loadingText, { color: colors.wrong }]}>{t('challenge.could_not_load')}</Text><Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={s.btnText}>{t('challenge.go_back')}</Text></Pressable></SafeAreaView>;
 
   const mColor = modeConfig?.color ?? '#6C5CE7';
 
@@ -205,7 +206,7 @@ function ChallengeModeScreen() {
       </View>
       <View style={s.progressRow}>{Array.from({ length: modeData?.rounds?.length ?? 5 }).map((_, i) => (<View key={i} style={[s.progressSeg, { backgroundColor: i <= roundIdx ? mColor : colors.border }]} />))}</View>
 
-      {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>Start</Text></Pressable></View>)}
+      {phase === 'ready' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{modeConfig?.name}</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{modeConfig?.roundLabel} · {modeConfig?.estimatedTime}</Text><Text style={[s.howItWorks, { color: colors.textMid }]}>{modeConfig?.howItWorks}</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => { if (isExternalMode) setPhase('show'); else startRound(); }}><Text style={s.btnText}>{t('game.start')}</Text></Pressable></View>)}
 
       {phase === 'show' && isExternalMode && modeData && (<>
         {/* `viewTimeMultiplier` is the shared challenge-mode buffer
@@ -225,13 +226,13 @@ function ChallengeModeScreen() {
         {mode === 'colour_chain' && <ColourChainGame modeData={modeData} onComplete={handleModeComplete} modeColor={mColor} viewTimeMultiplier={CHALLENGE_VIEW_TIME_MULT} onRoundChange={setRoundIdx} />}
       </>)}
 
-      {phase === 'show' && !isExternalMode && currentRound && (<View style={s.gameArea}><Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text><View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{currentRound.shapes.map((sh: any, i: number) => (<View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}><ShapeSvg type={sh.type} color={sh.color} size={sh.size} /></View>))}</View></View>)}
+      {phase === 'show' && !isExternalMode && currentRound && (<View style={s.gameArea}><Text style={[s.phaseLabel, { color: colors.textMid }]}>{t('challenge.memorise_positions')}</Text><View style={[s.canvas, { backgroundColor: colors.card }]} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{currentRound.shapes.map((sh: any, i: number) => (<View key={i} style={{ position: 'absolute', left: `${sh.x}%`, top: `${sh.y}%`, transform: [{ translateX: -sh.size / 2 }, { translateY: -sh.size / 2 }] }}><ShapeSvg type={sh.type} color={sh.color} size={sh.size} /></View>))}</View></View>)}
 
       {(phase === 'recall' || phase === 'feedback') && !isExternalMode && currentShape && (<View style={s.gameArea}><View style={s.promptRow}><ShapeSvg type={currentShape.type} color={currentShape.color} size={24} /><Text style={[s.promptText, { color: colors.text }]}>Where was the {currentShape.colorName} {currentShape.type}?</Text></View><Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text><Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>{tapResult && (<><View style={{ position: 'absolute', left: `${tapResult.tapX}%`, top: `${tapResult.tapY}%`, width: 12, height: 12, borderRadius: 6, backgroundColor: currentShape.color, transform: [{ translateX: -6 }, { translateY: -6 }] }} /><View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -12 }, { translateY: -12 }] }} /><View style={{ position: 'absolute', left: `${(tapResult.tapX + tapResult.actualX) / 2}%`, top: `${Math.min(tapResult.tapY, tapResult.actualY) - 5}%`, transform: [{ translateX: -20 }] }}><Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text></View></>)}</Pressable></View>)}
 
       {phase === 'round_done' && !isExternalMode && (<View style={s.centered}><Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text><Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1]}/500</Text><Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}><Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text></Pressable></View>)}
 
-      {phase === 'complete' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>Challenge Complete!</Text><Text style={[s.bigScore, { color: colors.text }]}>{getScorePercentage(mode ?? 'speed_recall', totalScore)}%</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{totalScore} / {(modeData?.rounds?.length ?? 5) * 500} points</Text>{action === 'create' && <Text style={[s.sentText, { color: colors.correct }]}>Challenge sent! Waiting for your friend.</Text>}<Pressable style={[s.btn, { backgroundColor: mColor, marginTop: 20 }]} onPress={() => router.replace('/(tabs)/friends')}><Text style={s.btnText}>Back to friends</Text></Pressable></View>)}
+      {phase === 'complete' && (<View style={s.centered}><Text style={[s.bigTitle, { color: mColor }]}>{t('challenge.complete')}</Text><Text style={[s.bigScore, { color: colors.text }]}>{getScorePercentage(mode ?? 'speed_recall', totalScore)}%</Text><Text style={[s.subtitle, { color: colors.textMid }]}>{totalScore} / {(modeData?.rounds?.length ?? 5) * 500} points</Text>{action === 'create' && <Text style={[s.sentText, { color: colors.correct }]}>{t('challenge.sent_waiting')}</Text>}<Pressable style={[s.btn, { backgroundColor: mColor, marginTop: 20 }]} onPress={() => router.replace('/(tabs)/friends')}><Text style={s.btnText}>{t('challenge.back_to_friends')}</Text></Pressable></View>)}
 
       <QuitConfirmModal
         visible={showQuitConfirm}

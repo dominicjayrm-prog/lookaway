@@ -15,6 +15,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-nati
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useGameStore } from '@/src/store';
 import { getMastermindLevel, type MastermindLevel, type MastermindQuestion } from '@/src/data/mastermindLevels';
 import { MastermindSceneCard } from '@/src/components/MastermindSceneCard';
@@ -134,7 +135,7 @@ export default function MastermindGameScreen() {
       <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]}>
         <View style={st.centered}>
           <View style={[st.badge, { backgroundColor: 'rgba(212,160,18,0.12)' }]}>
-            <Text style={st.badgeText}>MASTERMIND</Text>
+            <Text style={st.badgeText}>{t('challenge.mastermind_badge')}</Text>
           </View>
           <Text style={[st.readyTitle, { color: colors.text }]}>Level {levelNum}</Text>
           <Text style={[st.readySub, { color: colors.textMid }]}>
@@ -146,7 +147,7 @@ export default function MastermindGameScreen() {
             accessibilityRole="button"
             accessibilityLabel="Start level"
           >
-            <Text style={st.playButtonText}>Play</Text>
+            <Text style={st.playButtonText}>{t('challenge.play')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -181,7 +182,7 @@ export default function MastermindGameScreen() {
     return (
       <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]}>
         <View style={st.centered}>
-          <Text style={[st.blankText, { color: GOLD }]}>Look away!</Text>
+          <Text style={[st.blankText, { color: GOLD }]}>{t('challenge.look_away')}</Text>
         </View>
       </SafeAreaView>
     );
