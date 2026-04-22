@@ -250,6 +250,23 @@ function ResultScreen() {
           totalLevelsEverCompleted: totalCompleted,
         });
       }, 2500);
+
+      // "Rate BLANKED" prompt — only on 3-star passes (peak joy) and
+      // only if this play was genuinely new or improved (don't prompt
+      // on a same-star replay). The store's own gate enforces the
+      // level floor, cooldown, already-accepted etc., so we don't
+      // duplicate those checks here. 3500ms puts the prompt AFTER
+      // the star pops (1200ms) + celebration sound (1500ms) + any
+      // streak celebration that's mid-animation.
+      const isJoyful = stars === 3 && (!isReplay || didImprove);
+      if (isJoyful) {
+        safeTimeout(() => {
+          const hasStreakCelebration = useGameStore.getState().streakRewardQueue.length > 0;
+          useGameStore.getState().maybeShowReviewPrompt(
+            hasStreakCelebration ? 'streak_milestone' : 'level_3_star',
+          );
+        }, 3500);
+      }
     } else {
       sounds.play('levelFail');
       celeb.triggerFailCelebrations(safeTimeout);

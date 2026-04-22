@@ -26,6 +26,7 @@ import { supabase } from '@/src/lib/supabase';
 import { abandonChallenge } from '@/src/utils/challengeFlow';
 import { spacing } from '@/src/theme/spacing';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
+import { useGameStore } from '@/src/store';
 
 interface ChallengeRow {
   challenger_id: string;
@@ -372,6 +373,18 @@ function RevealScreen({
       }),
     ]).start();
   }, [winnerScale, winnerOpacity, bannerOpacity]);
+
+  // "Rate BLANKED" prompt on a win — peak-joy moment after beating a
+  // friend in PvP. The store's own gate enforces level floor, cooldown,
+  // already-accepted etc. 1500ms delay lets the winner-scale spring
+  // finish first so the prompt doesn't compete with the reveal.
+  useEffect(() => {
+    if (!won) return;
+    const t = setTimeout(() => {
+      useGameStore.getState().maybeShowReviewPrompt('friend_win');
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [won]);
 
   // Winner avatar gets the spring-in. Loser avatar just fades in
   // alongside the winner's pop — they shouldn't both get hero

@@ -28,6 +28,7 @@ import { sounds } from '@/src/lib/sounds';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
+import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
 import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
@@ -502,6 +503,11 @@ function RootLayout() {
           <ThemedStack />
           <StreakRewardToastMounter />
           <IncomingInviteListener />
+          {/* Stage A "Rate BLANKED" modal — driven by reviewPromptVisible
+              in gameStore. Mounted once at root so it overlays any
+              screen (level result, streak celebration, challenge result,
+              etc.) without needing to be imported per-trigger. */}
+          <ReviewPrompt />
           {/* Global offline takeover — renders null while online,
               full-screen Blink + CTA when NetInfo reports no
               connection. Mounted last so it overlays every screen. */}

@@ -113,4 +113,10 @@ export const EVENTS = {
   // Lives / friction
   OUT_OF_LIVES_SHOWN: 'out_of_lives_shown',
   OUT_OF_LIVES_ACTION: 'out_of_lives_action',
+  // App Store review prompt — Stage A is our custom BLANKED modal,
+  // Stage B is the native Apple sheet that fires only on ACCEPTED.
+  REVIEW_PROMPT_SHOWN: 'review_prompt_shown',
+  REVIEW_PROMPT_ACCEPTED: 'review_prompt_accepted',
+  REVIEW_PROMPT_DISMISSED: 'review_prompt_dismissed',
+  REVIEW_PROMPT_SKIPPED: 'review_prompt_skipped',
 } as const;
