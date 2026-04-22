@@ -380,7 +380,7 @@ function AuthScreen() {
 
             <View style={styles.inputContainer}>
               <View style={styles.passwordLabelRow}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Password</Text>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth_misc.password_label')}</Text>
                 {mode === 'login' && (
                   <Pressable
                     onPress={() => router.push('/(auth)/forgot-password')}
@@ -388,7 +388,7 @@ function AuthScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={t('auth.forgot_aria')}
                   >
-                    <Text style={[styles.forgotLink, { color: colors.accent }]}>Forgot?</Text>
+                    <Text style={[styles.forgotLink, { color: colors.accent }]}>{t('auth_misc.forgot_short')}</Text>
                   </Pressable>
                 )}
               </View>

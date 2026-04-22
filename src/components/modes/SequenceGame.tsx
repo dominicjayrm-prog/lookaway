@@ -177,7 +177,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
           <Text style={[s.progressText, { color: colors.textLight }]}>{tappedOrder.length}/{shapes.length} correct</Text>
         </>
       )}
-      {phase === 'wrong' && <Text style={[s.phaseLabel, { color: colors.wrong }]}>Wrong! The sequence ended.</Text>}
+      {phase === 'wrong' && <Text style={[s.phaseLabel, { color: colors.wrong }]}>{t('modes.sequence_wrong')}</Text>}
       {phase === 'recall' && safetyNetArmed && (
         <Text style={[s.progressText, { color: colors.correct }]}>Safety Net armed — first wrong tap is free</Text>
       )}

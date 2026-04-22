@@ -249,7 +249,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
       {(phase === 'recall' || phase === 'feedback') && currentShape && (
         <>
           <View style={s.promptRow}>
-            <Text style={[s.promptText, { color: colors.textMid }]}>Where was the</Text>
+            <Text style={[s.promptText, { color: colors.textMid }]}>{t('modes.where_was')}</Text>
             <ShapeSvg type={currentShape.type} color={currentShape.color} size={24} />
             <Text style={[s.promptText, { color: currentShape.color, fontWeight: '700' }]}>{currentShape.colorName} {currentShape.type}</Text>
             <Text style={[s.promptText, { color: colors.textMid }]}>?</Text>

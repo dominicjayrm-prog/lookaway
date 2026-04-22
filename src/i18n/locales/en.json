@@ -105,7 +105,44 @@
     "memorise_colours": "Memorise the colours!",
     "memorise_positions": "Memorise the positions!",
     "count_colours": "COUNT THE COLOURS!",
-    "brain_profile": "BRAIN PROFILE"
+    "brain_profile": "BRAIN PROFILE",
+    "get_ready": "Get ready...",
+    "where_was_colour": "Where was this colour?",
+    "sequence_wrong": "Wrong! The sequence ended.",
+    "snap_missing": "Something is missing... tap where it was",
+    "where_was": "Where was the"
+  },
+  "auth_misc": {
+    "password_label": "Password",
+    "forgot_short": "Forgot?"
+  },
+  "social": {
+    "remove": "Remove",
+    "report": "Report",
+    "block": "Block",
+    "leaderboard": "Leaderboard",
+    "friends_tab": "Friends",
+    "global_tab": "Global",
+    "top_division": "Top division reached!",
+    "no_thanks": "No thanks",
+    "invite_earn": "Invite friends, earn gems",
+    "your_code": "YOUR CODE"
+  },
+  "powerups_ui": {
+    "title": "Power-ups",
+    "boost_mode": "Boost this mode in the shop",
+    "boost_memory": "Boost your memory in the shop",
+    "your_power_ups": "Your Power-ups",
+    "no_power_ups": "No power-ups yet"
+  },
+  "achievement_detail": {
+    "close": "Close"
+  },
+  "dev_settings": {
+    "force_review": "Force review prompt"
+  },
+  "shop_misc": {
+    "owned": "OWNED"
   },
   "settings": {
     "title": "Settings",

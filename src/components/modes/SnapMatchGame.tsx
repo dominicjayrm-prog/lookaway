@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Path, Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -315,7 +316,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
           <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE B — Tap what changed!</Text>
           <Text style={[s.responseTime, { color: colors.textMid }]}>{responseSeconds}s</Text>
           {round.changeType === 'removed' && (
-            <Text style={[s.hint, { color: colors.gold }]}>Something is missing... tap where it was</Text>
+            <Text style={[s.hint, { color: colors.gold }]}>{t('modes.snap_missing')}</Text>
           )}
         </>
       )}

@@ -16,6 +16,7 @@
  * component only surfaces the UI and emits the intent.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polygon } from 'react-native-svg';
@@ -58,8 +59,8 @@ export function ModePowerUpBar({ mode, used, onUse, onBuyOut, disabled }: Props)
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.accentSoft, borderColor: colors.accent + '25' }]}>
         <BoltIcon size={18} color={colors.accent} />
-        <Text style={[styles.emptyTitle, { color: colors.accent }]}>Power-ups</Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>Boost this mode in the shop</Text>
+        <Text style={[styles.emptyTitle, { color: colors.accent }]}>{t('powerups_ui.title')}</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>{t('powerups_ui.boost_mode')}</Text>
       </View>
     );
   }

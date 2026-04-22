@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -63,7 +64,7 @@ export const BuyPowerUpPopup = React.memo(function BuyPowerUpPopup({ powerUpId, 
           </Pressable>
 
           <Pressable style={styles.noThanks} onPress={onClose}>
-            <Text style={[styles.noThanksText, { color: colors.textLight }]}>No thanks</Text>
+            <Text style={[styles.noThanksText, { color: colors.textLight }]}>{t('social.no_thanks')}</Text>
           </Pressable>
         </View>
       </View>

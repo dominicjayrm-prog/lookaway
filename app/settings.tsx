@@ -266,7 +266,7 @@ function SettingsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('modals.force_review_aria')}
               >
-                <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>Force review prompt</Text>
+                <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>{t('dev_settings.force_review')}</Text>
                 <Ionicons name="star" size={18} color={colors.gold} />
               </Pressable>
             </Card>

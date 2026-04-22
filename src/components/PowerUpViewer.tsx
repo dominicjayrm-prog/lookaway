@@ -59,14 +59,14 @@ function PowerUpViewerComponent({ visible, onDismiss }: Props) {
         <Pressable style={st.backdropTouch} onPress={onDismiss} />
         <View style={[st.sheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined }]}>
           <View style={st.handle} />
-          <Text style={[st.title, { color: colors.text }]}>Your Power-ups</Text>
+          <Text style={[st.title, { color: colors.text }]}>{t('powerups_ui.your_power_ups')}</Text>
           <Text style={[st.subtitle, { color: colors.textLight }]}>{totalBoosts} boost{totalBoosts !== 1 ? 's' : ''} available</Text>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
             {groups.length === 0 ? (
               <View style={[st.emptyState, { backgroundColor: colors.card }]}>
                 <Ionicons name="flash-outline" size={32} color={colors.textLight} />
-                <Text style={[st.emptyText, { color: colors.textLight }]}>No power-ups yet</Text>
+                <Text style={[st.emptyText, { color: colors.textLight }]}>{t('powerups_ui.no_power_ups')}</Text>
                 <Text style={[st.emptyHint, { color: colors.textLight }]}>{t('modals.powerup_empty_hint')}</Text>
               </View>
             ) : (

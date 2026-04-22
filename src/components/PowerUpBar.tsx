@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -31,8 +32,8 @@ export const PowerUpBar = React.memo(function PowerUpBar({ usedThisLevel, onUseP
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.accentSoft, borderColor: colors.accent + '25' }]}>
         <BoltIcon size={18} color={colors.accent} />
-        <Text style={[styles.emptyTitle, { color: colors.accent }]}>Power-ups</Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>Boost your memory in the shop</Text>
+        <Text style={[styles.emptyTitle, { color: colors.accent }]}>{t('powerups_ui.title')}</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>{t('powerups_ui.boost_memory')}</Text>
       </View>
     );
   }

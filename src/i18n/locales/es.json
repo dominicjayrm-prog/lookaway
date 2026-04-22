@@ -105,7 +105,44 @@
     "memorise_colours": "¡Memoriza los colores!",
     "memorise_positions": "¡Memoriza las posiciones!",
     "count_colours": "¡CUENTA LOS COLORES!",
-    "brain_profile": "PERFIL CEREBRAL"
+    "brain_profile": "PERFIL CEREBRAL",
+    "get_ready": "Prepárate...",
+    "where_was_colour": "¿Dónde estaba este color?",
+    "sequence_wrong": "¡Fallo! La secuencia ha terminado.",
+    "snap_missing": "Falta algo... toca dónde estaba",
+    "where_was": "¿Dónde estaba el"
+  },
+  "auth_misc": {
+    "password_label": "Contraseña",
+    "forgot_short": "¿Olvidada?"
+  },
+  "social": {
+    "remove": "Eliminar",
+    "report": "Reportar",
+    "block": "Bloquear",
+    "leaderboard": "Clasificación",
+    "friends_tab": "Amigos",
+    "global_tab": "Global",
+    "top_division": "¡División máxima alcanzada!",
+    "no_thanks": "No, gracias",
+    "invite_earn": "Invita a amigos, gana gemas",
+    "your_code": "TU CÓDIGO"
+  },
+  "powerups_ui": {
+    "title": "Potenciadores",
+    "boost_mode": "Mejora este modo en la tienda",
+    "boost_memory": "Mejora tu memoria en la tienda",
+    "your_power_ups": "Tus potenciadores",
+    "no_power_ups": "Aún no tienes potenciadores"
+  },
+  "achievement_detail": {
+    "close": "Cerrar"
+  },
+  "dev_settings": {
+    "force_review": "Forzar solicitud de valoración"
+  },
+  "shop_misc": {
+    "owned": "TUYOS"
   },
   "settings": {
     "title": "Ajustes",
