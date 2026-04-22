@@ -66,7 +66,22 @@
     "owned_section": "OWNED",
     "locked_section": "LOCKED",
     "equipped": "EQUIPPED",
-    "browse_shop": "Browse Shop"
+    "browse_shop": "Browse Shop",
+    "achievement_unlocked": "Achievement Unlocked!",
+    "check_profile": "Check your profile to see them all.",
+    "milestone_reward": "Milestone Reward!",
+    "share_invite": "Share invite",
+    "use_streak_shield": "Use Streak Shield",
+    "status": "Status",
+    "online": "Online",
+    "offline": "Offline",
+    "spot_change_badge": "SPOT THE CHANGE",
+    "speed_round_badge": "SPEED ROUND",
+    "stars_label": "Stars"
+  },
+  "legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Use"
   },
   "settings": {
     "title": "Settings",

@@ -136,7 +136,7 @@ function SpeedGameScreen() {
           <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
             <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
           </Pressable>
-          <Badge label="SPEED ROUND" />
+          <Badge label={t('modals.speed_round_badge')} />
 
           <View style={styles.headerSpacer} />
         </View>
@@ -145,7 +145,7 @@ function SpeedGameScreen() {
           <Text style={styles.levelTitle}>{t('challenge.speed_round')}</Text>
           <Text style={styles.levelSubtitle}>10 scenes {String.fromCharCode(183)} 2 seconds each</Text>
           <Text style={styles.levelSubtitle}>1 question per scene</Text>
-          <Button title="Start" onPress={handleStart} style={styles.startButton} />
+          <Button title={t('game.start')} onPress={handleStart} style={styles.startButton} />
         </Animated.View>
       </SafeAreaView>
     );

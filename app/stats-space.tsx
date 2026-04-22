@@ -438,7 +438,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="⭐"
                 value={cards.stars}
-                label="Stars"
+                label={t('modals.stars_label')}
                 color="#D4A012"
                 theme={theme}
                 delay={1300}

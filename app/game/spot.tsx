@@ -95,14 +95,14 @@ function SpotGameScreen() {
       <SafeAreaView style={[s.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={s.header}>
           <Pressable onPress={()=>router.back()}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
-          <Badge label="SPOT THE CHANGE" />
+          <Badge label={t('modals.spot_change_badge')} />
           <View style={s.spacer}/>
         </View>
         <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
           <Text style={s.modeIcon}>{mag}</Text>
           <Text style={s.title}>{t('challenge.spot_title')}</Text>
           <Text style={s.sub}>5 rounds {String.fromCharCode(183)} find what changed</Text>
-          <Button title="Start" onPress={()=>dispatch({type:'START'})} style={s.startBtn}/>
+          <Button title={t('game.start')} onPress={()=>dispatch({type:'START'})} style={s.startBtn}/>
         </Animated.View>
       </SafeAreaView>
     );
@@ -119,7 +119,7 @@ function SpotGameScreen() {
           <View style={s.resultsRow}>
             {state.results.map((r,i)=>(<View key={i} style={[s.resultDot, {backgroundColor:r.correct?colors.correct:colors.wrong}]}/>))}
           </View>
-          <Button title="Done" onPress={()=>router.replace('/(tabs)')} style={s.startBtn}/>
+          <Button title={t('common.done')} onPress={()=>router.replace('/(tabs)')} style={s.startBtn}/>
         </Animated.View>
       </SafeAreaView>
     );

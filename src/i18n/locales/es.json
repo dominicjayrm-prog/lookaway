@@ -66,7 +66,22 @@
     "owned_section": "TUYOS",
     "locked_section": "BLOQUEADOS",
     "equipped": "EQUIPADO",
-    "browse_shop": "Explorar tienda"
+    "browse_shop": "Explorar tienda",
+    "achievement_unlocked": "¡Logro desbloqueado!",
+    "check_profile": "Revisa tu perfil para verlos todos.",
+    "milestone_reward": "¡Recompensa de hito!",
+    "share_invite": "Compartir invitación",
+    "use_streak_shield": "Usar Escudo de Racha",
+    "status": "Estado",
+    "online": "En línea",
+    "offline": "Desconectado",
+    "spot_change_badge": "DETECTA EL CAMBIO",
+    "speed_round_badge": "RONDA RÁPIDA",
+    "stars_label": "Estrellas"
+  },
+  "legal": {
+    "privacy_title": "Política de privacidad",
+    "terms_title": "Términos de uso"
   },
   "settings": {
     "title": "Ajustes",

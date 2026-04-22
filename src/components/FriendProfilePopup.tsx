@@ -10,6 +10,7 @@
  *  - Challenge + Close + Remove friend actions
  */
 import React, { useEffect, useState } from 'react';
+import { t } from '@/src/i18n';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
@@ -221,7 +222,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
             <View style={styles.statGrid}>
               <StatCell label="Record" value={recordText} icon="trophy-outline" iconColor={colors.wrong} colors={colors} />
               <StatCell label="Achievements" value={achievementsText} icon="medal" iconColor={colors.gold} colors={colors} />
-              <StatCell label="Status" value={status === 'online' ? 'Online' : 'Offline'} icon={status === 'online' ? 'ellipse' : 'ellipse-outline'} iconColor={statusColor} colors={colors} />
+              <StatCell label={t('modals.status')} value={status === 'online' ? t('modals.online') : t('modals.offline')} icon={status === 'online' ? 'ellipse' : 'ellipse-outline'} iconColor={statusColor} colors={colors} />
             </View>
 
             {/* Equipped cosmetics showcase */}

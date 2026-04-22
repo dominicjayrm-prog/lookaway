@@ -222,7 +222,7 @@ export function StreakRecoveryModal({ visible, streak, daysMissed, onDismiss }: 
                   iconBg={colors.correctSoft}
                   iconColor={colors.correct}
                   iconEmoji={SHIELD}
-                  title="Use Streak Shield"
+                  title={t('modals.use_streak_shield')}
                   subtitle={
                     comboPrice === 0
                       ? `${shields} shield${shields !== 1 ? 's' : ''} available`

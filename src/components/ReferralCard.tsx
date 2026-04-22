@@ -3,6 +3,7 @@
  * Shows on the Friends tab.
  */
 import React, { useEffect, useState, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Clipboard, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -95,7 +96,7 @@ function ReferralCard() {
         onPress={handleShare}
       >
         <Ionicons name="share-outline" size={16} color="#FFF" />
-        <Text style={st.shareBtnText}>Share invite</Text>
+        <Text style={st.shareBtnText}>{t('modals.share_invite')}</Text>
       </Pressable>
 
       {/* Stats */}
