@@ -25,7 +25,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { restorePurchases } from '@/src/lib/purchases';
+import { restorePurchases, getSubscriptionOfferings, formatCurrency, type SubscriptionPrice } from '@/src/lib/purchases';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { useGameStore } from '@/src/store';
 import { t } from '@/src/i18n';
@@ -218,6 +218,44 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
   const slideAnim = useRef(new RNAnimated.Value(SH)).current;
 
+  // Real prices from RevenueCat — localised to the user's Apple ID
+  // region. "£19.99" in the UK, "€19.99" in Spain, "US$19.99" in the
+  // US, etc. Fetched once when the paywall opens; null while loading
+  // or on web/simulator where RC isn't available. We render fallback
+  // GBP values until these resolve so the modal never blanks out.
+  const [monthlyPkg, setMonthlyPkg] = useState<SubscriptionPrice | null>(null);
+  const [annualPkg, setAnnualPkg] = useState<SubscriptionPrice | null>(null);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    getSubscriptionOfferings().then(({ monthly, annual }) => {
+      if (cancelled) return;
+      setMonthlyPkg(monthly);
+      setAnnualPkg(annual);
+    });
+    return () => { cancelled = true; };
+  }, [visible]);
+
+  // Display strings. Fall back to GBP baseline on web or when the RC
+  // fetch hasn't resolved yet — the App Store will show the real local
+  // price when StoreKit actually charges, and this fallback only
+  // flashes briefly on the first paywall open.
+  const monthlyPriceString = monthlyPkg?.priceString ?? '£2.99';
+  const annualPriceString = annualPkg?.priceString ?? '£19.99';
+  // Monthly-equivalent of the annual plan (e.g. £19.99/12 = £1.66).
+  // Computed from the annual plan's numeric price + currency code so
+  // it always uses the same currency as the displayed annual price.
+  const annualMonthlyEq = annualPkg
+    ? formatCurrency(annualPkg.price / 12, annualPkg.currencyCode)
+    : '£1.66';
+  // Savings vs 12 × monthly. Shown on the yearly plan card's header.
+  // Example: monthly £2.99 × 12 = £35.88, annual £19.99 → saves £15.89.
+  // If either price is missing we fall back to a plain "Yearly" label
+  // so the badge doesn't claim a made-up discount.
+  const annualSavings = (monthlyPkg && annualPkg && monthlyPkg.currencyCode === annualPkg.currencyCode)
+    ? formatCurrency(Math.max(0, monthlyPkg.price * 12 - annualPkg.price), annualPkg.currencyCode)
+    : null;
+
   // Pulsing glow for selected plan
   const glowAnim = useRef(new RNAnimated.Value(0)).current;
   useEffect(() => {
@@ -296,7 +334,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = plan === 'yearly' ? t('paywall.cta_yearly') : t('paywall.cta_monthly');
+  const ctaText = plan === 'yearly' ? t('paywall.cta_yearly', { price: annualPriceString }) : t('paywall.cta_monthly', { price: monthlyPriceString });
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -347,12 +385,12 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               </View>
               <View style={st.planLeft}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('paywall.plans.yearly')}</Text>
+                  <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'yearly' && { color: palette.planNameActive }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{annualSavings ? t('paywall.plans.yearly_save', { savings: annualSavings }) : t('paywall.plans.yearly')}</Text>
                   <View style={st.bestValueBadge}><Text style={st.bestValueText} numberOfLines={1}>{t('paywall.plans.best_value')}</Text></View>
                 </View>
-                <Text style={[st.planSub, { color: palette.planSubInactive }, plan === "yearly" && { color: palette.planSubActive }]}>{t("paywall.plans.yearly_sub")}</Text>
+                <Text style={[st.planSub, { color: palette.planSubInactive }, plan === "yearly" && { color: palette.planSubActive }]}>{t('paywall.plans.yearly_sub', { price: annualMonthlyEq })}</Text>
               </View>
-              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{'\u00A3'}19.99<Text style={st.planPricePer}>{t('paywall.plans.yearly_price_suffix')}</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{annualPriceString}<Text style={st.planPricePer}>{t('paywall.plans.yearly_price_suffix')}</Text></Text>
             </Pressable>
 
             {/* Monthly */}
@@ -371,7 +409,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               <View style={st.planLeft}>
                 <Text style={[st.planName, { color: palette.planNameInactive }, plan === 'monthly' && { color: palette.planNameActive }]}>{t('paywall.plans.monthly')}</Text>
               </View>
-              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'monthly' && { color: palette.planPriceActive }]}>{'\u00A3'}2.99<Text style={st.planPricePer}>{t('paywall.plans.monthly_price_suffix')}</Text></Text>
+              <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'monthly' && { color: palette.planPriceActive }]}>{monthlyPriceString}<Text style={st.planPricePer}>{t('paywall.plans.monthly_price_suffix')}</Text></Text>
             </Pressable>
           </View>
 
@@ -387,7 +425,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
               Must be near the purchase CTA and clearly state: length of
               subscription, price per period, auto-renewal, how to cancel. */}
           <Text style={[st.renewalDisclosure, { color: palette.legalMuted }]}>
-            {plan === 'yearly' ? t('paywall.renewal_yearly') : t('paywall.renewal_monthly')}
+            {plan === 'yearly' ? t('paywall.renewal_yearly', { price: annualPriceString }) : t('paywall.renewal_monthly', { price: monthlyPriceString })}
           </Text>
 
           {/* Legal — functional links that route to the in-app WebView

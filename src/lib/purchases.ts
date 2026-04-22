@@ -264,6 +264,72 @@ export async function getEntitlementStatus(): Promise<EntitlementStatus> {
   }
 }
 
+// ─── Subscription pricing ──────────────────────────────────────────
+
+/** Locale-formatted pricing for the monthly + yearly subscription
+ *  packages, pulled from RevenueCat's current offering. `priceString`
+ *  is already formatted for the user's Apple ID region — "£19.99" in
+ *  the UK, "€19.99" in Spain, "US$19.99" in the US, "$399.00" in
+ *  Mexico, etc. The paywall interpolates these into its CTAs and
+ *  legal disclosures instead of hardcoding a currency symbol, which
+ *  would have Apple rejecting under guideline 3.1.2 (displayed
+ *  price must match what StoreKit actually charges). */
+export interface SubscriptionPrice {
+  /** Locale-formatted price ready to display — e.g. "£19.99". */
+  priceString: string;
+  /** Numeric price in the user's local currency. */
+  price: number;
+  /** ISO 4217 currency code — e.g. "GBP", "EUR", "USD", "MXN". */
+  currencyCode: string;
+}
+
+export interface SubscriptionOfferings {
+  monthly: SubscriptionPrice | null;
+  annual: SubscriptionPrice | null;
+}
+
+export async function getSubscriptionOfferings(): Promise<SubscriptionOfferings> {
+  const Purchases = getPurchases();
+  if (!Purchases) return { monthly: null, annual: null };
+  try {
+    const offerings = await Purchases.getOfferings();
+    const current = offerings?.current;
+    if (!current) return { monthly: null, annual: null };
+    const pack = (p: any): SubscriptionPrice | null => {
+      if (!p?.product) return null;
+      return {
+        priceString: p.product.priceString,
+        price: p.product.price,
+        currencyCode: p.product.currencyCode,
+      };
+    };
+    return { monthly: pack(current.monthly), annual: pack(current.annual) };
+  } catch (e) {
+    log.warn('purchases', 'getSubscriptionOfferings failed', { error: String(e) });
+    return { monthly: null, annual: null };
+  }
+}
+
+/** Format a numeric amount in the given currency using the runtime's
+ *  Intl implementation. Intl.NumberFormat with `undefined` locale uses
+ *  the device's own locale, so a Spanish user sees "19,99 €" and an
+ *  American sees "$19.99" — matching the formatting convention of the
+ *  priceString RevenueCat gives us for the whole price. Used by the
+ *  paywall to display the "£1.66/month" breakdown on the yearly plan
+ *  (annualPrice / 12) and the "Save £17" savings badge
+ *  (monthlyPrice × 12 − annualPrice). */
+export function formatCurrency(amount: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currencyCode}`;
+  }
+}
+
 // ─── Gem reward lookup ─────────────────────────────────────────────
 
 /** Given a product ID, return how many gems to add — 0 if it's not
