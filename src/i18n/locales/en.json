@@ -91,7 +91,11 @@
   },
   "legal": {
     "privacy_title": "Privacy Policy",
-    "terms_title": "Terms of Use"
+    "terms_title": "Terms of Use",
+    "eula_title": "Terms of Use (EULA)",
+    "privacy_url": "https://playblanked.com/privacy",
+    "terms_url": "https://playblanked.com/terms",
+    "eula_url": "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
   },
   "modes": {
     "level_not_found": "Level not found",
