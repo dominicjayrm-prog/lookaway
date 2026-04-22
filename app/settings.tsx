@@ -13,6 +13,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { typography } from '@/src/theme/typography';
+import { useGameStore } from '@/src/store';
 import { spacing } from '@/src/theme/spacing';
 import { restorePurchases } from '@/src/lib/purchases';
 import { useGameStore } from '@/src/store';
@@ -236,6 +237,23 @@ function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.wrong + '60'} />
           </Pressable>
         </Card>
+
+        {__DEV__ && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textLight }]}>DEV</Text>
+            <Card style={styles.card}>
+              <Pressable
+                style={[styles.row, { paddingHorizontal: spacing.md }]}
+                onPress={() => useGameStore.getState().setReviewPromptVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Force review prompt"
+              >
+                <Text style={[styles.rowLabel, { color: colors.text, flex: 1 }]}>Force review prompt</Text>
+                <Ionicons name="star" size={18} color={colors.gold} />
+              </Pressable>
+            </Card>
+          </>
+        )}
       </ScrollView>
 
       <SubscriptionPaywall

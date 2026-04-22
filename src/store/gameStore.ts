@@ -8,6 +8,8 @@ import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/d
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
+import { shouldShowReviewPrompt, type ReviewPromptState } from '@/src/lib/reviewPrompt';
+import { track, EVENTS } from '@/src/lib/analytics';
 
 /**
  * Every AsyncStorage key that belongs to ONE user and must be wiped
@@ -193,6 +195,13 @@ interface SavedState {
    *  300 Blanked+ gems. null = never granted. Synced via profiles so
    *  the 30-day cooldown is honoured across devices. */
   lastPlusGemGrantAt?: string | null;
+  /** ISO timestamp of the last time our Stage A "Rate BLANKED" modal
+   *  was shown. Drives the 60-day cooldown between prompts. */
+  lastReviewPromptedAt?: string | null;
+  /** Outcome of the last Stage A prompt. 'accepted' means we escalated
+   *  to the native Apple sheet — once accepted, never re-prompt (Apple
+   *  rate-limits the native sheet to 3/year anyway). */
+  reviewPromptOutcome?: 'accepted' | 'dismissed' | null;
   totalStars?: number;
   highestWorld?: number;
   powerUps?: Partial<PowerUpInventory>;
@@ -249,6 +258,8 @@ function saveState(state: GameStore) {
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
       lastPlusGemGrantAt: state.lastPlusGemGrantAt,
+      lastReviewPromptedAt: state.lastReviewPromptedAt,
+      reviewPromptOutcome: state.reviewPromptOutcome,
       totalStars: state.totalStars, highestWorld: state.highestWorld,
       levelProgress: state.levelProgress, completedScores: state.completedScores,
       powerUps: state.powerUps,
@@ -326,6 +337,17 @@ export interface GameStore {
   /** ISO timestamp of the most recent 300-gem Blanked+ grant. Null
    *  = never granted. 30 days must elapse before the next grant. */
   lastPlusGemGrantAt: string | null;
+  /** ISO timestamp of the last Stage A review prompt — drives the
+   *  60-day cooldown. Synced across devices via profiles. */
+  lastReviewPromptedAt: string | null;
+  /** 'accepted' = user tapped Sure and we fired the native Apple sheet
+   *  (never re-prompt). 'dismissed' = tapped Maybe later (prompt again
+   *  after cooldown). null = never prompted yet. */
+  reviewPromptOutcome: 'accepted' | 'dismissed' | null;
+  /** Ephemeral — true while the Stage A modal is mounted. NOT persisted.
+   *  Flipped to true by `maybeShowReviewPrompt`, back to false by the
+   *  modal's close animation. */
+  reviewPromptVisible: boolean;
   totalStars: number; highestWorld: number;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
@@ -418,6 +440,19 @@ export interface GameStore {
    *  on app foreground, after purchase, after restore. Returns the
    *  number of gems granted (0 if skipped). */
   maybeGrantMonthlyPlusGems: () => number;
+  /** Flip the Stage A modal visibility. Used by the modal itself to
+   *  close and by dev-only overrides to force-show it. Does NOT write
+   *  `lastReviewPromptedAt` — that's `recordReviewPrompted`'s job. */
+  setReviewPromptVisible: (v: boolean) => void;
+  /** Persist the user's answer to the Stage A modal. Writes both the
+   *  outcome and (if not already stamped) the timestamp, then syncs
+   *  to Supabase so the decision sticks across reinstalls + devices. */
+  recordReviewPrompted: (outcome: 'accepted' | 'dismissed') => void;
+  /** Gate + fire Stage A. Call from any peak-joy trigger point — the
+   *  function itself decides whether it's actually OK to show. Returns
+   *  true if the modal was triggered, false if gated (with the reason
+   *  logged to analytics for post-launch tuning). */
+  maybeShowReviewPrompt: (trigger: 'level_3_star' | 'streak_milestone' | 'friend_win') => boolean;
   /** Update the locally-cached avatar url after a successful upload so
    *  every surface that reads it from the store (profile header, home
    *  tab, etc.) refreshes immediately without waiting for the next
@@ -486,6 +521,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     localUpdatedAt: saved.localUpdatedAt ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
     lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
+    lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
+    reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
+    reviewPromptVisible: false,
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
     highestWorld: saved.highestWorld ?? 1,
@@ -811,6 +849,47 @@ export const useGameStore = create<GameStore>((set, get) => {
       return 300;
     },
 
+    setReviewPromptVisible: (v: boolean) => set({ reviewPromptVisible: v }),
+
+    recordReviewPrompted: (outcome) => {
+      const nowIso = new Date().toISOString();
+      set({
+        lastReviewPromptedAt: nowIso,
+        reviewPromptOutcome: outcome,
+      });
+      // Debounced cloud sync fires via saveState. Fire-and-forget —
+      // if the sync fails we'll just re-sync on the next write and
+      // the local value is already the source of truth for gating.
+      setTimeout(() => saveState(get()), 0);
+    },
+
+    maybeShowReviewPrompt: (trigger) => {
+      const state = get();
+      const snapshot: ReviewPromptState = {
+        reviewPromptOutcome: state.reviewPromptOutcome,
+        lastReviewPromptedAt: state.lastReviewPromptedAt,
+        completedLevelCount: Object.keys(state.levelProgress).length,
+        lives: state.lives,
+      };
+      const result = shouldShowReviewPrompt(snapshot);
+      if (!result.ok) {
+        track(EVENTS.REVIEW_PROMPT_SKIPPED, { trigger, reason: result.reason });
+        return false;
+      }
+      // Stamp the timestamp BEFORE showing the modal so a crash
+      // mid-prompt still burns the cooldown slot. Prevents a
+      // crash-loop from spamming the prompt on every relaunch.
+      // The outcome stays null until the user actually taps a button.
+      const nowIso = new Date().toISOString();
+      set({
+        lastReviewPromptedAt: nowIso,
+        reviewPromptVisible: true,
+      });
+      setTimeout(() => saveState(get()), 0);
+      track(EVENTS.REVIEW_PROMPT_SHOWN, { trigger });
+      return true;
+    },
+
     // Re-read localStorage after mount — fixes static export where loadState() runs before window is ready
     hydrate: () => {
       if (get()._hydrated) return;
@@ -836,6 +915,8 @@ export const useGameStore = create<GameStore>((set, get) => {
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
           lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
+          lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
+          reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
           totalStars: saved.totalStars ?? 0,
           highestWorld: saved.highestWorld ?? 1,
           powerUps: { ...DEFAULT_POWERUPS, ...(saved.powerUps ?? {}) },
@@ -901,6 +982,9 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakMilestonesClaimed: [],
         lastPlayDate: null,
         lastPlusGemGrantAt: null,
+        lastReviewPromptedAt: null,
+        reviewPromptOutcome: null,
+        reviewPromptVisible: false,
         // Progress
         totalStars: 0,
         highestWorld: 1,
@@ -1024,6 +1108,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakMilestonesClaimed: [],
         lastPlayDate: null,
         lastPlusGemGrantAt: null,
+        lastReviewPromptedAt: null,
+        reviewPromptOutcome: null,
         loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
         localUpdatedAt: 0,
         username: null,
@@ -1180,6 +1266,26 @@ export const useGameStore = create<GameStore>((set, get) => {
           if (!a) return b ?? null;
           if (!b) return a;
           return a > b ? a : b;
+        })(),
+        // Review prompt timestamp: most-recent wins (same reasoning as
+        // the gem-grant timestamp — prevents a stale cloud value from
+        // resurrecting a cooldown that's already elapsed locally).
+        lastReviewPromptedAt: ((): string | null => {
+          const a = safeLocal.lastReviewPromptedAt;
+          const b = cloud.lastReviewPromptedAt;
+          if (!a) return b ?? null;
+          if (!b) return a;
+          return a > b ? a : b;
+        })(),
+        // Review prompt outcome: 'accepted' is sticky across devices —
+        // once a user has given us their App Store rating, we never
+        // want to re-prompt from ANY device. Otherwise take whichever
+        // side has a value.
+        reviewPromptOutcome: ((): 'accepted' | 'dismissed' | null => {
+          const a = safeLocal.reviewPromptOutcome ?? null;
+          const b = cloud.reviewPromptOutcome ?? null;
+          if (a === 'accepted' || b === 'accepted') return 'accepted';
+          return a ?? b ?? null;
         })(),
         // completedScores already merged above (line ~762) via mergedScores —
         // an older version of this block also wrote it here under a now-dead
