@@ -10,6 +10,7 @@
  *  - Challenge + Close + Remove friend actions
  */
 import React, { useEffect, useState } from 'react';
+import { t } from '@/src/i18n';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
@@ -75,7 +76,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
   // view a blocked user IS a removed one.
   const handleBlock = React.useCallback(() => {
     if (!myId || blocking) return;
-    const confirmMsg = `Block @${profile.username}? They won't be able to send you friend requests or challenges, and they'll disappear from your search results. You can unblock them from your profile.`;
+    const confirmMsg = t('modals.block_user_confirm', { username: profile.username });
     const runBlock = async () => {
       setBlocking(true);
       const ok = await blockUser(myId, profile.id);
@@ -87,18 +88,18 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
         onRemove(friend.friendshipId);
         onClose();
       } else {
-        const errMsg = `Could not block @${profile.username}. Please try again.`;
+        const errMsg = t('modals.block_failed_body', { username: profile.username });
         if (Platform.OS === 'web' && typeof window !== 'undefined') (window as any).alert?.(errMsg);
-        else Alert.alert('Block failed', errMsg);
+        else Alert.alert(t('modals.block_failed_title'), errMsg);
       }
     };
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       if ((window as any).confirm?.(confirmMsg)) runBlock();
       return;
     }
-    Alert.alert('Block user', confirmMsg, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Block', style: 'destructive', onPress: runBlock },
+    Alert.alert(t('modals.block_user_title'), confirmMsg, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('modals.block_user_cta'), style: 'destructive', onPress: runBlock },
     ]);
   }, [myId, blocking, profile.username, profile.id, friend.friendshipId, onRemove, onClose]);
 
@@ -214,20 +215,20 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
 
             {/* Primary stat grid — 2 rows of 3 */}
             <View style={styles.statGrid}>
-              <StatCell label="Stars" value={String(profile.total_stars)} icon="star" iconColor={colors.gold} colors={colors} />
-              <StatCell label="World" value={String(profile.highest_world)} icon="map-outline" iconColor={colors.accent} colors={colors} />
-              <StatCell label="Memory" value={memoryScore !== null ? `${memoryScore}%` : ' -'} icon="pulse" iconColor={colors.blue} colors={colors} />
+              <StatCell label={t('modals.friend_stat_stars')} value={String(profile.total_stars)} icon="star" iconColor={colors.gold} colors={colors} />
+              <StatCell label={t('modals.friend_stat_world')} value={String(profile.highest_world)} icon="map-outline" iconColor={colors.accent} colors={colors} />
+              <StatCell label={t('modals.friend_stat_memory')} value={memoryScore !== null ? `${memoryScore}%` : ' -'} icon="pulse" iconColor={colors.blue} colors={colors} />
             </View>
             <View style={styles.statGrid}>
-              <StatCell label="Record" value={recordText} icon="trophy-outline" iconColor={colors.wrong} colors={colors} />
-              <StatCell label="Achievements" value={achievementsText} icon="medal" iconColor={colors.gold} colors={colors} />
-              <StatCell label="Status" value={status === 'online' ? 'Online' : 'Offline'} icon={status === 'online' ? 'ellipse' : 'ellipse-outline'} iconColor={statusColor} colors={colors} />
+              <StatCell label={t('modals.friend_stat_record')} value={recordText} icon="trophy-outline" iconColor={colors.wrong} colors={colors} />
+              <StatCell label={t('modals.friend_stat_achievements')} value={achievementsText} icon="medal" iconColor={colors.gold} colors={colors} />
+              <StatCell label={t('modals.status')} value={status === 'online' ? t('modals.online') : t('modals.offline')} icon={status === 'online' ? 'ellipse' : 'ellipse-outline'} iconColor={statusColor} colors={colors} />
             </View>
 
             {/* Equipped cosmetics showcase */}
             {(frame || banner || expressionCosmetic) && (
               <View style={[styles.cosmeticStrip, { borderColor: colors.border }]}>
-                <Text style={[styles.cosmeticLabel, { color: colors.textMid }]}>EQUIPPED</Text>
+                <Text style={[styles.cosmeticLabel, { color: colors.textMid }]}>{t('modals.equipped')}</Text>
                 <View style={styles.cosmeticRow}>
                   {frame && frame.id !== 'frame_none' && (
                     <CosmeticChip label={frame.name} colors={colors} />

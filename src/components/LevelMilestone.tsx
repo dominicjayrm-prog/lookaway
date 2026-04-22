@@ -4,6 +4,7 @@
  * Auto-dismisses after 2.5 seconds.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
@@ -128,7 +129,7 @@ function LevelMilestone({ levelCount, onDone }: Props) {
         <RNAnimated.View style={[st.badge, { transform: [{ scale: badgeScale }] }]}>
           <Text style={st.emoji}>{milestone.emoji}</Text>
           <Text style={st.count}>{levelCount}</Text>
-          <Text style={st.countLabel}>LEVELS</Text>
+          <Text style={st.countLabel}>{t('celebrations.level_milestone_label')}</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: textOpacity, marginTop: 16 }}>

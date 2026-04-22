@@ -13,6 +13,7 @@
  *    sound so the player can confirm audio is working before a game.
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Switch, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -80,7 +81,7 @@ export default function SoundSettingsScreen() {
           onPress={() => router.back()}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Back to settings"
+          accessibilityLabel={t('modals.back_to_settings_aria')}
           style={styles.backBtn}
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -98,7 +99,7 @@ export default function SoundSettingsScreen() {
         <Card style={styles.card}>
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowLabel, { color: colors.text, fontWeight: '700' }]}>All sounds</Text>
+              <Text style={[styles.rowLabel, { color: colors.text, fontWeight: '700' }]}>{t('sound_settings.all_sounds')}</Text>
               <Text style={[styles.rowHelp, { color: colors.textLight }]}>Master toggle — turns every sound off</Text>
             </View>
             <Switch
@@ -110,7 +111,7 @@ export default function SoundSettingsScreen() {
         </Card>
 
         {/* Category toggles */}
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>CATEGORIES</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('sound_settings.categories_section')}</Text>
         <Card style={styles.card}>
           {CATEGORIES.map((cat, i) => {
             const enabled = prefs.master && prefs[cat.key];
@@ -148,12 +149,12 @@ export default function SoundSettingsScreen() {
         </Card>
 
         {/* Haptics */}
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>HAPTICS</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('sound_settings.haptics_section')}</Text>
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.catIcon}>{'\uD83D\uDCF3'}</Text>
             <View style={styles.catText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Haptic feedback</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('sound_settings.haptic_feedback')}</Text>
               <Text style={[styles.rowHelp, { color: colors.textLight }]}>Subtle vibration on taps, correct/wrong answers, and level complete</Text>
             </View>
             <Switch

@@ -3,6 +3,7 @@
  * 5-second sequence with gold rings, Blink star-eyes, cosmetic previews, confetti.
  */
 import React, { useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Animated as RNAnimated, Dimensions, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from './Blink';
@@ -202,7 +203,7 @@ function PremiumCelebrationComponent({ visible, onDismiss }: Props) {
 
         {/* Subtitle */}
         <RNAnimated.View style={{ opacity: subtitleOpacity, transform: [{ scale: subtitleScale }] }}>
-          <Text style={st.premiumText}>Premium</Text>
+          <Text style={st.premiumText}>{t('celebrations.premium_label')}</Text>
         </RNAnimated.View>
 
         {/* 3 cosmetic previews */}
@@ -211,15 +212,15 @@ function PremiumCelebrationComponent({ visible, onDismiss }: Props) {
             <View style={{ borderWidth: 3, borderColor: GOLD, borderRadius: 22, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Blink expression="normal" size={34} />
             </View>
-            <Text style={st.previewLabel}>Gold Frame</Text>
+            <Text style={st.previewLabel}>{t('celebrations.premium_frame')}</Text>
           </View>
           <View style={st.previewItem}>
             <Blink expression="premium" size={44} />
-            <Text style={st.previewLabel}>Star Eyes</Text>
+            <Text style={st.previewLabel}>{t('celebrations.premium_expression')}</Text>
           </View>
           <View style={st.previewItem}>
             <LinearGradient colors={['#2D3436', '#D4A012']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 50, height: 24, borderRadius: 6 }} />
-            <Text style={st.previewLabel}>Gold Banner</Text>
+            <Text style={st.previewLabel}>{t('celebrations.premium_banner')}</Text>
           </View>
         </RNAnimated.View>
 
@@ -231,7 +232,7 @@ function PremiumCelebrationComponent({ visible, onDismiss }: Props) {
         {/* Button */}
         <RNAnimated.View style={{ opacity: btnOpacity, transform: [{ translateY: btnSlide }], marginTop: 20, width: '100%', maxWidth: 260 }}>
           <Pressable onPress={onDismiss} style={st.btn}>
-            <Text style={st.btnText}>Let's go</Text>
+            <Text style={st.btnText}>{t('celebrations.premium_cta')}</Text>
           </Pressable>
         </RNAnimated.View>
       </View>

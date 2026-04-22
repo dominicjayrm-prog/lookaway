@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, TextInput, StyleSheet, Animated as RNAnimated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -52,7 +53,7 @@ function AnimatedAddButton({
           ]}
         >
           <Ionicons name="checkmark" size={14} color={colors.correct} />
-          <Text style={[styles.sentPillText, { color: colors.correct }]}>Sent</Text>
+          <Text style={[styles.sentPillText, { color: colors.correct }]}>{t('friends.sent')}</Text>
         </RNAnimated.View>
       ) : (
         <Pressable
@@ -62,9 +63,9 @@ function AnimatedAddButton({
           ]}
           onPress={onPress}
           accessibilityRole="button"
-          accessibilityLabel="Send friend request"
+          accessibilityLabel={t('friends.send_request_aria')}
         >
-          <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Add</Text>
+          <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{t('friends.add')}</Text>
         </Pressable>
       )}
     </RNAnimated.View>
@@ -121,7 +122,7 @@ export const FriendSearchSection = forwardRef<TextInput, FriendSearchSectionProp
           <TextInput
             ref={ref}
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Add friend by username..."
+            placeholder={t('friends.search_placeholder')}
             placeholderTextColor={colors.textLight}
             value={searchText}
             onChangeText={onChangeSearchText}
@@ -130,13 +131,13 @@ export const FriendSearchSection = forwardRef<TextInput, FriendSearchSectionProp
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
-            accessibilityLabel="Search friends by username"
+            accessibilityLabel={t('friends.search_aria')}
           />
           {searchText.length > 0 && (
             <Pressable
               onPress={() => onChangeSearchText('')}
               accessibilityRole="button"
-              accessibilityLabel="Clear search"
+              accessibilityLabel={t('friends.clear_search_aria')}
             >
               <Ionicons name="close-circle" size={18} color={colors.textLight} />
             </Pressable>

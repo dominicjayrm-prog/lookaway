@@ -33,12 +33,26 @@ import { initAdsAndTracking } from '@/src/utils/adService';
 import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 import { OfflineScreen } from '@/src/components/OfflineScreen';
+import { applyLanguage, t } from '@/src/i18n';
 
 SplashScreen.preventAutoHideAsync();
 
 function StoreHydrator() {
   const hydrate = useGameStore((s) => s.hydrate);
   useEffect(() => { hydrate(); }, [hydrate]);
+  return null;
+}
+
+/** Keep the i18n layer's active locale in lockstep with the user's
+ *  preference. `applyLanguage` is also called synchronously from
+ *  `setPreferredLanguage` for instant tap-to-re-render, but this
+ *  effect handles cold-start + the loadFromCloud case where the
+ *  cloud value rides into local state via the hydrate merge. */
+function LocaleApplier() {
+  const preferred = useGameStore((s) => s.preferredLanguage);
+  useEffect(() => {
+    applyLanguage(preferred);
+  }, [preferred]);
   return null;
 }
 
@@ -122,8 +136,8 @@ function DeepLinkHandler() {
           // next launch. Safe even if no session exists.
           try { await supabase.auth.signOut(); } catch {}
           Alert.alert(
-            'Reset link not valid',
-            msg + ' Tap "Forgot?" on the sign in screen to send a fresh one.',
+            t('reset_link.invalid_title'),
+            t('reset_link.invalid_body', { msg }),
           );
         };
         const codeMatch = url.match(/[?&#]code=([^&]+)/);
@@ -131,7 +145,7 @@ function DeepLinkHandler() {
           const { error } = await supabase.auth.exchangeCodeForSession(codeMatch[1]);
           if (error) {
             console.warn('exchangeCodeForSession failed:', error.message);
-            await fail('That reset link has expired or already been used.');
+            await fail(t('reset_link.expired'));
           }
           return;
         }
@@ -145,16 +159,16 @@ function DeepLinkHandler() {
             const { error } = await supabase.auth.setSession({ access_token: access, refresh_token: refresh });
             if (error) {
               console.warn('setSession from hash failed:', error.message);
-              await fail('That reset link has expired or already been used.');
+              await fail(t('reset_link.expired'));
             }
           } else {
-            await fail('That reset link is missing the security token.');
+            await fail(t('reset_link.missing_token'));
           }
         }
       } catch (e) {
         console.warn('password reset deep link handler threw:', e);
         try { await supabase.auth.signOut(); } catch {}
-        Alert.alert('Reset link not valid', 'Something went wrong opening the link. Tap "Forgot?" on the sign in screen to send a fresh one.');
+        Alert.alert(t('reset_link.invalid_title'), t('reset_link.invalid_body', { msg: t('auth.generic_error') }));
       }
     };
 
@@ -492,6 +506,7 @@ function RootLayout() {
       <AuthProvider>
         <MobileContainer onLayout={onLayoutReady}>
           <StoreHydrator />
+          <LocaleApplier />
           <SoundLoader />
           <AdsInitialiser />
           <AnalyticsInitialiser />

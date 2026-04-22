@@ -3,6 +3,7 @@
  * Shows all owned boosts grouped by game mode.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -66,7 +67,7 @@ function PowerUpViewerComponent({ visible, onDismiss }: Props) {
               <View style={[st.emptyState, { backgroundColor: colors.card }]}>
                 <Ionicons name="flash-outline" size={32} color={colors.textLight} />
                 <Text style={[st.emptyText, { color: colors.textLight }]}>No power-ups yet</Text>
-                <Text style={[st.emptyHint, { color: colors.textLight }]}>Buy boosts in the shop to use during gameplay</Text>
+                <Text style={[st.emptyHint, { color: colors.textLight }]}>{t('modals.powerup_empty_hint')}</Text>
               </View>
             ) : (
               groups.map(g => (
@@ -92,7 +93,7 @@ function PowerUpViewerComponent({ visible, onDismiss }: Props) {
             )}
 
             <Pressable onPress={() => { onDismiss(); router.push('/(tabs)/shop'); }} style={[st.shopBtn, { backgroundColor: colors.accent }]}>
-              <Text style={st.shopBtnText}>Get more in the Shop</Text>
+              <Text style={st.shopBtnText}>{t('modals.get_more_shop')}</Text>
             </Pressable>
           </ScrollView>
         </View>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
+import { t } from '@/src/i18n';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
 import { PowerUpBar } from '@/src/components/PowerUpBar';
@@ -323,11 +324,11 @@ function ChallengeGameScreen() {
   const sceneCorrect = sceneAnswers.filter(a => a.correct).length;
 
   if (phase === 'loading') {
-    return (<SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}><ActivityIndicator size="large" color={colors.accent} /><Text style={[styles.loadingText, { color: colors.textMid }]}>Setting up challenge...</Text></SafeAreaView>);
+    return (<SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}><ActivityIndicator size="large" color={colors.accent} /><Text style={[styles.loadingText, { color: colors.textMid }]}>{t('challenge.loading_setup')}</Text></SafeAreaView>);
   }
 
   if (phase === 'error') {
-    return (<SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}><Text style={[styles.loadingText, { color: colors.wrong }]}>Could not load challenge</Text><Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={styles.primaryBtnText}>Go back</Text></Pressable></SafeAreaView>);
+    return (<SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}><Text style={[styles.loadingText, { color: colors.wrong }]}>{t('challenge.could_not_load')}</Text><Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.back()}><Text style={styles.primaryBtnText}>{t('challenge.go_back')}</Text></Pressable></SafeAreaView>);
   }
 
   return (
@@ -350,10 +351,10 @@ function ChallengeGameScreen() {
       {/* Ready */}
       {phase === 'ready' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Challenge</Text>
+          <Text style={[styles.bigTitle, { color: colors.accent }]}>{t('challenge.title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>{totalScenes} scenes, {totalScenes * 5} questions</Text>
           <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={startChallenge}>
-            <Text style={styles.primaryBtnText}>Start</Text>
+            <Text style={styles.primaryBtnText}>{t('game.start')}</Text>
           </Pressable>
         </View>
       )}
@@ -368,7 +369,7 @@ function ChallengeGameScreen() {
       {phase === 'memorise' && currentScene && (
         <View style={styles.gameArea}>
           <CountdownTimer duration={currentScene.viewTime * CHALLENGE_VIEW_TIME_MULT + pu.timerBonus} running={!pu.buyPopupId} onComplete={handleMemoriseComplete} style={styles.timer} />
-          <Text style={[styles.memoriseText, { color: colors.textMid }]}>Memorise this scene!</Text>
+          <Text style={[styles.memoriseText, { color: colors.textMid }]}>{t('game.memorise_prompt')}</Text>
           <SceneRenderer objects={currentScene.objects} visible viewTime={currentScene.viewTime * CHALLENGE_VIEW_TIME_MULT} />
           <SlowTimeButton used={pu.usedPowerUps.slowTime} onUse={pu.handleSlowTime} />
         </View>
@@ -383,8 +384,8 @@ function ChallengeGameScreen() {
       {phase === 'transition' && (
         <View style={styles.centered}>
           <AnimatedBlink expression="blank" size={80} entrance="spring" />
-          <Text style={[styles.bigTitle, { color: colors.accent, marginTop: 16 }]}>Go blank!</Text>
-          <Text style={[styles.subtitle, { color: colors.textLight }]}>What do you remember?</Text>
+          <Text style={[styles.bigTitle, { color: colors.accent, marginTop: 16 }]}>{t('challenge.go_blank')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textLight }]}>{t('game.go_blank_sub')}</Text>
         </View>
       )}
 
@@ -420,11 +421,11 @@ function ChallengeGameScreen() {
           <Text style={[styles.subtitle, { color: colors.textMid }]}>{sceneCorrect}/{totalQuestions} correct</Text>
           {sceneIdx + 1 < totalScenes ? (
             <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={handleNextScene}>
-              <Text style={styles.primaryBtnText}>Next scene</Text>
+              <Text style={styles.primaryBtnText}>{t('challenge.next_scene')}</Text>
             </Pressable>
           ) : (
             <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={handleNextScene}>
-              <Text style={styles.primaryBtnText}>See results</Text>
+              <Text style={styles.primaryBtnText}>{t('challenge.see_results')}</Text>
             </Pressable>
           )}
         </View>
@@ -436,7 +437,7 @@ function ChallengeGameScreen() {
           a frame to mount. */}
       {phase === 'complete' && (
         <View style={styles.centered}>
-          <Text style={[styles.bigTitle, { color: colors.accent }]}>Nice work!</Text>
+          <Text style={[styles.bigTitle, { color: colors.accent }]}>{t('challenge.nice_work')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent’s progress…</Text>
         </View>
       )}
@@ -454,7 +455,7 @@ function ChallengeGameScreen() {
         visible={showQuitConfirm}
         costsLife={false}
         nonPremiumBody={isChallenger
-          ? "Your progress will be lost and no challenge will be sent to your friend."
+          ? t('challenge.abandon_warning')
           : "Your progress will be lost. You can come back later as long as the challenge is still pending."}
         onLeave={confirmLeave}
         onKeepPlaying={() => setShowQuitConfirm(false)}

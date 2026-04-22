@@ -3,6 +3,7 @@
  * Rendered on the Play tab home screen.
  */
 import React, { useEffect, useState, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -71,7 +72,7 @@ function WeeklyChallengesCard() {
             <Ionicons name="trophy-outline" size={15} color={colors.blue} />
           </View>
           <View>
-            <Text style={[st.headerTitle, { color: colors.text }]}>Weekly challenges</Text>
+            <Text style={[st.headerTitle, { color: colors.text }]}>{t('modals.weekly_challenges')}</Text>
             <Text style={[st.headerSub, { color: colors.textMid }]}>
               {completedCount}/3 done {allClaimed ? '' : `\u00B7 Resets in ${resetTimer}`}
             </Text>
@@ -79,7 +80,7 @@ function WeeklyChallengesCard() {
         </View>
         {allClaimed && (
           <View style={[st.completedBadge, { backgroundColor: colors.correctSoft }]}>
-            <Text style={[st.completedText, { color: colors.correct }]}>Done!</Text>
+            <Text style={[st.completedText, { color: colors.correct }]}>{t('modals.weekly_done')}</Text>
           </View>
         )}
       </View>
@@ -154,13 +155,13 @@ function GoalRow({ goal, progress, claimed, colors, onClaim, isLast }: GoalRowPr
               style={({ pressed }) => [st.claimBtn, { backgroundColor: colors.correct }, pressed && { opacity: 0.8, transform: [{ scale: 0.96 }] }]}
               onPress={() => onClaim(goal.id)}
             >
-              <Text style={st.claimBtnText}>Claim</Text>
+              <Text style={st.claimBtnText}>{t('modals.claim')}</Text>
             </Pressable>
           )}
           {claimed && (
             <View style={[st.claimedBadge, { backgroundColor: colors.correctSoft }]}>
               <Ionicons name="checkmark-circle" size={12} color={colors.correct} />
-              <Text style={[st.claimedText, { color: colors.correct }]}>Claimed</Text>
+              <Text style={[st.claimedText, { color: colors.correct }]}>{t('modals.claimed')}</Text>
             </View>
           )}
         </View>

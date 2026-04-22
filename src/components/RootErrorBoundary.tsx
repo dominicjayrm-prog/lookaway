@@ -17,6 +17,7 @@
  *    in dev so the user can copy-paste it to support
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 
 interface State {
@@ -56,7 +57,7 @@ export class RootErrorBoundary extends React.Component<Props, State> {
 
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Something went wrong</Text>
+        <Text style={styles.title}>{t('common.something_wrong')}</Text>
         <Text style={styles.body}>
           Blanked hit an unexpected error. Tap below to try again. If this keeps
           happening, email hello@playblanked.com and we'll fix it for you.
@@ -65,8 +66,8 @@ export class RootErrorBoundary extends React.Component<Props, State> {
           <Text style={styles.devText} selectable>{errMsg}</Text>
           {errStack ? <Text style={styles.devStack} selectable>{errStack}</Text> : null}
         </View>
-        <Pressable onPress={this.reset} style={styles.button} accessibilityRole="button" accessibilityLabel="Try again">
-          <Text style={styles.buttonText}>Try again</Text>
+        <Pressable onPress={this.reset} style={styles.button} accessibilityRole="button" accessibilityLabel={t('common.try_again')}>
+          <Text style={styles.buttonText}>{t('common.try_again')}</Text>
         </Pressable>
       </View>
     );

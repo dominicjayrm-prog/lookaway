@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle, Rect, Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -195,7 +196,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
     <View style={s.container}>
       {phase === 'chaos' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>COUNT THE COLOURS!</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.count_colours')}</Text>
           <View style={s.timerRow}>
             <View style={[s.timerTrack, { backgroundColor: colors.border }]}>
               <View style={[s.timerFill, { width: `${Math.round(chaosProgress * 100)}%`, backgroundColor: timerColor }]} />

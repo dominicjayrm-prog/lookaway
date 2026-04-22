@@ -1,0 +1,96 @@
+/**
+ * BLANKED i18n layer.
+ *
+ * Thin wrapper over `i18n-js` that:
+ *  - Detects the device locale via `expo-localization`.
+ *  - Resolves the effective language from the user's preference
+ *    ('system' | 'en' | 'es') — `system` defers to the device.
+ *  - Exposes `t(key, params?)` for rendering, plus `setLocale()` for
+ *    switching from the settings screen.
+ *  - Falls back to English automatically when an `es.json` key is
+ *    missing (lets us ship partially-translated features safely).
+ *
+ * We intentionally keep the module stateless apart from the `I18n`
+ * instance itself. The store owns `preferredLanguage`, calls
+ * `setLocale()` when it changes, and the rendered UI re-reads via
+ * `t()` on every render — no context provider needed, which keeps
+ * the API surface minimal and sidesteps a whole class of React
+ * provider-ordering bugs.
+ */
+import { I18n } from 'i18n-js';
+import * as Localization from 'expo-localization';
+
+import en from './locales/en.json';
+import es from './locales/es.json';
+
+/** User preference — what they picked in settings.
+ *  'system' = follow device locale. */
+export type LanguagePreference = 'system' | 'en' | 'es';
+
+/** Effective locale after resolving 'system' against the device. */
+export type ResolvedLanguage = 'en' | 'es';
+
+/** All languages we currently ship. Add to this list when we
+ *  introduce French/German/etc. — `resolveLanguage` handles the
+ *  device-locale match automatically. */
+export const SUPPORTED_LANGUAGES: ResolvedLanguage[] = ['en', 'es'];
+
+/** Shared i18n-js instance. Exported for the (rare) case where a
+ *  caller needs to drop down to raw API (e.g. pluralisation rules). */
+export const i18n = new I18n(
+  { en, es },
+  {
+    defaultLocale: 'en',
+    // When a key is missing in the active locale, i18n-js will try
+    // the default ('en'). This is what we want — partially-translated
+    // features render in English rather than showing "[missing …]".
+    enableFallback: true,
+  },
+);
+
+/** Read the device's primary locale language code (e.g. 'es' from
+ *  'es-MX'). Used when `preferredLanguage === 'system'`. Safe to call
+ *  on web — `expo-localization` ships a DOM polyfill that falls back
+ *  to `navigator.language`. */
+export function getDeviceLanguage(): string | null {
+  try {
+    const locales = Localization.getLocales();
+    return locales[0]?.languageCode ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve the effective language from the user's preference and
+ *  the device locale. Pure — takes the device language as a param
+ *  so it's trivially unit-testable. */
+export function resolveLanguage(
+  preference: LanguagePreference,
+  deviceLanguage: string | null,
+): ResolvedLanguage {
+  if (preference === 'en' || preference === 'es') return preference;
+  // 'system' — map the device language onto one of our supported
+  // locales. Anything we don't support (fr, de, ja…) falls back to
+  // English, which is the right call for a v1 shipping just en+es.
+  if (deviceLanguage && (SUPPORTED_LANGUAGES as string[]).includes(deviceLanguage)) {
+    return deviceLanguage as ResolvedLanguage;
+  }
+  return 'en';
+}
+
+/** Apply a language to the i18n instance. Call this once on app
+ *  boot (from `_layout.tsx`) and again whenever `preferredLanguage`
+ *  changes in the store so the whole UI re-renders in the new
+ *  language on the next frame. */
+export function applyLanguage(preference: LanguagePreference): ResolvedLanguage {
+  const resolved = resolveLanguage(preference, getDeviceLanguage());
+  i18n.locale = resolved;
+  return resolved;
+}
+
+/** Render a key. Thin wrapper so components never touch `i18n-js`
+ *  directly — if we swap libraries (or roll our own) this is the
+ *  single migration point. */
+export function t(key: string, params?: Record<string, string | number>): string {
+  return i18n.t(key, params);
+}

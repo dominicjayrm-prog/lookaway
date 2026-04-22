@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated } from
 import Svg, { Path, Circle, Polygon } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { getNextMilestone } from '@/src/data/streakMilestones';
 
 interface StreakCelebrationProps {
@@ -148,7 +149,7 @@ export const StreakCelebration = React.memo(function StreakCelebration({ visible
             {/* Streak text */}
             <RNAnimated.View style={{ opacity: textOpacity, transform: [{ translateY: textSlide }], alignItems: 'center' }}>
               <Text style={[styles.streakNumber, { color }]}>{days}-DAY</Text>
-              <Text style={[styles.streakLabel, { color: colors.text }]}>STREAK!</Text>
+              <Text style={[styles.streakLabel, { color: colors.text }]}>{t('celebrations.streak_label')}</Text>
             </RNAnimated.View>
 
             {/* Title badge */}
@@ -165,7 +166,7 @@ export const StreakCelebration = React.memo(function StreakCelebration({ visible
             {/* Keep it up button */}
             <RNAnimated.View style={{ opacity: buttonOpacity, width: '100%', maxWidth: 240 }}>
               <Pressable style={[styles.button, { backgroundColor: color }]} onPress={onDismiss}>
-                <Text style={styles.buttonText}>Keep it up!</Text>
+                <Text style={styles.buttonText}>{t('celebrations.streak_cta')}</Text>
               </Pressable>
             </RNAnimated.View>
 
@@ -174,7 +175,7 @@ export const StreakCelebration = React.memo(function StreakCelebration({ visible
               {nextMilestone ? (
                 <Text style={[styles.nextText, { color: colors.textMid }]}>Next milestone: {nextMilestone.days} days (+{nextMilestone.gems} gems)</Text>
               ) : (
-                <Text style={[styles.nextText, { color: colors.gold }]}>You've reached the highest streak level!</Text>
+                <Text style={[styles.nextText, { color: colors.gold }]}>{t('celebrations.streak_max')}</Text>
               )}
             </RNAnimated.View>
           </View>

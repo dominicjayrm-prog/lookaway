@@ -4,6 +4,7 @@
  * No purchasing — that's shop-only.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -51,7 +52,7 @@ function CosmeticPickerComponent({
             {/* Owned items */}
             {ownedItems.length > 0 && (
               <>
-                <Text style={[st.sectionLabel, { color: colors.textMid }]}>OWNED</Text>
+                <Text style={[st.sectionLabel, { color: colors.textMid }]}>{t('modals.owned_section')}</Text>
                 <View style={st.grid}>
                   {sortedOwned.map(item => {
                     const equipped = item.id === equippedId;
@@ -64,7 +65,7 @@ function CosmeticPickerComponent({
                         {renderPreview(item)}
                         <Text style={[st.cardName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
                         <Text style={{ fontSize: 8, color: RARITY_COLORS[item.rarity], fontWeight: '600' }}>{item.rarity.toUpperCase()}</Text>
-                        {equipped && <Text style={[st.equippedLabel, { color: colors.correct }]}>EQUIPPED</Text>}
+                        {equipped && <Text style={[st.equippedLabel, { color: colors.correct }]}>{t('modals.equipped')}</Text>}
                       </Pressable>
                     );
                   })}
@@ -75,7 +76,7 @@ function CosmeticPickerComponent({
             {/* Locked items */}
             {lockedItems.length > 0 && (
               <>
-                <Text style={[st.sectionLabel, { color: colors.textLight, marginTop: 16 }]}>LOCKED</Text>
+                <Text style={[st.sectionLabel, { color: colors.textLight, marginTop: 16 }]}>{t('modals.locked_section')}</Text>
                 <View style={st.grid}>
                   {sortedLocked.map(item => (
                     <View key={item.id} style={[st.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: 0.4 }]}>
@@ -97,7 +98,7 @@ function CosmeticPickerComponent({
             {lockedItems.length > 0 && (
               <Pressable onPress={() => { onDismiss(); router.push('/(tabs)/shop'); }} style={[st.shopLink, { borderColor: colors.accent }]}>
                 <Ionicons name="cart" size={16} color={colors.accent} />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>Browse Shop</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.accent }}>{t('modals.browse_shop')}</Text>
               </Pressable>
             )}
           </ScrollView>

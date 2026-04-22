@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Dimensions, Modal } from 'react-nati
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
 import { LevelCache } from '@/src/utils/levelCache';
@@ -364,9 +365,9 @@ function SideCampaignScreen() {
   if (phase === 'error') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
-        <Text style={[s.loadingText, { color: colors.wrong }]}>Could not load level</Text>
+        <Text style={[s.loadingText, { color: colors.wrong }]}>{t('challenge.could_not_load_level')}</Text>
         <Pressable style={[s.btn, { backgroundColor: colors.accent }]} onPress={() => router.back()}>
-          <Text style={s.btnText}>Go back</Text>
+          <Text style={s.btnText}>{t('challenge.go_back')}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -402,7 +403,7 @@ function SideCampaignScreen() {
             if (isExternalMode) setPhase('show');
             else startRound();
           }}>
-            <Text style={s.btnText}>Start</Text>
+            <Text style={s.btnText}>{t('game.start')}</Text>
           </Pressable>
         </View>
       )}
@@ -420,7 +421,7 @@ function SideCampaignScreen() {
       {/* SPEED RECALL: Show scene */}
       {phase === 'show' && !isExternalMode && currentRound && (
         <View style={s.gameArea}>
-          <Text style={[s.phaseLabel, { color: colors.textMid }]}>Memorise the positions!</Text>
+          <Text style={[s.phaseLabel, { color: colors.textMid }]}>{t('challenge.memorise_positions')}</Text>
           {/* Timer bar */}
           <View style={{ width: '100%', height: 6, borderRadius: 3, backgroundColor: colors.border, marginBottom: 10, overflow: 'hidden' }}>
             <View style={{ width: `${Math.round(srTimerProgress * 100)}%`, height: '100%', borderRadius: 3, backgroundColor: srTimerProgress > 0.4 ? mColor : srTimerProgress > 0.15 ? '#D4A012' : '#FF6B6B' }} />
@@ -448,7 +449,7 @@ function SideCampaignScreen() {
           </View>
           <Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text>
           {phase === 'recall' && srSecondChanceArmed && (
-            <Text style={[s.shapeProgress, { color: '#E17055', fontWeight: '700' }]}>Second Chance armed</Text>
+            <Text style={[s.shapeProgress, { color: '#E17055', fontWeight: '700' }]}>{t('challenge.second_chance_armed')}</Text>
           )}
           <Pressable style={[s.canvas, { backgroundColor: colors.card }]} onPress={handleCanvasTap} onLayout={(e) => setCanvasSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
             {/* Ghost Outline — dashed rings at every shape's true
@@ -505,7 +506,7 @@ function SideCampaignScreen() {
       {/* Level Complete */}
       {phase === 'complete' && (
         <View style={s.centered}>
-          <Text style={[s.bigTitle, { color: mColor }]}>Level Complete!</Text>
+          <Text style={[s.bigTitle, { color: mColor }]}>{t('challenge.level_complete')}</Text>
           <Text style={[s.bigScore, { color: colors.text }]}>{scorePct}%</Text>
           <View style={s.starRow}>
             {[1, 2, 3].map(i => (
@@ -517,10 +518,10 @@ function SideCampaignScreen() {
           )}
           <View style={s.buttonRow}>
             <Pressable style={[s.btn, s.btnSecondary, { borderColor: mColor }]} onPress={() => router.back()}>
-              <Text style={[s.btnTextSecondary, { color: mColor }]}>Back to map</Text>
+              <Text style={[s.btnTextSecondary, { color: mColor }]}>{t('challenge.back_to_map')}</Text>
             </Pressable>
             <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={goToNextLevel}>
-              <Text style={s.btnText}>Next Level</Text>
+              <Text style={s.btnText}>{t('challenge.next_level')}</Text>
             </Pressable>
           </View>
         </View>
@@ -529,12 +530,12 @@ function SideCampaignScreen() {
       {/* Level Failed */}
       {phase === 'failed' && (
         <View style={s.centered}>
-          <Text style={[s.bigTitle, { color: colors.wrong }]}>Not Quite!</Text>
+          <Text style={[s.bigTitle, { color: colors.wrong }]}>{t('challenge.not_quite')}</Text>
           <Text style={[s.bigScore, { color: colors.text }]}>{scorePct}%</Text>
           <Text style={[s.subtitle, { color: colors.textMid }]}>You need 50% to pass</Text>
           <View style={s.buttonRow}>
             <Pressable style={[s.btn, s.btnSecondary, { borderColor: colors.textMid }]} onPress={() => router.back()}>
-              <Text style={[s.btnTextSecondary, { color: colors.textMid }]}>Back to map</Text>
+              <Text style={[s.btnTextSecondary, { color: colors.textMid }]}>{t('challenge.back_to_map')}</Text>
             </Pressable>
             <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
               // Retry — regenerate data and fully reset state
@@ -553,7 +554,7 @@ function SideCampaignScreen() {
                 setPhase('ready');
               }
             }}>
-              <Text style={s.btnText}>Try Again</Text>
+              <Text style={s.btnText}>{t('challenge.try_again')}</Text>
             </Pressable>
           </View>
         </View>
@@ -565,7 +566,7 @@ function SideCampaignScreen() {
           <View style={s.quitBackdrop}>
             <Pressable style={s.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
             <View style={[s.quitCard, { backgroundColor: colors.card }]}>
-              <Text style={[s.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[s.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[s.quitMessage, { color: colors.textMid }]}>
                 {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
               </Text>
@@ -573,7 +574,7 @@ function SideCampaignScreen() {
                 <Text style={s.btnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => setShowQuitConfirm(false)}>
-                <Text style={s.btnText}>Keep playing</Text>
+                <Text style={s.btnText}>{t('challenge.keep_playing')}</Text>
               </Pressable>
             </View>
           </View>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Animated as RNAnimated, Pressable } from 'react-native';
 import { AchievementIcon } from './AchievementIcon';
 import { TIER_COLORS, type AchievementUnlock } from '@/src/utils/achievements';
@@ -42,7 +43,7 @@ function SingleToast({ unlock, onDismiss, onTap }: { unlock: AchievementUnlock; 
           <AchievementIcon name={unlock.icon} color={tierColor} size={20} />
         </View>
         <View style={styles.toastContent}>
-          <Text style={styles.toastTitle}>Achievement Unlocked!</Text>
+          <Text style={styles.toastTitle}>{t('modals.achievement_unlocked')}</Text>
           <Text style={styles.toastName}>{unlock.achievementName} —{tierLabel}</Text>
           <Text style={styles.toastDesc}>{unlock.description} ·<Text style={styles.toastGems}>+{unlock.gems} gems {GEM}</Text></Text>
         </View>
@@ -100,7 +101,7 @@ function BatchToast({ count, onDismiss, onTap }: { count: number; onDismiss: () 
         <View style={[styles.tierStripe, { backgroundColor: '#D4A012' }]} />
         <View style={styles.toastContent}>
           <Text style={styles.toastTitle}>And {count} more achievement{count !== 1 ? 's' : ''}!</Text>
-          <Text style={styles.toastDesc}>Check your profile to see them all.</Text>
+          <Text style={styles.toastDesc}>{t('modals.check_profile')}</Text>
         </View>
       </Pressable>
     </RNAnimated.View>

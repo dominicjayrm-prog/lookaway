@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, ScrollView, Pressable, StyleSheet, Dimensions, Modal, Animated as RNAnimated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -238,7 +239,7 @@ function WorldMapScreen() {
           style={styles.backButton}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel="Back to journey"
+          accessibilityLabel={t('modals.back_to_journey_aria')}
         >
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
@@ -315,7 +316,7 @@ function WorldMapScreen() {
               {/* Finale badge */}
               {isBoss && (
                 <View style={[styles.checkpointBadge, { backgroundColor: state === 'boss-completed' ? 'rgba(212,160,18,0.1)' : 'rgba(0,0,0,0.04)' }]}>
-                  <Text style={[styles.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>FINALE</Text>
+                  <Text style={[styles.checkpointText, { color: state === 'boss-completed' ? '#D4A012' : '#B2BEC3' }]}>{t('world_map.finale_marker')}</Text>
                 </View>
               )}
               {/* Node circle */}
@@ -327,7 +328,7 @@ function WorldMapScreen() {
                 </View>
               )}
               {/* PLAY label for current */}
-              {state === 'current' && <Text style={[styles.playLabel, { color: worldColor }]}>PLAY</Text>}
+              {state === 'current' && <Text style={[styles.playLabel, { color: worldColor }]}>{t('world_map.play_label')}</Text>}
               {/* Gift icon for milestone levels */}
               {(() => {
                 const milestone = worldMilestones.find((m) => m.level === levelNum);
@@ -374,7 +375,7 @@ function WorldMapScreen() {
           pointerEvents="none"
         >
           <View style={styles.markerPill}>
-            <Text style={[styles.markerText, { color: worldColor }]}>START</Text>
+            <Text style={[styles.markerText, { color: worldColor }]}>{t('world_map.start_marker')}</Text>
           </View>
         </View>
 
@@ -410,7 +411,7 @@ function WorldMapScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Play level ${currentLevel}: ${currentLevelTitle}`}
           >
-            <Text style={styles.playButtonText}>Play</Text>
+            <Text style={styles.playButtonText}>{t('world_map.play')}</Text>
           </Pressable>
         )}
       </RNAnimated.View>
@@ -548,7 +549,7 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
           style={styles.popupBackdropTouchable}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss level info"
+          accessibilityLabel={t('modals.dismiss_level_info_aria')}
         />
         <View style={[styles.popupCard, { backgroundColor: colors.card }]}>
           <View style={[styles.popupCircle, { backgroundColor: worldColor }]}>
@@ -580,9 +581,9 @@ function LevelPopup({ worldId, levelNum, worldColor, stars, completedUpTo, color
               style={[styles.popupCloseBtn, { backgroundColor: colors.surface }]}
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close_aria')}
             >
-              <Text style={[styles.popupCloseText, { color: colors.textMid }]}>Close</Text>
+              <Text style={[styles.popupCloseText, { color: colors.textMid }]}>{t('world_map.close')}</Text>
             </Pressable>
           </View>
         </View>

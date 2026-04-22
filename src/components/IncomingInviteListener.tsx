@@ -14,6 +14,7 @@
  * this is a time-critical real-time invite, not a passive notification.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Modal, Pressable, Animated, Platform, Alert } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -357,8 +358,8 @@ export function IncomingInviteListener() {
             <Ionicons name="flash" size={18} color="#FFFFFF" />
             <Text style={styles.acceptText}>Accept & play</Text>
           </Pressable>
-          <Pressable onPress={handleDecline} style={styles.declineBtn} accessibilityRole="button" accessibilityLabel="Decline challenge">
-            <Text style={[styles.declineText, { color: colors.textMid }]}>Decline</Text>
+          <Pressable onPress={handleDecline} style={styles.declineBtn} accessibilityRole="button" accessibilityLabel={t('common.decline_challenge_aria')}>
+            <Text style={[styles.declineText, { color: colors.textMid }]}>{t('common.decline')}</Text>
           </Pressable>
         </View>
       </View>

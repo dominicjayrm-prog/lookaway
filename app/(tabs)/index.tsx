@@ -28,6 +28,7 @@ import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { getNextMilestone } from '@/src/data/streakMilestones';
 import { supabase } from '@/src/lib/supabase';
 import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
+import { t } from '@/src/i18n';
 import {
   computeAppOpenOutcome,
   getDaysMissed,
@@ -37,17 +38,19 @@ import {
 } from '@/src/utils/streakRecovery';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
-const WORLD_NAMES = ['Shapes','Colour','Numbers','Motion','Photo','Master'];
+// World names resolve via t() inside the component body so switching
+// language updates the pill labels without a remount.
+const WORLD_NAME_KEYS = ['home.worlds.shapes','home.worlds.colour','home.worlds.numbers','home.worlds.motion','home.worlds.photo','home.worlds.master'] as const;
 const WORLD_LEVEL_COUNTS = [20, 30, 35, 35, 40, 40];
 const EMDASH = String.fromCharCode(8212);
 
 function getHomeGreeting(streakCount: number): string {
-  if (streakCount >= 3) return `Day ${streakCount}! Keep it going 🔥`;
+  if (streakCount >= 3) return t('home.greeting_streak', { count: streakCount });
   const h = new Date().getHours();
-  if (h >= 5 && h < 12) return 'Good morning! Ready to train?';
-  if (h >= 12 && h < 17) return "Let's exercise that memory";
-  if (h >= 17 && h < 21) return 'Evening brain boost?';
-  return 'Quick round before bed?';
+  if (h >= 5 && h < 12) return t('home.greeting_morning');
+  if (h >= 12 && h < 17) return t('home.greeting_afternoon');
+  if (h >= 17 && h < 21) return t('home.greeting_evening');
+  return t('home.greeting_night');
 }
 
 function StarIcon({ size = 14, color = '#D4A012' }: { size?: number; color?: string }) {
@@ -73,22 +76,38 @@ function ActivityIcon({ type, color }: { type: string; color: string }) {
 
 function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: string; main: string; sub: string } {
   const d = event.data;
-  const t = getTimeAgo(event.timestamp);
+  const time = getTimeAgo(event.timestamp);
   switch (event.type) {
-    case 'level_complete': return { iconColor: '#D4A012', iconBg: 'rgba(212,160,18,0.1)', main: `Completed ${d.title || `Level ${d.levelNumber}`}`, sub: `World ${d.worldId} · ${d.stars} star${(d.stars as number) !== 1 ? 's' : ''} · ${t}` };
-    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Finished ${d.worldName}!`, sub: `World complete · ${t}` };
-    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: `${d.days}-day streak!`, sub: `Earned ${d.gems} gems · ${t}` };
-    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Beat @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
-    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: `Lost to @${d.opponent}`, sub: `${d.myScore}% to ${d.theirScore}% · ${t}` };
-    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Added @${d.username}`, sub: `New friend · ${t}` };
-    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: `Improved Level ${d.levelNumber}`, sub: `${d.oldStars}→${d.newStars} stars · ${t}` };
-    case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: `Bought power-up`, sub: `Shop · ${t}` };
-    case 'mode_complete': {
-      const modeName = (d.modeName as string) ?? 'Mode';
-      const pct = typeof d.scorePct === 'number' ? `${d.scorePct}%` : null;
-      return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: `Completed ${modeName}`, sub: pct ? `${pct} score · ${t}` : `Challenge mode · ${t}` };
+    case 'level_complete': {
+      const title = (d.title as string) || t('home.activity.level_complete_title_default', { number: d.levelNumber });
+      const stars = d.stars as number;
+      return {
+        iconColor: '#D4A012', iconBg: 'rgba(212,160,18,0.1)',
+        main: t('home.activity.level_complete_main', { title }),
+        sub: stars === 1
+          ? t('home.activity.level_complete_sub_one', { world: d.worldId, time })
+          : t('home.activity.level_complete_sub_many', { world: d.worldId, stars, time }),
+      };
     }
-    default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: 'Activity', sub: t };
+    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: d.worldName }), sub: t('home.activity.world_complete_sub', { time }) };
+    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: t('home.activity.streak_milestone_main', { days: d.days }), sub: t('home.activity.streak_milestone_sub', { gems: d.gems, time }) };
+    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.challenge_won_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
+    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: t('home.activity.challenge_lost_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
+    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: t('home.activity.friend_added_main', { username: d.username }), sub: t('home.activity.friend_added_sub', { time }) };
+    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.star_improved_main', { number: d.levelNumber }), sub: t('home.activity.star_improved_sub', { old: d.oldStars, new: d.newStars, time }) };
+    case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.powerup_bought_main'), sub: t('home.activity.powerup_bought_sub', { time }) };
+    case 'mode_complete': {
+      const modeName = (d.modeName as string) ?? t('home.activity.mode_fallback');
+      const hasPct = typeof d.scorePct === 'number';
+      return {
+        iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)',
+        main: t('home.activity.mode_complete_main', { name: modeName }),
+        sub: hasPct
+          ? t('home.activity.mode_complete_sub', { pct: d.scorePct, time })
+          : t('home.activity.mode_complete_sub_no_score', { time }),
+      };
+    }
+    default: return { iconColor: '#636E72', iconBg: 'rgba(0,0,0,0.05)', main: t('home.activity.generic'), sub: time };
   }
 }
 
@@ -98,11 +117,11 @@ function RecentActivityCard({ colors, router }: { colors: Record<string, string>
 
   return (
     <View style={[actStyles.card, { backgroundColor: colors.card }]}>
-      <Text style={[actStyles.title, { color: colors.text }]}>Recent Activity</Text>
+      <Text style={[actStyles.title, { color: colors.text }]}>{t('home.activity.title')}</Text>
       {activities.length === 0 ? (
         <View style={actStyles.emptyContainer}>
-          <Text style={[actStyles.emptyTitle, { color: colors.textMid }]}>Your story starts here</Text>
-          <Text style={[actStyles.emptySub, { color: colors.textLight }]}>Complete a level to see your activity appear!</Text>
+          <Text style={[actStyles.emptyTitle, { color: colors.textMid }]}>{t('home.activity.empty_title')}</Text>
+          <Text style={[actStyles.emptySub, { color: colors.textLight }]}>{t('home.activity.empty_sub')}</Text>
         </View>
       ) : (
         activities.map((event, i) => {
@@ -171,14 +190,18 @@ function PlayTab() {
   // Contextual hero subtitle
   const heroSubtitle = (() => {
     const remaining = currentWorldLevels - (nextLevelNumber - 1);
-    if (nextLevelNumber === 1) return `Welcome to World ${currentWorldId}`;
-    if (remaining <= 3) return `${remaining} level${remaining !== 1 ? 's' : ''} to finish World ${currentWorldId}!`;
-    if (streakCount >= 3) return `${streakCount}-day streak! Keep it going`;
-    const subs = ['Keep pushing forward', 'Your memory is getting sharper', "Let's test that memory", 'Ready for the next challenge?'];
-    return subs[nextLevelNumber % subs.length];
+    if (nextLevelNumber === 1) return t('home.welcome_world', { world: currentWorldId });
+    if (remaining <= 3) {
+      return remaining === 1
+        ? t('home.levels_to_finish_one', { world: currentWorldId })
+        : t('home.levels_to_finish_many', { count: remaining, world: currentWorldId });
+    }
+    if (streakCount >= 3) return t('home.streak_keep_going', { count: streakCount });
+    const subKeys = ['home.subtitle_1', 'home.subtitle_2', 'home.subtitle_3', 'home.subtitle_4'];
+    return t(subKeys[nextLevelNumber % subKeys.length]);
   })();
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
+  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || t('common.player');
   const initials = displayName.slice(0, 2).toUpperCase();
   // Profile pic priority: cloud avatar_url (cross-device) → locally
   // cached URI for THIS user id (offline / during upload). The cache
@@ -412,8 +435,8 @@ function PlayTab() {
             onPress={() => setInfoCard(infoCard === 'lives' ? null : 'lives')}
             style={[styles.livesPill, { backgroundColor: colors.wrongSoft }]}
             accessibilityRole="button"
-            accessibilityLabel={`${lives} of 5 lives`}
-            accessibilityHint="Tap to see how lives work"
+            accessibilityLabel={t('home.lives_aria', { count: lives })}
+            accessibilityHint={t('home.lives_hint')}
           >
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons key={i} name={i < lives ? 'heart' : 'heart-outline'} size={15} color={i < lives ? colors.wrong : colors.textLight} />
@@ -426,8 +449,8 @@ function PlayTab() {
               onPress={() => setInfoCard(infoCard === 'gems' ? null : 'gems')}
               style={[styles.gemPill, { backgroundColor: colors.accentSoft }]}
               accessibilityRole="button"
-              accessibilityLabel={`${gems} gems`}
-              accessibilityHint="Tap to see how gems work"
+              accessibilityLabel={t('home.gems_aria', { count: gems })}
+              accessibilityHint={t('home.gems_hint')}
             >
               <Ionicons name="diamond" size={13} color={colors.accent} />
               <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
@@ -436,7 +459,7 @@ function PlayTab() {
               style={styles.profileButton}
               onPress={() => router.push('/profile')}
               accessibilityRole="button"
-              accessibilityLabel="Open profile"
+              accessibilityLabel={t('home.open_profile_aria')}
             >
               {profilePic ? (
                 <Image source={{ uri: profilePic }} style={styles.profileImage} />
@@ -459,8 +482,8 @@ function PlayTab() {
           </View>
 
           {/* Level info */}
-          <Text style={styles.heroContinueLabel}>CONTINUE</Text>
-          <Text style={styles.heroLevelTitle}>{`World ${currentWorldId} ${EMDASH} Level ${nextLevelNumber}`}</Text>
+          <Text style={styles.heroContinueLabel}>{t('home.continue_label')}</Text>
+          <Text style={styles.heroLevelTitle}>{t('home.world_level_title', { world: currentWorldId, level: nextLevelNumber })}</Text>
           <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
           {/* Progress bar */}
@@ -480,9 +503,9 @@ function PlayTab() {
               router.push(`/game/${nextLevelId}`);
             }}
             accessibilityRole="button"
-            accessibilityLabel={`Play World ${currentWorldId} Level ${nextLevelNumber}`}
+            accessibilityLabel={t('home.play_aria', { world: currentWorldId, level: nextLevelNumber })}
           >
-            <Text style={styles.heroPlayText}>Play</Text>
+            <Text style={styles.heroPlayText}>{t('home.play_button')}</Text>
           </Pressable>
         </LinearGradient>
         </View>
@@ -493,7 +516,7 @@ function PlayTab() {
             <View style={[styles.statIconBg, { backgroundColor: colors.accentSoft }]}>
               <Svg width={16} height={12} viewBox="0 0 36 24"><Path d="M2 12Q18 2 34 12Q18 22 2 12Z" fill="none" stroke={colors.accent} strokeWidth={1.8} /><Circle cx={18} cy={12} r={4} fill={colors.accent} /><Circle cx={18} cy={12} r={2} fill="white" /></Svg>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>BRAIN</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_brain')}</Text>
             <Text style={[styles.statValue, { color: completedCount > 0 ? colors.accent : colors.textLight }]}>
               {completedCount > 0 ? `${memoryScore}%` : EMDASH}
             </Text>
@@ -502,7 +525,7 @@ function PlayTab() {
             <View style={[styles.statIconBg, { backgroundColor: colors.goldSoft }]}>
               <StarIcon size={13} color={colors.gold} />
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>STARS</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_stars')}</Text>
             <Text style={[styles.statValue, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/600</Text>
           </View>
           <Pressable
@@ -521,12 +544,12 @@ function PlayTab() {
               inRecoveryWindow && { borderWidth: 1.5, borderColor: colors.wrong + '40' },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={inRecoveryWindow ? `Streak in danger: ${recoveryMinsRemaining} minutes to recover` : `Streak: ${streakCount} days. Tap for rewards.`}
+            accessibilityLabel={inRecoveryWindow ? t('home.streak_danger_aria', { mins: recoveryMinsRemaining ?? 0 }) : t('home.streak_normal_aria', { count: streakCount })}
           >
             <View style={[styles.statIconBg, { backgroundColor: colors.wrongSoft }]}>
               <Text style={{ fontSize: 12 }}>{'\u{1F525}'}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.textLight }]}>STREAK</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('home.stat_streak')}</Text>
             <Text style={[styles.statValue, { color: streakCount > 0 ? colors.wrong : colors.textLight }]}>{streakCount}</Text>
             {inRecoveryWindow && (
               // Recovery countdown stays — it's a critical safety
@@ -541,8 +564,9 @@ function PlayTab() {
                 ]}
                 numberOfLines={1}
               >
-                {(recoveryMinsRemaining ?? 0) < 5 ? '\u26A0\uFE0F ' : '\u23F1 '}
-                {recoveryMinsRemaining} min to recover
+                {(recoveryMinsRemaining ?? 0) < 5
+                  ? t('home.streak_recover_warn', { mins: recoveryMinsRemaining ?? 0 })
+                  : t('home.streak_recover_time', { mins: recoveryMinsRemaining ?? 0 })}
               </Text>
             )}
           </Pressable>
@@ -551,17 +575,18 @@ function PlayTab() {
         {/* Your Journey */}
         <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
           <View style={styles.journeyHeader}>
-            <Text style={[styles.journeyTitle, { color: colors.text }]}>Your Journey</Text>
+            <Text style={[styles.journeyTitle, { color: colors.text }]}>{t('home.journey_title')}</Text>
             <Pressable
               onPress={() => router.push('/(tabs)/journey')}
               accessibilityRole="button"
-              accessibilityLabel="See all worlds in Journey tab"
+              accessibilityLabel={t('home.journey_see_all_aria')}
             >
-              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>See all {'>'}</Text>
+              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>{t('home.journey_see_all')}</Text>
             </Pressable>
           </View>
           <View style={styles.journeyPills}>
-            {WORLD_NAMES.map((name, i) => {
+            {WORLD_NAME_KEYS.map((nameKey, i) => {
+              const name = t(nameKey);
               const wc = WORLD_COLORS[i];
               const isCurrentWorld = i + 1 === currentWorldId;
               const isCompleted = i + 1 < currentWorldId;
@@ -625,33 +650,33 @@ function PlayTab() {
       <InfoCard
         visible={infoCard === 'lives'}
         icon={<Ionicons name="heart" size={20} color="#FF6B6B" />}
-        title="Lives"
+        title={t('home.info.lives_title')}
         description={lives >= 5
-          ? 'You have full lives! Lose one each time you fail a level. Lives regenerate 1 every 30 minutes.'
-          : `You have ${lives} ${lives === 1 ? 'life' : 'lives'} left. Lives regenerate 1 every 30 minutes.`}
-        tip={lives < 5 ? 'Get unlimited lives with Blanked+, never wait to play again' : undefined}
+          ? t('home.info.lives_full')
+          : (lives === 1
+              ? t('home.info.lives_partial_one')
+              : t('home.info.lives_partial_many', { count: lives }))}
+        tip={lives < 5 ? t('home.info.lives_tip') : undefined}
         accentColor="#FF6B6B"
         action={lives < 5 ? () => setShowPaywall(true) : undefined}
-        actionLabel={lives < 5 ? 'Learn about Blanked+' : undefined}
+        actionLabel={lives < 5 ? t('home.info.lives_action') : undefined}
         onClose={() => setInfoCard(null)}
       />
       <InfoCard
         visible={infoCard === 'gems'}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" />}
-        title="Gems"
-        description={`You have ${gems} gems. Gems buy power-ups and cosmetics from the shop. The more you play, the more you earn.`}
-        tip="Earn 1-3 gems per level based on your star rating. Streaks give bonus gems!"
+        title={t('home.info.gems_title')}
+        description={t('home.info.gems_desc', { count: gems })}
+        tip={t('home.info.gems_tip')}
         accentColor="#6C5CE7"
         onClose={() => setInfoCard(null)}
       />
       <InfoCard
         visible={infoCard === 'streak'}
         icon={<Text style={{ fontSize: 20 }}>{'\u{1F525}'}</Text>}
-        title="Daily Streak"
-        description={streakCount === 0
-          ? 'Play at least one level every day to start a streak. Longer streaks unlock bonus rewards!'
-          : `You're on a ${streakCount}-day streak! Play at least one level today to keep it alive.`}
-        tip={streakCount > 0 ? 'Buy Streak Shields in the shop to protect your streak if you miss a day' : undefined}
+        title={t('home.info.streak_title')}
+        description={streakCount === 0 ? t('home.info.streak_zero') : t('home.info.streak_alive', { count: streakCount })}
+        tip={streakCount > 0 ? t('home.info.streak_tip') : undefined}
         accentColor="#FF6B6B"
         onClose={() => setInfoCard(null)}
       />

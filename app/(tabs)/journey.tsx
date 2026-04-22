@@ -16,6 +16,7 @@ import Svg, { Rect, Path, Polygon, Circle as SvgCircle } from 'react-native-svg'
 import { supabase } from '@/src/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { InfoCard } from '@/src/components/InfoCard';
+import { t } from '@/src/i18n';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 const GREEN = '#00B894';
@@ -41,13 +42,15 @@ function ChevronSvg({ size = 16, color = '#B2BEC3' }: { size?: number; color?: s
 
 /** Brain benefit pills — shows what cognitive skills each mode trains.
  *  Keyed by campaign id so it updates when the player switches modes. */
-const MODE_BENEFITS: Record<string, string[]> = {
-  classic:       ['Visual memory', 'Colour recognition', 'Spatial awareness'],
-  speed_recall:  ['Position memory', 'Reaction speed', 'Spatial precision'],
-  snap_match:    ['Change detection', 'Attention to detail', 'Visual scanning'],
-  sequence:      ['Sequential memory', 'Pattern retention', 'Order recall'],
-  counting_blitz: ['Focus under pressure', 'Selective attention', 'Counting accuracy'],
-  colour_chain:  ['Colour memory', 'Grid navigation', 'Systematic recall'],
+// Mode benefits — resolve via t() at render time so switching
+// language re-reads without remounting the pills.
+const MODE_BENEFIT_KEYS: Record<string, string[]> = {
+  classic:       ['journey.benefits.classic_1', 'journey.benefits.classic_2', 'journey.benefits.classic_3'],
+  speed_recall:  ['journey.benefits.speed_recall_1', 'journey.benefits.speed_recall_2', 'journey.benefits.speed_recall_3'],
+  snap_match:    ['journey.benefits.snap_match_1', 'journey.benefits.snap_match_2', 'journey.benefits.snap_match_3'],
+  sequence:      ['journey.benefits.sequence_1', 'journey.benefits.sequence_2', 'journey.benefits.sequence_3'],
+  counting_blitz: ['journey.benefits.counting_blitz_1', 'journey.benefits.counting_blitz_2', 'journey.benefits.counting_blitz_3'],
+  colour_chain:  ['journey.benefits.colour_chain_1', 'journey.benefits.colour_chain_2', 'journey.benefits.colour_chain_3'],
 };
 
 function ProgressRing({ percentage, color, trackColor = '#ECEAE8', size = 26 }: { percentage: number; color: string; trackColor?: string; size?: number }) {
@@ -244,13 +247,13 @@ function JourneyTab() {
     <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* Header */}
       <View style={st.header}>
-        <Text style={[st.title, { color: colors.text }]}>Journey</Text>
+        <Text style={[st.title, { color: colors.text }]}>{t('journey.title')}</Text>
         <Pressable
           onPress={() => setInfoCard(infoCard === 'stars' ? null : 'stars')}
           style={[st.starPill, { backgroundColor: colors.goldSoft }]}
           accessibilityRole="button"
-          accessibilityLabel={`${totalStars} of ${TOTAL_MAX_STARS} stars`}
-          accessibilityHint="Tap to learn how stars work"
+          accessibilityLabel={t('journey.stars_aria', { count: totalStars, total: TOTAL_MAX_STARS })}
+          accessibilityHint={t('journey.stars_hint')}
         >
           <StarSvg size={13} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
           <Text style={[st.starCount, { color: totalStars > 0 ? colors.gold : colors.textLight }]}>{totalStars}/{TOTAL_MAX_STARS}</Text>
@@ -288,7 +291,9 @@ function JourneyTab() {
                 onPress={() => !m.locked && setSelectedIdx(i)}
                 disabled={m.locked}
                 accessibilityRole="button"
-                accessibilityLabel={`${c.name}${m.locked ? ', locked' : ''}, ${pct} percent complete`}
+                accessibilityLabel={m.locked
+                  ? t('journey.pill_aria_locked', { name: c.name, pct })
+                  : t('journey.pill_aria', { name: c.name, pct })}
                 accessibilityState={{ selected: isActive, disabled: m.locked }}
               >
                 <View style={st.pillRingWrap}>
@@ -312,11 +317,11 @@ function JourneyTab() {
               onPress={() => navigateToWorld(continueWorld)}
               style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
               accessibilityRole="button"
-              accessibilityLabel={`Continue ${continueWorld.name}, world ${continueWorld.worldNum}`}
+              accessibilityLabel={t('journey.continue_aria', { name: continueWorld.name, world: continueWorld.worldNum })}
             >
               <LinearGradient colors={[modeColor, modeColor + 'DD']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.heroCard}>
                 <View style={st.heroContent}>
-                  <Text style={st.heroLabel}>{`CONTINUE \u00B7 WORLD ${continueWorld.worldNum}`}</Text>
+                  <Text style={st.heroLabel}>{t('journey.continue_label', { world: continueWorld.worldNum })}</Text>
                   <Text style={st.heroWorldName}>{continueWorld.name}</Text>
                   <View style={st.heroProgressRow}>
                     <View style={st.heroTrack}>
@@ -326,7 +331,7 @@ function JourneyTab() {
                   </View>
                 </View>
                 <View style={st.heroPlayBtn}>
-                  <Text style={st.heroPlayText}>Play</Text>
+                  <Text style={st.heroPlayText}>{t('journey.play')}</Text>
                 </View>
               </LinearGradient>
             </Pressable>
@@ -336,16 +341,16 @@ function JourneyTab() {
               onPress={() => navigateToWorld(worlds[0])}
               style={({ pressed }) => [pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
               accessibilityRole="button"
-              accessibilityLabel={`Start ${campaign.name} campaign`}
+              accessibilityLabel={t('journey.start_aria', { campaign: campaign.name })}
             >
               <LinearGradient colors={[modeColor + '20', modeColor + '08']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.heroCard, st.heroCardNew, { borderColor: modeColor + '18' }]}>
                 <View style={st.heroContent}>
-                  <Text style={[st.heroLabel, { color: modeColor, opacity: 0.6 }]}>NEW CAMPAIGN</Text>
+                  <Text style={[st.heroLabel, { color: modeColor, opacity: 0.6 }]}>{t('journey.new_campaign')}</Text>
                   <Text style={[st.heroWorldName, { color: modeColor }]}>{campaign.name}</Text>
-                  <Text style={[st.heroNewMeta, { color: colors.textMid }]}>{campaign.worldCount} world{campaign.worldCount !== 1 ? 's' : ''} {'\u00B7'} {campaign.totalLevels} levels</Text>
+                  <Text style={[st.heroNewMeta, { color: colors.textMid }]}>{campaign.worldCount === 1 ? t('journey.campaign_meta_one', { levels: campaign.totalLevels }) : t('journey.campaign_meta_many', { worlds: campaign.worldCount, levels: campaign.totalLevels })}</Text>
                 </View>
                 <View style={[st.heroPlayBtn, { backgroundColor: modeColor }]}>
-                  <Text style={st.heroPlayText}>Start</Text>
+                  <Text style={st.heroPlayText}>{t('journey.start')}</Text>
                 </View>
               </LinearGradient>
             </Pressable>
@@ -356,18 +361,18 @@ function JourneyTab() {
         {!selected.locked && (
           <View style={st.benefitsRow}>
             <Text style={st.benefitsEmoji}>{'\uD83E\uDDE0'}</Text>
-            {(MODE_BENEFITS[selected.id] ?? MODE_BENEFITS.classic).map((label) => (
-              <View key={label} style={[st.benefitPill, { backgroundColor: modeColor + '08' }]}>
+            {(MODE_BENEFIT_KEYS[selected.id] ?? MODE_BENEFIT_KEYS.classic).map((key) => { const label = t(key); return (
+              <View key={key} style={[st.benefitPill, { backgroundColor: modeColor + '08' }]}>
                 <Text style={[st.benefitText, { color: modeColor }]}>{label}</Text>
               </View>
-            ))}
+            ); })}
           </View>
         )}
 
         {/* ── Worlds List ── */}
         {!selected.locked && (
           <>
-            <Text style={[st.sectionLabel, { color: colors.textLight }]}>{campaign.name.toUpperCase()} WORLDS</Text>
+            <Text style={[st.sectionLabel, { color: colors.textLight }]}>{t('journey.worlds_section', { campaign: campaign.name.toUpperCase() })}</Text>
             {worlds.map((w, i) => {
               const prevWorld = i > 0 ? worlds[i - 1] : null;
               const almostDone = w.unlocked && !w.isComplete && w.completed / w.totalLevels >= 0.8;
@@ -396,7 +401,7 @@ function JourneyTab() {
                       ...(w.isCurrent ? { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 } : {}),
                     }]}
                     accessibilityRole="button"
-                    accessibilityLabel={`World ${w.worldNum}: ${w.name}${w.unlocked ? '' : ', locked'}${w.isComplete ? ', complete' : ''}`}
+                    accessibilityLabel={!w.unlocked ? t('journey.world_aria_locked', { world: w.worldNum, name: w.name }) : w.isComplete ? t('journey.world_aria_complete', { world: w.worldNum, name: w.name }) : t('journey.world_aria', { world: w.worldNum, name: w.name })}
                     accessibilityState={{ disabled: !w.unlocked }}
                     onPress={() => {
                       if (w.unlocked) { navigateToWorld(w); }
@@ -404,10 +409,12 @@ function JourneyTab() {
                         const prev = i > 0 ? worlds[i - 1] : null;
                         const remaining = prev ? prev.totalLevels - prev.completed : 0;
                         setInfoCardData({
-                          title: 'World Locked',
+                          title: t('journey.locked_title'),
                           desc: prev
-                            ? `Complete all ${prev.totalLevels} levels in World ${prev.worldNum} "${prev.name}" to unlock "${w.name}". You have ${remaining} ${remaining === 1 ? 'level' : 'levels'} to go!`
-                            : `"${w.name}" will unlock as you progress. Keep playing!`,
+                            ? (remaining === 1
+                                ? t('journey.locked_body_one_left', { total: prev.totalLevels, prev: prev.worldNum, prevName: prev.name, next: w.name })
+                                : t('journey.locked_body_many_left', { total: prev.totalLevels, prev: prev.worldNum, prevName: prev.name, next: w.name, remaining }))
+                            : t('journey.locked_body_no_prev', { name: w.name }),
                         });
                         setInfoCard('locked');
                       }
@@ -435,10 +442,10 @@ function JourneyTab() {
                     {/* Info */}
                     <View style={st.worldInfo}>
                       <View style={st.worldNameRow}>
-                        <Text style={[st.worldName, { color: w.unlocked ? colors.text : colors.textLight }]}>{w.name}</Text>
+                        <Text style={[st.worldName, { color: w.unlocked ? colors.text : colors.textLight }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{w.name}</Text>
                         {almostDone && (
                           <View style={[st.almostBadge, { backgroundColor: GREEN + '15' }]}>
-                            <Text style={[st.almostText, { color: GREEN }]}>ALMOST!</Text>
+                            <Text style={[st.almostText, { color: GREEN }]} numberOfLines={1}>{t('journey.almost')}</Text>
                           </View>
                         )}
                         {w.isComplete && (
@@ -455,11 +462,11 @@ function JourneyTab() {
                             <View style={[st.worldFill, { width: `${Math.round((w.completed / w.totalLevels) * 100)}%`, backgroundColor: w.isComplete ? GREEN : modeColor }]} />
                           </View>
                           <Text style={[st.worldCount, { color: w.isComplete ? GREEN : colors.textLight }]}>
-                            {w.isComplete ? 'Complete' : `${w.completed}/${w.totalLevels}`}
+                            {w.isComplete ? t('journey.world_complete') : `${w.completed}/${w.totalLevels}`}
                           </Text>
                         </View>
                       ) : (
-                        <Text style={[st.worldLocked, { color: colors.textLight }]}>Complete World {w.worldNum - 1} to unlock</Text>
+                        <Text style={[st.worldLocked, { color: colors.textLight }]}>{t('journey.world_locked_hint', { prev: w.worldNum - 1 })}</Text>
                       )}
                     </View>
 
@@ -478,8 +485,8 @@ function JourneyTab() {
         {selected.locked && (
           <View style={st.lockedMsg}>
             <LockSvg size={24} color={colors.textLight} />
-            <Text style={[st.lockedTitle, { color: colors.text }]}>{campaign.name} is locked</Text>
-            <Text style={[st.lockedSub, { color: colors.textMid }]}>Complete Classic World {campaign.unlockAfterWorld} to unlock</Text>
+            <Text style={[st.lockedTitle, { color: colors.text }]}>{t('journey.campaign_locked_title', { name: campaign.name })}</Text>
+            <Text style={[st.lockedSub, { color: colors.textMid }]}>{t('journey.campaign_locked_sub', { world: campaign.unlockAfterWorld })}</Text>
           </View>
         )}
       </ScrollView>
@@ -487,17 +494,17 @@ function JourneyTab() {
       <InfoCard
         visible={infoCard === 'stars'}
         icon={<StarSvg size={20} color="#D4A012" />}
-        title="Total Stars"
-        description={`You've earned ${totalStars} out of ${TOTAL_MAX_STARS} possible stars across all game modes. That's ${TOTAL_MAX_STARS > 0 ? Math.round((totalStars / TOTAL_MAX_STARS) * 100) : 0}% of all available stars!`}
-        tip={totalStars < TOTAL_MAX_STARS / 2 ? 'Replay completed levels with higher scores to earn more stars' : totalStars < TOTAL_MAX_STARS * 0.8 ? "You're over halfway! Keep pushing for 3 stars on every level" : 'Almost there! You\'re a true memory master \uD83E\uDDE0'}
+        title={t('journey.stars_info_title')}
+        description={t('journey.stars_info_desc', { earned: totalStars, total: TOTAL_MAX_STARS, pct: TOTAL_MAX_STARS > 0 ? Math.round((totalStars / TOTAL_MAX_STARS) * 100) : 0 })}
+        tip={totalStars < TOTAL_MAX_STARS / 2 ? t('journey.stars_info_tip_low') : totalStars < TOTAL_MAX_STARS * 0.8 ? t('journey.stars_info_tip_mid') : t('journey.stars_info_tip_high')}
         accentColor="#D4A012"
         onClose={() => setInfoCard(null)}
       />
       <InfoCard
         visible={infoCard === 'locked'}
         icon={<LockSvg size={20} color="#636E72" />}
-        title={infoCardData?.title ?? 'World Locked'}
-        description={infoCardData?.desc ?? 'Complete previous levels to unlock.'}
+        title={infoCardData?.title ?? t('journey.locked_title')}
+        description={infoCardData?.desc ?? t('journey.locked_body_no_prev', { name: '' })}
         accentColor="#636E72"
         onClose={() => setInfoCard(null)}
       />

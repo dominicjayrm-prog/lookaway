@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { t } from '@/src/i18n';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { CountdownTimer } from '@/src/components/CountdownTimer';
 import { QuestionCard } from '@/src/components/QuestionCard';
@@ -135,16 +136,16 @@ function SpeedGameScreen() {
           <Pressable onPress={() => { clearTimeouts(); resetGame(); router.back(); }}>
             <Text style={styles.closeButton}>{String.fromCharCode(10005)}</Text>
           </Pressable>
-          <Badge label="SPEED ROUND" />
+          <Badge label={t('modals.speed_round_badge')} />
 
           <View style={styles.headerSpacer} />
         </View>
         <Animated.View entering={isWeb ? undefined : FadeIn} style={styles.centered}>
           <Text style={styles.modeIcon}>{lightning}</Text>
-          <Text style={styles.levelTitle}>Speed Round</Text>
+          <Text style={styles.levelTitle}>{t('challenge.speed_round')}</Text>
           <Text style={styles.levelSubtitle}>10 scenes {String.fromCharCode(183)} 2 seconds each</Text>
           <Text style={styles.levelSubtitle}>1 question per scene</Text>
-          <Button title="Start" onPress={handleStart} style={styles.startButton} />
+          <Button title={t('game.start')} onPress={handleStart} style={styles.startButton} />
         </Animated.View>
       </SafeAreaView>
     );
@@ -154,7 +155,7 @@ function SpeedGameScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]} edges={['top']}>
         <View style={styles.centered}>
-          <Text style={styles.levelSubtitle}>Loading...</Text>
+          <Text style={styles.levelSubtitle}>{t('challenge.loading_ellipsis')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -189,7 +190,7 @@ function SpeedGameScreen() {
       {gameState === 'TRANSITION' && (
         <Animated.View entering={isWeb ? undefined : FadeIn} exiting={isWeb ? undefined : FadeOut} style={styles.centered}>
           <AnimatedBlink expression="blank" size={80} entrance="spring" />
-          <Text style={[styles.blankText, { marginTop: 16 }]}>Go blank!</Text>
+          <Text style={[styles.blankText, { marginTop: 16 }]}>{t('challenge.go_blank')}</Text>
         </Animated.View>
       )}
       {gameState === 'QUESTION' && currentQuestion && (
@@ -218,7 +219,7 @@ function SpeedGameScreen() {
           <View style={styles.quitBackdrop}>
             <Pressable style={styles.quitBackdropTouch} onPress={() => setShowQuitConfirm(false)} />
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
-              <Text style={[styles.quitTitle, { color: colors.text }]}>Leave level?</Text>
+              <Text style={[styles.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[styles.quitMessage, { color: colors.textMid }]}>
                 {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
               </Text>
@@ -226,7 +227,7 @@ function SpeedGameScreen() {
                 <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
               </Pressable>
               <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
-                <Text style={styles.quitBtnText}>Keep playing</Text>
+                <Text style={styles.quitBtnText}>{t('challenge.keep_playing')}</Text>
               </Pressable>
             </View>
           </View>

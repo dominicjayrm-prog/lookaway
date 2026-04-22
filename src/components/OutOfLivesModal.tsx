@@ -9,6 +9,7 @@ import { spacing, borderRadius } from '@/src/theme/spacing';
 import { useGameStore, LIFE_REGEN_MS } from '@/src/store/gameStore';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { track, EVENTS } from '@/src/lib/analytics';
+import { t } from '@/src/i18n';
 
 interface OutOfLivesModalProps {
   visible: boolean;
@@ -19,8 +20,8 @@ interface OutOfLivesModalProps {
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return '00:00';
-  const t = Math.ceil(ms / 1000);
-  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  const secs = Math.ceil(ms / 1000);
+  return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
 }
 
 function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus }: OutOfLivesModalProps) {
@@ -73,9 +74,9 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
             ))}
           </View>
 
-          <Text style={[st.title, { color: colors.text }]}>Out of lives!</Text>
+          <Text style={[st.title, { color: colors.text }]}>{t('out_of_lives.title')}</Text>
           <Text style={[st.countdown, { color: colors.textMid }]}>
-            Next free life in <Text style={{ fontWeight: '800', color: colors.text }}>{countdown}</Text>
+            {t('out_of_lives.countdown')}<Text style={{ fontWeight: '800', color: colors.text }}>{countdown}</Text>
           </Text>
 
           {/* Option 1: Buy lives (shop) */}
@@ -84,7 +85,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
             onPress={() => { track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'go_to_shop' }); onGoToShop?.(); }}
           >
             <Ionicons name="heart" size={16} color={colors.accent} />
-            <Text style={[st.shopBtnText, { color: colors.accent }]}>Tired of waiting?</Text>
+            <Text style={[st.shopBtnText, { color: colors.accent }]}>{t('out_of_lives.shop_cta')}</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.accent} style={{ opacity: 0.5 }} />
           </Pressable>
 
@@ -96,7 +97,7 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
           >
             <Ionicons name="diamond" size={14} color={colors.textMid} />
             <Text style={[st.gemBtnText, { color: colors.textMid }]}>
-              Refill with {LIVES_CONFIG.gemRefillCost} gems
+              {t('out_of_lives.refill_cta', { cost: LIVES_CONFIG.gemRefillCost })}
             </Text>
           </Pressable>
 
@@ -112,15 +113,15 @@ function OutOfLivesModalInner({ visible, onClose, onGoToShop, onGoToBlankedPlus 
               <Ionicons name="eye" size={14} color="#6C5CE7" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={st.plusTitle}>Never lose a life again</Text>
-              <Text style={st.plusSub}>Unlimited lives with Blanked+</Text>
+              <Text style={st.plusTitle}>{t('out_of_lives.plus_title')}</Text>
+              <Text style={st.plusSub}>{t('out_of_lives.plus_sub')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.5)" />
           </Pressable>
 
           {/* Dismiss */}
           <Pressable style={st.waitBtn} onPress={() => { track(EVENTS.OUT_OF_LIVES_ACTION, { action: 'wait' }); onClose(); }}>
-            <Text style={[st.waitText, { color: colors.textLight }]}>I'll wait</Text>
+            <Text style={[st.waitText, { color: colors.textLight }]}>{t('out_of_lives.wait')}</Text>
           </Pressable>
         </View>
       </View>

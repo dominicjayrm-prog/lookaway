@@ -9,6 +9,7 @@
  *   Phase 3 (2s+): Reveal card with confetti, item name, rarity, CTA
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal, Dimensions,
   Animated as RNAnimated,
@@ -288,9 +289,9 @@ export function MilestoneGiftCelebration({ visible, itemId, itemName, rarity, ca
               style={[st.doneButton, { backgroundColor: GOLD }]}
               onPress={onDismiss}
               accessibilityRole="button"
-              accessibilityLabel="Continue"
+              accessibilityLabel={t('common.continue_aria')}
             >
-              <Text style={st.doneText}>Awesome!</Text>
+              <Text style={st.doneText}>{t('celebrations.milestone_gift_cta')}</Text>
             </Pressable>
           </RNAnimated.View>
         )}

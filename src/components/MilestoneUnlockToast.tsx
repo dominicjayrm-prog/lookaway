@@ -4,6 +4,7 @@
  * after 3 seconds.
  */
 import React, { useEffect, useRef } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Animated as RNAnimated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { RARITY_COLORS } from '@/src/data/cosmetics';
@@ -49,7 +50,7 @@ export function MilestoneUnlockToast({ visible, itemName, rarity, category, onDi
           <Text style={{ fontSize: 20 }}>{'\uD83C\uDF81'}</Text>
         </View>
         <View style={st.textWrap}>
-          <Text style={st.title}>Milestone Reward!</Text>
+          <Text style={st.title}>{t('modals.milestone_reward')}</Text>
           <Text style={st.name}>{itemName}</Text>
           <Text style={[st.rarity, { color: rarityColor }]}>
             {rarity.charAt(0).toUpperCase() + rarity.slice(1)} {category}

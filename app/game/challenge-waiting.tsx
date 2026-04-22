@@ -19,6 +19,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/src/lib/supabase';
+import { t } from '@/src/i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { cancelInvite, expireInvite } from '@/src/utils/challengeFlow';
@@ -219,12 +220,12 @@ export default function ChallengeWaitingScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.centered}>
-          <Text style={[styles.terminalTitle, { color: colors.text }]}>Not your invite</Text>
+          <Text style={[styles.terminalTitle, { color: colors.text }]}>{t('challenge.not_your_invite')}</Text>
           <Text style={[styles.terminalBody, { color: colors.textMid }]}>
             This invite belongs to another player. Head back to see your active challenges.
           </Text>
           <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.replace('/(tabs)/friends')}>
-            <Text style={styles.primaryBtnText}>Back to friends</Text>
+            <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -236,7 +237,7 @@ export default function ChallengeWaitingScreen() {
       ? `@${friend?.username ?? 'they'} declined the challenge.`
       : terminal === 'expired'
         ? `@${friend?.username ?? 'they'} didn\u2019t respond in time.`
-        : 'Invite cancelled.';
+        : t('challenge.invite_cancelled');
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.centered}>
@@ -244,16 +245,16 @@ export default function ChallengeWaitingScreen() {
             <Ionicons name={terminal === 'declined' ? 'close-circle-outline' : 'time-outline'} size={32} color={colors.wrong} />
           </View>
           <Text style={[styles.terminalTitle, { color: colors.text }]}>
-            {terminal === 'declined' ? 'Challenge declined' : terminal === 'expired' ? 'Invite expired' : 'Cancelled'}
+            {terminal === 'declined' ? t('challenge.challenge_declined') : terminal === 'expired' ? t('challenge.invite_expired') : t('challenge.cancelled')}
           </Text>
           <Text style={[styles.terminalBody, { color: colors.textMid }]}>{message}</Text>
           <Pressable
             style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
             onPress={() => router.replace('/(tabs)/friends')}
             accessibilityRole="button"
-            accessibilityLabel="Back to friends"
+            accessibilityLabel={t('challenge.back_to_friends_aria')}
           >
-            <Text style={styles.primaryBtnText}>Back to friends</Text>
+            <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -299,9 +300,9 @@ export default function ChallengeWaitingScreen() {
           style={[styles.cancelBtn, { borderColor: colors.border }]}
           onPress={handleCancel}
           accessibilityRole="button"
-          accessibilityLabel="Cancel the invite"
+          accessibilityLabel={t('challenge.cancel_invite_aria')}
         >
-          <Text style={[styles.cancelText, { color: colors.textMid }]}>Cancel invite</Text>
+          <Text style={[styles.cancelText, { color: colors.textMid }]}>{t('challenge.cancel_invite')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

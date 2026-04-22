@@ -7,6 +7,7 @@
  * screen never shows again, then navigates to the World 6 level map.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Dimensions,
   Animated as RNAnimated, ScrollView,
@@ -118,7 +119,7 @@ export default function MastermindIntroScreen() {
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: titleAnim, transform: [{ translateY: titleAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] }}>
-          <Text style={[st.title, { color: t.text }]}>Mastermind</Text>
+          <Text style={[st.title, { color: t.text }]}>{t('world_map.mastermind_title')}</Text>
           <Text style={[st.subtitle, { color: t.textMid }]}>
             The final challenge. Are you ready?
           </Text>
@@ -179,7 +180,7 @@ export default function MastermindIntroScreen() {
             onPress={handleEnter}
             style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
             accessibilityRole="button"
-            accessibilityLabel="Enter Mastermind"
+            accessibilityLabel={t('world_map.enter_mastermind')}
           >
             <LinearGradient
               colors={['#D4A012', '#B8860B'] as any}
@@ -187,7 +188,7 @@ export default function MastermindIntroScreen() {
               end={{ x: 1, y: 1 }}
               style={st.ctaButton}
             >
-              <Text style={st.ctaText}>Enter Mastermind</Text>
+              <Text style={st.ctaText}>{t('world_map.enter_mastermind')}</Text>
             </LinearGradient>
           </Pressable>
         </RNAnimated.View>

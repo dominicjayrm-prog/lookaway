@@ -17,6 +17,7 @@
  * behaves the same way to avoid leaking whether an account exists.
  */
 import React, { useState } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -45,7 +46,7 @@ function ForgotPasswordScreen() {
     setError(null);
     const trimmed = email.trim();
     if (!trimmed) {
-      setError('Please enter your email address');
+      setError(t('auth.enter_email'));
       return;
     }
     // Loose shape check — a proper email regex isn't worth the noise.
@@ -73,7 +74,7 @@ function ForgotPasswordScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
         <View style={styles.centerContainer}>
           <AnimatedBlink expression="love" size={120} entrance="spring" />
-          <Text style={[styles.successTitle, { color: colors.text }]}>Check your email</Text>
+          <Text style={[styles.successTitle, { color: colors.text }]}>{t('auth.check_email')}</Text>
           <Text style={[styles.successBody, { color: colors.textMid }]}>
             {`We’ve sent a reset link to ${email.trim()}. Tap the button in the email to set a new password — the link is valid for an hour.`}
           </Text>
@@ -93,17 +94,17 @@ function ForgotPasswordScreen() {
             style={[styles.primaryButton, { backgroundColor: colors.accent }]}
             onPress={() => router.replace('/(auth)/login')}
             accessibilityRole="button"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.back_to_signin_aria')}
           >
-            <Text style={styles.primaryButtonText}>Back to sign in</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.back_to_signin')}</Text>
           </Pressable>
           <Pressable
             onPress={() => { setSent(false); setEmail(''); }}
             style={styles.secondaryButton}
             accessibilityRole="button"
-            accessibilityLabel="Send to a different email"
+            accessibilityLabel={t('auth.send_different_aria')}
           >
-            <Text style={[styles.secondaryButtonText, { color: colors.textMid }]}>Send to a different email</Text>
+            <Text style={[styles.secondaryButtonText, { color: colors.textMid }]}>{t('auth.send_different')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -121,20 +122,20 @@ function ForgotPasswordScreen() {
             onPress={() => router.back()}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.back_to_signin_aria')}
           >
             <Ionicons name="chevron-back" size={26} color={colors.text} />
           </Pressable>
         </View>
 
         <View style={styles.content}>
-          <Text style={[styles.title, { color: colors.text }]}>Forgot password?</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('auth.forgot_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>
             {'Enter the email you signed up with. We’ll send you a link to set a new password.'}
           </Text>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>{t('auth.email')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, color: colors.text }]}
               placeholder="your@email.com"
@@ -162,12 +163,12 @@ function ForgotPasswordScreen() {
             onPress={handleSubmit}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Send reset link"
+            accessibilityLabel={t('auth.send_reset_aria')}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.primaryButtonText}>Send reset link</Text>
+              <Text style={styles.primaryButtonText}>{t('auth.send_reset')}</Text>
             )}
           </Pressable>
         </View>

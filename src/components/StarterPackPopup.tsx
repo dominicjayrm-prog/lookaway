@@ -3,6 +3,7 @@
  * One-time £0.99 purchase. Bouncing gift, shimmer CTA, item list.
  */
 import React, { useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal,
   Animated as RNAnimated, Dimensions, Platform,
@@ -162,7 +163,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           </RNAnimated.View>
 
           {/* Title */}
-          <Text style={st.title}>Starter Pack</Text>
+          <Text style={st.title}>{t('celebrations.starter_pack_title')}</Text>
 
           {/* Price row */}
           <View style={st.priceRow}>
@@ -204,7 +205,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
 
           {/* No thanks */}
           <Pressable onPress={handleDismiss} style={st.noThanksBtn} hitSlop={8}>
-            <Text style={st.noThanksText}>No thanks</Text>
+            <Text style={st.noThanksText}>{t('celebrations.starter_pack_no_thanks')}</Text>
           </Pressable>
         </RNAnimated.View>
       </View>

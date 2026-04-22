@@ -22,6 +22,7 @@
  *    can't tell which screen they're on from the dialog alone.
  */
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
@@ -60,10 +61,10 @@ export function QuitConfirmModal({ visible, costsLife, nonPremiumBody, onLeave, 
           style={s.backdropTouch}
           onPress={onKeepPlaying}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss quit dialog"
+          accessibilityLabel={t('common.dismiss_quit_aria')}
         />
         <View style={[s.card, { backgroundColor: colors.bg }]}>
-          <Text style={[s.title, { color: colors.text }]}>Leave level?</Text>
+          <Text style={[s.title, { color: colors.text }]}>{t('common.leave_level')}</Text>
           <Text style={[s.body, { color: colors.textMid }]}>{body}</Text>
           <Pressable
             style={[s.btn, { backgroundColor: colors.wrong }]}
@@ -77,9 +78,9 @@ export function QuitConfirmModal({ visible, costsLife, nonPremiumBody, onLeave, 
             style={[s.btn, { backgroundColor: colors.accent }]}
             onPress={onKeepPlaying}
             accessibilityRole="button"
-            accessibilityLabel="Keep playing"
+            accessibilityLabel={t('common.keep_playing_aria')}
           >
-            <Text style={s.btnText}>Keep playing</Text>
+            <Text style={s.btnText}>{t('common.keep_playing')}</Text>
           </Pressable>
         </View>
       </View>

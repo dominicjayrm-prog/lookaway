@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -39,7 +40,7 @@ export function ActiveChallengesSection({
 
   return (
     <>
-      <SectionLabel label="ACTIVE CHALLENGES" />
+      <SectionLabel label={t('friends.active_challenges')} />
       {challenges.map((c) => {
         const iNeedToPlay = c.my_score === null;
         const waitingForOpponent = c.my_score !== null && c.their_score === null;
@@ -89,13 +90,13 @@ export function ActiveChallengesSection({
                   accessibilityRole="button"
                   accessibilityLabel={`Play challenge from ${c.opponent.username}`}
                 >
-                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>Play</Text>
+                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{t('friends.play')}</Text>
                 </Pressable>
               </View>
             ) : waitingForOpponent ? (
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <View style={[styles.pendingBadge, { backgroundColor: colors.goldSoft }]}>
-                  <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>Pending</Text>
+                  <Text style={{ color: colors.gold, fontSize: 11, fontWeight: '700' }}>{t('friends.pending')}</Text>
                 </View>
                 <Pressable
                   onPress={() => onCancelOutgoing(c.id, c.opponent.username)}
@@ -109,7 +110,7 @@ export function ActiveChallengesSection({
               </View>
             ) : (
               <View style={[styles.pendingBadge, { backgroundColor: colors.correctSoft }]}>
-                <Text style={{ color: colors.correct, fontSize: 11, fontWeight: '700' }}>Done</Text>
+                <Text style={{ color: colors.correct, fontSize: 11, fontWeight: '700' }}>{t('friends.done')}</Text>
               </View>
             )}
           </View>

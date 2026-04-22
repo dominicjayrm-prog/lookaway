@@ -7,21 +7,24 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import OfflineBanner from '@/src/components/OfflineBanner';
 import { useFriendsBadgeCount } from '@/src/hooks/useFriendsBadgeCount';
+import { t } from '@/src/i18n';
 
 const isWeb = Platform.OS === 'web';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
+// Tab titles resolve via t() inside the render fn below so
+// the tab bar re-reads when the user flips language in Settings.
 const TAB_CONFIG: {
   name: string;
-  title: string;
+  titleKey: string;
   icon: IoniconsName;
   iconFocused: IoniconsName;
 }[] = [
-  { name: 'index', title: 'Play', icon: 'play-circle-outline', iconFocused: 'play-circle' },
-  { name: 'journey', title: 'Journey', icon: 'map-outline', iconFocused: 'map' },
-  { name: 'friends', title: 'Friends', icon: 'people-outline', iconFocused: 'people' },
-  { name: 'shop', title: 'Shop', icon: 'diamond-outline', iconFocused: 'diamond' },
+  { name: 'index', titleKey: 'tabs.play', icon: 'play-circle-outline', iconFocused: 'play-circle' },
+  { name: 'journey', titleKey: 'tabs.journey', icon: 'map-outline', iconFocused: 'map' },
+  { name: 'friends', titleKey: 'tabs.friends', icon: 'people-outline', iconFocused: 'people' },
+  { name: 'shop', titleKey: 'tabs.shop', icon: 'diamond-outline', iconFocused: 'diamond' },
 ];
 
 function TabLayout() {
@@ -68,7 +71,7 @@ function TabLayout() {
               tabPress: () => { if (!isWeb) Haptics.selectionAsync(); },
             }}
             options={{
-              title: tab.title,
+              title: t(tab.titleKey),
               tabBarBadge: badge,
               tabBarBadgeStyle: {
                 backgroundColor: colors.wrong,

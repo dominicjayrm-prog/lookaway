@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle, Rect, Polygon, Path } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -168,8 +169,8 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
 
   return (
     <View style={s.container}>
-      {phase === 'showing' && <Text style={[s.phaseLabel, { color: modeColor }]}>Watch carefully...</Text>}
-      {phase === 'pause' && <Text style={[s.phaseLabel, { color: modeColor }]}>Now tap them in order!</Text>}
+      {phase === 'showing' && <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.watch_carefully')}</Text>}
+      {phase === 'pause' && <Text style={[s.phaseLabel, { color: modeColor }]}>{t('modes.tap_in_order')}</Text>}
       {phase === 'recall' && (
         <>
           <Text style={[s.phaseLabel, { color: modeColor }]}>Tap in order — Next: #{nextExpected}</Text>

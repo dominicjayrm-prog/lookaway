@@ -27,6 +27,7 @@ import { track, EVENTS } from '@/src/lib/analytics';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { log } from '@/src/lib/logger';
 import { sounds } from '@/src/lib/sounds';
+import { t } from '@/src/i18n';
 
 const GEM = '\u{1F48E}';
 
@@ -38,7 +39,7 @@ function AdBadge({ colors }: { colors: Record<string, string> }) {
   return (
     <View style={[styles.adBadge, { backgroundColor: colors.correct }]}>
       <Ionicons name="play" size={8} color="#FFFFFF" />
-      <Text style={styles.adBadgeText}>FREE AD</Text>
+      <Text style={styles.adBadgeText}>{t('shop.free_ad')}</Text>
     </View>
   );
 }
@@ -72,7 +73,7 @@ function CosmeticStatus({
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
         <Ionicons name="play" size={9} color={colors.correct} />
-        <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '800' }}>Watch ad</Text>
+        <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '800' }}>{t('shop.watch_ad')}</Text>
       </View>
     );
   }
@@ -98,7 +99,7 @@ function ShopTab() {
   const [bannerSnapshot] = useState(() => {
     const need = params.needGems ? parseInt(params.needGems, 10) : 0;
     if (need > 0 && params.reason === 'streak_recovery') {
-      return `You need ${need} more gem${need !== 1 ? 's' : ''} to save your streak`;
+      return need === 1 ? t('shop.need_gems_banner_one') : t('shop.need_gems_banner_many', { count: need });
     }
     return null;
   });
@@ -177,7 +178,7 @@ function ShopTab() {
     const { result, periodType } = await purchaseSubscription(plan);
     if (result === 'cancelled') return;
     if (result === 'error') {
-      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      Alert.alert(t('shop.alert_purchase_failed_title'), t('shop.alert_purchase_failed_body'));
       return;
     }
     // Purchase succeeded — activate locally + sync to Supabase.
@@ -241,18 +242,18 @@ function ShopTab() {
     if (item.adEligible) {
       const remaining = await getRemainingAdWatches();
       if (remaining === 0 && !store.isSubscribed()) {
-        Alert.alert('Daily ad limit reached', 'Come back tomorrow for more free unlocks.');
+        Alert.alert(t('shop.alert_ad_limit_title'), t('shop.alert_ad_limit_body'));
         return;
       }
       Alert.alert(
-        store.isSubscribed() ? `Unlock ${item.name}?` : `Watch a 30s ad to unlock ${item.name}?`,
+        store.isSubscribed() ? t('shop.unlock_plus_title', { name: item.name }) : t('shop.unlock_ad_title', { name: item.name }),
         store.isSubscribed()
-          ? 'Blanked+ members skip the ad and claim commons for free.'
-          : `You\u2019ll get it for free. ${remaining} ad unlock${remaining === 1 ? '' : 's'} left today.`,
+          ? t('shop.unlock_plus_body')
+          : (remaining === 1 ? t('shop.unlock_ad_body_one') : t('shop.unlock_ad_body_many', { count: remaining })),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: store.isSubscribed() ? 'Claim free' : 'Watch ad',
+            text: store.isSubscribed() ? t('shop.claim_free') : t('shop.watch_ad'),
             onPress: async () => {
               setAdLoadingId(item.id);
               const result = await showRewardedAd();
@@ -265,9 +266,9 @@ function ShopTab() {
                 setCelebrationItem(item as Cosmetic);
                 getRemainingAdWatches().then(setAdWatchesLeft);
               } else if (result.reason === 'limit_reached') {
-                Alert.alert('Daily ad limit reached', 'Come back tomorrow for more free unlocks.');
+                Alert.alert(t('shop.alert_ad_limit_title'), t('shop.alert_ad_limit_body'));
               } else {
-                Alert.alert('Ad unavailable', 'Couldn\u2019t load an ad right now. Try again in a moment.');
+                Alert.alert(t('shop.alert_ad_unavailable_title'), t('shop.alert_ad_unavailable_body'));
               }
             },
           },
@@ -296,7 +297,7 @@ function ShopTab() {
     if (result === 'cancelled') return;
     if (result === 'error') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      Alert.alert(t('shop.alert_purchase_failed_title'), t('shop.alert_purchase_failed_body'));
       return;
     }
 
@@ -312,13 +313,13 @@ function ShopTab() {
       store.addGems(gemReward);
       if (uid) logEconomyEvent(uid, ECONOMY_EVENTS.IAP_GEMS, gemReward, { productId });
       sounds.play('gemClink');
-      Alert.alert('Gems added!', `${gemReward} gems have been added to your balance.`);
+      Alert.alert(t('shop.alert_gems_title'), t('shop.alert_gems_body', { count: gemReward }));
     } else if (productId === IAP_PRODUCT_IDS.LIVES_REFILL) {
       store.refillLives();
-      Alert.alert('Lives refilled!', 'All 5 lives are back.');
+      Alert.alert(t('shop.alert_lives_title'), t('shop.alert_lives_body'));
     } else if (productId === IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H) {
       store.activateUnlimitedLives();
-      Alert.alert('Unlimited lives!', 'Play as much as you want for the next hour.');
+      Alert.alert(t('shop.alert_unlimited_title'), t('shop.alert_unlimited_body'));
     } else if (productId === IAP_PRODUCT_IDS.STARTER_PACK) {
       store.addGems(200);
       store.buyPowerUp('slowTime', 3, 0);
@@ -327,10 +328,10 @@ function ShopTab() {
       store.refillLives();
       try { await AsyncStorage.setItem('starter_pack_purchased', 'true'); } catch {}
       setShowStarterPack(false);
-      Alert.alert('Starter Pack unlocked!', '200 gems, 3 boosts, and unlimited play for 1 hour.');
+      Alert.alert(t('shop.alert_starter_title'), t('shop.alert_starter_body'));
     } else if (productId === IAP_PRODUCT_IDS.REMOVE_ADS) {
       store.setAdsRemoved();
-      Alert.alert('Ads removed!', 'No more interstitial or banner ads. Enjoy!');
+      Alert.alert(t('shop.alert_ads_title'), t('shop.alert_ads_body'));
     }
     log.breadcrumb('purchases', 'reward granted', { productId });
   };
@@ -345,7 +346,7 @@ function ShopTab() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* Sticky header */}
       <View style={[styles.header, { backgroundColor: colors.bg }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Shop</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('shop.title')}</Text>
         <View style={[styles.gemDisplay, { backgroundColor: colors.accentSoft }]}>
           <Text style={{ fontSize: 20 }}>{GEM}</Text>
           <AnimatedGemCount count={gems} style={[styles.gemCount, { color: colors.accent }]} />
@@ -372,7 +373,7 @@ function ShopTab() {
             style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
             onPress={() => setShowPaywall(true)}
             accessibilityRole="button"
-            accessibilityLabel="Open Blanked Plus subscription"
+            accessibilityLabel={t('shop.plus_open_aria')}
           >
             <LinearGradient
               colors={['#6C5CE7', '#5B4CC8']}
@@ -386,7 +387,7 @@ function ShopTab() {
                 </View>
                 <View>
                   <Text style={styles.plusTitle}>Blanked<Text style={{ fontWeight: '900' }}>+</Text></Text>
-                  <Text style={styles.plusSubtitle}>Unlimited lives, no ads, 300 gems/mo</Text>
+                  <Text style={styles.plusSubtitle}>{t('shop.plus_subtitle')}</Text>
                 </View>
               </View>
               <View style={styles.plusArrow}>
@@ -402,16 +403,16 @@ function ShopTab() {
             style={({ pressed }) => [styles.starterBanner, { backgroundColor: colors.card }, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
             onPress={() => setShowStarterPack(true)}
             accessibilityRole="button"
-            accessibilityLabel="Open Starter Pack offer, 75 percent off"
+            accessibilityLabel={t('shop.starter_open_aria')}
           >
             <View style={[styles.starterIconBg, { backgroundColor: '#FF6B6B12' }]}>
               <Ionicons name="gift" size={20} color="#FF6B6B" />
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[styles.starterTitle, { color: colors.text }]}>Starter Pack</Text>
+                <Text style={[styles.starterTitle, { color: colors.text }]}>{t('shop.starter_title')}</Text>
                 <View style={[styles.starterBadge, { backgroundColor: colors.wrong }]}>
-                  <Text style={styles.starterBadgeText}>75% OFF</Text>
+                  <Text style={styles.starterBadgeText} numberOfLines={1}>{t('shop.starter_badge')}</Text>
                 </View>
               </View>
               <Text style={[styles.starterTimer, { color: colors.wrong }]}>{starterPackTimeLeft}</Text>
@@ -421,7 +422,7 @@ function ShopTab() {
         )}
 
         {/* ── Cosmetics ── (leads the shop — most visually rich) */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Cosmetics</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('shop.cosmetics')}</Text>
 
         {/* Tab bar */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 14 }}>
@@ -431,11 +432,11 @@ function ShopTab() {
               onPress={() => { setCosmeticTab(tab); setCelebrationItem(null); }}
               style={[styles.cosmeticTabPill, { backgroundColor: cosmeticTab === tab ? colors.accent : colors.card, borderColor: cosmeticTab === tab ? colors.accent : colors.border }]}
               accessibilityRole="button"
-              accessibilityLabel={`${tab} tab`}
+              accessibilityLabel={t('shop.tab_aria', { tab })}
               accessibilityState={{ selected: cosmeticTab === tab }}
             >
               <Text style={{ fontSize: 12, fontWeight: '700', color: cosmeticTab === tab ? '#FFF' : colors.textMid }}>
-                {tab === 'featured' ? '✨ Today' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'featured' ? t('shop.tab_featured') : tab === 'frames' ? t('shop.tab_frames') : tab === 'banners' ? t('shop.tab_banners') : t('shop.tab_expressions')}
               </Text>
             </Pressable>
           ))}
@@ -445,7 +446,7 @@ function ShopTab() {
         {cosmeticTab === 'featured' && (
           <View>
             <Text style={{ fontSize: 11, color: colors.textLight, fontWeight: '600', marginBottom: 10 }}>
-              {dailyOnSale ? 'Weekend sale \u00B7 20% off' : 'Refreshes daily \u00B7 Weekend sale Sat & Sun'}
+              {dailyOnSale ? t('shop.featured_sale') : t('shop.featured_refresh')}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               {dailyFeatured.map(({ cosmetic: c, originalPrice, discountedPrice }) => {
@@ -584,7 +585,7 @@ function ShopTab() {
         )}
 
         {/* ── Power-ups ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Power-ups</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('shop.power_ups')}</Text>
 
         {/* Mode selector pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.modeScroll} contentContainerStyle={styles.modeScrollContent}>
@@ -596,7 +597,7 @@ function ShopTab() {
                 style={[styles.modePill, { backgroundColor: isActive ? m.color : colors.card, borderWidth: isActive ? 0 : 1, borderColor: colors.border }]}
                 onPress={() => setSelectedMode(m.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${m.name} mode filter`}
+                accessibilityLabel={t('shop.mode_filter_aria', { name: m.name })}
                 accessibilityState={{ selected: isActive }}
               >
                 <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
@@ -638,7 +639,7 @@ function ShopTab() {
                   )}
                   {isUniversal && (
                     <View style={[styles.universalBadge, { backgroundColor: colors.goldSoft }]}>
-                      <Text style={[styles.universalBadgeText, { color: colors.gold }]}>ALL MODES</Text>
+                      <Text style={[styles.universalBadgeText, { color: colors.gold }]} numberOfLines={1}>{t('shop.all_modes')}</Text>
                     </View>
                   )}
                   <View
@@ -670,14 +671,14 @@ function ShopTab() {
                       },
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Buy 1 ${p.name} for ${p.cost} gems`}
+                    accessibilityLabel={t('shop.buy_powerup_aria', { name: p.name, cost: p.cost })}
                   >
                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{GEM} {p.cost}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => handleBuyPowerUp(p, 3)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Buy 3 ${p.name} for ${p.bundleCost} gems`}
+                    accessibilityLabel={t('shop.bundle_aria', { name: p.name, cost: p.bundleCost })}
                   >
                     <Text style={{ fontSize: 10, fontWeight: '700', color: p.color, marginTop: 6 }}>
                       3 for {GEM} {p.bundleCost}
@@ -690,21 +691,21 @@ function ShopTab() {
         </View>
 
         {/* ── Lives ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Lives</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('shop.lives')}</Text>
         <View style={[styles.livesCard, { backgroundColor: colors.card }]}>
           <Pressable
             style={styles.livesRow}
             onPress={() => handleIAP(IAP_PRODUCT_IDS.LIVES_REFILL)}
             accessibilityRole="button"
-            accessibilityLabel="Refill all 5 lives for 99 pence"
+            accessibilityLabel={t('shop.refill_aria')}
           >
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
                 <Ionicons name="heart" size={20} color={colors.accent} />
               </View>
               <View>
-                <Text style={[styles.livesTextBold, { color: colors.text }]}>Refill all 5 lives</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>The quickest way to keep playing</Text>
+                <Text style={[styles.livesTextBold, { color: colors.text }]}>{t('shop.refill_lives')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>{t('shop.refill_lives_sub')}</Text>
               </View>
             </View>
             <View style={[styles.cashBtn, { backgroundColor: colors.accent }]}>
@@ -716,15 +717,15 @@ function ShopTab() {
             style={styles.livesRow}
             onPress={() => handleIAP(IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H)}
             accessibilityRole="button"
-            accessibilityLabel="Unlimited lives for 1 hour, 1 pound 99"
+            accessibilityLabel={t('shop.unlimited_aria')}
           >
             <View style={styles.livesRowLeft}>
               <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
                 <Ionicons name="infinite" size={22} color={colors.gold} />
               </View>
               <View>
-                <Text style={[styles.livesText, { color: colors.text }]}>Unlimited for 1 hour</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>Play as much as you want</Text>
+                <Text style={[styles.livesText, { color: colors.text }]}>{t('shop.unlimited_hour')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>{t('shop.unlimited_hour_sub')}</Text>
               </View>
             </View>
             <View style={[styles.outlineBtn, { borderColor: colors.accent }]}>
@@ -743,8 +744,8 @@ function ShopTab() {
                 <Ionicons name="heart-outline" size={18} color={colors.textLight} />
               </View>
               <View>
-                <Text style={[styles.livesTextFaded, { color: colors.textMid }]}>Refill with gems</Text>
-                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>Use your gem balance</Text>
+                <Text style={[styles.livesTextFaded, { color: colors.textMid }]}>{t('shop.refill_gems')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{t('shop.refill_gems_sub')}</Text>
               </View>
             </View>
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
@@ -752,7 +753,7 @@ function ShopTab() {
         </View>
 
         {/* ── Gem packs ── */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Gem packs</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('shop.gem_packs')}</Text>
         <View style={styles.gemPackRow}>
           {[
             { id: IAP_PRODUCT_IDS.GEMS_100, gems: 100, price: '\u00A30.99', badge: null },
@@ -778,22 +779,22 @@ function ShopTab() {
         </View>
 
         {/* ── Remove ads ── */}
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMid, marginTop: 8, marginBottom: 12 }}>Other</Text>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMid, marginTop: 8, marginBottom: 12 }}>{t('shop.other')}</Text>
         <View style={[styles.removeAdsCard, { backgroundColor: colors.card }]}>
           <View style={styles.removeAdsContent}>
             <View style={[styles.removeAdsIcon, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="eye-off-outline" size={22} color={colors.accent} />
             </View>
             <View style={{ flex: 1, marginLeft: 14 }}>
-              <Text style={[styles.removeAdsTitle, { color: colors.text }]}>Remove ads</Text>
-              <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>Remove all ads from the app forever</Text>
+              <Text style={[styles.removeAdsTitle, { color: colors.text }]}>{t('shop.remove_ads')}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMid, marginTop: 2, lineHeight: 18 }}>{t('shop.remove_ads_desc')}</Text>
             </View>
           </View>
           <Pressable
             onPress={() => handleIAP(IAP_PRODUCT_IDS.REMOVE_ADS)}
             style={[styles.removeAdsBtn, { borderColor: colors.accent }]}
             accessibilityRole="button"
-            accessibilityLabel="Buy remove ads for 4 pounds 99, one time"
+            accessibilityLabel={t('shop.remove_ads_aria')}
           >
             <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 - one time</Text>
           </Pressable>
@@ -815,7 +816,7 @@ function ShopTab() {
       <InfoCard
         visible={showUnavailable}
         icon={<Ionicons name="time-outline" size={20} color="#6C5CE7" />}
-        title="Not Available Yet"
+        title={t('shop.not_available_title')}
         description="This item isn't in today's shop. Check back tomorrow - the featured items rotate daily with 20% off!"
         tip="Tap the ✨ Today tab to see what's available right now"
         accentColor="#6C5CE7"
@@ -824,9 +825,9 @@ function ShopTab() {
       <InfoCard
         visible={!!earnOnlyInfo}
         icon={<Ionicons name="gift-outline" size={20} color="#D4A012" />}
-        title={earnOnlyInfo?.name ?? 'Milestone Reward'}
+        title={earnOnlyInfo?.name ?? t('shop.milestone_default')}
         description={`This cosmetic can only be unlocked by completing: ${earnOnlyInfo?.description ?? 'a gameplay milestone'}`}
-        tip="Head to the Journey tab and keep playing to earn it!"
+        tip={t('shop.milestone_tip')}
         accentColor="#D4A012"
         onClose={() => setEarnOnlyInfo(null)}
       />
@@ -841,9 +842,9 @@ function ShopTab() {
       <InfoCard
         visible={gemShortfall !== null}
         icon={<Ionicons name="diamond" size={20} color="#6C5CE7" style={{ opacity: 0.4 }} />}
-        title="Not Enough Gems"
+        title={t('shop.not_enough_title')}
         description={gemShortfall ? `You need ${gemShortfall.cost - gems} more gems for "${gemShortfall.name}". Keep playing to earn gems, every level gives 1-3 gems based on your stars.` : ''}
-        tip="Play levels to earn gems, or check gem packs below"
+        tip={t('shop.not_enough_tip')}
         accentColor="#6C5CE7"
         onClose={() => setGemShortfall(null)}
       />

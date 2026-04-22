@@ -11,6 +11,7 @@
  * screen comes from the active theme object — no hardcoded hex values.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, ScrollView, Dimensions,
   Animated as RNAnimated, Alert,
@@ -366,7 +367,7 @@ export default function StatsSpaceScreen() {
           >
             <Ionicons name="chevron-back" size={20} color={theme.backColor} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: theme.title }]}>Memory Analytics</Text>
+          <Text style={[styles.headerTitle, { color: theme.title }]}>{t('stats_space.title')}</Text>
           {subscribed ? (
             <View style={[styles.badge, { backgroundColor: theme.badgeBg }]}>
               <Text style={[styles.badgeText, { color: theme.badgeText }]}>BLANKED+</Text>
@@ -389,7 +390,7 @@ export default function StatsSpaceScreen() {
 
           {/* Memory score */}
           <View style={styles.scoreWrapper}>
-            <Text style={[styles.scoreLabel, { color: theme.muted }]}>MEMORY SCORE</Text>
+            <Text style={[styles.scoreLabel, { color: theme.muted }]}>{t('stats_space.memory_score_label')}</Text>
             <Text style={[styles.scoreValue, { color: theme.title }]}>
               {memoryScoreAnimated}
             </Text>
@@ -419,7 +420,7 @@ export default function StatsSpaceScreen() {
                 icon="🎯"
                 value={cards.accuracy}
                 suffix="%"
-                label="Accuracy"
+                label={t('stats_space.accuracy')}
                 color="#00B894"
                 theme={theme}
                 delay={1000}
@@ -428,7 +429,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="🔥"
                 value={cards.bestStreak}
-                label="Best Streak"
+                label={t('stats_space.best_streak')}
                 color="#FF6B6B"
                 theme={theme}
                 delay={1150}
@@ -437,7 +438,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="⭐"
                 value={cards.stars}
-                label="Stars"
+                label={t('modals.stars_label')}
                 color="#D4A012"
                 theme={theme}
                 delay={1300}
@@ -448,7 +449,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="🧩"
                 value={cards.levelsDone}
-                label="Levels Done"
+                label={t('stats_space.levels_done')}
                 color="#0984E3"
                 theme={theme}
                 delay={1450}
@@ -459,7 +460,7 @@ export default function StatsSpaceScreen() {
                 value={cards.avgSpeed}
                 suffix="s"
                 decimals={1}
-                label="Avg Speed"
+                label={t('stats_space.avg_speed')}
                 color="#00CEC9"
                 theme={theme}
                 delay={1600}
@@ -468,7 +469,7 @@ export default function StatsSpaceScreen() {
               <StatsCard
                 icon="📅"
                 value={cards.daysActive}
-                label="Days Active"
+                label={t('stats_space.days_active')}
                 color="#FD79A8"
                 theme={theme}
                 delay={1750}
@@ -533,7 +534,7 @@ export default function StatsSpaceScreen() {
           />
           <View style={styles.conversionContent}>
             <Blink expression="celebrate" size={50} />
-            <Text style={[styles.conversionTitle, { color: theme.title }]}>Like what you see?</Text>
+            <Text style={[styles.conversionTitle, { color: theme.title }]}>{t('stats_space.conversion_title')}</Text>
             <Text style={[styles.conversionBody, { color: theme.subtitle }]}>
               Unlock Memory Analytics with Blanked+ and track your real brain performance over time.
             </Text>

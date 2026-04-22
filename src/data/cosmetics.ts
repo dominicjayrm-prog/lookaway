@@ -4,6 +4,7 @@
  * Banners are decorative backgrounds on the profile header.
  * Name colours change the display name colour (subscriber perk).
  */
+import { t } from '@/src/i18n';
 
 // ─── TYPES ─────────────────────────────────────────────────
 export type CosmeticType = 'frame' | 'banner' | 'name_color' | 'expression';
@@ -411,3 +412,58 @@ export const RARITY_ORDER: Record<string, number> = {
 export function sortByRarity<T extends { rarity: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99));
 }
+
+// ─── i18n GETTERS ─────────────────────────────────────────────────
+// Cosmetic names + descriptions were hand-authored inline in the
+// arrays above. Rather than rewriting every entry with a translation
+// key, we install live-resolving getters that look up
+// `data.cosmetics.<id>.name` / `.desc` at read time. Spanish
+// translations populate es.json under those keys; English falls
+// through to whatever string was stored in the literal, so
+// untranslated items keep rendering correctly.
+//
+// This makes every call site locale-aware (shop cards, cosmetic
+// picker titles, celebration toasts) without touching the ~90
+// individual entries above.
+(function installCosmeticTranslations(): void {
+  const attach = (item: Cosmetic) => {
+    const fallbackName = item.name;
+    const fallbackDesc = item.description;
+    const fallbackEarn = item.earnDescription;
+    Object.defineProperty(item, 'name', {
+      get: () => {
+        const key = `data.cosmetics.${item.id}.name`;
+        const v = t(key);
+        // i18n-js returns the key itself when nothing's found; in
+        // that case fall back to the original English literal.
+        return v === key ? fallbackName : v;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    Object.defineProperty(item, 'description', {
+      get: () => {
+        const key = `data.cosmetics.${item.id}.desc`;
+        const v = t(key);
+        return v === key ? fallbackDesc : v;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+    if (fallbackEarn !== undefined) {
+      Object.defineProperty(item, 'earnDescription', {
+        get: () => {
+          const key = `data.cosmetics.${item.id}.earn`;
+          const v = t(key);
+          return v === key ? fallbackEarn : v;
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  };
+  FRAMES.forEach(attach);
+  BANNERS.forEach(attach);
+  NAME_COLORS.forEach(attach);
+  EXPRESSIONS.forEach(attach);
+})();

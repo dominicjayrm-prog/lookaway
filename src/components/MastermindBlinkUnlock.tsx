@@ -7,6 +7,7 @@
  * UNLOCKED" badge, flavour text, achievement card, and equip CTA.
  */
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal,
   Animated as RNAnimated, Dimensions,
@@ -126,7 +127,7 @@ export function MastermindBlinkUnlock({ visible, onDismiss }: Props) {
         {/* TOP: Badge + Blink */}
         <View style={st.topSection}>
           <View style={[st.badge, { backgroundColor: 'rgba(212,160,18,0.15)' }]}>
-            <Text style={st.badgeText}>LEGENDARY UNLOCKED</Text>
+            <Text style={st.badgeText}>{t('modals.legendary_unlocked')}</Text>
           </View>
 
           {/* Glow rings behind Blink */}
@@ -143,9 +144,9 @@ export function MastermindBlinkUnlock({ visible, onDismiss }: Props) {
             <AnimatedBlink expression="mastermind_boss" size={150} breathing />
           </RNAnimated.View>
 
-          <Text style={[st.title, { color: textColor }]}>Mastermind Blink</Text>
+          <Text style={[st.title, { color: textColor }]}>{t('modals.mastermind_blink')}</Text>
           <View style={[st.subBadge, { backgroundColor: 'rgba(212,160,18,0.12)' }]}>
-            <Text style={st.subBadgeText}>LEGENDARY EXPRESSION</Text>
+            <Text style={st.subBadgeText}>{t('modals.legendary_expression')}</Text>
           </View>
         </View>
 
@@ -158,7 +159,7 @@ export function MastermindBlinkUnlock({ visible, onDismiss }: Props) {
             <View style={[st.achievementCard, { backgroundColor: cardBg }]}>
               <Text style={st.achievementEmoji}>{'\uD83D\uDC51'}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={[st.achievementTitle, { color: textColor }]}>Mastermind Complete</Text>
+                <Text style={[st.achievementTitle, { color: textColor }]}>{t('modals.mastermind_complete')}</Text>
                 <Text style={[st.achievementDesc, { color: textMid }]}>Finished Classic World 6 — the hardest world in Blanked</Text>
               </View>
             </View>
@@ -172,12 +173,12 @@ export function MastermindBlinkUnlock({ visible, onDismiss }: Props) {
               style={[st.equipButton]}
               onPress={handleEquip}
               accessibilityRole="button"
-              accessibilityLabel="Equip Mastermind Blink"
+              accessibilityLabel={t('modals.equip_mastermind_aria')}
             >
-              <Text style={st.equipText}>Equip Mastermind Blink</Text>
+              <Text style={st.equipText}>{t('modals.equip_mastermind')}</Text>
             </Pressable>
             <Pressable onPress={onDismiss} style={st.dismissBtn}>
-              <Text style={[st.dismissText, { color: textMid }]}>Maybe later</Text>
+              <Text style={[st.dismissText, { color: textMid }]}>{t('modals.maybe_later')}</Text>
             </Pressable>
           </View>
         )}

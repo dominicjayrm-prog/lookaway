@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,7 +37,7 @@ function AchievementsScreen() {
         <Pressable onPress={() => { Haptics.selectionAsync().catch(() => {}); router.back(); }} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Achievements</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('achievements_page.title')}</Text>
         <Text style={[styles.headerCount, { color: colors.textLight }]}>{unlockedCount}/{totalTiers}</Text>
       </View>
 
