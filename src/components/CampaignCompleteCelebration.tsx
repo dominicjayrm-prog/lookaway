@@ -2,7 +2,8 @@
  * The ultimate celebration — shown when the player completes ALL 200 classic levels.
  * Cinematic 4-second sequence with all 6 world colors bursting in sequence.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React
+import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon, Path } from 'react-native-svg';
 
@@ -200,8 +201,8 @@ function CampaignCompleteCelebration({ visible, totalStars, maxStars, onDismiss 
           position: 'absolute', left: 20, right: 20, top: cy + 65, alignItems: 'center',
           opacity: titleOpacity, transform: [{ scale: titleScale }],
         }}>
-          <Text style={s.masterLabel}>BLANKED</Text>
-          <Text style={s.title}>Master</Text>
+          <Text style={s.masterLabel}>{t('celebrations.campaign_master_label')}</Text>
+          <Text style={s.title}>{t('celebrations.campaign_master_title')}</Text>
         </RNAnimated.View>
 
         {/* Stats */}
@@ -219,7 +220,7 @@ function CampaignCompleteCelebration({ visible, totalStars, maxStars, onDismiss 
           bottom: SH * 0.12, opacity: btnOpacity, transform: [{ translateY: btnY }],
         }}>
           <Pressable style={s.btn} onPress={handleDismiss}>
-            <Text style={s.btnText}>Incredible</Text>
+            <Text style={s.btnText}>{t('celebrations.campaign_master_cta')}</Text>
           </Pressable>
         </RNAnimated.View>
       </View>

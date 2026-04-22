@@ -12,7 +12,8 @@
  *
  * No Blink mascot on this modal — the mode letter icon is the hero.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React
+import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Modal, Dimensions,
   Animated as RNAnimated,
@@ -148,7 +149,7 @@ export function ModeUnlockCelebration({ visible, modeId, onDismiss }: Props) {
             <View style={st.headerCircle} />
 
             <View style={st.badge}>
-              <Text style={st.badgeText}>NEW MODE UNLOCKED</Text>
+              <Text style={st.badgeText}>{t('celebrations.mode_unlock_badge')}</Text>
             </View>
 
             <View style={st.letterCircle}>
@@ -182,11 +183,11 @@ export function ModeUnlockCelebration({ visible, modeId, onDismiss }: Props) {
             <View style={[st.countsRow, { opacity: showCounts ? 1 : 0 }]}>
               <View style={st.countItem}>
                 <Text style={[st.countNumber, { color: mode.color }]}>{mode.worlds}</Text>
-                <Text style={st.countLabel}>Worlds</Text>
+                <Text style={st.countLabel}>{t('celebrations.mode_unlock_worlds')}</Text>
               </View>
               <View style={st.countItem}>
                 <Text style={[st.countNumber, { color: mode.color }]}>{mode.levels}</Text>
-                <Text style={st.countLabel}>Levels</Text>
+                <Text style={st.countLabel}>{t('celebrations.mode_unlock_levels')}</Text>
               </View>
             </View>
 
@@ -197,7 +198,7 @@ export function ModeUnlockCelebration({ visible, modeId, onDismiss }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Start playing ${mode.name}`}
             >
-              <Text style={st.ctaText}>Let's Go!</Text>
+              <Text style={st.ctaText}>{t('celebrations.mode_unlock_cta')}</Text>
             </Pressable>
 
             <Pressable
@@ -206,7 +207,7 @@ export function ModeUnlockCelebration({ visible, modeId, onDismiss }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Dismiss"
             >
-              <Text style={st.dismissText}>Maybe later</Text>
+              <Text style={st.dismissText}>{t('celebrations.mode_unlock_dismiss')}</Text>
             </Pressable>
           </View>
         </RNAnimated.View>

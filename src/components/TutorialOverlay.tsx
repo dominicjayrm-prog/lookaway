@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React
+import { t } from '@/src/i18n';, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable, Modal, Animated as RNAnimated } from 'react-native';
 import Svg, { Circle as SvgCircle, Polygon } from 'react-native-svg';
 
@@ -229,14 +230,14 @@ function CelebrationScreen({ onDismiss }: { onDismiss: () => void }) {
         opacity: cardOpacity,
         transform: [{ scale: cardScale }],
       }}>
-        <Text style={st.celebTitle}>You're all set!</Text>
+        <Text style={st.celebTitle}>{t('celebrations.tutorial_done_title')}</Text>
         <RNAnimated.View style={{ opacity: subtitleOpacity }}>
           <Text style={st.celebBody}>Your memory journey starts now.{'\n'}Let's see what you can remember.</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: btnOpacity, transform: [{ translateY: btnY }], width: '100%', maxWidth: 280, marginTop: 28 }}>
           <Pressable style={st.celebBtn} onPress={handleDismiss}>
-            <Text style={st.celebBtnText}>Let's play</Text>
+            <Text style={st.celebBtnText}>{t('celebrations.tutorial_play')}</Text>
           </Pressable>
         </RNAnimated.View>
       </RNAnimated.View>
@@ -321,7 +322,7 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
           <View style={st.btnRow}>
             {step === 0 ? (
               <Pressable onPress={onComplete} style={st.ghostBtn}>
-                <Text style={st.ghostText}>Skip</Text>
+                <Text style={st.ghostText}>{t('celebrations.tutorial_skip')}</Text>
               </Pressable>
             ) : (
               <Pressable onPress={back} style={st.backBtn}>
@@ -335,7 +336,7 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
 
             {step > 0 && step < STEPS.length - 1 && (
               <Pressable onPress={onComplete} style={st.ghostBtn}>
-                <Text style={st.ghostText}>Skip</Text>
+                <Text style={st.ghostText}>{t('celebrations.tutorial_skip')}</Text>
               </Pressable>
             )}
           </View>

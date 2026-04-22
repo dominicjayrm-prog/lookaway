@@ -2,7 +2,8 @@
  * Daily Login Reward popup — shows a 7-day calendar with today's reward highlighted.
  * Beautiful on-brand design with animations.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React
+import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -156,7 +157,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
         }]}>
           {/* Header */}
           <View style={[st.header, { backgroundColor: '#6C5CE7' }]}>
-            <Text style={st.headerLabel}>DAILY REWARD</Text>
+            <Text style={st.headerLabel}>{t('celebrations.daily_reward_label')}</Text>
             <Text style={st.headerTitle}>Day {rewardDay} of 7</Text>
             {streak > 1 && <Text style={st.headerStreak}>{'\uD83D\uDD25'} {streak}-day login streak</Text>}
           </View>
@@ -187,7 +188,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
           <View style={[st.todayBox, { backgroundColor: '#6C5CE7' + '08', borderColor: '#6C5CE7' + '20' }]}>
             <Text style={st.todayIcon}>{todayReward.icon}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[st.todayTitle, { color: colors.text }]}>Today's reward</Text>
+              <Text style={[st.todayTitle, { color: colors.text }]}>{t('celebrations.daily_today')}</Text>
               <Text style={[st.todayDesc, { color: colors.textMid }]}>{todayReward.label}{rewardDay === 7 ? ' + mystery bonus!' : ''}</Text>
             </View>
           </View>
@@ -195,13 +196,13 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
           {/* Claim button or claimed confirmation */}
           {!claimed ? (
             <Pressable style={({ pressed }) => [st.claimBtn, pressed && { transform: [{ scale: 0.96 }] }]} onPress={handleClaim}>
-              <Text style={st.claimText}>Claim reward</Text>
+              <Text style={st.claimText}>{t('celebrations.daily_claim')}</Text>
             </Pressable>
           ) : (
             <RNAnimated.View style={[st.claimedBox, { transform: [{ scale: claimScale }] }]}>
               <Text style={[st.claimedText, { color: colors.correct }]}>{'\u2713'} Claimed!</Text>
               <Pressable style={[st.doneBtn, { backgroundColor: colors.surface }]} onPress={handleDismiss}>
-                <Text style={[st.doneText, { color: colors.textMid }]}>Done</Text>
+                <Text style={[st.doneText, { color: colors.textMid }]}>{t('celebrations.daily_done')}</Text>
               </Pressable>
             </RNAnimated.View>
           )}

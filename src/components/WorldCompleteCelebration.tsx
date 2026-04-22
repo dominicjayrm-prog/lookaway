@@ -2,7 +2,8 @@
  * Cinematic celebration shown when the player completes the final level of a world.
  * Full-screen modal with expanding rings, particle burst, crown icon, stats summary.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React
+import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Polygon, Path } from 'react-native-svg';
 import { CELEBRATION_COLORS } from '@/src/utils/animations';
@@ -199,7 +200,7 @@ function WorldCompleteCelebration({ visible, worldNumber, worldName, worldColor,
         }}>
           <Text style={s.worldLabel}>WORLD {worldNumber}</Text>
           <Text style={s.title}>{worldName}</Text>
-          <Text style={s.subtitle}>Complete!</Text>
+          <Text style={s.subtitle}>{t('celebrations.world_complete_sub')}</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{ position: 'absolute', left: 20, right: 20, top: cy + 170, alignItems: 'center', opacity: statsOpacity }}>
@@ -216,7 +217,7 @@ function WorldCompleteCelebration({ visible, worldNumber, worldName, worldColor,
             opacity: perfectOpacity, transform: [{ scale: perfectScale }],
           }}>
             <View style={s.perfectBadge}>
-              <Text style={s.perfectText}>PERFECT WORLD!</Text>
+              <Text style={s.perfectText}>{t('celebrations.world_perfect')}</Text>
             </View>
           </RNAnimated.View>
         )}

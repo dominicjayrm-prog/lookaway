@@ -3,7 +3,8 @@
  * "Welcome to Blanked! Your journey begins."
  * Only shows once ever, tracked by localStorage.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React
+import { t } from '@/src/i18n';, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimensions } from 'react-native';
 import Svg, { Circle as SvgCircle, Polygon } from 'react-native-svg';
 
@@ -159,7 +160,7 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
           position: 'absolute', left: 20, right: 20, top: cy + 55, alignItems: 'center',
           opacity: titleOpacity, transform: [{ scale: titleScale }],
         }}>
-          <Text style={st.title}>First level complete!</Text>
+          <Text style={st.title}>{t('celebrations.first_level_title')}</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{ position: 'absolute', left: 20, right: 20, top: cy + 110, alignItems: 'center', opacity: bodyOpacity }}>
@@ -171,7 +172,7 @@ function FirstLevelCelebration({ visible, onDismiss }: Props) {
           bottom: SH * 0.15, opacity: btnOpacity, transform: [{ translateY: btnY }],
         }}>
           <Pressable style={st.btn} onPress={handleDismiss}>
-            <Text style={st.btnText}>Keep going</Text>
+            <Text style={st.btnText}>{t('celebrations.first_level_cta')}</Text>
           </Pressable>
         </RNAnimated.View>
       </View>

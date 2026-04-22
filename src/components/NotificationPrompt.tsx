@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, Platform } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 
 interface NotificationPromptProps {
@@ -20,7 +21,7 @@ export function NotificationPrompt({ visible, onEnable, onDismiss }: Notificatio
             <Ionicons name="notifications" size={32} color={colors.accent} />
           </View>
 
-          <Text style={[styles.title, { color: colors.text }]}>Stay in the game</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('celebrations.notif_prompt_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>Get notified when:</Text>
 
           <View style={styles.bulletList}>
@@ -37,11 +38,11 @@ export function NotificationPrompt({ visible, onEnable, onDismiss }: Notificatio
           </View>
 
           <Pressable style={[styles.enableBtn, { backgroundColor: colors.accent }]} onPress={onEnable}>
-            <Text style={styles.enableText}>Enable notifications</Text>
+            <Text style={styles.enableText}>{t('celebrations.notif_prompt_enable')}</Text>
           </Pressable>
 
           <Pressable style={[styles.laterBtn, { backgroundColor: colors.surface }]} onPress={onDismiss}>
-            <Text style={[styles.laterText, { color: colors.textMid }]}>Maybe later</Text>
+            <Text style={[styles.laterText, { color: colors.textMid }]}>{t('celebrations.notif_prompt_later')}</Text>
           </Pressable>
         </View>
       </View>
