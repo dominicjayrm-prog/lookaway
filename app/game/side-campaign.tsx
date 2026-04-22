@@ -445,9 +445,9 @@ function SideCampaignScreen() {
         <View style={s.gameArea}>
           <View style={s.promptRow}>
             <ShapeSvg type={currentShape.type} color={currentShape.color} size={24} />
-            <Text style={[s.promptText, { color: colors.text }]}>Where was the {currentShape.colorName} {currentShape.type}?</Text>
+            <Text style={[s.promptText, { color: colors.text }]}>{t('game_indicators.where_was_color_shape', { color: currentShape.colorName, shape: currentShape.type })}</Text>
           </View>
-          <Text style={[s.shapeProgress, { color: colors.textLight }]}>Shape {shapeIdx + 1}/{currentRound.shapes.length}</Text>
+          <Text style={[s.shapeProgress, { color: colors.textLight }]}>{t('game_indicators.shape_progress', { index: shapeIdx + 1, total: currentRound.shapes.length })}</Text>
           {phase === 'recall' && srSecondChanceArmed && (
             <Text style={[s.shapeProgress, { color: '#E17055', fontWeight: '700' }]}>{t('challenge.second_chance_armed')}</Text>
           )}
@@ -479,7 +479,7 @@ function SideCampaignScreen() {
                 <View style={{ position: 'absolute', left: `${tapResult.actualX}%`, top: `${tapResult.actualY}%`, width: 48, height: 48, borderRadius: 24, borderWidth: 2.5, borderColor: colors.correct, borderStyle: 'dashed', transform: [{ translateX: -24 }, { translateY: -24 }] }} />
                 {/* Score label */}
                 <View style={{ position: 'absolute', left: `${Math.min(85, Math.max(15, tapResult.actualX))}%`, top: `${Math.max(12, tapResult.actualY - 8)}%`, transform: [{ translateX: -24 }, { translateY: -32 }] }}>
-                  <Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{tapResult.score} pts</Text>
+                  <Text style={[s.feedbackScore, { color: tapResult.score >= 70 ? colors.correct : tapResult.score >= 40 ? colors.gold : colors.wrong }]}>{t('game_indicators.points_suffix', { count: tapResult.score })}</Text>
                 </View>
               </>
             )}
@@ -532,7 +532,7 @@ function SideCampaignScreen() {
         <View style={s.centered}>
           <Text style={[s.bigTitle, { color: colors.wrong }]}>{t('challenge.not_quite')}</Text>
           <Text style={[s.bigScore, { color: colors.text }]}>{scorePct}%</Text>
-          <Text style={[s.subtitle, { color: colors.textMid }]}>You need 50% to pass</Text>
+          <Text style={[s.subtitle, { color: colors.textMid }]}>{t('game_indicators.you_need_pass')}</Text>
           <View style={s.buttonRow}>
             <Pressable style={[s.btn, s.btnSecondary, { borderColor: colors.textMid }]} onPress={() => router.back()}>
               <Text style={[s.btnTextSecondary, { color: colors.textMid }]}>{t('challenge.back_to_map')}</Text>

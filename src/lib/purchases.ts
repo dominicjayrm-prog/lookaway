@@ -330,6 +330,27 @@ export function formatCurrency(amount: number, currencyCode: string): string {
   }
 }
 
+/** Batch fetch locale-formatted priceStrings for a set of App Store
+ *  product IDs (non-subscription IAPs — gem packs, lives, remove-ads).
+ *  Returns a `{ [productId]: priceString }` map with missing entries
+ *  omitted. Uses StoreKit via RevenueCat, so prices honour the user's
+ *  Apple ID region — £ in UK, € in Spain, MX$ in Mexico, etc.  */
+export async function getProductPrices(productIds: string[]): Promise<Record<string, string>> {
+  const Purchases = getPurchases();
+  if (!Purchases) return {};
+  try {
+    const products = await Purchases.getProducts(productIds);
+    const map: Record<string, string> = {};
+    for (const p of products ?? []) {
+      if (p?.identifier && p?.priceString) map[p.identifier] = p.priceString;
+    }
+    return map;
+  } catch (e) {
+    log.warn('purchases', 'getProductPrices failed', { error: String(e) });
+    return {};
+  }
+}
+
 // ─── Gem reward lookup ─────────────────────────────────────────────
 
 /** Given a product ID, return how many gems to add — 0 if it's not

@@ -296,7 +296,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
       {/* Phase label */}
       {phase === 'sceneA' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE A — Memorise!</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('game_indicators.scene_a_memorise')}</Text>
           {/* Countdown timer bar */}
           <View style={[s.timerTrack, { backgroundColor: colors.border }]}>
             <View style={[s.timerFill, {
@@ -313,7 +313,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
       )}
       {phase === 'sceneB' && (
         <>
-          <Text style={[s.phaseLabel, { color: modeColor }]}>SCENE B — Tap what changed!</Text>
+          <Text style={[s.phaseLabel, { color: modeColor }]}>{t('game_indicators.scene_b_tap_changed')}</Text>
           <Text style={[s.responseTime, { color: colors.textMid }]}>{responseSeconds}s</Text>
           {round.changeType === 'removed' && (
             <Text style={[s.hint, { color: colors.gold }]}>{t('modes.snap_missing')}</Text>

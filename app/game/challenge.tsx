@@ -438,7 +438,7 @@ function ChallengeGameScreen() {
       {phase === 'complete' && (
         <View style={styles.centered}>
           <Text style={[styles.bigTitle, { color: colors.accent }]}>{t('challenge.nice_work')}</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>Checking your opponent’s progress…</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>{t('game_indicators.checking_opponent')}</Text>
         </View>
       )}
 

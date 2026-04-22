@@ -100,7 +100,7 @@ function BatchToast({ count, onDismiss, onTap }: { count: number; onDismiss: () 
       <Pressable style={styles.toastInner} onPress={onTap}>
         <View style={[styles.tierStripe, { backgroundColor: '#D4A012' }]} />
         <View style={styles.toastContent}>
-          <Text style={styles.toastTitle}>And {count} more achievement{count !== 1 ? 's' : ''}!</Text>
+          <Text style={styles.toastTitle}>{count === 1 ? t('achievement_toast.more_one') : t('achievement_toast.more_many', { count })}</Text>
           <Text style={styles.toastDesc}>{t('modals.check_profile')}</Text>
         </View>
       </Pressable>

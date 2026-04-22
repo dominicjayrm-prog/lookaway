@@ -23,7 +23,12 @@
     "dismiss_quit_aria": "Descartar diálogo de salida",
     "keep_playing_aria": "Seguir jugando",
     "decline": "Rechazar",
-    "decline_challenge_aria": "Rechazar reto"
+    "decline_challenge_aria": "Rechazar reto",
+    "day_short": "d",
+    "hour_short": "h",
+    "minute_short": "m",
+    "resets_in": "Se reinicia en {time}",
+    "done_count": "{count}/{total} listos"
   },
   "modals": {
     "close_language": "Cerrar selector de idioma",
@@ -126,7 +131,126 @@
     "top_division": "¡División máxima alcanzada!",
     "no_thanks": "No, gracias",
     "invite_earn": "Invita a amigos, gana gemas",
-    "your_code": "TU CÓDIGO"
+    "your_code": "TU CÓDIGO",
+    "qr_hint": "Deja que un amigo lo escanee para añadirte al instante",
+    "online_now": "En línea",
+    "active_never": "Nunca",
+    "active_minutes": "Activo hace {minutes} min",
+    "active_hours": "Activo hace {hours} h",
+    "active_days": "Activo hace {days} d",
+    "rarity_common": "COMÚN",
+    "rarity_rare": "RARO",
+    "rarity_epic": "ÉPICO",
+    "rarity_legendary": "LEGENDARIO",
+    "bundle_deal": "3 por {GEM} {cost}",
+    "buy_n": "Comprar {count}",
+    "division_label": "División {name}",
+    "stars_to_next": "{count} estrellas hasta {name}",
+    "division_bronze": "Bronce",
+    "division_silver": "Plata",
+    "division_gold": "Oro",
+    "division_platinum": "Platino",
+    "division_diamond": "Diamante",
+    "division_master": "Maestro",
+    "add_friends_hint": "¡Añade amigos para ver la clasificación!",
+    "no_players_yet": "Aún no hay jugadores.",
+    "you": "Tú",
+    "stars_suffix": "estrellas",
+    "qr_scanner_hint": "Apunta la cámara al código QR de un amigo",
+    "qr_invalid": "Ese no es un código de invitación de Blanked",
+    "qr_own_title": "Ese es tu propio QR 😄",
+    "qr_own_body": "Muéstraselo a un amigo para que pueda escanearlo.",
+    "qr_sent_title": "¡Solicitud enviada!",
+    "qr_sent_body": "Verá tu solicitud en su pestaña de Amigos.",
+    "qr_sent_cta": "Genial",
+    "qr_already_friends_title": "Ya sois amigos",
+    "qr_already_friends_body": "Ya estás conectado con este jugador.",
+    "qr_pending_title": "Solicitud pendiente",
+    "qr_pending_body": "Ya hay una solicitud de amistad en curso entre vosotros.",
+    "qr_error_title": "No se pudo enviar la solicitud",
+    "qr_error_body": "Comprueba tu conexión e inténtalo de nuevo.",
+    "qr_camera_loading": "Cargando cámara…",
+    "qr_camera_body": "Blanked necesita acceso a la cámara para que puedas escanear el QR de un amigo. Puedes activarlo en Ajustes."
+  },
+  "time_ago": {
+    "just_now": "Ahora mismo",
+    "minutes": "hace {count} min",
+    "hours": "hace {count} h",
+    "yesterday": "Ayer",
+    "days": "hace {count} d",
+    "weeks": "hace {count} sem",
+    "months": "hace {count} mes"
+  },
+  "analytics": {
+    "top_percentile": "Top {pct}% de jugadores",
+    "dimension": {
+      "visual": "Visual",
+      "spatial": "Espacial",
+      "sequence": "Secuencia",
+      "speed": "Velocidad",
+      "focus": "Concentración",
+      "consistency": "Constancia"
+    },
+    "dimension_lower": {
+      "visual": "visual",
+      "spatial": "espacial",
+      "sequence": "secuencia",
+      "speed": "velocidad",
+      "focus": "concentración",
+      "consistency": "constancia"
+    },
+    "mode": {
+      "classic": "Clásico",
+      "speed_recall": "Memoria Rápida",
+      "sequence": "Secuencia",
+      "snap_match": "Emparejar al Vuelo",
+      "counting_blitz": "Conteo Relámpago",
+      "daily_challenges": "retos diarios"
+    },
+    "insight": {
+      "empty_title": "Construye tu perfil cerebral",
+      "empty_body": "Juega unos cuantos niveles en cualquier modo y tu perfil de memoria empezará a formarse.",
+      "strongest_title": "Tu punto más fuerte: {label}",
+      "strongest_body": "Puntúas {score} en memoria {area}. Prueba {mode} para afinar tus habilidades de {weak}."
+    }
+  },
+  "weekly": {
+    "challenge_friend_title": "Reta a un amigo",
+    "challenge_friend_desc": "Envía un reto a cualquier amigo",
+    "play_5_days_title": "Juega 5 días esta semana",
+    "play_5_days_desc": "Completa al menos un nivel en 5 días distintos",
+    "play_every_day_title": "Juega todos los días esta semana",
+    "play_every_day_desc": "Completa al menos un nivel cada día durante 7 días seguidos",
+    "three_modes_title": "Juega 3 modos distintos",
+    "three_modes_desc": "Completa un nivel en 3 modos distintos que hayas desbloqueado",
+    "complete_15_title": "Completa 15 niveles",
+    "complete_15_desc": "Termina 15 niveles en cualquier modo esta semana",
+    "complete_25_title": "Completa 25 niveles",
+    "complete_25_desc": "Termina 25 niveles en cualquier modo esta semana",
+    "streak_5_title": "Acierta 5 respuestas seguidas",
+    "streak_5_desc": "Responde 5 preguntas seguidas sin un solo error",
+    "earn_25_stars_title": "Gana 25 estrellas esta semana",
+    "earn_25_stars_desc": "Reúne 25 estrellas en todos los niveles y modos",
+    "answer_75_title": "Acierta 75 preguntas",
+    "answer_75_desc": "Consigue 75 respuestas correctas en total esta semana",
+    "no_powerups_title": "Completa 10 niveles sin potenciadores",
+    "no_powerups_desc": "Termina 10 niveles sin usar ningún potenciador — memoria pura",
+    "no_life_loss_title": "Gana 5 niveles seguidos",
+    "no_life_loss_desc": "Gana 5 niveles consecutivos sin perder ni una vida",
+    "perfect_3_title": "Saca un 100% en 3 niveles",
+    "perfect_3_desc": "Acierta todas las preguntas en 3 niveles distintos",
+    "improve_stars_5_title": "Mejora tus estrellas en 5 niveles",
+    "improve_stars_5_desc": "Consigue más estrellas en 5 niveles que ya hayas completado",
+    "fast_10_title": "10 seguidas en menos de 2 s",
+    "fast_10_desc": "Consigue 10 respuestas correctas seguidas, cada una en menos de 2 segundos",
+    "flawless_3_title": "Completa 3 niveles perfectos",
+    "flawless_3_desc": "Termina 3 niveles con un 100% de precisión y sin potenciadores",
+    "score_95_5_title": "Saca un 95%+ en 5 niveles",
+    "score_95_5_desc": "Consigue al menos un 95% de precisión en 5 niveles distintos esta semana",
+    "streak_20_title": "20 respuestas seguidas",
+    "streak_20_desc": "La racha de memoria definitiva — una respuesta mal y vuelta a empezar",
+    "endurance_8_title": "Completa 8 niveles en una sesión",
+    "endurance_8_desc": "Termina 8 niveles sin cerrar la app"
   },
   "powerups_ui": {
     "title": "Potenciadores",
@@ -444,7 +568,8 @@
     "notif_prompt_enable": "Activar notificaciones",
     "notif_prompt_later": "Quizá más tarde",
     "starter_pack_title": "Pack de inicio",
-    "starter_pack_no_thanks": "No, gracias"
+    "starter_pack_no_thanks": "No, gracias",
+    "first_level_body": "Bienvenido a Blanked.\nTu aventura de memoria ha comenzado."
   },
   "achievements_page": {
     "title": "Logros"
@@ -454,7 +579,14 @@
     "empty": "No hay usuarios bloqueados",
     "unblock": "Desbloquear",
     "unblocking": "Desbloqueando…",
-    "unblock_title": "¿Desbloquear a este usuario?"
+    "unblock_title": "¿Desbloquear a este usuario?",
+    "unblock_confirm_title": "Desbloquear usuario",
+    "unblock_confirm_body": "¿Desbloquear a @{username}? Podrá enviarte de nuevo solicitudes de amistad y retos.",
+    "unblock_failed_title": "No se pudo desbloquear",
+    "unblock_failed_body": "No se pudo desbloquear a @{username}. Inténtalo de nuevo.",
+    "empty_hint": "Cuando bloquees a alguien, aparecerá aquí. Puedes bloquear a un usuario desde su perfil en la pestaña de Amigos — no podrá enviarte solicitudes de amistad ni retos.",
+    "blocked_on": "Bloqueado el {date}",
+    "unblock_aria": "Desbloquear a {username}"
   },
   "username_page": {
     "disallowed": "Ese nombre no está permitido.",
@@ -510,7 +642,10 @@
     "hide_password": "Ocultar contraseña",
     "show_password": "Mostrar contraseña",
     "confirm_placeholder": "Escríbela de nuevo",
-    "update_password_aria": "Actualizar contraseña"
+    "update_password_aria": "Actualizar contraseña",
+    "update_password_failed": "No se pudo actualizar la contraseña. Inténtalo de nuevo.",
+    "password_too_short": "La contraseña debe tener al menos 6 caracteres",
+    "passwords_dont_match": "Las contraseñas no coinciden"
   },
   "world_map": {
     "play": "Jugar",
@@ -533,9 +668,18 @@
   },
   "sound_settings": {
     "all_sounds": "Todos los sonidos",
+    "all_sounds_help": "Interruptor general — apaga todos los sonidos",
     "categories_section": "CATEGORÍAS",
     "haptics_section": "VIBRACIÓN",
-    "haptic_feedback": "Vibración"
+    "haptic_feedback": "Vibración",
+    "haptic_feedback_help": "Vibración sutil al tocar, al acertar o fallar y al completar un nivel",
+    "cat_ui_label": "Sonidos de interfaz",
+    "cat_ui_desc": "Toques de botón, transiciones, navegación",
+    "cat_gameplay_label": "Sonidos del juego",
+    "cat_gameplay_desc": "Aciertos/fallos, temporizadores, potenciadores",
+    "cat_rewards_label": "Recompensas y celebraciones",
+    "cat_rewards_desc": "Estrellas, gemas, nivel completado, hitos de racha",
+    "preview_aria": "Escuchar {label}"
   },
   "streak_rewards": {
     "title": "Tu Racha",
@@ -553,7 +697,12 @@
     "best_streak": "Mejor racha",
     "levels_done": "Niveles hechos",
     "avg_speed": "Velocidad media",
-    "days_active": "Días activos"
+    "days_active": "Días activos",
+    "sample_data": "DATOS DE EJEMPLO",
+    "unlock_analytics_body": "Desbloquea el análisis de memoria con Blanked+ y sigue tu rendimiento cerebral real a lo largo del tiempo.",
+    "upgrade_cta": "Pásate a Blanked+",
+    "upgrade_sub": "Incluye vidas ilimitadas, 300 gemas/mes y más",
+    "welcome_plus": "¡Bienvenido a Blanked+! Cargando tus estadísticas reales…"
   },
   "challenge": {
     "loading_setup": "Preparando el reto...",
@@ -688,6 +837,57 @@
     "share_link": "Compartir enlace de invitación",
     "share_link_aria": "Compartir enlace de invitación"
   },
+  "buy_powerup_popup": {
+    "remaining_zero": "Te quedan 0",
+    "buy_one": "Comprar 1"
+  },
+  "game_indicators": {
+    "second_chance_armed": "Segunda oportunidad activa — un reintento gratis si fallas por mucho",
+    "paused_count_now": "EN PAUSA — CUENTA AHORA",
+    "where_was_color_shape": "¿Dónde estaba el {shape} {color}?",
+    "shape_progress": "Forma {index}/{total}",
+    "points_suffix": "{count} pts",
+    "tap_in_order_next": "Toca en orden — Siguiente: n.º{n}",
+    "correct_progress": "{done}/{total} correctas",
+    "scene_a_memorise": "ESCENA A — ¡Memoriza!",
+    "scene_b_tap_changed": "ESCENA B — ¡Toca lo que cambió!",
+    "safety_net_armed": "Red de seguridad activa — el primer fallo es gratis",
+    "offline_banner": "Sin conexión — tu progreso se sincronizará cuando vuelvas",
+    "you_need_pass": "Necesitas un 50% para pasar",
+    "average_time": "Tiempo medio: {seconds}s",
+    "signing_you_back_in": "Volviendo a iniciar sesión…",
+    "checking_opponent": "Comprobando el progreso de tu oponente…",
+    "next_milestone": "Próximo hito: {days} días (+{gems} gemas)",
+    "notifications_get_when": "Recibe notificaciones cuando:",
+    "notif_bullet_streak": "Tu racha esté en peligro",
+    "notif_bullet_challenge": "Un amigo te rete",
+    "notif_bullet_lives": "Tus vidas estén al máximo",
+    "tutorial_intro_body": "Tu aventura de memoria empieza ahora.\nA ver qué recuerdas.",
+    "replay_for_stars_one": "Vuelve a jugar para ganar 1 estrella más",
+    "replay_for_stars_many": "Vuelve a jugar para ganar {count} estrellas más"
+  },
+  "achievement_toast": {
+    "more_one": "¡Y 1 logro más!",
+    "more_many": "¡Y {count} logros más!"
+  },
+  "starter_pack": {
+    "cta_with_price": "Consigue el Pack de Inicio - {price}",
+    "badge": "75% DE DESCUENTO — PAGO ÚNICO",
+    "green_banner": "¡200 gemas, 3 potenciadores y juego ilimitado durante 1 hora!",
+    "item_gems_name": "200 Gemas",
+    "item_gems_desc": "Para potenciadores y extras",
+    "item_slow_time_name": "Tiempo Lento",
+    "item_slow_time_desc": "Segundos extra para memorizar",
+    "item_peek_name": "Ojear",
+    "item_peek_desc": "Echa otro vistazo a la escena",
+    "item_5050_name": "50/50",
+    "item_5050_desc": "Elimina 2 respuestas incorrectas",
+    "item_unlimited_name": "Vidas ilimitadas",
+    "item_unlimited_desc": "Juega sin parar",
+    "item_value_hour": "1h",
+    "time_left_hours": "Quedan {h}h {m}m",
+    "time_left_minutes": "Quedan {m}m"
+  },
   "shop": {
     "title": "Tienda",
     "plus_open_aria": "Abrir la suscripción Blanked Plus",
@@ -715,7 +915,7 @@
     "buy_powerup_aria": "Comprar 1 {name} por {cost} gemas",
     "buy_pack_aria": "Comprar pack de 3 {name} por {cost} gemas",
     "refill_lives": "Recarga las 5 vidas",
-    "refill_lives_sub": "La forma más rápida de seguir jugando",
+    "refill_lives_sub": "La vía rápida para seguir jugando",
     "refill_aria": "Recargar las 5 vidas por 99 peniques",
     "unlimited_hour": "Ilimitadas durante 1 hora",
     "unlimited_hour_sub": "Juega todo lo que quieras",
@@ -741,6 +941,7 @@
     "alert_starter_body": "200 gemas, 3 potenciadores y juego ilimitado durante 1 hora.",
     "alert_ads_title": "¡Anuncios eliminados!",
     "alert_ads_body": "Se acabaron los anuncios intersticiales y banners. ¡A disfrutar!",
+    "loading_label": "CARGANDO…",
     "need_gems_banner_one": "Te falta 1 gema para salvar tu racha",
     "need_gems_banner_many": "Te faltan {count} gemas para salvar tu racha",
     "unlock_plus_title": "¿Desbloquear {name}?",
@@ -754,7 +955,10 @@
     "milestone_default": "Recompensa de hito",
     "milestone_tip": "¡Ve a la pestaña Aventura y sigue jugando para conseguirlo!",
     "not_enough_title": "No tienes gemas suficientes",
-    "not_enough_tip": "Juega niveles para ganar gemas, o mira los packs de gemas abajo"
+    "not_enough_tip": "Juega niveles para ganar gemas, o mira los packs de gemas abajo",
+    "best_value": "MEJOR OFERTA",
+    "gems_label": "gemas",
+    "one_time": "pago único"
   },
   "journey": {
     "title": "Aventura",

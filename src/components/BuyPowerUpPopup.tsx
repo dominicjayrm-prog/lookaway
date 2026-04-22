@@ -38,14 +38,14 @@ export const BuyPowerUpPopup = React.memo(function BuyPowerUpPopup({ powerUpId, 
           <Ionicons name={iconForPowerUp(def.icon) as keyof typeof Ionicons.glyphMap} size={32} color={def.color} style={{ marginBottom: 8 }} />
           <Text style={[styles.name, { color: colors.text }]}>{def.name}</Text>
           <Text style={[styles.desc, { color: colors.textMid }]}>{def.description}</Text>
-          <Text style={[styles.remaining, { color: colors.wrong }]}>You have 0 remaining</Text>
+          <Text style={[styles.remaining, { color: colors.wrong }]}>{t('buy_powerup_popup.remaining_zero')}</Text>
 
           <Pressable
             style={[styles.buyBtn, { backgroundColor: canAfford1 ? colors.accent : colors.surface }]}
             onPress={() => canAfford1 && handleBuy(1)}
             disabled={!canAfford1}
           >
-            <Text style={[styles.buyBtnText, { color: canAfford1 ? '#FFF' : colors.textLight }]}>Buy 1</Text>
+            <Text style={[styles.buyBtnText, { color: canAfford1 ? '#FFF' : colors.textLight }]}>{t('buy_powerup_popup.buy_one')}</Text>
             <Text style={[styles.buyBtnCost, { color: canAfford1 ? '#FFF' : colors.textLight }]}>{GEM} {def.cost}</Text>
           </Pressable>
 
@@ -54,7 +54,7 @@ export const BuyPowerUpPopup = React.memo(function BuyPowerUpPopup({ powerUpId, 
             onPress={() => canAfford3 && handleBuy(def.bundleSize)}
             disabled={!canAfford3}
           >
-            <Text style={[styles.bundleBtnText, { color: canAfford3 ? colors.accent : colors.textLight }]}>Buy {def.bundleSize}</Text>
+            <Text style={[styles.bundleBtnText, { color: canAfford3 ? colors.accent : colors.textLight }]}>{t('social.buy_n', { count: def.bundleSize })}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.bundleBtnCost, { color: canAfford3 ? colors.accent : colors.textLight }]}>{GEM} {def.bundleCost}</Text>
               <View style={[styles.discountBadge, { backgroundColor: colors.correctSoft }]}>

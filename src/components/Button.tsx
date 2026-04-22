@@ -72,12 +72,17 @@ export const Button = React.memo(function Button({
       ]}
     >
       {icon}
-      <Text style={[
-        styles.text,
-        variantTextStyles[variant],
-        disabled && { color: colors.textLight },
-        textStyle,
-      ]}>{title}</Text>
+      <Text
+        style={[
+          styles.text,
+          variantTextStyles[variant],
+          disabled && { color: colors.textLight },
+          textStyle,
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >{title}</Text>
     </Pressable>
   );
 });

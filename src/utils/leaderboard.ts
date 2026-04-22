@@ -3,24 +3,42 @@
  * Divisions based on total stars earned.
  */
 import { supabase } from '@/src/lib/supabase';
+import { t } from '@/src/i18n';
 
 // ── Divisions ─────────────────────────────────────────────────────────
 export interface Division {
   id: string;
-  name: string;
+  /** Localised display name. Resolved at access time via a getter so
+   *  the UI picks up the active locale without needing to recompute
+   *  leaderboard entries after a language toggle. */
+  readonly name: string;
   color: string;
   icon: string;
   minStars: number;
 }
 
-export const DIVISIONS: Division[] = [
-  { id: 'bronze', name: 'Bronze', color: '#CD7F32', icon: '\u{1F949}', minStars: 0 },
-  { id: 'silver', name: 'Silver', color: '#C0C0C0', icon: '\u{1F948}', minStars: 50 },
-  { id: 'gold', name: 'Gold', color: '#D4A012', icon: '\u{1F947}', minStars: 150 },
-  { id: 'platinum', name: 'Platinum', color: '#0984E3', icon: '\u{1F48E}', minStars: 300 },
-  { id: 'diamond', name: 'Diamond', color: '#6C5CE7', icon: '\u2B50', minStars: 500 },
-  { id: 'master', name: 'Master', color: '#FF6B6B', icon: '\u{1F451}', minStars: 800 },
+interface DivisionSeed {
+  id: string;
+  nameKey: string;
+  color: string;
+  icon: string;
+  minStars: number;
+}
+
+const DIVISION_SEEDS: DivisionSeed[] = [
+  { id: 'bronze',   nameKey: 'social.division_bronze',   color: '#CD7F32', icon: '\u{1F949}', minStars: 0 },
+  { id: 'silver',   nameKey: 'social.division_silver',   color: '#C0C0C0', icon: '\u{1F948}', minStars: 50 },
+  { id: 'gold',     nameKey: 'social.division_gold',     color: '#D4A012', icon: '\u{1F947}', minStars: 150 },
+  { id: 'platinum', nameKey: 'social.division_platinum', color: '#0984E3', icon: '\u{1F48E}', minStars: 300 },
+  { id: 'diamond',  nameKey: 'social.division_diamond',  color: '#6C5CE7', icon: '\u2B50',    minStars: 500 },
+  { id: 'master',   nameKey: 'social.division_master',   color: '#FF6B6B', icon: '\u{1F451}', minStars: 800 },
 ];
+
+export const DIVISIONS: Division[] = DIVISION_SEEDS.map(seed => {
+  const div = { id: seed.id, color: seed.color, icon: seed.icon, minStars: seed.minStars } as Division;
+  Object.defineProperty(div, 'name', { get: () => t(seed.nameKey), enumerable: true });
+  return div;
+});
 
 export function getDivision(totalStars: number): Division {
   for (let i = DIVISIONS.length - 1; i >= 0; i--) {

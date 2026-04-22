@@ -282,7 +282,7 @@ function ChallengeResultScreen() {
           <View style={[styles.waitingRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.waitingPlayer}>
               <PlayerAvatar skin={data.me} size={44} />
-              <Text style={[styles.waitingName, { color: colors.text }]}>You</Text>
+              <Text style={[styles.waitingName, { color: colors.text }]}>{t('social.you')}</Text>
               <Text style={[styles.waitingStatus, { color: mySubmitted ? colors.correct : colors.textLight }]}>
                 {mySubmitted ? '\u2713 Done' : 'Playing…'}
               </Text>
@@ -402,7 +402,7 @@ function RevealScreen({
         <View style={styles.avatarRow}>
           <Animated.View style={[styles.playerCol, myAnim]}>
             <PlayerAvatar skin={data.me} winner={won} />
-            <Text style={[styles.playerName, { color: colors.text }]}>You</Text>
+            <Text style={[styles.playerName, { color: colors.text }]}>{t('social.you')}</Text>
           </Animated.View>
           <Text style={[styles.vsText, { color: colors.textLight }]}>VS</Text>
           <Animated.View style={[styles.playerCol, theirAnim]}>

@@ -322,7 +322,7 @@ export default function StatsSpaceScreen() {
     const { result, periodType } = await purchaseSubscription(plan);
     if (result === 'cancelled') return;
     if (result === 'error') {
-      Alert.alert('Purchase failed', 'Something went wrong. Please try again.');
+      Alert.alert(t('shop.alert_purchase_failed_title'), t('shop.alert_purchase_failed_body'));
       return;
     }
     const s = useGameStore.getState();
@@ -398,7 +398,7 @@ export default function StatsSpaceScreen() {
               entering={FadeIn.duration(400).delay(800)}
               style={[styles.scoreSub, { color: theme.scoreSub }]}
             >
-              Top {analytics.percentile}% of players
+              {t('analytics.top_percentile', { pct: analytics.percentile })}
             </Animated.Text>
           </View>
 
@@ -408,7 +408,7 @@ export default function StatsSpaceScreen() {
               style={[styles.sampleWatermark, { borderColor: theme.muted + '33' }]}
             >
               <Text style={[styles.sampleWatermarkText, { color: theme.muted }]}>
-                SAMPLE DATA
+                {t('stats_space.sample_data')}
               </Text>
             </Animated.View>
           )}
@@ -536,7 +536,7 @@ export default function StatsSpaceScreen() {
             <Blink expression="celebrate" size={50} />
             <Text style={[styles.conversionTitle, { color: theme.title }]}>{t('stats_space.conversion_title')}</Text>
             <Text style={[styles.conversionBody, { color: theme.subtitle }]}>
-              Unlock Memory Analytics with Blanked+ and track your real brain performance over time.
+              {t('stats_space.unlock_analytics_body')}
             </Text>
             <Pressable
               onPress={() => setShowPaywall(true)}
@@ -551,11 +551,11 @@ export default function StatsSpaceScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.upgradeGradient}
               >
-                <Text style={styles.upgradeText}>Upgrade to Blanked+</Text>
+                <Text style={styles.upgradeText}>{t('stats_space.upgrade_cta')}</Text>
               </LinearGradient>
             </Pressable>
             <Text style={[styles.upgradeSub, { color: theme.muted }]}>
-              Includes unlimited lives, 300 gems/month, and more
+              {t('stats_space.upgrade_sub')}
             </Text>
           </View>
         </RNAnimated.View>
@@ -573,7 +573,7 @@ export default function StatsSpaceScreen() {
         >
           <Text style={{ fontSize: 18 }}>✨</Text>
           <Text style={[styles.celebrateText, { color: theme.title }]}>
-            Welcome to Blanked+! Your real stats are loading…
+            {t('stats_space.welcome_plus')}
           </Text>
           <Pressable onPress={() => setShowPremiumCelebration(false)} hitSlop={10}>
             <Ionicons name="close" size={18} color={theme.muted} />

@@ -63,18 +63,18 @@ function ResetPasswordScreen() {
   const handleSubmit = async () => {
     setError(null);
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.password_too_short'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords don\u2019t match');
+      setError(t('auth.passwords_dont_match'));
       return;
     }
     setLoading(true);
     const { error: err } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (err) {
-      setError(err.message || 'Could not update password. Please try again.');
+      setError(err.message || t('auth.update_password_failed'));
       return;
     }
     setDone(true);
@@ -100,7 +100,7 @@ function ResetPasswordScreen() {
             <Ionicons name="checkmark" size={40} color={colors.correct} />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>{t('auth.password_updated')}</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>Signing you back in…</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>{t('game_indicators.signing_you_back_in')}</Text>
         </View>
       </SafeAreaView>
     );

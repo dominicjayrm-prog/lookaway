@@ -59,7 +59,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
   // release after SCAN_COOLDOWN_MS (or after the modal closes).
   const lockedRef = useRef(false);
   const [processing, setProcessing] = useState(false);
-  const [hintText, setHintText] = useState('Point the camera at a friend\u2019s QR code');
+  const [hintText, setHintText] = useState(t('social.qr_scanner_hint'));
 
   // Animated subtle scan line bouncing inside the frame.
   const scanLineY = useRef(new RNAnimated.Value(0)).current;
@@ -85,7 +85,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
     // can be scanned again.
     lockedRef.current = false;
     setProcessing(false);
-    setHintText('Point the camera at a friend\u2019s QR code');
+    setHintText(t('social.qr_scanner_hint'));
   }, [visible, permission, requestPermission]);
 
   const handleClose = useCallback(() => {
@@ -104,19 +104,19 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
       const inviteId = parseInviteUrl(data);
       if (!inviteId) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-        setHintText('That\u2019s not a Blanked invite code');
+        setHintText(t('social.qr_invalid'));
         setTimeout(() => {
           lockedRef.current = false;
           setProcessing(false);
-          setHintText('Point the camera at a friend\u2019s QR code');
+          setHintText(t('social.qr_scanner_hint'));
         }, SCAN_COOLDOWN_MS);
         return;
       }
 
       if (inviteId === myId) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        Alert.alert('That\u2019s your own QR 😄', 'Show it to a friend so they can scan it.', [
-          { text: 'OK', onPress: handleClose },
+        Alert.alert(t('social.qr_own_title'), t('social.qr_own_body'), [
+          { text: t('common.ok'), onPress: handleClose },
         ]);
         return;
       }
@@ -126,38 +126,38 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
         case 'sent':
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           onFriendAdded?.();
-          Alert.alert('Request sent!', 'They will see your request in their Friends tab.', [
-            { text: 'Nice', onPress: handleClose },
+          Alert.alert(t('social.qr_sent_title'), t('social.qr_sent_body'), [
+            { text: t('social.qr_sent_cta'), onPress: handleClose },
           ]);
           break;
         case 'already_friends':
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-          Alert.alert('Already friends', 'You\u2019re already connected with this player.', [
-            { text: 'OK', onPress: handleClose },
+          Alert.alert(t('social.qr_already_friends_title'), t('social.qr_already_friends_body'), [
+            { text: t('common.ok'), onPress: handleClose },
           ]);
           break;
         case 'request_pending':
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-          Alert.alert('Request pending', 'A friend request between you two is already waiting.', [
-            { text: 'OK', onPress: handleClose },
+          Alert.alert(t('social.qr_pending_title'), t('social.qr_pending_body'), [
+            { text: t('common.ok'), onPress: handleClose },
           ]);
           break;
         case 'self':
-          Alert.alert('That\u2019s your own QR 😄', undefined, [{ text: 'OK', onPress: handleClose }]);
+          Alert.alert(t('social.qr_own_title'), undefined, [{ text: t('common.ok'), onPress: handleClose }]);
           break;
         case 'error':
         default:
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-          Alert.alert('Couldn\u2019t send request', 'Check your connection and try again.', [
+          Alert.alert(t('social.qr_error_title'), t('social.qr_error_body'), [
             {
-              text: 'Try again',
+              text: t('common.try_again'),
               onPress: () => {
                 lockedRef.current = false;
                 setProcessing(false);
-                setHintText('Point the camera at a friend\u2019s QR code');
+                setHintText(t('social.qr_scanner_hint'));
               },
             },
-            { text: 'Cancel', style: 'cancel', onPress: handleClose },
+            { text: t('common.cancel'), style: 'cancel', onPress: handleClose },
           ]);
           break;
       }
@@ -213,7 +213,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
               <Ionicons name="camera-outline" size={32} color={colors.accent} />
               <Text style={[st.permTitle, { color: colors.text }]}>{t('modals.camera_needed')}</Text>
               <Text style={[st.permBody, { color: colors.textMid }]}>
-                {'Blanked needs camera access so you can scan a friend\u2019s QR code. You can enable it in Settings.'}
+                {t('social.qr_camera_body')}
               </Text>
               <Pressable
                 onPress={() => Linking.openSettings()}
@@ -228,7 +228,7 @@ export function FriendQRScanner({ visible, onDismiss, onFriendAdded }: Props) {
         {/* Loading permission placeholder */}
         {permissionLoading && (
           <View style={st.permissionCard}>
-            <Text style={{ color: '#FFFFFF' }}>Loading camera…</Text>
+            <Text style={{ color: '#FFFFFF' }}>{t('social.qr_camera_loading')}</Text>
           </View>
         )}
 

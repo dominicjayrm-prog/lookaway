@@ -30,13 +30,20 @@ function Index() {
       return;
     }
 
-    // Check user_metadata first (set instantly during signUp, no race condition)
-    const metaName = session.user.user_metadata?.display_name;
-    if (metaName) {
-      setHasUsername(true);
-      return;
-    }
-
+    // ALWAYS check profiles.username directly — never trust
+    // user_metadata.display_name as a proxy. Supabase auto-populates
+    // user_metadata from Apple's fullName claim on the first Apple
+    // Sign-In, which used to make this branch short-circuit to
+    // `hasUsername = true` and skip the `/username` picker. Result:
+    // Apple users landed straight in /(tabs) with profiles.username
+    // still NULL — they looked fine in the app (the header greeting
+    // falls back to user_metadata) but showed up as "Player" in the
+    // admin panel and any leaderboard that reads profiles.username.
+    //
+    // Email/password signup already writes to profiles.username
+    // synchronously before redirecting here (see app/(auth)/login.tsx
+    // signup handler) so those users pass this check on first render
+    // with no extra latency beyond the single round-trip below.
     let cancelled = false;
 
     async function checkUsername() {

@@ -232,7 +232,7 @@ function CelebrationScreen({ onDismiss }: { onDismiss: () => void }) {
       }}>
         <Text style={st.celebTitle}>{t('celebrations.tutorial_done_title')}</Text>
         <RNAnimated.View style={{ opacity: subtitleOpacity }}>
-          <Text style={st.celebBody}>Your memory journey starts now.{'\n'}Let's see what you can remember.</Text>
+          <Text style={st.celebBody}>{t('game_indicators.tutorial_intro_body')}</Text>
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: btnOpacity, transform: [{ translateY: btnY }], width: '100%', maxWidth: 280, marginTop: 28 }}>

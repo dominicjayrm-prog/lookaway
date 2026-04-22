@@ -157,9 +157,18 @@ function UsernameScreen() {
     // their profile screen. Keeps this picker singularly focused on
     // the one thing it's here for: picking a username.
     const avatarColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+    // Write BOTH `username` AND `display_name` — the profiles table has
+    // both fields and the admin dashboard + external leaderboards read
+    // `display_name`. Pre-fix, the picker only wrote `username`, which
+    // left `display_name` at the handle_new_user trigger's default
+    // ('Player' for Apple Sign-In users because Apple doesn't populate
+    // raw_user_meta_data.display_name). Every Apple user who went
+    // through this picker ended up showing as "Player" in the admin
+    // panel until a retroactive UPDATE could be applied. Matching the
+    // email-signup flow in app/(auth)/login.tsx which writes both.
     const { error } = await supabase
       .from('profiles')
-      .upsert({ id: user.id, username, avatar_color: avatarColor }, { onConflict: 'id' });
+      .upsert({ id: user.id, username, display_name: username, avatar_color: avatarColor }, { onConflict: 'id' });
     setSaving(false);
     if (error) {
       log.error('auth', 'username save failed', error, { userId: user.id });

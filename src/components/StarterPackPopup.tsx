@@ -2,7 +2,7 @@
  * Starter Pack Paywall — Bottom sheet modal.
  * One-time £0.99 purchase. Bouncing gift, shimmer CTA, item list.
  */
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { t } from '@/src/i18n';
 import {
   View, Text, StyleSheet, Pressable, Modal,
@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect, Line, Polygon } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { getProductPrices } from '@/src/lib/purchases';
+import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -65,13 +67,18 @@ function HeartSvg({ size = 18, color = '#FF6B6B' }: { size?: number; color?: str
 }
 
 // ── Pack Items ─────────────────────────────────────────────────────────
-const ITEMS = [
-  { Icon: GemSvg, color: '#6C5CE7', bg: '#6C5CE712', name: '200 Gems', desc: 'For power-ups & extras', value: '200', valueColor: '#6C5CE7' },
-  { Icon: ClockSvg, color: '#0984E3', bg: '#0984E312', name: 'Slow Time', desc: 'Extra seconds to memorise', value: '\u00D73', valueColor: '#0984E3' },
-  { Icon: EyeSvg, color: '#00B894', bg: '#00B89412', name: 'Peek', desc: 'Glance back at the scene', value: '\u00D73', valueColor: '#00B894' },
-  { Icon: ChevronSvg, color: '#D4A012', bg: '#D4A01212', name: '50/50', desc: 'Remove 2 wrong answers', value: '\u00D73', valueColor: '#D4A012' },
-  { Icon: HeartSvg, color: '#FF6B6B', bg: '#FF6B6B12', name: 'Unlimited lives', desc: 'Play without stopping', value: '1hr', valueColor: '#FF6B6B' },
-];
+// Resolved at render time so names + descriptions pick up the active
+// locale. Kept as a function (not a top-level const) so we never bake
+// English strings in at module load.
+function getItems() {
+  return [
+    { Icon: GemSvg, color: '#6C5CE7', bg: '#6C5CE712', name: t('starter_pack.item_gems_name'), desc: t('starter_pack.item_gems_desc'), value: '200', valueColor: '#6C5CE7' },
+    { Icon: ClockSvg, color: '#0984E3', bg: '#0984E312', name: t('starter_pack.item_slow_time_name'), desc: t('starter_pack.item_slow_time_desc'), value: '\u00D73', valueColor: '#0984E3' },
+    { Icon: EyeSvg, color: '#00B894', bg: '#00B89412', name: t('starter_pack.item_peek_name'), desc: t('starter_pack.item_peek_desc'), value: '\u00D73', valueColor: '#00B894' },
+    { Icon: ChevronSvg, color: '#D4A012', bg: '#D4A01212', name: t('starter_pack.item_5050_name'), desc: t('starter_pack.item_5050_desc'), value: '\u00D73', valueColor: '#D4A012' },
+    { Icon: HeartSvg, color: '#FF6B6B', bg: '#FF6B6B12', name: t('starter_pack.item_unlimited_name'), desc: t('starter_pack.item_unlimited_desc'), value: t('starter_pack.item_value_hour'), valueColor: '#FF6B6B' },
+  ];
+}
 
 // ── Shimmer Button ────────────────────────────────────────────────────
 function ShimmerButton({ text, onPress }: { text: string; onPress: () => void }) {
@@ -101,6 +108,21 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
   const slideAnim = useRef(new RNAnimated.Value(SH)).current;
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
   const floatAnim = useRef(new RNAnimated.Value(0)).current;
+
+  // Locale-formatted price pulled from RevenueCat when the popup opens.
+  // Fallback keeps the popup functional if StoreKit doesn't return a
+  // product (shouldn't happen in production).
+  const [priceLabel, setPriceLabel] = useState<string>('\u00A30.99');
+  const items = getItems();
+  useEffect(() => {
+    if (!visible) return;
+    getProductPrices([IAP_PRODUCT_IDS.STARTER_PACK])
+      .then(map => {
+        const p = map[IAP_PRODUCT_IDS.STARTER_PACK];
+        if (p) setPriceLabel(p);
+      })
+      .catch(() => {});
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -165,20 +187,24 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           {/* Title */}
           <Text style={st.title}>{t('celebrations.starter_pack_title')}</Text>
 
-          {/* Price row */}
+          {/* Price row — the discounted price is pulled from
+              RevenueCat so it formats correctly for the user's Apple
+              ID region (£0.99 / €0.99 / MX$19.00 / etc.). The
+              strikethrough "was" price is hidden until we have a
+              locale-formatted equivalent; a fake 4x value in GBP
+              would mislead non-UK users. */}
           <View style={st.priceRow}>
-            <Text style={st.oldPrice}>{'\u00A3'}3.99</Text>
-            <Text style={st.newPrice}>{'\u00A3'}0.99</Text>
+            <Text style={st.newPrice}>{priceLabel}</Text>
           </View>
 
           {/* Badge */}
           <View style={st.badge}>
-            <Text style={st.badgeText}>75% OFF — ONE TIME PURCHASE</Text>
+            <Text style={st.badgeText}>{t('starter_pack.badge')}</Text>
           </View>
 
           {/* Items list */}
           <View style={st.itemsList}>
-            {ITEMS.map((item, i) => (
+            {items.map((item, i) => (
               <View key={i} style={[st.itemRow, i < ITEMS.length - 1 && st.itemBorder]}>
                 <View style={[st.itemIcon, { backgroundColor: item.bg }]}>
                   <item.Icon size={18} color={item.color} />
@@ -197,11 +223,11 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           {/* Green banner */}
           <View style={st.greenBanner}>
             <Ionicons name="checkmark-circle" size={16} color="#00B894" />
-            <Text style={st.greenText}>200 gems, 3 boosts, and unlimited play for 1 hour!</Text>
+            <Text style={st.greenText}>{t('starter_pack.green_banner')}</Text>
           </View>
 
           {/* Shimmer CTA */}
-          <ShimmerButton text={`Get Starter Pack - \u00A30.99`} onPress={onPurchase} />
+          <ShimmerButton text={t('starter_pack.cta_with_price', { price: priceLabel })} onPress={onPurchase} />
 
           {/* No thanks */}
           <Pressable onPress={handleDismiss} style={st.noThanksBtn} hitSlop={8}>

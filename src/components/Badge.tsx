@@ -23,7 +23,7 @@ export const Badge = React.memo(function Badge({
 
   return (
     <View style={[styles.badge, { backgroundColor: resolvedBgColor }, style]}>
-      <Text style={[styles.text, { color: resolvedColor }]}>{label}</Text>
+      <Text style={[styles.text, { color: resolvedColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
     </View>
   );
 });

@@ -363,7 +363,7 @@ function JourneyTab() {
             <Text style={st.benefitsEmoji}>{'\uD83E\uDDE0'}</Text>
             {(MODE_BENEFIT_KEYS[selected.id] ?? MODE_BENEFIT_KEYS.classic).map((key) => { const label = t(key); return (
               <View key={key} style={[st.benefitPill, { backgroundColor: modeColor + '08' }]}>
-                <Text style={[st.benefitText, { color: modeColor }]}>{label}</Text>
+                <Text style={[st.benefitText, { color: modeColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{label}</Text>
               </View>
             ); })}
           </View>

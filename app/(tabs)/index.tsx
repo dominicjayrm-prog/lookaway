@@ -89,7 +89,12 @@ function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: 
           : t('home.activity.level_complete_sub_many', { world: d.worldId, stars, time }),
       };
     }
-    case 'world_complete': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: d.worldName }), sub: t('home.activity.world_complete_sub', { time }) };
+    case 'world_complete': {
+      const wid = typeof d.worldId === 'number' ? d.worldId : 0;
+      const key = WORLD_NAME_KEYS[wid - 1];
+      const localisedWorldName = key ? t(key) : (d.worldName as string) ?? '';
+      return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: localisedWorldName }), sub: t('home.activity.world_complete_sub', { time }) };
+    }
     case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: t('home.activity.streak_milestone_main', { days: d.days }), sub: t('home.activity.streak_milestone_sub', { gems: d.gems, time }) };
     case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.challenge_won_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
     case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: t('home.activity.challenge_lost_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
@@ -360,16 +365,22 @@ function PlayTab() {
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
         return;
       }
-      // Wait a moment so cloud sync has a chance to merge the latest
-      // loginReward from Supabase before we decide whether to show the modal.
-      // This prevents a Day 1 prompt on a new device when the player is
-      // mid-streak on another device.
+      // Wait for cloud sync to merge the latest loginReward from
+      // Supabase before deciding whether to show the modal. On iOS
+      // native `localStorage` doesn't exist so loadState() returns an
+      // empty snapshot — the `lastClaimDate` starts as '' and looks
+      // like "never claimed" until the Supabase round-trip completes.
+      // Bumped 1200ms → 2500ms because on slower networks the merge
+      // was landing AFTER the old window, causing the modal to pop
+      // for users who'd already claimed today. The component itself
+      // ALSO re-checks on open and auto-dismisses if the reward is
+      // unavailable — belt-and-braces against a stuck modal.
       setTimeout(() => {
         if (cancelled) return;
         const latest = useGameStore.getState().loginReward;
         const check = checkDailyReward(latest);
         if (check.available) setShowDailyReward(true);
-      }, 1200);
+      }, 2500);
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
@@ -599,7 +610,12 @@ function PlayTab() {
                   opacity: isLocked ? 0.7 : 1,
                 }]}>
                   <Text style={[styles.worldPillNum, { color: isCurrentWorld || isCompleted ? wc : wc + '80' }]}>{i + 1}</Text>
-                  <Text style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}>{name}</Text>
+                  <Text
+                    style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >{name}</Text>
                 </View>
               );
             })}

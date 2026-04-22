@@ -22,13 +22,13 @@ export function NotificationPrompt({ visible, onEnable, onDismiss }: Notificatio
           </View>
 
           <Text style={[styles.title, { color: colors.text }]}>{t('celebrations.notif_prompt_title')}</Text>
-          <Text style={[styles.subtitle, { color: colors.textMid }]}>Get notified when:</Text>
+          <Text style={[styles.subtitle, { color: colors.textMid }]}>{t('game_indicators.notifications_get_when')}</Text>
 
           <View style={styles.bulletList}>
             {[
-              { icon: 'flame-outline' as const, text: 'Your streak is at risk' },
-              { icon: 'people-outline' as const, text: 'A friend challenges you' },
-              { icon: 'heart-outline' as const, text: 'Your lives are full' },
+              { icon: 'flame-outline' as const, text: t('game_indicators.notif_bullet_streak') },
+              { icon: 'people-outline' as const, text: t('game_indicators.notif_bullet_challenge') },
+              { icon: 'heart-outline' as const, text: t('game_indicators.notif_bullet_lives') },
             ].map((item, i) => (
               <View key={i} style={styles.bulletRow}>
                 <Ionicons name={item.icon} size={18} color={colors.accent} />

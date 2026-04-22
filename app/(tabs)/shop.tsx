@@ -22,7 +22,7 @@ import { LIVES_CONFIG } from '@/src/utils/scoring';
 import { AnimatedGemCount } from '@/src/components/AnimatedGemCount';
 import { ALL_POWERUPS, getPowerupsForMode, MODE_FILTERS, POWERUP_EMOJIS, type PowerUpDef } from '@/src/data/powerUps';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
-import { purchaseProduct, purchaseSubscription, gemsForProduct, type PurchaseResult } from '@/src/lib/purchases';
+import { purchaseProduct, purchaseSubscription, gemsForProduct, getProductPrices, type PurchaseResult } from '@/src/lib/purchases';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { log } from '@/src/lib/logger';
@@ -30,6 +30,18 @@ import { sounds } from '@/src/lib/sounds';
 import { t } from '@/src/i18n';
 
 const GEM = '\u{1F48E}';
+
+/** Map cosmetic rarity tier → translated UPPERCASE label. Used on
+ *  every cosmetic card (frames/banners/expressions/featured). */
+function rarityLabel(rarity: string): string {
+  switch (rarity) {
+    case 'common':    return t('social.rarity_common');
+    case 'rare':      return t('social.rarity_rare');
+    case 'epic':      return t('social.rarity_epic');
+    case 'legendary': return t('social.rarity_legendary');
+    default:          return rarity.toUpperCase();
+  }
+}
 
 /**
  * Small "FREE AD" badge overlaid on the top-right of a common,
@@ -67,7 +79,7 @@ function CosmeticStatus({
     return <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>{t('shop_misc.owned')}</Text>;
   }
   if (isLoading) {
-    return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>LOADING…</Text>;
+    return <Text style={{ fontSize: 9, color: colors.accent, fontWeight: '700', marginTop: 3 }}>{t('shop.loading_label')}</Text>;
   }
   if (item.adEligible) {
     return (
@@ -138,10 +150,33 @@ function ShopTab() {
   const [starterPackTimeLeft, setStarterPackTimeLeft] = useState('');
   const [adWatchesLeft, setAdWatchesLeft] = useState<number | null>(null);
   const [adLoadingId, setAdLoadingId] = useState<string | null>(null);
+  // Locale-formatted App Store prices pulled from RevenueCat for the
+  // five non-subscription products (lives refill, unlimited lives 1h,
+  // three gem packs, remove-ads). Falls back to the English "£X.XX"
+  // static strings only if StoreKit doesn't return anything — which
+  // on-device with a real Apple ID should never happen.
+  const [iapPrices, setIapPrices] = useState<Record<string, string>>({});
   // Refresh the remaining ad count on mount so the "X left today"
   // hint stays in sync with AsyncStorage across cold starts.
   useEffect(() => {
     getRemainingAdWatches().then(setAdWatchesLeft).catch(() => setAdWatchesLeft(5));
+  }, []);
+
+  // Pull locale-formatted App Store prices for the IAP products shown
+  // in this tab. RevenueCat returns priceString in the Apple ID's
+  // region currency ("£0.99" in UK, "0,99 €" in Spain, "MX$19.00" in
+  // Mexico), matching exactly what StoreKit will charge at checkout.
+  useEffect(() => {
+    const ids = [
+      IAP_PRODUCT_IDS.LIVES_REFILL,
+      IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H,
+      IAP_PRODUCT_IDS.GEMS_100,
+      IAP_PRODUCT_IDS.GEMS_500,
+      IAP_PRODUCT_IDS.GEMS_1200,
+      IAP_PRODUCT_IDS.REMOVE_ADS,
+      IAP_PRODUCT_IDS.STARTER_PACK,
+    ];
+    getProductPrices(ids).then(setIapPrices).catch(() => {});
   }, []);
 
   // Check if starter pack is within its 24hr window
@@ -162,7 +197,7 @@ function ShopTab() {
           if (left <= 0) { setStarterPackAvailable(false); return; }
           const h = Math.floor(left / 3600000);
           const m = Math.floor((left % 3600000) / 60000);
-          setStarterPackTimeLeft(h > 0 ? `${h}h ${m}m left` : `${m}m left`);
+          setStarterPackTimeLeft(h > 0 ? t('starter_pack.time_left_hours', { h, m }) : t('starter_pack.time_left_minutes', { m }));
         };
         update();
         const interval = setInterval(update, 60000);
@@ -417,7 +452,7 @@ function ShopTab() {
               </View>
               <Text style={[styles.starterTimer, { color: colors.wrong }]}>{starterPackTimeLeft}</Text>
             </View>
-            <Text style={[styles.starterPrice, { color: colors.accent }]}>{'\u00A3'}0.99</Text>
+            <Text style={[styles.starterPrice, { color: colors.accent }]}>{iapPrices[IAP_PRODUCT_IDS.STARTER_PACK] ?? '\u00A30.99'}</Text>
           </Pressable>
         )}
 
@@ -471,7 +506,7 @@ function ShopTab() {
                     {isExpr && <View style={{ marginBottom: 4 }}><Blink expression={'blinkExpression' in c ? (c as ExpressionCosmetic).blinkExpression : 'normal'} size={40} /></View>}
                     {c.type === 'banner' && <LinearGradient colors={('gradientColors' in c ? (c as BannerCosmetic).gradientColors : [colors.accent, '#A29BFE']) as unknown as readonly [string, string, ...string[]]} style={{ width: 60, height: 24, borderRadius: 6, marginBottom: 4 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
                     <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{c.name}</Text>
-                    <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{c.rarity.toUpperCase()}</Text>
+                    <Text style={{ fontSize: 8, color: RARITY_COLORS[c.rarity], fontWeight: '600' }}>{rarityLabel(c.rarity)}</Text>
                     {owned ? <Text style={{ fontSize: 9, color: colors.correct, fontWeight: '700', marginTop: 3 }}>{t('shop_misc.owned')}</Text> : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                         {dailyOnSale && <Text style={{ fontSize: 9, color: colors.textLight, textDecorationLine: 'line-through' }}>{originalPrice}</Text>}
@@ -510,7 +545,7 @@ function ShopTab() {
                     <Blink expression={exprs[fi % exprs.length]} size={30} />
                   </View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{f.name}</Text>
-                  <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{f.rarity.toUpperCase()}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[f.rarity], fontWeight: '600' }}>{rarityLabel(f.rarity)}</Text>
                   <CosmeticStatus item={f} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
@@ -546,7 +581,7 @@ function ShopTab() {
                     end={vert ? { x: 0, y: 1 } : { x: 1, y: 1 }}
                   />
                   <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text }} numberOfLines={1}>{b.name}</Text>
-                  <Text style={{ fontSize: 8, color: RARITY_COLORS[b.rarity], fontWeight: '600' }}>{b.rarity.toUpperCase()}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[b.rarity], fontWeight: '600' }}>{rarityLabel(b.rarity)}</Text>
                   <CosmeticStatus item={b} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
@@ -576,7 +611,7 @@ function ShopTab() {
                   {!owned && e.adEligible && <AdBadge colors={colors} />}
                   <View style={{ marginBottom: 4 }}><Blink expression={e.blinkExpression} size={40} /></View>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' }} numberOfLines={1}>{e.name}</Text>
-                  <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{e.rarity.toUpperCase()}</Text>
+                  <Text style={{ fontSize: 8, color: RARITY_COLORS[e.rarity], fontWeight: '600' }}>{rarityLabel(e.rarity)}</Text>
                   <CosmeticStatus item={e} owned={owned} isLoading={isLoading} colors={colors} />
                 </Pressable>
               );
@@ -600,7 +635,7 @@ function ShopTab() {
                 accessibilityLabel={t('shop.mode_filter_aria', { name: m.name })}
                 accessibilityState={{ selected: isActive }}
               >
-                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]}>{m.name}</Text>
+                <Text style={[styles.modePillText, { color: isActive ? '#FFF' : colors.textMid }]} numberOfLines={1}>{m.name}</Text>
               </Pressable>
             );
           })}
@@ -681,7 +716,7 @@ function ShopTab() {
                     accessibilityLabel={t('shop.bundle_aria', { name: p.name, cost: p.bundleCost })}
                   >
                     <Text style={{ fontSize: 10, fontWeight: '700', color: p.color, marginTop: 6 }}>
-                      3 for {GEM} {p.bundleCost}
+                      {t('social.bundle_deal', { GEM, cost: p.bundleCost })}
                     </Text>
                   </Pressable>
                 </LinearGradient>
@@ -703,13 +738,13 @@ function ShopTab() {
               <View style={[styles.livesIconCircle, { backgroundColor: colors.accentSoft }]}>
                 <Ionicons name="heart" size={20} color={colors.accent} />
               </View>
-              <View>
-                <Text style={[styles.livesTextBold, { color: colors.text }]}>{t('shop.refill_lives')}</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>{t('shop.refill_lives_sub')}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.livesTextBold, { color: colors.text }]} numberOfLines={1}>{t('shop.refill_lives')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }} numberOfLines={2}>{t('shop.refill_lives_sub')}</Text>
               </View>
             </View>
-            <View style={[styles.cashBtn, { backgroundColor: colors.accent }]}>
-              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{'\u00A3'}0.99</Text>
+            <View style={[styles.cashBtn, { backgroundColor: colors.accent, marginLeft: 10 }]}>
+              <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '700' }}>{iapPrices[IAP_PRODUCT_IDS.LIVES_REFILL] ?? '\u00A30.99'}</Text>
             </View>
           </Pressable>
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
@@ -723,13 +758,13 @@ function ShopTab() {
               <View style={[styles.livesIconCircle, { backgroundColor: colors.goldSoft }]}>
                 <Ionicons name="infinite" size={22} color={colors.gold} />
               </View>
-              <View>
-                <Text style={[styles.livesText, { color: colors.text }]}>{t('shop.unlimited_hour')}</Text>
-                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }}>{t('shop.unlimited_hour_sub')}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.livesText, { color: colors.text }]} numberOfLines={1}>{t('shop.unlimited_hour')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMid, marginTop: 1 }} numberOfLines={2}>{t('shop.unlimited_hour_sub')}</Text>
               </View>
             </View>
-            <View style={[styles.outlineBtn, { borderColor: colors.accent }]}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{'\u00A3'}1.99</Text>
+            <View style={[styles.outlineBtn, { borderColor: colors.accent, marginLeft: 10 }]}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accent }}>{iapPrices[IAP_PRODUCT_IDS.LIVES_UNLIMITED_1H] ?? '\u00A31.99'}</Text>
             </View>
           </Pressable>
           <View style={[styles.livesDivider, { backgroundColor: colors.border }]} />
@@ -743,12 +778,12 @@ function ShopTab() {
               <View style={[styles.livesIconCircle, { backgroundColor: colors.surface }]}>
                 <Ionicons name="heart-outline" size={18} color={colors.textLight} />
               </View>
-              <View>
-                <Text style={[styles.livesTextFaded, { color: colors.textMid }]}>{t('shop.refill_gems')}</Text>
-                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }}>{t('shop.refill_gems_sub')}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.livesTextFaded, { color: colors.textMid }]} numberOfLines={1}>{t('shop.refill_gems')}</Text>
+                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 1 }} numberOfLines={2}>{t('shop.refill_gems_sub')}</Text>
               </View>
             </View>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight, marginLeft: 10 }}>{GEM} {LIVES_CONFIG.gemRefillCost}</Text>
           </Pressable>
         </View>
 
@@ -756,26 +791,29 @@ function ShopTab() {
         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('shop.gem_packs')}</Text>
         <View style={styles.gemPackRow}>
           {[
-            { id: IAP_PRODUCT_IDS.GEMS_100, gems: 100, price: '\u00A30.99', badge: null },
-            { id: IAP_PRODUCT_IDS.GEMS_500, gems: 500, price: '\u00A33.99', badge: 'BEST VALUE' },
-            { id: IAP_PRODUCT_IDS.GEMS_1200, gems: 1200, price: '\u00A37.99', badge: null },
-          ].map((pack) => (
+            { id: IAP_PRODUCT_IDS.GEMS_100, gems: 100, fallback: '\u00A30.99', badge: null },
+            { id: IAP_PRODUCT_IDS.GEMS_500, gems: 500, fallback: '\u00A33.99', badge: t('shop.best_value') },
+            { id: IAP_PRODUCT_IDS.GEMS_1200, gems: 1200, fallback: '\u00A37.99', badge: null },
+          ].map((pack) => {
+            const priceLabel = iapPrices[pack.id] ?? pack.fallback;
+            return (
             <Pressable
               key={pack.id}
               onPress={() => handleIAP(pack.id)}
               style={[styles.gemPackCard, { backgroundColor: colors.card }]}
               accessibilityRole="button"
-              accessibilityLabel={`Buy ${pack.gems} gems for ${pack.price}`}
+              accessibilityLabel={`Buy ${pack.gems} gems for ${priceLabel}`}
             >
               {pack.badge && <View style={[styles.bestValueBadge, { backgroundColor: colors.accent }]}><Text style={styles.bestValueText}>{pack.badge}</Text></View>}
               <Text style={{ fontSize: 32, marginTop: pack.badge ? 16 : 0 }}>{GEM}</Text>
               <Text style={[styles.packGemAmount, { color: colors.text }]}>{pack.gems.toLocaleString()}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textMid, marginBottom: 12 }}>gems</Text>
+              <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textMid, marginBottom: 12 }}>{t('shop.gems_label')}</Text>
               <View style={[styles.packBtn, { borderColor: colors.accent }]}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent }}>{pack.price}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.accent }}>{priceLabel}</Text>
               </View>
             </Pressable>
-          ))}
+            );
+          })}
         </View>
 
         {/* ── Remove ads ── */}
@@ -796,7 +834,7 @@ function ShopTab() {
             accessibilityRole="button"
             accessibilityLabel={t('shop.remove_ads_aria')}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{'\u00A3'}4.99 - one time</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.accent }}>{iapPrices[IAP_PRODUCT_IDS.REMOVE_ADS] ?? '\u00A34.99'} - {t('shop.one_time')}</Text>
           </Pressable>
         </View>
       </ScrollView>
