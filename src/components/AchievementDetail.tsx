@@ -1,9 +1,20 @@
 import React from 'react';
-import { t } from '@/src/i18n';
+import { t, i18n as i18nInstance } from '@/src/i18n';
 import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
 import { AchievementIcon } from './AchievementIcon';
 import { TIER_COLORS, getHighestUnlockedTier, type Achievement, type PlayerAchievement, type AchievementTier } from '@/src/utils/achievements';
 import { useTheme } from '@/src/providers/ThemeProvider';
+
+/** Format an ISO date using the active i18n locale ('en-GB' → 'es-ES'
+ *  when the app is in Spanish). Example: "10 abr" instead of "10 Apr". */
+function formatUnlockedDate(iso: string): string {
+  const locale = i18nInstance.locale === 'es' ? 'es-ES' : 'en-GB';
+  try {
+    return new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  } catch {
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+}
 
 interface Props {
   visible: boolean;
@@ -46,7 +57,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
                   <View style={styles.tierHeader}>
                     <View style={[styles.tierDot, { backgroundColor: isUnlocked ? tierColor : colors.border }]} />
                     <Text style={[styles.tierLabel, { color: isUnlocked ? tierColor : colors.textMid, fontWeight: isUnlocked ? '700' : '500' }]}>
-                      {tier.tier.charAt(0).toUpperCase() + tier.tier.slice(1)}
+                      {t(`achievement_detail.tier_${tier.tier}`)}
                     </Text>
                     {isUnlocked && <Text style={[styles.checkMark, { color: tierColor }]}>{'\u2713'}</Text>}
                   </View>
@@ -54,7 +65,7 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
 
                   {isUnlocked && unlockedAt && (
                     <Text style={[styles.tierMeta, { color: colors.textLight }]}>
-                      Unlocked {new Date(unlockedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · <Text style={{ color: '#00B894', fontWeight: '700' }}>+{tier.gems} gems</Text>
+                      {t('achievement_detail.unlocked_meta', { date: formatUnlockedDate(unlockedAt), gems: tier.gems })}
                     </Text>
                   )}
 
@@ -63,12 +74,12 @@ export function AchievementDetail({ visible, achievement, progress, onClose }: P
                       <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
                         <View style={[styles.progressFill, { width: `${progressPct}%`, backgroundColor: tierColor }]} />
                       </View>
-                      <Text style={[styles.progressText, { color: colors.textLight }]}>{currentProgress}/{tier.target}</Text>
+                      <Text style={[styles.progressText, { color: colors.textLight }]}>{t('achievement_detail.progress_count', { current: currentProgress, target: tier.target })}</Text>
                     </View>
                   )}
 
                   {!isUnlocked && !isNext && (
-                    <Text style={[styles.tierMeta, { color: colors.textLight }]}>{tier.target} needed · +{tier.gems} gems</Text>
+                    <Text style={[styles.tierMeta, { color: colors.textLight }]}>{t('achievement_detail.locked_meta', { target: tier.target, gems: tier.gems })}</Text>
                   )}
                 </View>
               );

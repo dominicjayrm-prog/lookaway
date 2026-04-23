@@ -138,6 +138,12 @@ async function getAchievements(): Promise<Achievement[]> {
     ...row,
     name: locale === 'es' && row.name_es ? row.name_es : row.name,
     description: locale === 'es' && row.description_es ? row.description_es : row.description,
+    // tiers_es mirrors the tiers shape with translated `description`.
+    // Fall back to the English `tiers` array when tiers_es is NULL or
+    // empty so untranslated achievements still render correctly.
+    tiers: locale === 'es' && Array.isArray(row.tiers_es) && row.tiers_es.length > 0
+      ? row.tiers_es
+      : row.tiers,
   })) as Achievement[];
   _cachedAchievements[locale] = mapped;
   return mapped;

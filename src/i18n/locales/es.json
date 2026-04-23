@@ -260,7 +260,19 @@
     "no_power_ups": "Aún no tienes potenciadores"
   },
   "achievement_detail": {
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "tier_bronze": "Bronce",
+    "tier_silver": "Plata",
+    "tier_gold": "Oro",
+    "unlocked_meta": "Desbloqueado el {date} · +{gems} gemas",
+    "locked_meta": "Faltan {target} · +{gems} gemas",
+    "progress_count": "{current}/{target}",
+    "cat_all": "Todos",
+    "cat_campaign": "Campaña",
+    "cat_daily": "Diario",
+    "cat_social": "Social",
+    "cat_streak": "Racha",
+    "cat_mastery": "Maestría"
   },
   "dev_settings": {
     "force_review": "Forzar solicitud de valoración"
