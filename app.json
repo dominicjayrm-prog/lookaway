@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.blanked.app",
-      "buildNumber": "34",
+      "buildNumber": "35",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:playblanked.com"
@@ -34,7 +34,10 @@
         "backgroundColor": "#6C5CE7"
       },
       "permissions": [
-        "com.google.android.gms.permission.AD_ID"
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "intentFilters": [
         {
@@ -46,7 +49,10 @@
               "host": "playblanked.com"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -105,6 +111,12 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "358aaae5-b032-4731-b328-e956d11a67df"
+      }
+    }
   }
 }

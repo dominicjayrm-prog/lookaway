@@ -292,9 +292,18 @@ function saveState(state: GameStore) {
   (saveState as { _syncTimer?: ReturnType<typeof setTimeout> })._syncTimer = setTimeout(() => {
     const live = useGameStore.getState();
     const uid = live._authUserId;
-    if (uid) {
-      saveProgressToSupabase(uid, live).catch((e) => log.error('sync', 'debounced sync failed', e, { uid }));
+    if (!uid) return;
+    // CRITICAL: never sync to cloud before loadFromCloud has
+    // completed. The store's default state (gems:50, subscription:
+    // inactive, cosmetics:[]) would otherwise overwrite the user's
+    // real cloud row during the boot race on slow networks. Log a
+    // breadcrumb so we can spot if this skip fires frequently in
+    // production analytics.
+    if (!live._cloudHydrated) {
+      log.breadcrumb('sync', 'skipped cloud save — not hydrated yet', { uid });
+      return;
     }
+    saveProgressToSupabase(uid, live).catch((e) => log.error('sync', 'debounced sync failed', e, { uid }));
   }, 2000);
 }
 
@@ -305,7 +314,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     if (timer) {
       clearTimeout(timer);
       const state = useGameStore?.getState?.();
-      if (state?._authUserId) {
+      if (state?._authUserId && state._cloudHydrated) {
         saveProgressToSupabase(state._authUserId, state).catch(() => {});
       }
     }
@@ -388,6 +397,11 @@ export interface GameStore {
    *  to decide whether to reset it on app foreground. */
   sessionLastTouchedAt: number;
   _hydrated: boolean;
+  /** True once loadFromCloud has completed at least once for the
+   *  current user. Blocks cloud writes until set so the default
+   *  store state can't overwrite real cloud values during the
+   *  boot race. */
+  _cloudHydrated: boolean;
 
   // Cosmetics
   ownedCosmetics: string[];   // IDs of owned cosmetics
@@ -565,6 +579,15 @@ export const useGameStore = create<GameStore>((set, get) => {
     sessionLastTouchedAt: Date.now(),
     _authUserId: null,
     _hydrated: false,
+    // Tracks whether loadFromCloud has completed (success OR failure)
+    // for the current signed-in user. Until it flips true, the
+    // debounced cloud sync in saveState() is a no-op — this prevents
+    // the race where the store's default state (gems:50, subscription:
+    // inactive, cosmetics:[]) gets saved to Supabase BEFORE
+    // loadFromCloud has a chance to merge the real values in, which
+    // wiped some TestFlight users' gems + subscription flag on slow
+    // networks (see idjpvp's bug report 2026-04-23).
+    _cloudHydrated: false,
 
     // Cosmetics
     ownedCosmetics: saved.ownedCosmetics ?? [],
@@ -1013,6 +1036,10 @@ export const useGameStore = create<GameStore>((set, get) => {
         // `loadFromCloud` runs, so the window where _authUserId is
         // null is tiny and safe.
         _authUserId: null,
+        // Re-lock the cloud-hydration flag so the next signed-in user
+        // can't overwrite their cloud row with the zeroed state below
+        // while loadFromCloud is still fetching.
+        _cloudHydrated: false,
         // Economy
         gems: 0,
         lives: 5,
@@ -1108,14 +1135,21 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     // Cloud sync
     syncToCloud: () => {
-      const uid = get()._authUserId;
-      if (uid) {
-        saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'manual syncToCloud failed', e, { uid }));
+      const state = get();
+      if (state._authUserId && state._cloudHydrated) {
+        saveProgressToSupabase(state._authUserId, state).catch((e) => log.error('sync', 'manual syncToCloud failed', e, { uid: state._authUserId }));
       }
     },
     loadFromCloud: async (userId: string) => {
       const cloud = await loadProgressFromSupabase(userId);
-      if (!cloud) return;
+      if (!cloud) {
+        // Failure (offline, rate-limited, auth expired). Flip the
+        // hydration flag anyway — otherwise writes stay blocked
+        // forever for users with a flaky connection and their local
+        // progress can't sync when they come back online.
+        set({ _cloudHydrated: true });
+        return;
+      }
       const local = get();
 
       // ── Cross-account contamination guard ────────────────────────
@@ -1355,6 +1389,11 @@ export const useGameStore = create<GameStore>((set, get) => {
         // `localHasProgress` flag, which silently overrode the merged value.
         maxLives: Math.max(safeLocal.maxLives, cloud.maxLives),
         loginReward: pickLoginReward(),
+        // Unblock cloud writes now that we've merged the real cloud
+        // state into local. Before this flip, saveState skips its
+        // debounced cloud sync so the boot-time default state can't
+        // race ahead and clobber the user's row.
+        _cloudHydrated: true,
       });
       setTimeout(() => saveState(get()), 0);
     },

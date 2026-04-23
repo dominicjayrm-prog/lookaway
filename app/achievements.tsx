@@ -44,12 +44,12 @@ function AchievementsScreen() {
       {/* Category pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={styles.categoryScrollContent}>
         {[
-          { id: 'all', label: 'All' },
-          { id: 'campaign', label: 'Campaign' },
-          { id: 'daily', label: 'Daily' },
-          { id: 'social', label: 'Social' },
-          { id: 'streak', label: 'Streak' },
-          { id: 'mastery', label: 'Mastery' },
+          { id: 'all', label: t('achievement_detail.cat_all') },
+          { id: 'campaign', label: t('achievement_detail.cat_campaign') },
+          { id: 'daily', label: t('achievement_detail.cat_daily') },
+          { id: 'social', label: t('achievement_detail.cat_social') },
+          { id: 'streak', label: t('achievement_detail.cat_streak') },
+          { id: 'mastery', label: t('achievement_detail.cat_mastery') },
         ].map(cat => (
           <Pressable
             key={cat.id}

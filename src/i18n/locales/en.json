@@ -260,7 +260,19 @@
     "no_power_ups": "No power-ups yet"
   },
   "achievement_detail": {
-    "close": "Close"
+    "close": "Close",
+    "tier_bronze": "Bronze",
+    "tier_silver": "Silver",
+    "tier_gold": "Gold",
+    "unlocked_meta": "Unlocked {date} · +{gems} gems",
+    "locked_meta": "{target} needed · +{gems} gems",
+    "progress_count": "{current}/{target}",
+    "cat_all": "All",
+    "cat_campaign": "Campaign",
+    "cat_daily": "Daily",
+    "cat_social": "Social",
+    "cat_streak": "Streak",
+    "cat_mastery": "Mastery"
   },
   "dev_settings": {
     "force_review": "Force review prompt"
