@@ -46,7 +46,7 @@ function CosmeticPickerComponent({
         <View style={[st.sheet, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined }]}>
           <View style={[st.handle, { backgroundColor: colors.borderStrong }]} />
           <Text style={[st.title, { color: colors.text }]}>{title}</Text>
-          <Text style={[st.counter, { color: colors.textLight }]}>{ownedItems.length}/{totalCount} collected</Text>
+          <Text style={[st.counter, { color: colors.textLight }]}>{t('modals.collected_count', { owned: ownedItems.length, total: totalCount })}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
             {/* Owned items */}
@@ -64,7 +64,7 @@ function CosmeticPickerComponent({
                       >
                         {renderPreview(item)}
                         <Text style={[st.cardName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-                        <Text style={{ fontSize: 8, color: RARITY_COLORS[item.rarity], fontWeight: '600' }}>{item.rarity.toUpperCase()}</Text>
+                        <Text style={{ fontSize: 8, color: RARITY_COLORS[item.rarity], fontWeight: '600' }}>{t(`social.rarity_${item.rarity}`)}</Text>
                         {equipped && <Text style={[st.equippedLabel, { color: colors.correct }]}>{t('modals.equipped')}</Text>}
                       </Pressable>
                     );
@@ -87,7 +87,7 @@ function CosmeticPickerComponent({
                         </View>
                       </View>
                       <Text style={[st.cardName, { color: colors.textLight }]} numberOfLines={1}>{item.name}</Text>
-                      <Text style={{ fontSize: 8, color: RARITY_COLORS[item.rarity], fontWeight: '600' }}>{item.rarity.toUpperCase()}</Text>
+                      <Text style={{ fontSize: 8, color: RARITY_COLORS[item.rarity], fontWeight: '600' }}>{t(`social.rarity_${item.rarity}`)}</Text>
                     </View>
                   ))}
                 </View>
