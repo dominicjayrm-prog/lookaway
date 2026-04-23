@@ -571,6 +571,12 @@ export async function saveNotificationPreferences(
   }
 }
 
+/** Default local time for the morning re-engagement reminder. Biased
+ *  toward the morning so players get a nudge at the start of their day
+ *  (matches the server-side 9am push which only fires to users who
+ *  haven't played yet today — see supabase/functions/push-dispatch). */
+export const DEFAULT_DAILY_REMINDER_TIME = '09:00';
+
 /** Daily reminder time lives on its own column rather than inside
  *  notification_preferences so the client can read it efficiently on
  *  every app open without deserialising the JSONB blob. Returns
@@ -582,9 +588,9 @@ export async function loadDailyReminderTime(userId: string): Promise<string | nu
       .select('daily_reminder_time')
       .eq('id', userId)
       .single();
-    return (data?.daily_reminder_time as string | null) ?? '20:00';
+    return (data?.daily_reminder_time as string | null) ?? DEFAULT_DAILY_REMINDER_TIME;
   } catch {
-    return '20:00';
+    return DEFAULT_DAILY_REMINDER_TIME;
   }
 }
 
@@ -596,5 +602,101 @@ export async function saveDailyReminderTime(userId: string, time: string | null)
       .eq('id', userId);
   } catch (e) {
     log.error('notifications', 'saveDailyReminderTime failed', e);
+  }
+}
+
+// ─── Timezone sync ──────────────────────────────────────────────────
+// The server-side push-dispatch edge function uses `profiles.timezone`
+// to decide whether it's 9am in the user's local time RIGHT NOW before
+// sending the morning hype push. Without a correct timezone, everyone
+// gets their 9am push at 9am UTC — wrong for every non-London user.
+
+/** Read the device's IANA timezone (e.g. "Europe/London", "America/New_York").
+ *  Returns null on web where Intl may not resolve a meaningful value
+ *  for headless environments. */
+export function getDeviceTimezone(): string | null {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof tz === 'string' && tz.length > 0 ? tz : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Push the device's current timezone to the profile so server-side
+ *  campaigns can schedule at local times. Idempotent — writes on every
+ *  app open so users who travel across timezones stay in sync. Skips
+ *  the write when the stored value already matches. */
+export async function syncTimezoneToProfile(userId: string): Promise<void> {
+  const tz = getDeviceTimezone();
+  if (!tz) return;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', userId)
+      .single();
+    if ((data as { timezone?: string | null } | null)?.timezone === tz) return;
+    await supabase.from('profiles').update({ timezone: tz }).eq('id', userId);
+    log.breadcrumb('notifications', 'timezone synced', { userId, tz });
+  } catch (e) {
+    log.error('notifications', 'syncTimezoneToProfile failed', e, { userId, tz });
+  }
+}
+
+// ─── First-run pre-permission prompt gate ──────────────────────────
+
+/** Returns true if the app should show the pre-permission popup now.
+ *  Checks: not web, not already asked, not already granted, decline
+ *  count below threshold. The caller is responsible for rendering
+ *  the modal and calling `markNotifPromptAsked()` on resolution. */
+export async function shouldShowFirstRunNotifPrompt(userId?: string): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    const AS = require('@react-native-async-storage/async-storage').default;
+    const asked = await AS.getItem('blanked_notifications_asked');
+    if (asked) return false;
+    const declined = parseInt((await AS.getItem('blanked_notifications_declined_count')) ?? '0', 10);
+    if (declined >= 2) return false;
+    // If permission is already granted we don't need the pre-prompt —
+    // just register the token.
+    if (await hasNotificationPermission()) {
+      if (userId) registerPushToken(userId);
+      await AS.setItem('blanked_notifications_asked', 'true');
+      return false;
+    }
+    // Also respect server-side flag (syncs across devices for the same
+    // user — if they already accepted on their iPhone we don't re-prompt
+    // on their iPad).
+    if (userId) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('has_seen_notif_prompt')
+          .eq('id', userId)
+          .single();
+        if ((data as { has_seen_notif_prompt?: boolean } | null)?.has_seen_notif_prompt) {
+          await AS.setItem('blanked_notifications_asked', 'true');
+          return false;
+        }
+      } catch {}
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Record that we've shown the prompt so we don't re-show it. Called
+ *  after the user picks Enable OR Dismiss. */
+export async function markNotifPromptAsked(userId?: string): Promise<void> {
+  try {
+    const AS = require('@react-native-async-storage/async-storage').default;
+    await AS.setItem('blanked_notifications_asked', 'true');
+  } catch {}
+  if (userId) {
+    try {
+      await supabase.from('profiles').update({ has_seen_notif_prompt: true }).eq('id', userId);
+    } catch {}
   }
 }

@@ -18,6 +18,7 @@ import {
   scheduleWinBackReminders,
   cancelWinBackReminders,
   scheduleWeeklyChallengeReminder,
+  syncTimezoneToProfile,
 } from '@/src/utils/notifications';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
@@ -301,6 +302,12 @@ function CloudSyncLoader() {
     updateOnlineStatus(user.id);
     expireOldChallenges();
     registerPushToken(user.id);
+    // Mirror the device's IANA timezone to the profile so the
+    // server-side push scheduler (push-dispatch edge fn) can fire the
+    // morning 9am hype push at the user's local 9am, not UTC 9am.
+    // Idempotent — writes only when the stored tz differs from what
+    // Intl resolves on-device right now (handles travel).
+    syncTimezoneToProfile(user.id);
     // Idempotent: insert any missing streak_rewards rows for this player
     seedStreakMilestonesIfMissing(user.id);
 

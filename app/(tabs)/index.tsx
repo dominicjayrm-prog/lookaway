@@ -9,6 +9,13 @@ import { TabTransition } from '@/src/components/TabTransition';
 import TutorialOverlay from '@/src/components/TutorialOverlay';
 import DailyLoginReward from '@/src/components/DailyLoginReward';
 import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
+import { NotificationPrompt } from '@/src/components/NotificationPrompt';
+import {
+  shouldShowFirstRunNotifPrompt,
+  markNotifPromptAsked,
+  requestNotificationPermission,
+  registerPushToken,
+} from '@/src/utils/notifications';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
@@ -245,6 +252,24 @@ function PlayTab() {
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   const [infoCard, setInfoCard] = useState<string | null>(null);
+
+  // First-run notification pre-permission popup. Fires once per account
+  // after the player lands on the home tab, 3 seconds in so the tutorial
+  // + daily reward modals finish first. Gated by AsyncStorage +
+  // profile.has_seen_notif_prompt so it never repeats across devices.
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (await shouldShowFirstRunNotifPrompt(user.id)) {
+          setTimeout(() => { if (!cancelled) setShowNotifPrompt(true); }, 3000);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // Streak recovery state ─────────────────────────────────
   const [recoveryModal, setRecoveryModal] = useState<{ streak: number; daysMissed: number } | null>(null);
@@ -633,6 +658,32 @@ function PlayTab() {
       {/* Tutorial overlay for first-time users */}
       {/* Daily login reward popup */}
       <DailyLoginReward visible={showDailyReward} onDismiss={() => setShowDailyReward(false)} />
+
+      {/* First-run pre-permission popup. Warms the player up to the
+          native "Allow Notifications?" sheet with a one-off explainer
+          so we don't burn the single system prompt they get. Server-
+          side has_seen_notif_prompt stops this re-showing across
+          devices for the same account. */}
+      <NotificationPrompt
+        visible={showNotifPrompt}
+        onEnable={async () => {
+          setShowNotifPrompt(false);
+          await markNotifPromptAsked(user?.id);
+          const granted = await requestNotificationPermission();
+          if (granted && user?.id) {
+            await registerPushToken(user.id);
+          }
+        }}
+        onDismiss={async () => {
+          setShowNotifPrompt(false);
+          try {
+            const cur = parseInt((await AsyncStorage.getItem('blanked_notifications_declined_count')) ?? '0', 10);
+            await AsyncStorage.setItem('blanked_notifications_declined_count', String(cur + 1));
+            // After the second decline, stop asking across the app.
+            if (cur + 1 >= 2) await markNotifPromptAsked(user?.id);
+          } catch {}
+        }}
+      />
 
       {/* Tutorial overlay for first-time users */}
       <OutOfLivesModal
