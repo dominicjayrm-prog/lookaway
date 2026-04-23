@@ -131,12 +131,12 @@ function ChallengeSelectScreen() {
       isUserOnline(friendId).then((online) => {
         if (online) { setFriendOnline(true); startInstantInvite(); return; }
         notify(
-          '@' + (friendUsername || 'friend') + ' is offline',
+          t('challenge.friend_offline_title', { username: friendUsername || 'friend' }),
           t('challenge.offline_body'),
         );
       });
     } else {
-      notify('Friend unavailable', 'Couldn\u2019t find that friend. Go back and pick them again.');
+      notify(t('challenge.friend_unavailable_title'), t('challenge.friend_not_found_body'));
     }
   };
 
@@ -148,7 +148,7 @@ function ChallengeSelectScreen() {
           <Svg width={20} height={20} viewBox="0 0 24 24"><Path d="M15,4 L7,12 L15,20" fill="none" stroke={colors.text} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /></Svg>
         </Pressable>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Challenge @{friendUsername || 'friend'}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('challenge.challenge_header', { username: friendUsername || 'friend' })}</Text>
           <Text style={[styles.headerSub, { color: colors.textMid }]}>{t('challenge.select_mode')}</Text>
         </View>
       </View>
@@ -253,7 +253,7 @@ function ChallengeSelectScreen() {
           <View style={[styles.statusPill, { backgroundColor: friendOnline ? '#00B89420' : colors.surface }]}>
             <View style={[styles.statusDot, { backgroundColor: friendOnline ? '#00B894' : colors.textLight }]} />
             <Text style={[styles.statusText, { color: friendOnline ? '#00B894' : colors.textMid }]}>
-              {friendOnline === null ? '\u2026' : friendOnline ? 'Online' : 'Offline'}
+              {friendOnline === null ? '\u2026' : friendOnline ? t('challenge.status_online') : t('challenge.status_offline')}
             </Text>
           </View>
         </View>
@@ -262,13 +262,13 @@ function ChallengeSelectScreen() {
           onPress={handleStart}
           disabled={sending}
           accessibilityRole="button"
-          accessibilityLabel={friendOnline ? 'Send instant challenge invite' : 'Friend is offline — cannot challenge'}
+          accessibilityLabel={friendOnline ? t('challenge.send_invite_aria') : t('challenge.offline_cta')}
         >
           {sending ? (
             <ActivityIndicator color="#FFF" />
           ) : (
             <Text style={styles.startBtnText}>
-              {friendOnline ? 'Invite to 1v1' : 'Friend is offline'}
+              {friendOnline ? t('challenge.invite_cta') : t('challenge.offline_cta')}
             </Text>
           )}
         </Pressable>

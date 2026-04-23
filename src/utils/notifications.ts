@@ -127,9 +127,43 @@ export async function hasNotificationPermission(): Promise<boolean> {
 // ─── Push Notification Sending ──────────────────────────────────────
 
 /**
- * Send a push notification to a user via their stored push token.
- * Checks notification preferences before sending.
- * Respects daily rate limit (max 3/day).
+ * Enqueue a templated push to a specific user. The push-dispatch
+ * edge function picks it up within ≤1 minute and renders title+body
+ * from its locale catalog using the recipient's preferred_language.
+ *
+ * This is how EVERY server-delivered notification should be fired —
+ * pre-rendered strings on the sender's device would leak the
+ * sender's language to the recipient when they differ.
+ */
+export async function enqueuePushTemplate(
+  userId: string,
+  templateKey: string,
+  params: Record<string, string | number>,
+  notificationType: string,
+  deepLink?: string,
+): Promise<void> {
+  try {
+    await supabase.from('push_queue').insert({
+      user_id: userId,
+      notification_type: notificationType,
+      title: '', // Ignored when template_key is set; edge fn renders from catalog
+      body: '',
+      data: { type: notificationType, ...(deepLink ? { deepLink } : {}) },
+      template_key: templateKey,
+      params,
+    });
+  } catch (e) {
+    log.error('notifications', 'enqueuePushTemplate failed', e, { userId, templateKey });
+  }
+}
+
+/**
+ * Legacy immediate-send helper — still exported for backwards-compat
+ * with callers that haven't been refactored to the template flow yet.
+ * Sends a pre-rendered title/body directly via Expo, which means the
+ * text is whatever language the SENDER's device is in. Prefer
+ * `enqueuePushTemplate` for anything user-visible so the recipient
+ * sees it in their own language.
  */
 export async function notifyUser(
   userId: string,
@@ -281,19 +315,17 @@ export async function cancelLivesFullNotification(): Promise<void> {
 
 // ─── Push Notification Triggers ─────────────────────────────────────
 
-/** Notify a friend that they've been challenged */
+/** Notify a friend that they've been challenged.
+ *  No-op: the `friend_challenges` INSERT trigger already enqueues
+ *  this push server-side rendered in the recipient's language.
+ *  Kept as an exported stub so existing callers don't crash. */
 export async function notifyChallengeReceived(
   challengedId: string,
   challengerUsername: string,
   modeName: string,
   challengeId: string,
 ): Promise<void> {
-  await notifyUser(
-    challengedId,
-    `${challengerUsername} challenged you!`,
-    `Can you beat them at ${modeName}?`,
-    { type: 'friend_challenge', deepLink: `blanked://challenge/${challengeId}`, challengeId },
-  );
+  void challengedId; void challengerUsername; void modeName; void challengeId;
 }
 
 /** Notify a challenger that the addressee declined their challenge.
@@ -303,11 +335,11 @@ export async function notifyChallengeDeclined(
   challengerId: string,
   declinerUsername: string,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     challengerId,
-    `${declinerUsername} declined your challenge`,
-    t('notifications.maybe_later'),
-    { type: 'friend_challenge_declined', declinerUsername },
+    'challenge_declined',
+    { username: declinerUsername },
+    'friend_challenge_declined',
   );
 }
 
@@ -320,42 +352,35 @@ export async function notifyChallengeResult(
   challengeId: string,
 ): Promise<void> {
   const won = challengerScore > challengedScore;
-  const resultText = won
-    ? `You won! ${challengerScore}% to ${challengedScore}%`
-    : `${challengedUsername} beat you ${challengedScore}% to ${challengerScore}%`;
-
-  await notifyUser(
+  await enqueuePushTemplate(
     challengerId,
-    `Challenge result vs @${challengedUsername}`,
-    resultText,
-    { type: 'challenge_result', deepLink: `blanked://challenge-result/${challengeId}`, challengeId },
+    won ? 'challenge_result_won' : 'challenge_result_lost',
+    {
+      username: challengedUsername,
+      myScore: challengerScore,
+      theirScore: challengedScore,
+    },
+    'challenge_result',
+    `blanked://challenge-result/${challengeId}`,
   );
 }
 
-/** Notify user of a friend request */
+/** Notify user of a friend request. No-op — the `friendships` INSERT
+ *  trigger enqueues this push server-side in the recipient's language. */
 export async function notifyFriendRequest(
   targetUserId: string,
   senderUsername: string,
 ): Promise<void> {
-  await notifyUser(
-    targetUserId,
-    'New friend request',
-    `@${senderUsername} wants to add you as a friend.`,
-    { type: 'friend_request', deepLink: 'blanked://friends' },
-  );
+  void targetUserId; void senderUsername;
 }
 
-/** Notify the original sender that the other side accepted. */
+/** Notify the original sender that the other side accepted. No-op —
+ *  the `friendships` UPDATE (pending→accepted) trigger handles it. */
 export async function notifyFriendRequestAccepted(
   senderId: string,
   accepterUsername: string,
 ): Promise<void> {
-  await notifyUser(
-    senderId,
-    'Friend request accepted',
-    `@${accepterUsername} is now your friend. Send them a challenge?`,
-    { type: 'friend_request_accepted', deepLink: 'blanked://friends' },
-  );
+  void senderId; void accepterUsername;
 }
 
 /** Notify the player that they unlocked a new achievement tier. */
@@ -365,11 +390,12 @@ export async function notifyAchievementUnlocked(
   tierLabel: string,
   gemsAwarded: number,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     userId,
-    `${tierLabel} unlocked!`,
-    t('notifications.achievement_body', { name: achievementName, gems: gemsAwarded }),
-    { type: 'achievements', deepLink: 'blanked://achievements' },
+    'achievement_unlocked',
+    { tier: tierLabel, name: achievementName, gems: gemsAwarded },
+    'achievements',
+    'blanked://achievements',
   );
 }
 
@@ -379,11 +405,12 @@ export async function notifyFriendOnline(
   targetUserId: string,
   friendUsername: string,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     targetUserId,
-    `@${friendUsername} is online`,
-    'Challenge them while they\u2019re active?',
-    { type: 'friend_online', deepLink: 'blanked://friends' },
+    'friend_online',
+    { username: friendUsername },
+    'friend_online',
+    'blanked://friends',
   );
 }
 

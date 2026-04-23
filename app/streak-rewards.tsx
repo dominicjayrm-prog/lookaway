@@ -108,7 +108,11 @@ export default function StreakRewardsScreen() {
 
   return (
     <SafeAreaView style={[st.safe, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* Header */}
+      {/* Header — title is absolute-centered so the Best pill on the
+           right (which is visually wider than the back button on the
+           left) doesn't pull the title off-axis. Flex layout was
+           centering the title within the flex gap between the two,
+           not within the screen. */}
       <View style={st.header}>
         <Pressable
           onPress={() => { Haptics.selectionAsync().catch(() => {}); router.back(); }}
@@ -120,7 +124,7 @@ export default function StreakRewardsScreen() {
         </Pressable>
         <Text style={[st.title, { color: colors.text }]}>{t('streak_rewards.title')}</Text>
         <View style={[st.bestPill, { backgroundColor: colors.goldSoft }]}>
-          <Text style={[st.bestPillText, { color: colors.gold }]}>{TROPHY} Best: {bestStreak}d</Text>
+          <Text style={[st.bestPillText, { color: colors.gold }]}>{TROPHY} {t('streak_rewards.best_label', { days: bestStreak })}</Text>
         </View>
       </View>
 
@@ -131,21 +135,30 @@ export default function StreakRewardsScreen() {
         {/* Hero — Blink + count + next reward pill */}
         <FloatingBlink />
         <CountUp value={streakCount} style={[st.streakNum, { color: colors.wrong }]} />
-        <Text style={[st.streakLabel, { color: colors.textMid }]}>day streak</Text>
+        <Text style={[st.streakLabel, { color: colors.textMid }]}>{t('streak_rewards.day_streak')}</Text>
 
         {nextMilestone && (
           <View style={[st.nextPill, { backgroundColor: colors.wrongSoft }]}>
             <Text style={st.nextPillEmoji}>{GIFT}</Text>
             <Text style={[st.nextPillText, { color: colors.wrong }]}>
-              Day {nextMilestone.day}: {nextMilestone.gems} gems
-              {nextMilestone.shields > 0 ? ` + ${nextMilestone.shields} shield${nextMilestone.shields > 1 ? 's' : ''}` : ''}
-              {' — '}{daysToNext} day{daysToNext !== 1 ? 's' : ''} away
+              {t('streak_rewards.next_reward_line', {
+                day: nextMilestone.day,
+                gems: nextMilestone.gems,
+                shieldsSuffix: nextMilestone.shields > 0
+                  ? (nextMilestone.shields === 1
+                      ? t('streak_rewards.shields_suffix_one')
+                      : t('streak_rewards.shields_suffix_many', { count: nextMilestone.shields }))
+                  : '',
+                daysAway: daysToNext === 1
+                  ? t('streak_rewards.days_away_one')
+                  : t('streak_rewards.days_away_many', { count: daysToNext }),
+              })}
             </Text>
           </View>
         )}
         {!nextMilestone && (
           <View style={[st.nextPill, { backgroundColor: colors.goldSoft }]}>
-            <Text style={[st.nextPillText, { color: colors.gold }]}>{TROPHY} All rewards claimed!</Text>
+            <Text style={[st.nextPillText, { color: colors.gold }]}>{TROPHY} {t('streak_rewards.all_claimed')}</Text>
           </View>
         )}
 
@@ -181,10 +194,10 @@ export default function StreakRewardsScreen() {
                 { backgroundColor: colors.gold, opacity: claimingAll ? 0.55 : pressed ? 0.85 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={`Claim all ${reachableUnclaimed.length} pending rewards`}
+              accessibilityLabel={t('streak_rewards.claim_all_aria', { count: reachableUnclaimed.length })}
             >
               <Text style={st.claimAllText}>
-                {GIFT} Claim all {reachableUnclaimed.length}
+                {GIFT} {t('streak_rewards.claim_all_cta', { count: reachableUnclaimed.length })}
               </Text>
             </Pressable>
           )}
@@ -258,7 +271,11 @@ function CountUp({ value, style }: { value: number; style: any }) {
 
 // ─── This week row (Mon–Sun) ────────────────────────────────────────
 function WeekRow({ playedToday, colors }: { playedToday: boolean; colors: any }) {
-  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  // Locale-aware single-letter day initials. English: M T W T F S S.
+  // Spanish: L M M J V S D. Storing the whole row as a single
+  // comma-joined string in the i18n file keeps the JSON trivial to
+  // translate (one row per language) without exposing 7 keys.
+  const labels = t('streak_rewards.week_days').split(',');
   // Today index 0=Mon … 6=Sun
   const jsDay = new Date().getDay();
   const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
@@ -385,7 +402,7 @@ function MilestoneNode({
     ? {
         onPress: onTap,
         accessibilityRole: 'button' as const,
-        accessibilityLabel: `Claim Day ${milestone.day} reward: ${milestone.gems} gems${milestone.shields > 0 ? ` and ${milestone.shields} shields` : ''}`,
+        accessibilityLabel: t('streak_rewards.claim_one_aria', { day: milestone.day }),
       }
     : {};
 
@@ -466,17 +483,19 @@ function MilestoneNode({
               },
             ]}
           >
-            Day {milestone.day}
+            {t('streak_rewards.day_label', { day: milestone.day })}
           </Text>
           {reachableUnclaim && !claiming && (
             <View style={[st.nodeBadge, { backgroundColor: colors.goldSoft }]}>
-              <Text style={[st.nodeBadgeText, { color: colors.gold }]}>{GIFT} TAP TO CLAIM</Text>
+              <Text style={[st.nodeBadgeText, { color: colors.gold }]}>{GIFT} {t('streak_rewards.tap_to_claim')}</Text>
             </View>
           )}
           {isNext && (
             <View style={[st.nodeBadge, { backgroundColor: colors.wrongSoft }]}>
               <Text style={[st.nodeBadgeText, { color: colors.wrong }]}>
-                {milestone.day - currentStreak} DAYS AWAY
+                {milestone.day - currentStreak === 1
+                  ? t('streak_rewards.days_away_badge_one')
+                  : t('streak_rewards.days_away_badge_many', { count: milestone.day - currentStreak })}
               </Text>
             </View>
           )}
@@ -506,8 +525,8 @@ function MilestoneNode({
               <View style={[st.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.wrong }]} />
             </View>
             <View style={st.progressLabels}>
-              <Text style={[st.progressLabel, { color: colors.textLight }]}>Day {currentStreak}</Text>
-              <Text style={[st.progressLabel, { color: colors.textLight }]}>Day {milestone.day}</Text>
+              <Text style={[st.progressLabel, { color: colors.textLight }]}>{t('streak_rewards.day_label', { day: currentStreak })}</Text>
+              <Text style={[st.progressLabel, { color: colors.textLight }]}>{t('streak_rewards.day_label', { day: milestone.day })}</Text>
             </View>
           </View>
         )}
@@ -547,9 +566,30 @@ const st = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 6,
+    // Relative anchor for the absolute-positioned title below. Keeps
+    // the title visually centered on the screen even though the back
+    // button (36px) and Best pill (~80px) on either side are
+    // different widths.
+    position: 'relative',
   },
   backBtn: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center' },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    // Absolute centering: stretched edge-to-edge with textAlign center
+    // so the text lands dead-center of the viewport regardless of the
+    // two flanking siblings' widths. zIndex 0 keeps it behind the
+    // Pressable's hit area.
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 8,
+    bottom: 6,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: 36,
+    pointerEvents: 'none',
+  },
   bestPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   bestPillText: { fontSize: 10, fontWeight: '700' },
   scroll: { paddingHorizontal: 16, paddingBottom: 24, alignItems: 'center' },
