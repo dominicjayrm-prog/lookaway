@@ -536,7 +536,16 @@
     "replay": "Replay",
     "close": "Close",
     "mastermind_title": "Mastermind",
-    "enter_mastermind": "Enter Mastermind"
+    "enter_mastermind": "Enter Mastermind",
+    "world_of_count": "World {world} of {total}",
+    "mode_world_of_count": "{mode} — World {world} of {total}",
+    "complete_badge": "COMPLETE!",
+    "next_world_awaits": "WORLD {next} AWAITS",
+    "summit": "THE SUMMIT",
+    "level_prefix": "Level {number}",
+    "level_with_title": "Level {number}: {title}",
+    "tap_to_play": "Tap to play",
+    "world_complete_footer": "World complete!"
   },
   "notif_settings": {
     "title": "Notifications",

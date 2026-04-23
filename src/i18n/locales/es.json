@@ -655,7 +655,16 @@
     "replay": "Repetir",
     "close": "Cerrar",
     "mastermind_title": "Mente Maestra",
-    "enter_mastermind": "Entrar en Mente Maestra"
+    "enter_mastermind": "Entrar en Mente Maestra",
+    "world_of_count": "Mundo {world} de {total}",
+    "mode_world_of_count": "{mode} — Mundo {world} de {total}",
+    "complete_badge": "¡COMPLETADO!",
+    "next_world_awaits": "EL MUNDO {next} TE ESPERA",
+    "summit": "LA CUMBRE",
+    "level_prefix": "Nivel {number}",
+    "level_with_title": "Nivel {number}: {title}",
+    "tap_to_play": "Toca para jugar",
+    "world_complete_footer": "¡Mundo completado!"
   },
   "notif_settings": {
     "title": "Notificaciones",

@@ -10,10 +10,11 @@ import { log } from '@/src/lib/logger';
 var CLASSIC_CACHE_KEY = 'blanked_levels_classic';
 var SIDE_CACHE_KEY = 'blanked_levels_side';
 var CACHE_VERSION_KEY = 'blanked_levels_version';
-// Bumped to 3 when scene_data_es was added — forces existing
-// installs to re-download so Spanish users get the translated
-// columns instead of the pre-translation cached blobs.
-var CURRENT_VERSION = '3';
+// Bumped to 4 when title_es was added — forces existing installs to
+// re-download the classic cache so Spanish users get translated
+// level titles ("Bienvenido al Mundo 2") instead of the English
+// originals ("Welcome to World 2") that v3 had baked in.
+var CURRENT_VERSION = '4';
 
 interface CachedLevel {
   id: string;
@@ -22,6 +23,7 @@ interface CachedLevel {
   world_id?: number;
   level_number: number;
   title?: string;
+  title_es?: string | null;
   world_name?: string;
   difficulty?: number;
   scene_data?: any;

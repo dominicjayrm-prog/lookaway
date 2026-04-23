@@ -217,8 +217,20 @@ function WorldMapScreen() {
     router.push(`/game/w${worldId}-l${currentLevel}`);
   }, [worldId, currentLevel, router, checkLifeRegen]);
 
-  // Get level title for bottom bar
-  const currentLevelTitle = levelTitles[currentLevel] ?? `Level ${currentLevel}`;
+  // Get level title for bottom bar. When the DB title is missing OR
+  // is itself just "Level N" (a stub), skip the colon+title half so we
+  // never render "Level 31: Level 31" — the cosmetic duplication bug
+  // the user spotted on the world-complete map.
+  const rawLevelTitle = levelTitles[currentLevel];
+  const levelPrefixLabel = t('world_map.level_prefix', { number: currentLevel });
+  const hasMeaningfulTitle =
+    !!rawLevelTitle &&
+    rawLevelTitle.trim().length > 0 &&
+    rawLevelTitle.trim().toLowerCase() !== `level ${currentLevel}`.toLowerCase() &&
+    rawLevelTitle.trim().toLowerCase() !== levelPrefixLabel.toLowerCase();
+  const currentLevelTitle = hasMeaningfulTitle
+    ? t('world_map.level_with_title', { number: currentLevel, title: rawLevelTitle as string })
+    : levelPrefixLabel;
 
   // Don't render the map until the intro gate has been checked
   // (only relevant for World 6 — all others skip immediately).
@@ -245,7 +257,7 @@ function WorldMapScreen() {
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>{worldName}</Text>
-          <Text style={[styles.headerSubtitle, { color: worldColor }]}>World {worldId} of 6</Text>
+          <Text style={[styles.headerSubtitle, { color: worldColor }]}>{t('world_map.world_of_count', { world: worldId, total: 6 })}</Text>
         </View>
         <View style={styles.headerPills}>
           <View style={[styles.pill, { backgroundColor: 'rgba(212,160,18,0.1)' }]}>
@@ -392,7 +404,11 @@ function WorldMapScreen() {
         >
           <View style={styles.markerPill}>
             <Text style={[styles.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>
-              {completedUpTo >= totalLevels ? 'COMPLETE!' : worldId < 6 ? `WORLD ${worldId + 1} AWAITS` : 'THE SUMMIT'}
+              {completedUpTo >= totalLevels
+                ? t('world_map.complete_badge')
+                : worldId < 6
+                  ? t('world_map.next_world_awaits', { next: worldId + 1 })
+                  : t('world_map.summit')}
             </Text>
           </View>
         </View>
@@ -401,15 +417,15 @@ function WorldMapScreen() {
       {/* ── BOTTOM BAR ── */}
       <RNAnimated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.bg, opacity: bottomAnim, transform: [{ translateY: bottomAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }]}>
         <View style={styles.bottomInfo}>
-          <Text style={[styles.bottomTitle, { color: colors.text }]}>Level {currentLevel}: {currentLevelTitle}</Text>
-          <Text style={[styles.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
+          <Text style={[styles.bottomTitle, { color: colors.text }]}>{currentLevelTitle}</Text>
+          <Text style={[styles.bottomSub, { color: colors.textMid }]}>{currentLevel <= totalLevels ? t('world_map.tap_to_play') : t('world_map.world_complete_footer')}</Text>
         </View>
         {currentLevel <= totalLevels && (
           <Pressable
             style={[styles.playButton, { backgroundColor: worldColor }]}
             onPress={handlePlay}
             accessibilityRole="button"
-            accessibilityLabel={`Play level ${currentLevel}: ${currentLevelTitle}`}
+            accessibilityLabel={currentLevelTitle}
           >
             <Text style={styles.playButtonText}>{t('world_map.play')}</Text>
           </Pressable>
