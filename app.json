@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.blanked.app",
-      "buildNumber": "29",
+      "buildNumber": "30",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:playblanked.com"
