@@ -277,7 +277,10 @@ export function MilestoneGiftCelebration({ visible, itemId, itemName, rarity, ca
 
             <View style={[st.rarityBadge, { backgroundColor: rarityColor + '15' }]}>
               <Text style={[st.rarityText, { color: rarityColor }]}>
-                {rarity.toUpperCase()} {category.toUpperCase()}
+                {t('social.cosmetic_badge', {
+                  rarity: t(`social.rarity_${rarity}`),
+                  category: t(`social.category_${category}`),
+                })}
               </Text>
             </View>
 
