@@ -8,6 +8,10 @@ interface CampaignLevelRow {
   world_id: number;
   level_number: number;
   title: string;
+  // Spanish translation of `title`. Null until migrated; the client
+  // falls back to `title` (English) when it's missing so users never
+  // see a blank label.
+  title_es?: string | null;
   scene_data: { objects?: unknown[]; questions?: unknown[] } | null;
   // Spanish translation — populated by translate_scene_data_to_es in
   // Supabase. NULL for any level not yet translated; we fall back to
@@ -66,11 +70,20 @@ function dbRowToLevel(row: CampaignLevelRow): Level {
   if (scenes.length === 0) {
     scenes = [{ id: `${row.id}-s1`, viewTime: row.view_time ?? 4, objects: [], questions: [] }];
   }
+  // Pick the localised title when available. `title_es` is populated
+  // by the campaign_level_titles_es migration; null rows (any new
+  // levels added later that haven't been translated yet) fall back
+  // cleanly to the English title.
+  const localisedTitle =
+    locale === 'es' && row.title_es && row.title_es.trim().length > 0
+      ? row.title_es
+      : row.title;
+
   return {
     id: row.id,
     worldId: row.world_id,
     levelNumber: row.level_number,
-    title: row.title ?? `Level ${row.level_number}`,
+    title: localisedTitle ?? `Level ${row.level_number}`,
     scenes,
     requiredScore: row.required_score ?? 60,
     parScore: row.par_score ?? 100,

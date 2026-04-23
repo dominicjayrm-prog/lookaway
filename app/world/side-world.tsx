@@ -157,7 +157,7 @@ function SideWorldMap() {
         </Pressable>
         <View style={st.headerCenter}>
           <Text style={[st.headerTitle, { color: themeColors.text }]}>{wName}</Text>
-          <Text style={[st.headerSubtitle, { color: worldColor }]}>{campaign?.name} — World {worldNum} of {totalWorlds}</Text>
+          <Text style={[st.headerSubtitle, { color: worldColor }]}>{t('world_map.mode_world_of_count', { mode: campaign?.name ?? '', world: worldNum, total: totalWorlds })}</Text>
         </View>
         <View style={st.headerPills}>
           <View style={[st.pill, { backgroundColor: 'rgba(212,160,18,0.1)' }]}>
@@ -231,7 +231,11 @@ function SideWorldMap() {
           pointerEvents="none"
         >
           <View style={st.markerPill}>
-            <Text style={[st.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>{completedUpTo >= totalLevels ? 'COMPLETE!' : worldNum < totalWorlds ? `WORLD ${worldNum + 1} AWAITS` : 'THE SUMMIT'}</Text>
+            <Text style={[st.markerText, { color: completedUpTo >= totalLevels ? '#D4A012' : '#B2BEC3' }]}>{completedUpTo >= totalLevels
+              ? t('world_map.complete_badge')
+              : worldNum < totalWorlds
+                ? t('world_map.next_world_awaits', { next: worldNum + 1 })
+                : t('world_map.summit')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -239,8 +243,8 @@ function SideWorldMap() {
       {/* Bottom bar */}
       <RNAnimated.View style={[st.bottomBar, { paddingBottom: Math.max(safeArea.bottom, 16), backgroundColor: themeColors.bg, opacity: anims.bottom, transform: [{ translateY: anims.bottom.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }] }]}>
         <View style={st.bottomInfo}>
-          <Text style={[st.bottomTitle, { color: themeColors.text }]}>Level {currentLevel}</Text>
-          <Text style={[st.bottomSub, { color: themeColors.textMid }]}>{currentLevel <= totalLevels ? 'Tap to play' : 'World complete!'}</Text>
+          <Text style={[st.bottomTitle, { color: themeColors.text }]}>{t('world_map.level_prefix', { number: currentLevel })}</Text>
+          <Text style={[st.bottomSub, { color: themeColors.textMid }]}>{currentLevel <= totalLevels ? t('world_map.tap_to_play') : t('world_map.world_complete_footer')}</Text>
         </View>
         {currentLevel <= totalLevels && <Pressable style={[st.playButton, { backgroundColor: worldColor }]} onPress={() => goToLevel(currentLevel)}><Text style={st.playButtonText}>{t('world_map.play')}</Text></Pressable>}
       </RNAnimated.View>

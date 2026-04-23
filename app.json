@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.blanked.app",
-      "buildNumber": "29",
+      "buildNumber": "34",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:playblanked.com"
@@ -56,6 +56,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#6C5CE7"
+        }
+      ],
       [
         "expo-camera",
         {

@@ -3,6 +3,7 @@
  * x: percentage (0-100), y: pixels from top of scroll area.
  * Level 1 at bottom, last level at top.
  */
+import { t } from '@/src/i18n';
 
 export interface PathNode {
   x: number;
@@ -94,14 +95,43 @@ export const WORLD_LIGHT_COLORS: Record<number, string> = {
   6: 'rgba(212,160,18,0.12)',
 };
 
-export const WORLD_NAMES: Record<number, string> = {
-  1: 'Shape Basics',
-  2: 'Colour & Position',
-  3: 'Numbers & Letters',
-  4: 'Moving Objects',
-  5: 'Photographic',
-  6: 'Mastermind',
+/** i18n keys for each classic world name. Resolved live via `t()`
+ *  through the WORLD_NAMES proxy below so switching the app language
+ *  from Settings flips every "Colour & Position"-type label on the
+ *  next render without remounting. */
+const WORLD_NAME_KEYS: Record<number, string> = {
+  1: 'data.worlds.classic_1',
+  2: 'data.worlds.classic_2',
+  3: 'data.worlds.classic_3',
+  4: 'data.worlds.classic_4',
+  5: 'data.worlds.classic_5',
+  6: 'data.worlds.classic_6',
 };
+
+/** Drop-in replacement for the old `WORLD_NAMES` literal. Looks and
+ *  indexes like `Record<number, string>` but every property read
+ *  calls `t()` on the matching i18n key — so callers do not need to
+ *  change (`WORLD_NAMES[worldId]` still returns a string). */
+export const WORLD_NAMES: Record<number, string> = new Proxy({} as Record<number, string>, {
+  get(_target, prop) {
+    const id = typeof prop === 'string' ? Number(prop) : Number(prop as unknown as number);
+    const key = WORLD_NAME_KEYS[id];
+    if (!key) return undefined as unknown as string;
+    return t(key);
+  },
+  has(_t, prop) {
+    const id = typeof prop === 'string' ? Number(prop) : Number(prop as unknown as number);
+    return id in WORLD_NAME_KEYS;
+  },
+  ownKeys() {
+    return Object.keys(WORLD_NAME_KEYS);
+  },
+  getOwnPropertyDescriptor(_t, prop) {
+    const id = typeof prop === 'string' ? Number(prop) : Number(prop as unknown as number);
+    if (!(id in WORLD_NAME_KEYS)) return undefined;
+    return { enumerable: true, configurable: true, value: t(WORLD_NAME_KEYS[id]) };
+  },
+});
 
 export const WORLD_LEVEL_COUNTS: Record<number, number> = {
   1: 20, 2: 30, 3: 35, 4: 35, 5: 40, 6: 40,

@@ -2,6 +2,7 @@ import { supabase } from '@/src/lib/supabase';
 import { notifyChallengeResult, notifyChallengeReceived, notifyChallengeDeclined } from '@/src/utils/notifications';
 import { checkAchievements } from '@/src/utils/achievements';
 import { log } from '@/src/lib/logger';
+import { t } from '@/src/i18n';
 
 // ──────────────────────────────────────────────────────────────────────
 // Difficulty tiers map to world ranges. Easy = worlds 1-2 (shape +
@@ -18,10 +19,21 @@ const DIFFICULTY_WORLDS: Record<ChallengeDifficulty, number[]> = {
   hard:   [5, 6],
 };
 
+/** Difficulty metadata — text fields are live getters that re-read
+ *  from i18n on every access so locale switching from Settings
+ *  updates the challenge-select screen on the next render without
+ *  any caller changes. */
+function mkDifficulty(labelKey: string, descKey: string, color: string) {
+  const o = { color } as { label: string; description: string; color: string };
+  Object.defineProperty(o, 'label', { get: () => t(labelKey), enumerable: true });
+  Object.defineProperty(o, 'description', { get: () => t(descKey), enumerable: true });
+  return o;
+}
+
 export const DIFFICULTY_META: Record<ChallengeDifficulty, { label: string; description: string; color: string }> = {
-  easy:   { label: 'Easy',   description: 'Worlds 1 & 2, shape and colour basics',   color: '#00B894' },
-  medium: { label: 'Medium', description: 'Worlds 3 & 4, numbers and moving objects', color: '#F9A825' },
-  hard:   { label: 'Hard',   description: 'Worlds 5 & 6, photographic and mastermind', color: '#FF6B6B' },
+  easy:   mkDifficulty('challenge.difficulty_easy_name',   'challenge.difficulty_easy_desc',   '#00B894'),
+  medium: mkDifficulty('challenge.difficulty_medium_name', 'challenge.difficulty_medium_desc', '#F9A825'),
+  hard:   mkDifficulty('challenge.difficulty_hard_name',   'challenge.difficulty_hard_desc',   '#FF6B6B'),
 };
 
 function levelBelongsToWorld(levelId: string, world: number): boolean {

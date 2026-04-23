@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { t } from '@/src/i18n';
@@ -6,8 +7,30 @@ import { t } from '@/src/i18n';
 // ─── Push Token Registration ────────────────────────────────────────
 
 /**
+ * Resolve the EAS project ID required by `getExpoPushTokenAsync` in
+ * SDK 53+. EAS Build injects this into `expoConfig.extra.eas.projectId`
+ * at build time; the deprecated `easConfig.projectId` path is kept as
+ * a fallback so older builds still work.
+ *
+ * Without this, `getExpoPushTokenAsync` throws silently in production
+ * and the caller sees `undefined` — the exact bug that left every
+ * user's `push_token` NULL in Supabase through v1.1.0 (builds 24-30).
+ */
+function resolveProjectId(): string | undefined {
+  return (
+    (Constants.expoConfig as any)?.extra?.eas?.projectId ??
+    (Constants as any)?.easConfig?.projectId
+  );
+}
+
+/**
  * Register for push notifications and save token to profile.
- * Only works on physical devices (iOS/Android).
+ * Works in both the Expo managed workflow and a bare workflow
+ * (post-prebuild / pure Xcode builds) — getExpoPushTokenAsync is
+ * supported in both as long as `projectId` is wired through.
+ *
+ * Returns null on: web, simulator, denied permission, any failure.
+ * Logs breadcrumbs + errors on failure so ops can spot dead flows.
  */
 export async function registerPushToken(userId: string): Promise<string | null> {
   if (Platform.OS === 'web') return null;
@@ -16,7 +39,10 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     const Notifications = require('expo-notifications');
     const Device = require('expo-device');
 
-    if (!Device.isDevice) return null;
+    if (!Device.isDevice) {
+      log.breadcrumb('notifications', 'skipped — not a physical device', { userId });
+      return null;
+    }
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -26,15 +52,44 @@ export async function registerPushToken(userId: string): Promise<string | null> 
       finalStatus = status;
     }
 
-    if (finalStatus !== 'granted') return null;
+    if (finalStatus !== 'granted') {
+      log.breadcrumb('notifications', 'permission denied', { userId, finalStatus });
+      return null;
+    }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId = resolveProjectId();
+    if (!projectId) {
+      // Loud, high-signal error. Without projectId the Expo push
+      // endpoint returns a token but it's unaddressable — silent
+      // failure mode we just spent a debug session untangling.
+      log.error(
+        'notifications',
+        'EAS projectId missing — push registration cannot proceed. Set expo.extra.eas.projectId in app.json or configure via EAS.',
+        new Error('missing_eas_project_id'),
+        { userId },
+      );
+      return null;
+    }
 
-    await supabase
+    const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+    const token: string | undefined = tokenResult?.data;
+
+    if (!token) {
+      log.error('notifications', 'getExpoPushTokenAsync returned no token', new Error('empty_token'), { userId, tokenResult });
+      return null;
+    }
+
+    const { error } = await supabase
       .from('profiles')
       .update({ push_token: token })
       .eq('id', userId);
 
+    if (error) {
+      log.error('notifications', 'supabase push_token update failed', error, { userId });
+      return null;
+    }
+
+    log.breadcrumb('notifications', 'push token registered', { userId, tokenPrefix: token.slice(0, 16) });
     return token;
   } catch (e) {
     log.error('notifications', 'registerPushToken failed', e, { userId });
@@ -72,9 +127,43 @@ export async function hasNotificationPermission(): Promise<boolean> {
 // ─── Push Notification Sending ──────────────────────────────────────
 
 /**
- * Send a push notification to a user via their stored push token.
- * Checks notification preferences before sending.
- * Respects daily rate limit (max 3/day).
+ * Enqueue a templated push to a specific user. The push-dispatch
+ * edge function picks it up within ≤1 minute and renders title+body
+ * from its locale catalog using the recipient's preferred_language.
+ *
+ * This is how EVERY server-delivered notification should be fired —
+ * pre-rendered strings on the sender's device would leak the
+ * sender's language to the recipient when they differ.
+ */
+export async function enqueuePushTemplate(
+  userId: string,
+  templateKey: string,
+  params: Record<string, string | number>,
+  notificationType: string,
+  deepLink?: string,
+): Promise<void> {
+  try {
+    await supabase.from('push_queue').insert({
+      user_id: userId,
+      notification_type: notificationType,
+      title: '', // Ignored when template_key is set; edge fn renders from catalog
+      body: '',
+      data: { type: notificationType, ...(deepLink ? { deepLink } : {}) },
+      template_key: templateKey,
+      params,
+    });
+  } catch (e) {
+    log.error('notifications', 'enqueuePushTemplate failed', e, { userId, templateKey });
+  }
+}
+
+/**
+ * Legacy immediate-send helper — still exported for backwards-compat
+ * with callers that haven't been refactored to the template flow yet.
+ * Sends a pre-rendered title/body directly via Expo, which means the
+ * text is whatever language the SENDER's device is in. Prefer
+ * `enqueuePushTemplate` for anything user-visible so the recipient
+ * sees it in their own language.
  */
 export async function notifyUser(
   userId: string,
@@ -226,19 +315,17 @@ export async function cancelLivesFullNotification(): Promise<void> {
 
 // ─── Push Notification Triggers ─────────────────────────────────────
 
-/** Notify a friend that they've been challenged */
+/** Notify a friend that they've been challenged.
+ *  No-op: the `friend_challenges` INSERT trigger already enqueues
+ *  this push server-side rendered in the recipient's language.
+ *  Kept as an exported stub so existing callers don't crash. */
 export async function notifyChallengeReceived(
   challengedId: string,
   challengerUsername: string,
   modeName: string,
   challengeId: string,
 ): Promise<void> {
-  await notifyUser(
-    challengedId,
-    `${challengerUsername} challenged you!`,
-    `Can you beat them at ${modeName}?`,
-    { type: 'friend_challenge', deepLink: `blanked://challenge/${challengeId}`, challengeId },
-  );
+  void challengedId; void challengerUsername; void modeName; void challengeId;
 }
 
 /** Notify a challenger that the addressee declined their challenge.
@@ -248,11 +335,11 @@ export async function notifyChallengeDeclined(
   challengerId: string,
   declinerUsername: string,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     challengerId,
-    `${declinerUsername} declined your challenge`,
-    t('notifications.maybe_later'),
-    { type: 'friend_challenge_declined', declinerUsername },
+    'challenge_declined',
+    { username: declinerUsername },
+    'friend_challenge_declined',
   );
 }
 
@@ -265,42 +352,35 @@ export async function notifyChallengeResult(
   challengeId: string,
 ): Promise<void> {
   const won = challengerScore > challengedScore;
-  const resultText = won
-    ? `You won! ${challengerScore}% to ${challengedScore}%`
-    : `${challengedUsername} beat you ${challengedScore}% to ${challengerScore}%`;
-
-  await notifyUser(
+  await enqueuePushTemplate(
     challengerId,
-    `Challenge result vs @${challengedUsername}`,
-    resultText,
-    { type: 'challenge_result', deepLink: `blanked://challenge-result/${challengeId}`, challengeId },
+    won ? 'challenge_result_won' : 'challenge_result_lost',
+    {
+      username: challengedUsername,
+      myScore: challengerScore,
+      theirScore: challengedScore,
+    },
+    'challenge_result',
+    `blanked://challenge-result/${challengeId}`,
   );
 }
 
-/** Notify user of a friend request */
+/** Notify user of a friend request. No-op — the `friendships` INSERT
+ *  trigger enqueues this push server-side in the recipient's language. */
 export async function notifyFriendRequest(
   targetUserId: string,
   senderUsername: string,
 ): Promise<void> {
-  await notifyUser(
-    targetUserId,
-    'New friend request',
-    `@${senderUsername} wants to add you as a friend.`,
-    { type: 'friend_request', deepLink: 'blanked://friends' },
-  );
+  void targetUserId; void senderUsername;
 }
 
-/** Notify the original sender that the other side accepted. */
+/** Notify the original sender that the other side accepted. No-op —
+ *  the `friendships` UPDATE (pending→accepted) trigger handles it. */
 export async function notifyFriendRequestAccepted(
   senderId: string,
   accepterUsername: string,
 ): Promise<void> {
-  await notifyUser(
-    senderId,
-    'Friend request accepted',
-    `@${accepterUsername} is now your friend. Send them a challenge?`,
-    { type: 'friend_request_accepted', deepLink: 'blanked://friends' },
-  );
+  void senderId; void accepterUsername;
 }
 
 /** Notify the player that they unlocked a new achievement tier. */
@@ -310,11 +390,12 @@ export async function notifyAchievementUnlocked(
   tierLabel: string,
   gemsAwarded: number,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     userId,
-    `${tierLabel} unlocked!`,
-    t('notifications.achievement_body', { name: achievementName, gems: gemsAwarded }),
-    { type: 'achievements', deepLink: 'blanked://achievements' },
+    'achievement_unlocked',
+    { tier: tierLabel, name: achievementName, gems: gemsAwarded },
+    'achievements',
+    'blanked://achievements',
   );
 }
 
@@ -324,11 +405,12 @@ export async function notifyFriendOnline(
   targetUserId: string,
   friendUsername: string,
 ): Promise<void> {
-  await notifyUser(
+  await enqueuePushTemplate(
     targetUserId,
-    `@${friendUsername} is online`,
-    'Challenge them while they\u2019re active?',
-    { type: 'friend_online', deepLink: 'blanked://friends' },
+    'friend_online',
+    { username: friendUsername },
+    'friend_online',
+    'blanked://friends',
   );
 }
 
@@ -516,6 +598,12 @@ export async function saveNotificationPreferences(
   }
 }
 
+/** Default local time for the morning re-engagement reminder. Biased
+ *  toward the morning so players get a nudge at the start of their day
+ *  (matches the server-side 9am push which only fires to users who
+ *  haven't played yet today — see supabase/functions/push-dispatch). */
+export const DEFAULT_DAILY_REMINDER_TIME = '09:00';
+
 /** Daily reminder time lives on its own column rather than inside
  *  notification_preferences so the client can read it efficiently on
  *  every app open without deserialising the JSONB blob. Returns
@@ -527,9 +615,9 @@ export async function loadDailyReminderTime(userId: string): Promise<string | nu
       .select('daily_reminder_time')
       .eq('id', userId)
       .single();
-    return (data?.daily_reminder_time as string | null) ?? '20:00';
+    return (data?.daily_reminder_time as string | null) ?? DEFAULT_DAILY_REMINDER_TIME;
   } catch {
-    return '20:00';
+    return DEFAULT_DAILY_REMINDER_TIME;
   }
 }
 
@@ -541,5 +629,101 @@ export async function saveDailyReminderTime(userId: string, time: string | null)
       .eq('id', userId);
   } catch (e) {
     log.error('notifications', 'saveDailyReminderTime failed', e);
+  }
+}
+
+// ─── Timezone sync ──────────────────────────────────────────────────
+// The server-side push-dispatch edge function uses `profiles.timezone`
+// to decide whether it's 9am in the user's local time RIGHT NOW before
+// sending the morning hype push. Without a correct timezone, everyone
+// gets their 9am push at 9am UTC — wrong for every non-London user.
+
+/** Read the device's IANA timezone (e.g. "Europe/London", "America/New_York").
+ *  Returns null on web where Intl may not resolve a meaningful value
+ *  for headless environments. */
+export function getDeviceTimezone(): string | null {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof tz === 'string' && tz.length > 0 ? tz : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Push the device's current timezone to the profile so server-side
+ *  campaigns can schedule at local times. Idempotent — writes on every
+ *  app open so users who travel across timezones stay in sync. Skips
+ *  the write when the stored value already matches. */
+export async function syncTimezoneToProfile(userId: string): Promise<void> {
+  const tz = getDeviceTimezone();
+  if (!tz) return;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', userId)
+      .single();
+    if ((data as { timezone?: string | null } | null)?.timezone === tz) return;
+    await supabase.from('profiles').update({ timezone: tz }).eq('id', userId);
+    log.breadcrumb('notifications', 'timezone synced', { userId, tz });
+  } catch (e) {
+    log.error('notifications', 'syncTimezoneToProfile failed', e, { userId, tz });
+  }
+}
+
+// ─── First-run pre-permission prompt gate ──────────────────────────
+
+/** Returns true if the app should show the pre-permission popup now.
+ *  Checks: not web, not already asked, not already granted, decline
+ *  count below threshold. The caller is responsible for rendering
+ *  the modal and calling `markNotifPromptAsked()` on resolution. */
+export async function shouldShowFirstRunNotifPrompt(userId?: string): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    const AS = require('@react-native-async-storage/async-storage').default;
+    const asked = await AS.getItem('blanked_notifications_asked');
+    if (asked) return false;
+    const declined = parseInt((await AS.getItem('blanked_notifications_declined_count')) ?? '0', 10);
+    if (declined >= 2) return false;
+    // If permission is already granted we don't need the pre-prompt —
+    // just register the token.
+    if (await hasNotificationPermission()) {
+      if (userId) registerPushToken(userId);
+      await AS.setItem('blanked_notifications_asked', 'true');
+      return false;
+    }
+    // Also respect server-side flag (syncs across devices for the same
+    // user — if they already accepted on their iPhone we don't re-prompt
+    // on their iPad).
+    if (userId) {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('has_seen_notif_prompt')
+          .eq('id', userId)
+          .single();
+        if ((data as { has_seen_notif_prompt?: boolean } | null)?.has_seen_notif_prompt) {
+          await AS.setItem('blanked_notifications_asked', 'true');
+          return false;
+        }
+      } catch {}
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Record that we've shown the prompt so we don't re-show it. Called
+ *  after the user picks Enable OR Dismiss. */
+export async function markNotifPromptAsked(userId?: string): Promise<void> {
+  try {
+    const AS = require('@react-native-async-storage/async-storage').default;
+    await AS.setItem('blanked_notifications_asked', 'true');
+  } catch {}
+  if (userId) {
+    try {
+      await supabase.from('profiles').update({ has_seen_notif_prompt: true }).eq('id', userId);
+    } catch {}
   }
 }

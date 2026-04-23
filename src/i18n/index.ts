@@ -48,6 +48,18 @@ export const i18n = new I18n(
   },
 );
 
+// When a key is missing from BOTH locales, i18n-js defaults to
+// rendering `[missing "en.some.key" translation]` — visible ugliness
+// that leaked onto production screens (cosmetic names on the
+// profile + shop cards). Register a custom missing-translation
+// handler that returns the raw scope, so call sites can detect
+// missing keys via a simple `result === key` check and fall back to
+// an inline English literal (what `installCosmeticTranslations` in
+// src/data/cosmetics.ts relies on). Exposed as a registered strategy
+// because i18n-js v4 doesn't accept this as a constructor option.
+i18n.missingTranslation.register('blanked_return_key', (_i18n, scope) => String(scope));
+i18n.missingBehavior = 'blanked_return_key';
+
 /** Read the device's primary locale language code (e.g. 'es' from
  *  'es-MX'). Used when `preferredLanguage === 'system'`. Safe to call
  *  on web — `expo-localization` ships a DOM polyfill that falls back

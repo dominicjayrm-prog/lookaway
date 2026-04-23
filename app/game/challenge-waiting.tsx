@@ -222,7 +222,7 @@ export default function ChallengeWaitingScreen() {
         <View style={styles.centered}>
           <Text style={[styles.terminalTitle, { color: colors.text }]}>{t('challenge.not_your_invite')}</Text>
           <Text style={[styles.terminalBody, { color: colors.textMid }]}>
-            This invite belongs to another player. Head back to see your active challenges.
+            {t('challenge.not_authorized_body')}
           </Text>
           <Pressable style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={() => router.replace('/(tabs)/friends')}>
             <Text style={styles.primaryBtnText}>{t('challenge.back_to_friends')}</Text>
@@ -233,10 +233,11 @@ export default function ChallengeWaitingScreen() {
   }
 
   if (terminal) {
+    const uname = friend?.username ?? 'they';
     const message = terminal === 'declined'
-      ? `@${friend?.username ?? 'they'} declined the challenge.`
+      ? t('challenge.terminal_declined_body', { username: uname })
       : terminal === 'expired'
-        ? `@${friend?.username ?? 'they'} didn\u2019t respond in time.`
+        ? t('challenge.terminal_expired_body', { username: uname })
         : t('challenge.invite_cancelled');
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -285,15 +286,15 @@ export default function ChallengeWaitingScreen() {
             `\u2026` and `\u2019` appeared literally on screen. Using
             the actual characters inline fixes the rendering. */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Waiting for @{friend?.username ?? 'friend'}…
+          {t('challenge.waiting_title', { username: friend?.username ?? 'friend' })}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textMid }]}>
-          They’re being invited to a {modeName} match right now.
+          {t('challenge.waiting_subtitle', { mode: modeName })}
         </Text>
         <View style={[styles.countdown, { backgroundColor: colors.accentSoft }]}>
           <Ionicons name="time" size={18} color={colors.accent} />
           <Text style={[styles.countdownText, { color: colors.accent }]}>
-            {secondsLeft}s to respond
+            {t('challenge.waiting_countdown', { seconds: secondsLeft })}
           </Text>
         </View>
         <Pressable
