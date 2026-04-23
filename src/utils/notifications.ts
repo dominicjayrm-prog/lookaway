@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { t } from '@/src/i18n';
@@ -6,8 +7,30 @@ import { t } from '@/src/i18n';
 // ─── Push Token Registration ────────────────────────────────────────
 
 /**
+ * Resolve the EAS project ID required by `getExpoPushTokenAsync` in
+ * SDK 53+. EAS Build injects this into `expoConfig.extra.eas.projectId`
+ * at build time; the deprecated `easConfig.projectId` path is kept as
+ * a fallback so older builds still work.
+ *
+ * Without this, `getExpoPushTokenAsync` throws silently in production
+ * and the caller sees `undefined` — the exact bug that left every
+ * user's `push_token` NULL in Supabase through v1.1.0 (builds 24-30).
+ */
+function resolveProjectId(): string | undefined {
+  return (
+    (Constants.expoConfig as any)?.extra?.eas?.projectId ??
+    (Constants as any)?.easConfig?.projectId
+  );
+}
+
+/**
  * Register for push notifications and save token to profile.
- * Only works on physical devices (iOS/Android).
+ * Works in both the Expo managed workflow and a bare workflow
+ * (post-prebuild / pure Xcode builds) — getExpoPushTokenAsync is
+ * supported in both as long as `projectId` is wired through.
+ *
+ * Returns null on: web, simulator, denied permission, any failure.
+ * Logs breadcrumbs + errors on failure so ops can spot dead flows.
  */
 export async function registerPushToken(userId: string): Promise<string | null> {
   if (Platform.OS === 'web') return null;
@@ -16,7 +39,10 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     const Notifications = require('expo-notifications');
     const Device = require('expo-device');
 
-    if (!Device.isDevice) return null;
+    if (!Device.isDevice) {
+      log.breadcrumb('notifications', 'skipped — not a physical device', { userId });
+      return null;
+    }
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -26,15 +52,44 @@ export async function registerPushToken(userId: string): Promise<string | null> 
       finalStatus = status;
     }
 
-    if (finalStatus !== 'granted') return null;
+    if (finalStatus !== 'granted') {
+      log.breadcrumb('notifications', 'permission denied', { userId, finalStatus });
+      return null;
+    }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId = resolveProjectId();
+    if (!projectId) {
+      // Loud, high-signal error. Without projectId the Expo push
+      // endpoint returns a token but it's unaddressable — silent
+      // failure mode we just spent a debug session untangling.
+      log.error(
+        'notifications',
+        'EAS projectId missing — push registration cannot proceed. Set expo.extra.eas.projectId in app.json or configure via EAS.',
+        new Error('missing_eas_project_id'),
+        { userId },
+      );
+      return null;
+    }
 
-    await supabase
+    const tokenResult = await Notifications.getExpoPushTokenAsync({ projectId });
+    const token: string | undefined = tokenResult?.data;
+
+    if (!token) {
+      log.error('notifications', 'getExpoPushTokenAsync returned no token', new Error('empty_token'), { userId, tokenResult });
+      return null;
+    }
+
+    const { error } = await supabase
       .from('profiles')
       .update({ push_token: token })
       .eq('id', userId);
 
+    if (error) {
+      log.error('notifications', 'supabase push_token update failed', error, { userId });
+      return null;
+    }
+
+    log.breadcrumb('notifications', 'push token registered', { userId, tokenPrefix: token.slice(0, 16) });
     return token;
   } catch (e) {
     log.error('notifications', 'registerPushToken failed', e, { userId });
