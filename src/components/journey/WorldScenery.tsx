@@ -1177,19 +1177,31 @@ function crystalDepths(w: number, h: number): React.ReactNode {
 // --------------------------------------------------------------------
 function auroraPeaks(w: number, h: number): React.ReactNode {
   const rand = seeded(4);
-  // Stars scattered across the top third — tiny dots of varying
-  // brightness.
+
+  // Stars tile across the upper half of the slab (the 'sky' band)
+  // in three size classes. Biggest ones get cross-glint rays.
   const stars: Array<{ x: number; y: number; r: number; opacity: number }> = [];
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 80; i++) {
     stars.push({
       x: w * rand(),
-      y: h * 0.02 + rand() * h * 0.45,
-      r: 0.8 + rand() * 1.4,
-      opacity: 0.4 + rand() * 0.5,
+      y: rand() * h * 0.55,
+      r: 0.7 + rand() * 1.8,
+      opacity: 0.4 + rand() * 0.55,
     });
   }
-  // Three mountain layers — back (lightest) to front (darkest). Each
-  // layer is built from a polyline of peaks at varying heights.
+
+  // Constellation: a dipper-like pattern in the sky band.
+  const constellation = [
+    { x: w * 0.2, y: h * 0.08 },
+    { x: w * 0.27, y: h * 0.11 },
+    { x: w * 0.32, y: h * 0.06 },
+    { x: w * 0.4, y: h * 0.09 },
+    { x: w * 0.46, y: h * 0.14 },
+    { x: w * 0.52, y: h * 0.11 },
+  ];
+
+  // Mountain layer builder — 4 receding ranges now (was 3) for more
+  // depth. Front ranges get sharper + darker.
   function mountainLayer(
     color: string,
     opacity: number,
@@ -1210,107 +1222,150 @@ function auroraPeaks(w: number, h: number): React.ReactNode {
     return <Polygon points={pts.join(' ')} fill={color} opacity={opacity} />;
   }
 
-  // Pine trees on the foreground layer — scattered clusters.
+  // Pine forests at the bottom — 30 varied pines (was 20).
   const pines: Array<{ x: number; y: number; size: number }> = [];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 32; i++) {
     pines.push({
-      x: w * (0.04 + rand() * 0.92),
-      y: h * (0.65 + rand() * 0.3),
-      size: 10 + rand() * 10,
+      x: w * (0.03 + rand() * 0.94),
+      y: h * (0.6 + rand() * 0.35),
+      size: 9 + rand() * 14,
     });
   }
+
+  // Falling snowflakes — more density, varied sizes.
+  const snowflakes = Array.from({ length: 40 }).map(() => ({
+    x: w * rand(),
+    y: h * (0.15 + rand() * 0.75),
+    r: 0.8 + rand() * 1.8,
+  }));
+
+  // A wolf silhouette howling on a foreground ridge.
+  const wolf = { x: w * 0.7, y: h * 0.72 };
+
+  // A small wooden cabin tucked between mountains with a glowing window.
+  const cabin = { x: w * 0.2, y: h * 0.78 };
 
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
         <LinearGradient id="aurora-1" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor="#A29BFE" stopOpacity={0} />
-          <Stop offset="0.4" stopColor="#00B894" stopOpacity={0.4} />
-          <Stop offset="0.7" stopColor="#6C5CE7" stopOpacity={0.35} />
+          <Stop offset="0.35" stopColor="#00B894" stopOpacity={0.55} />
+          <Stop offset="0.7" stopColor="#6C5CE7" stopOpacity={0.45} />
           <Stop offset="1" stopColor="#A29BFE" stopOpacity={0} />
         </LinearGradient>
         <LinearGradient id="aurora-2" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor="#FD79A8" stopOpacity={0} />
-          <Stop offset="0.5" stopColor="#A29BFE" stopOpacity={0.3} />
+          <Stop offset="0.5" stopColor="#A29BFE" stopOpacity={0.4} />
+          <Stop offset="1" stopColor="#74B9FF" stopOpacity={0} />
+        </LinearGradient>
+        <LinearGradient id="aurora-3" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#00B894" stopOpacity={0} />
+          <Stop offset="0.5" stopColor="#55EFC4" stopOpacity={0.3} />
           <Stop offset="1" stopColor="#74B9FF" stopOpacity={0} />
         </LinearGradient>
         <LinearGradient id="snow-drift" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0} />
-          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.35} />
+          <Stop offset="1" stopColor="#E4ECFF" stopOpacity={0.55} />
         </LinearGradient>
         <RadialGradient id="moon-glow" cx="50%" cy="50%" r="60%">
-          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.7} />
-          <Stop offset="0.4" stopColor="#E8E8F5" stopOpacity={0.25} />
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.75} />
+          <Stop offset="0.4" stopColor="#E8E8F5" stopOpacity={0.3} />
           <Stop offset="1" stopColor="#E8E8F5" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="cabin-window" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#FFE8A3" stopOpacity={0.95} />
+          <Stop offset="1" stopColor="#FFE8A3" stopOpacity={0} />
         </RadialGradient>
       </Defs>
 
-      {/* Moon with halo glow */}
-      <SvgCircle cx={w * 0.82} cy={h * 0.07} r={h * 0.07} fill="url(#moon-glow)" />
-      <SvgCircle cx={w * 0.82} cy={h * 0.07} r={h * 0.035} fill="#F1F0FF" opacity={0.92} />
-      <SvgCircle cx={w * 0.85} cy={h * 0.055} r={h * 0.012} fill="#CFD0E8" opacity={0.5} />
-      <SvgCircle cx={w * 0.795} cy={h * 0.083} r={h * 0.008} fill="#CFD0E8" opacity={0.6} />
+      {/* ---------- Moon with halo + craters ---------- */}
+      <SvgCircle cx={w * 0.82} cy={h * 0.07} r={h * 0.08} fill="url(#moon-glow)" />
+      <SvgCircle cx={w * 0.82} cy={h * 0.07} r={h * 0.04} fill="#F1F0FF" opacity={0.95} />
+      <SvgCircle cx={w * 0.85} cy={h * 0.055} r={h * 0.013} fill="#CFD0E8" opacity={0.55} />
+      <SvgCircle cx={w * 0.795} cy={h * 0.083} r={h * 0.009} fill="#CFD0E8" opacity={0.65} />
+      <SvgCircle cx={w * 0.825} cy={h * 0.08} r={h * 0.007} fill="#CFD0E8" opacity={0.45} />
 
-      {/* Stars — tiny dots, some with a cross-glint */}
+      {/* ---------- Stars ---------- */}
       {stars.map((s, i) => (
         <G key={`star-${i}`}>
           <SvgCircle cx={s.x} cy={s.y} r={s.r} fill="#FFFFFF" opacity={s.opacity} />
-          {s.r > 1.5 && (
-            <G opacity={s.opacity * 0.6}>
-              <Path
-                d={`M ${s.x - 3} ${s.y} L ${s.x + 3} ${s.y}`}
-                stroke="#FFFFFF"
-                strokeWidth={0.6}
-              />
-              <Path
-                d={`M ${s.x} ${s.y - 3} L ${s.x} ${s.y + 3}`}
-                stroke="#FFFFFF"
-                strokeWidth={0.6}
-              />
+          {s.r > 1.7 && (
+            <G opacity={s.opacity * 0.7}>
+              <Path d={`M ${s.x - 4} ${s.y} L ${s.x + 4} ${s.y}`} stroke="#FFFFFF" strokeWidth={0.5} />
+              <Path d={`M ${s.x} ${s.y - 4} L ${s.x} ${s.y + 4}`} stroke="#FFFFFF" strokeWidth={0.5} />
             </G>
           )}
         </G>
       ))}
 
-      {/* Aurora bands — multiple ribbons at varying heights. Each a
-       *  flowing wave painted with the aurora gradient. */}
-      {[0.15, 0.25, 0.38].map((yRatio, i) => {
-        const gradient = i % 2 === 0 ? 'aurora-1' : 'aurora-2';
-        const amp = 18 + i * 6;
-        return (
-          <Path
-            key={`aurora-${i}`}
-            d={`M 0 ${h * yRatio} Q ${w * 0.25} ${h * yRatio - amp} ${w * 0.5} ${h * yRatio} T ${w} ${h * yRatio + amp * 0.4} L ${w} ${h * yRatio + 32} Q ${w * 0.7} ${h * yRatio + 8} ${w * 0.4} ${h * yRatio + 28} T 0 ${h * yRatio + 18} Z`}
-            fill={`url(#${gradient})`}
-          />
-        );
-      })}
+      {/* ---------- Constellation lines connecting a few stars ---------- */}
+      <G opacity={0.25}>
+        {constellation.map((s, i) => (
+          <SvgCircle key={`c-${i}`} cx={s.x} cy={s.y} r={1.6} fill="#FFFFFF" />
+        ))}
+        {constellation.slice(0, -1).map((s, i) => {
+          const next = constellation[i + 1];
+          return <Path key={`cl-${i}`} d={`M ${s.x} ${s.y} L ${next.x} ${next.y}`} stroke="#FFFFFF" strokeWidth={0.4} />;
+        })}
+      </G>
 
-      {/* Mountain layers — back to front. Each layer gets darker + its
-       *  peaks reach lower down the slab. */}
-      {mountainLayer('#4A5580', 0.35, h * 0.72, h * 0.52, 10, 40, 501)}
-      {mountainLayer('#2B3658', 0.55, h * 0.8, h * 0.58, 9, 50, 502)}
-      {mountainLayer('#1B2838', 0.8, h * 0.88, h * 0.64, 8, 60, 503)}
+      {/* ---------- Aurora ribbons (3 layered bands at varied heights) ---------- */}
+      {[
+        { yRatio: 0.12, gradient: 'aurora-1', amp: 22 },
+        { yRatio: 0.22, gradient: 'aurora-2', amp: 28 },
+        { yRatio: 0.32, gradient: 'aurora-3', amp: 34 },
+      ].map((b, i) => (
+        <Path
+          key={`aurora-${i}`}
+          d={`M 0 ${h * b.yRatio} Q ${w * 0.22} ${h * b.yRatio - b.amp} ${w * 0.45} ${h * b.yRatio - b.amp * 0.3} T ${w * 0.75} ${h * b.yRatio + b.amp * 0.2} T ${w} ${h * b.yRatio + b.amp * 0.4} L ${w} ${h * b.yRatio + b.amp + 20} Q ${w * 0.7} ${h * b.yRatio + 10} ${w * 0.4} ${h * b.yRatio + 28} T 0 ${h * b.yRatio + 18} Z`}
+          fill={`url(#${b.gradient})`}
+        />
+      ))}
 
-      {/* Snow caps — triangular white hats on a handful of the
-       *  front-layer peaks. */}
-      {[0.14, 0.35, 0.58, 0.78].map((xRatio, i) => {
+      {/* ---------- Mountain layers (4 receding ranges) ---------- */}
+      {mountainLayer('#5C688A', 0.28, h * 0.68, h * 0.48, 12, 35, 501)}
+      {mountainLayer('#3F4C72', 0.45, h * 0.76, h * 0.55, 10, 45, 502)}
+      {mountainLayer('#2B3658', 0.65, h * 0.83, h * 0.62, 9, 55, 503)}
+      {mountainLayer('#131C33', 0.88, h * 0.92, h * 0.69, 8, 65, 504)}
+
+      {/* ---------- Snow caps ---------- */}
+      {[0.1, 0.22, 0.36, 0.5, 0.64, 0.78, 0.9].map((xRatio, i) => {
         const peakX = w * xRatio;
-        const peakY = h * (0.55 + (i % 2) * 0.04);
+        const peakY = h * (0.58 + (i % 3) * 0.03);
         return (
           <Polygon
             key={`cap-${i}`}
-            points={`${peakX - 10},${peakY + 12} ${peakX},${peakY} ${peakX + 10},${peakY + 12} ${peakX + 3},${peakY + 18} ${peakX - 3},${peakY + 18}`}
+            points={`${peakX - 12},${peakY + 14} ${peakX},${peakY} ${peakX + 12},${peakY + 14} ${peakX + 4},${peakY + 22} ${peakX - 4},${peakY + 22}`}
             fill="#FFFFFF"
-            opacity={0.65}
+            opacity={0.72}
           />
         );
       })}
 
-      {/* Pine trees dotted on the foreground mountain layer. Simple
-       *  stacked triangles for the classic pine silhouette. */}
+      {/* ---------- Cabin with glowing window ---------- */}
+      <G>
+        <SvgCircle cx={cabin.x} cy={cabin.y} r={22} fill="url(#cabin-window)" />
+        {/* Walls */}
+        <Rect x={cabin.x - 10} y={cabin.y - 3} width={20} height={14} fill="#2B1810" />
+        {/* Roof */}
+        <Polygon points={`${cabin.x - 13},${cabin.y - 3} ${cabin.x},${cabin.y - 10} ${cabin.x + 13},${cabin.y - 3}`} fill="#1A0F08" />
+        {/* Window */}
+        <Rect x={cabin.x - 3} y={cabin.y + 1} width={6} height={5} fill="#FFE8A3" />
+        {/* Chimney smoke */}
+        <Path
+          d={`M ${cabin.x + 6} ${cabin.y - 8} Q ${cabin.x + 10} ${cabin.y - 14} ${cabin.x + 5} ${cabin.y - 20} Q ${cabin.x + 1} ${cabin.y - 26} ${cabin.x + 8} ${cabin.y - 32}`}
+          stroke="#4A5580"
+          strokeWidth={1.5}
+          fill="none"
+          opacity={0.55}
+          strokeLinecap="round"
+        />
+      </G>
+
+      {/* ---------- Pine forest ---------- */}
       {pines.map((p, i) => (
-        <G key={`pine-${i}`} opacity={0.75}>
+        <G key={`pine-${i}`} opacity={0.82}>
           <Rect
             x={p.x - p.size * 0.08}
             y={p.y}
@@ -1327,27 +1382,50 @@ function auroraPeaks(w: number, h: number): React.ReactNode {
             fill="#0B1628"
           />
           <Polygon
-            points={`${p.x - p.size * 0.22},${p.y - p.size * 0.6} ${p.x},${p.y - p.size * 1.05} ${p.x + p.size * 0.22},${p.y - p.size * 0.6}`}
+            points={`${p.x - p.size * 0.22},${p.y - p.size * 0.6} ${p.x},${p.y - p.size * 1.08} ${p.x + p.size * 0.22},${p.y - p.size * 0.6}`}
             fill="#0B1628"
+          />
+          {/* Snow dusting on tip */}
+          <Polygon
+            points={`${p.x - p.size * 0.1},${p.y - p.size * 0.95} ${p.x},${p.y - p.size * 1.08} ${p.x + p.size * 0.1},${p.y - p.size * 0.95}`}
+            fill="#FFFFFF"
+            opacity={0.6}
           />
         </G>
       ))}
 
-      {/* Snow drift at the bottom — soft gradient + a couple of
-       *  humped snowbanks. */}
+      {/* ---------- Wolf silhouette (sitting, head up) ---------- */}
+      <G opacity={0.75}>
+        {/* Body */}
+        <Ellipse cx={wolf.x} cy={wolf.y + 6} rx={10} ry={5} fill="#0B1628" />
+        {/* Haunches */}
+        <Ellipse cx={wolf.x - 6} cy={wolf.y + 10} rx={4} ry={3} fill="#0B1628" />
+        {/* Head up (howl pose) */}
+        <Polygon points={`${wolf.x + 5},${wolf.y + 4} ${wolf.x + 10},${wolf.y - 6} ${wolf.x + 12},${wolf.y - 1}`} fill="#0B1628" />
+        {/* Tail */}
+        <Path d={`M ${wolf.x - 9} ${wolf.y + 4} Q ${wolf.x - 14} ${wolf.y + 1} ${wolf.x - 14} ${wolf.y - 3}`} stroke="#0B1628" strokeWidth={2.5} fill="none" strokeLinecap="round" />
+        {/* Front legs */}
+        <Rect x={wolf.x + 2} y={wolf.y + 9} width={1.5} height={6} fill="#0B1628" />
+        <Rect x={wolf.x + 5} y={wolf.y + 9} width={1.5} height={6} fill="#0B1628" />
+      </G>
+
+      {/* ---------- Snow drift at bottom + snowfall ---------- */}
       <Path
-        d={`M 0 ${h * 0.92} Q ${w * 0.25} ${h * 0.88} ${w * 0.5} ${h * 0.92} T ${w} ${h * 0.92} L ${w} ${h} L 0 ${h} Z`}
+        d={`M 0 ${h * 0.92} Q ${w * 0.25} ${h * 0.87} ${w * 0.5} ${h * 0.92} T ${w * 0.8} ${h * 0.91} T ${w} ${h * 0.93} L ${w} ${h} L 0 ${h} Z`}
         fill="url(#snow-drift)"
       />
-      {/* A few snowflake specks in the foreground. */}
-      {Array.from({ length: 18 }).map((_, i) => (
+      {/* Mounded snowbanks */}
+      <Ellipse cx={w * 0.3} cy={h * 0.95} rx={60} ry={8} fill="#FFFFFF" opacity={0.3} />
+      <Ellipse cx={w * 0.75} cy={h * 0.96} rx={80} ry={10} fill="#FFFFFF" opacity={0.3} />
+
+      {snowflakes.map((f, i) => (
         <SvgCircle
           key={`flake-${i}`}
-          cx={w * rand()}
-          cy={h * (0.6 + rand() * 0.4)}
-          r={1 + rand()}
+          cx={f.x}
+          cy={f.y}
+          r={f.r}
           fill="#FFFFFF"
-          opacity={0.4 + rand() * 0.4}
+          opacity={0.35 + f.r * 0.15}
         />
       ))}
     </Svg>
