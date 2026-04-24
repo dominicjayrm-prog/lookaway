@@ -12,7 +12,13 @@ export interface FriendProfile {
   username: string;
   avatar_color: string;
   total_stars: number;
+  /** @deprecated Display the unified_position instead — post-journey
+   *  rollout we show "Level 108" not "World 3". Kept in the type so
+   *  older cloud rows that haven't been re-synced continue to parse. */
   highest_world: number;
+  /** 1-380 on the Unified Brain Journey. This is the display value on
+   *  friend cards, leaderboard rows, and the friend profile popup. */
+  unified_position: number;
   last_seen: string | null;
   avatar_url?: string | null;
   equipped_frame?: string | null;
@@ -21,6 +27,11 @@ export interface FriendProfile {
   equipped_name_color?: string | null;
   memory_score_avg?: number | null;
 }
+
+/** Columns we need from public.profiles everywhere a FriendProfile is
+ *  hydrated — keep in sync with the FriendProfile interface above. */
+export const FRIEND_PROFILE_COLUMNS =
+  'id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg';
 
 export interface FriendRequest {
   id: string;
@@ -55,7 +66,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
   const [searchRes, hidden] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg')
+      .select(FRIEND_PROFILE_COLUMNS)
       .ilike('username', `${query}%`)
       .neq('id', currentUserId)
       .limit(15),
@@ -175,7 +186,7 @@ export async function removeFriend(friendshipId: string): Promise<boolean> {
 
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
   const [reqRes, hidden] = await Promise.all([
-    supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false }),
+    supabase.from('friendships').select('id, created_at, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('addressee_id', userId).eq('status', 'pending').order('created_at', { ascending: false }),
     getHiddenUserIds(userId),
   ]);
   const { data, error } = reqRes;
@@ -195,7 +206,7 @@ export async function getFriendRequests(userId: string): Promise<FriendRequest[]
 
 export async function getFriends(userId: string): Promise<Friend[]> {
   const [friendsRes, hidden] = await Promise.all([
-    supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
+    supabase.from('friendships').select('id, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), addressee:profiles!friendships_addressee_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'accepted').or(`requester_id.eq.${userId},addressee_id.eq.${userId}`),
     getHiddenUserIds(userId),
   ]);
   const { data, error } = friendsRes;
@@ -250,7 +261,7 @@ function mapChallengeRow(row: Record<string, unknown>, userId: string): Challeng
 }
 
 export async function getActiveChallenges(userId: string): Promise<Challenge[]> {
-  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'pending').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false });
   if (log.supabaseError('friends', 'getActiveChallenges', error, { userId })) return [];
   return (data ?? [])
     .map((row: Record<string, unknown>) => mapChallengeRow(row, userId))
@@ -258,7 +269,7 @@ export async function getActiveChallenges(userId: string): Promise<Challenge[]> 
 }
 
 export async function getRecentResults(userId: string, limit: number): Promise<Challenge[]> {
-  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
+  const { data, error } = await supabase.from('friend_challenges').select('id, challenger_id, challenged_id, level_ids, challenger_score, challenged_score, status, created_at, mode, challenger:profiles!friend_challenges_challenger_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg), challenged:profiles!friend_challenges_challenged_id_fkey(id, username, avatar_color, total_stars, highest_world, unified_position, last_seen, avatar_url, equipped_frame, equipped_expression, equipped_banner, equipped_name_color, memory_score_avg)').eq('status', 'completed').or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`).order('created_at', { ascending: false }).limit(limit);
   if (log.supabaseError('friends', 'getRecentResults', error, { userId, limit })) return [];
   return (data ?? [])
     .map((row: Record<string, unknown>) => mapChallengeRow(row, userId))

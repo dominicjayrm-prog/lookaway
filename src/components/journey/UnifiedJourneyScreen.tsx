@@ -498,7 +498,7 @@ export function UnifiedJourneyScreen() {
                       }}
                       pointerEvents="none"
                     >
-                      <BlinkOnPath mode={level.mode} size={36} />
+                      <BlinkOnPath size={36} />
                     </View>
                   )}
                 </React.Fragment>

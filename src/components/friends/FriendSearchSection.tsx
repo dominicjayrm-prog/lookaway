@@ -167,7 +167,7 @@ export const FriendSearchSection = forwardRef<TextInput, FriendSearchSectionProp
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.searchResultName, { color: colors.text }]}>@{u.username}</Text>
                   <Text style={{ fontSize: 11, color: colors.textLight }}>
-                    World {u.highest_world} · {'\u2B50'} {u.total_stars}
+                    {t('journey.position_of_total', { position: u.unified_position ?? 1 })} · {'\u2B50'} {u.total_stars}
                   </Text>
                 </View>
                 <AnimatedAddButton

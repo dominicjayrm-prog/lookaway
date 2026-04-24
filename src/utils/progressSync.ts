@@ -2,6 +2,7 @@ import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import type { SubscriptionStatus, GameStore } from '@/src/store/gameStore';
 import { log } from '@/src/lib/logger';
+import type { ModeId, WorldTheme } from '@/src/data/unifiedJourney';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
@@ -62,6 +63,17 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       days_played: state.daysPlayed ?? 0,
       streak_shields: state.streakShields ?? 0,
       recovery_window_start: state.recoveryWindowStart ?? null,
+      // Unified Brain Journey — cloud-mirrored so progress follows the
+      // user across devices. The clamp on unified_position is enforced
+      // by a CHECK constraint on the column, so we defend against
+      // corrupted local state here rather than let the upsert 500.
+      unified_position: Math.min(380, Math.max(1, state.unifiedPosition ?? 1)),
+      current_world_theme: state.currentWorldTheme ?? 'emerald_grove',
+      last_played_mode: state.lastPlayedMode ?? null,
+      last_played_level_id: state.lastPlayedLevelId ?? null,
+      has_seen_unified_intro: state.hasSeenUnifiedIntro ?? false,
+      has_seen_world_intro: state.hasSeenWorldIntro ?? {},
+      has_seen_brain_master: state.hasSeenBrainMaster ?? false,
       // tutorial_seen is written separately when the player completes the
       // spotlight tour (one-shot from app/(tabs)/index.tsx) — we do NOT
       // upsert it here because every save would re-write the same flag.
@@ -130,6 +142,15 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
    *  logic to decide whether local or cloud is the more recent source
    *  of truth for scalar fields like gems and equipped_*. */
   cloudUpdatedAt: number;
+  // ── Unified Brain Journey ──
+  /** 1-380. Server mirror of `unifiedPosition`. */
+  unifiedPosition: number;
+  currentWorldTheme: WorldTheme;
+  lastPlayedMode: ModeId | null;
+  lastPlayedLevelId: string | null;
+  hasSeenUnifiedIntro: boolean;
+  hasSeenWorldIntro: Partial<Record<WorldTheme, boolean>>;
+  hasSeenBrainMaster: boolean;
 } | null> {
   try {
     // Load profile
@@ -200,6 +221,37 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
         streak: typeof profile.login_reward_streak === 'number' ? profile.login_reward_streak : INITIAL_LOGIN_REWARD_STATE.streak,
       },
       cloudUpdatedAt: profile.updated_at ? new Date(profile.updated_at).getTime() : 0,
+      // Unified Brain Journey — defensive coercion since these columns
+      // may not exist on very old cloud rows that haven't been written
+      // to since the schema migration landed (on first sign-in the
+      // next saveProgressToSupabase will populate them).
+      unifiedPosition:
+        typeof profile.unified_position === 'number'
+          ? Math.min(380, Math.max(1, profile.unified_position))
+          : 1,
+      currentWorldTheme: (profile.current_world_theme === 'emerald_grove'
+        || profile.current_world_theme === 'amber_dunes'
+        || profile.current_world_theme === 'crystal_depths'
+        || profile.current_world_theme === 'aurora_peaks'
+        || profile.current_world_theme === 'inferno_core'
+          ? profile.current_world_theme
+          : 'emerald_grove') as WorldTheme,
+      lastPlayedMode: (
+        profile.last_played_mode === 'classic'
+        || profile.last_played_mode === 'speed_recall'
+        || profile.last_played_mode === 'snap_match'
+        || profile.last_played_mode === 'sequence'
+        || profile.last_played_mode === 'counting_blitz'
+        || profile.last_played_mode === 'colour_chain'
+          ? (profile.last_played_mode as ModeId)
+          : null),
+      lastPlayedLevelId: profile.last_played_level_id ?? null,
+      hasSeenUnifiedIntro: profile.has_seen_unified_intro === true,
+      hasSeenWorldIntro:
+        profile.has_seen_world_intro && typeof profile.has_seen_world_intro === 'object'
+          ? profile.has_seen_world_intro
+          : {},
+      hasSeenBrainMaster: profile.has_seen_brain_master === true,
     };
   } catch (e) {
     log.error('sync', 'loadProgressFromSupabase threw', e, { userId });

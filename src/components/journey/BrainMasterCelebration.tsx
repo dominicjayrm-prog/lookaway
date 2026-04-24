@@ -5,6 +5,7 @@ import { Blink } from '@/src/components/Blink';
 import { useGameStore } from '@/src/store';
 import { t } from '@/src/i18n';
 import { UNIFIED_LADDER } from '@/src/data/unifiedJourney';
+import { useEquippedBlinkExpression } from '@/src/hooks/useEquippedBlink';
 
 interface Props {
   visible: boolean;
@@ -16,6 +17,10 @@ interface Props {
  *  Mastermind reward aesthetic. */
 export function BrainMasterCelebration({ visible, onClose }: Props) {
   const { totalStars, streakCount } = useGameStore();
+  // The user's Blink takes centre stage during this celebration — it
+  // would be strange to show a default face instead of the cosmetic
+  // they've equipped after finishing all 380 levels.
+  const blinkExpression = useEquippedBlinkExpression();
 
   const share = async () => {
     try {
@@ -39,7 +44,7 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
           <Text style={st.title}>{t('journey.brain_master.title')}</Text>
 
           <View style={st.blinkWrap}>
-            <Blink expression="celebrate" size={180} />
+            <Blink expression={blinkExpression} size={180} />
           </View>
 
           <Text style={st.blurb}>{t('journey.brain_master.blurb')}</Text>

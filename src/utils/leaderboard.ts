@@ -59,7 +59,13 @@ export interface LeaderboardEntry {
   username: string;
   avatar_color: string;
   total_stars: number;
+  /** @deprecated Use unified_position. Kept for backwards compatibility
+   *  while older cloud rows haven't written the new column yet. */
   highest_world: number;
+  /** Position 1-380 on the Unified Brain Journey. This is what friend
+   *  cards and leaderboard rows should display ("Level 108" instead
+   *  of "World 2 Level 8"). */
+  unified_position: number;
   division: Division;
   rank: number;
   avatar_url?: string | null;
@@ -67,11 +73,14 @@ export interface LeaderboardEntry {
   equipped_expression?: string | null;
 }
 
+const LEADERBOARD_COLUMNS =
+  'id, username, avatar_color, total_stars, highest_world, unified_position, avatar_url, equipped_frame, equipped_expression';
+
 // ── Global leaderboard ───────────────────────────────────────────────
 export async function getGlobalLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world, avatar_url, equipped_frame, equipped_expression')
+    .select(LEADERBOARD_COLUMNS)
     .not('username', 'is', null)
     .order('total_stars', { ascending: false })
     .limit(limit);
@@ -84,6 +93,7 @@ export async function getGlobalLeaderboard(limit: number = 50): Promise<Leaderbo
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
+    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,
@@ -113,7 +123,7 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_color, total_stars, highest_world, avatar_url, equipped_frame, equipped_expression')
+    .select(LEADERBOARD_COLUMNS)
     .in('id', friendIds)
     .order('total_stars', { ascending: false });
 
@@ -125,6 +135,7 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
+    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,

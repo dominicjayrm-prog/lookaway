@@ -1361,6 +1361,13 @@ export const useGameStore = create<GameStore>((set, get) => {
         username: null,
         avatarUrl: null,
         subscriptionStatus: 'inactive' as SubscriptionStatus,
+        unifiedPosition: 1,
+        currentWorldTheme: 'emerald_grove' as WorldTheme,
+        lastPlayedMode: null,
+        lastPlayedLevelId: null,
+        hasSeenUnifiedIntro: false,
+        hasSeenWorldIntro: {},
+        hasSeenBrainMaster: false,
       };
       if (!localOwnerMatches) {
         log.warn('sync', 'cross-account loadFromCloud — forcing cloud-only hydrate', {
@@ -1550,11 +1557,18 @@ export const useGameStore = create<GameStore>((set, get) => {
         // `localHasProgress` flag, which silently overrode the merged value.
         maxLives: Math.max(safeLocal.maxLives, cloud.maxLives),
         loginReward: pickLoginReward(),
-        // Unified journey position: recompute from the merged progress
-        // so a fresh install on a second device lands on the correct
-        // ladder position instead of position 1. Without this, the
-        // unified_position field doesn't sync to cloud (no DB column
-        // yet) and would desync across devices.
+        // ── Unified Brain Journey merge ──
+        // Three sources to reconcile:
+        //   1. cloud.unifiedPosition — the server's cached cursor
+        //   2. safeLocal.unifiedPosition — offline progress on this device
+        //   3. recompute from mergedProgress — walks the ladder and
+        //      finds the first uncompleted level
+        // We take the MAX of all three so the user never moves backward
+        // regardless of which source is freshest. mergedProgress is
+        // authoritative because it's the union of cloud + local level
+        // stars, so it catches both "ran ahead offline" and "played on
+        // another device" scenarios even if one side's cursor field
+        // hasn't been flushed yet.
         unifiedPosition: ((): number => {
           let firstUncompleted = 1;
           for (const level of UNIFIED_LADDER) {
@@ -1565,23 +1579,42 @@ export const useGameStore = create<GameStore>((set, get) => {
             }
             firstUncompleted = level.position + 1;
           }
-          const computed = Math.min(TOTAL_POSITIONS, Math.max(1, firstUncompleted));
-          return Math.max(computed, safeLocal.unifiedPosition ?? 1);
+          const recomputed = Math.min(TOTAL_POSITIONS, Math.max(1, firstUncompleted));
+          return Math.max(
+            recomputed,
+            safeLocal.unifiedPosition ?? 1,
+            cloud.unifiedPosition ?? 1,
+          );
         })(),
         currentWorldTheme: getWorldForPosition(
-          Math.max(
-            safeLocal.unifiedPosition ?? 1,
-            (() => {
-              let p = 1;
-              for (const level of UNIFIED_LADDER) {
-                const entry = mergedProgress[level.levelId];
-                if (!entry || entry.stars <= 0) { p = level.position; break; }
-                p = level.position + 1;
-              }
-              return Math.min(TOTAL_POSITIONS, Math.max(1, p));
-            })(),
-          ),
+          (() => {
+            let p = 1;
+            for (const level of UNIFIED_LADDER) {
+              const entry = mergedProgress[level.levelId];
+              if (!entry || entry.stars <= 0) { p = level.position; break; }
+              p = level.position + 1;
+            }
+            return Math.max(
+              Math.min(TOTAL_POSITIONS, Math.max(1, p)),
+              safeLocal.unifiedPosition ?? 1,
+              cloud.unifiedPosition ?? 1,
+            );
+          })(),
         ),
+        // One-shot flags: OR between local and cloud so once a user
+        // has dismissed an intro on ANY device, it stays dismissed.
+        hasSeenUnifiedIntro:
+          (safeLocal.hasSeenUnifiedIntro ?? false) || cloud.hasSeenUnifiedIntro,
+        hasSeenWorldIntro: {
+          ...cloud.hasSeenWorldIntro,
+          ...safeLocal.hasSeenWorldIntro,
+        },
+        hasSeenBrainMaster:
+          (safeLocal.hasSeenBrainMaster ?? false) || cloud.hasSeenBrainMaster,
+        // Last-played: newer side wins via pickScalar. These are
+        // cosmetic UX hints only — no correctness impact on progression.
+        lastPlayedMode: pickScalar(safeLocal.lastPlayedMode ?? null, cloud.lastPlayedMode),
+        lastPlayedLevelId: pickScalar(safeLocal.lastPlayedLevelId ?? null, cloud.lastPlayedLevelId),
         // Unblock cloud writes now that we've merged the real cloud
         // state into local. Before this flip, saveState skips its
         // debounced cloud sync so the boot-time default state can't

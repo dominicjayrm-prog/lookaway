@@ -57,7 +57,7 @@ export function FriendsListSection({ friends, onSelectFriend }: FriendsListSecti
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.friendName, { color: colors.text }]}>@{f.profile.username}</Text>
               <Text style={{ fontSize: 11, color: colors.textLight }}>
-                {getLastActiveText(f.profile.last_seen)} · World {f.profile.highest_world} · {'\u2B50'}{' '}
+                {getLastActiveText(f.profile.last_seen)} · {t('journey.position_of_total', { position: f.profile.unified_position ?? 1 })} · {'\u2B50'}{' '}
                 {f.profile.total_stars}
               </Text>
             </View>
