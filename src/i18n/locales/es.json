@@ -749,6 +749,16 @@
     "welcome_plus": "¡Bienvenido a Blanked+! Cargando tus estadísticas reales…"
   },
   "challenge": {
+    "choose_mode": "ELIGE UN MODO",
+    "rematch_title": "REVANCHA",
+    "rematch_hint": "Toca para retar de nuevo",
+    "rematch_score": "{mine} vs {theirs}",
+    "rematch_dismiss_aria": "Descartar sugerencia de revancha",
+    "outcome_won": "GANASTE",
+    "outcome_lost": "PERDISTE",
+    "outcome_draw": "EMPATE",
+    "auto_match_hint": "Los retos Clásicos ajustan la dificultad a los niveles de ambos automáticamente.",
+    "auto_match_hint_with_level": "Ajustado al nivel de tu amigo ({level}). Reto equilibrado para los dos.",
     "mode_classic_desc": "5 escenas de la campaña. Mismas preguntas. Gana quien saque más puntos.",
     "mode_classic_how": "Ambos jugadores ven las mismas 5 escenas. Memoriza y responde 5 preguntas por escena. Gana el puntaje total más alto.",
     "mode_speed_recall_desc": "Mira la escena. Toca dónde estaba cada forma.",

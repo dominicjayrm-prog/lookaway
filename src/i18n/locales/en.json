@@ -630,6 +630,16 @@
     "welcome_plus": "Welcome to Blanked+! Your real stats are loading…"
   },
   "challenge": {
+    "choose_mode": "CHOOSE A MODE",
+    "rematch_title": "REMATCH",
+    "rematch_hint": "Tap to re-challenge",
+    "rematch_score": "{mine} vs {theirs}",
+    "rematch_dismiss_aria": "Dismiss rematch suggestion",
+    "outcome_won": "WON",
+    "outcome_lost": "LOST",
+    "outcome_draw": "DRAW",
+    "auto_match_hint": "Classic challenges auto-match difficulty to both your levels.",
+    "auto_match_hint_with_level": "Matched to your friend's level ({level}). Challenge is fair for both of you.",
     "mode_classic_desc": "5 campaign scenes. Same questions. Highest score wins.",
     "mode_classic_how": "Both players see the same 5 scenes. Memorise, then answer 5 questions per scene. Highest total score wins.",
     "mode_speed_recall_desc": "See the scene. Tap where each shape was.",
