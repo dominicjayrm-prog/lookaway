@@ -117,6 +117,8 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   streakCount: number;
   bestStreak: number;
   daysPlayed: number;
+  streakShields: number;
+  recoveryWindowStart: string | null;
   subscriptionStatus: SubscriptionStatus;
   totalStars: number;
   highestWorld: number;

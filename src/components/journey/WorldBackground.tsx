@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { WORLD_THEMES, WORLD_THEME_ORDER, type WorldTheme } from '@/src/data/unifiedJourney';
 import { WORLD_VISUALS } from './worldVisuals';
 import { WorldParticles } from './WorldParticles';
+import { WorldScenery } from './WorldScenery';
 
 interface Props {
   /** Total path canvas dimensions — must match the render container
@@ -61,12 +62,13 @@ export function WorldBackground({
               end={{ x: 0.5, y: 1 }}
               style={{ position: 'absolute', inset: 0, width, height: slabHeight + rowHeight }}
             />
+            <WorldScenery theme={theme} width={width} height={slabHeight + rowHeight} />
             <WorldParticles
               type={visuals.particleType}
               color={visuals.particleColor}
               width={width}
               height={slabHeight + rowHeight}
-              density={14}
+              density={16}
             />
           </View>
         );

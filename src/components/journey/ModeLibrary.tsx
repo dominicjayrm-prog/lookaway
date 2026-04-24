@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { CAMPAIGNS, CAMPAIGN_ORDER, type Campaign } from '@/src/data/campaigns';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
@@ -19,16 +21,19 @@ interface Props {
   sideCampaignProgress: Record<string, { stars: number; best_score: number }>;
 }
 
-/** Mode Library — a compact card per mode for players who want to grind
- *  one mode at a time. Tapping a card routes to the existing per-mode
- *  world map. Unified ladder progression happens on the journey path
- *  above; this surface is independent. */
+/** Mode Library — compact grid of all six modes for players who want to
+ *  grind one at a time. Each card has its mode accent as a left stripe
+ *  and a gradient progress bar. Tapping routes to the existing per-mode
+ *  world map. Light haptic on tap. */
 export function ModeLibrary({ sideCampaignProgress }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
   const { levelProgress } = useGameStore();
 
   const openMode = (campaign: Campaign) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     if (campaign.id === 'classic') {
       router.push('/world/1');
       return;
@@ -67,12 +72,14 @@ export function ModeLibrary({ sideCampaignProgress }: Props) {
   return (
     <View style={st.container}>
       <View style={st.headerRow}>
-        <Text style={[st.heading, { color: colors.text }]}>
-          {t('journey.mode_library_title')}
-        </Text>
-        <Text style={[st.subheading, { color: colors.textMid }]}>
-          {t('journey.mode_library_sub')}
-        </Text>
+        <View style={st.headerLeft}>
+          <Text style={[st.heading, { color: colors.text }]}>
+            {t('journey.mode_library_title')}
+          </Text>
+          <Text style={[st.subheading, { color: colors.textMid }]}>
+            {t('journey.mode_library_sub')}
+          </Text>
+        </View>
       </View>
 
       <View style={st.grid}>
@@ -89,26 +96,30 @@ export function ModeLibrary({ sideCampaignProgress }: Props) {
                 {
                   backgroundColor: colors.card,
                   borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
+                  opacity: pressed ? 0.88 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
                 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`${c.name}, ${pct}% complete`}
             >
-              <View style={[st.dot, { backgroundColor: c.color }]} />
+              <View style={[st.stripe, { backgroundColor: c.color }]} />
               <View style={st.cardBody}>
-                <Text style={[st.cardName, { color: colors.text }]} numberOfLines={1}>
-                  {c.name}
-                </Text>
+                <View style={st.cardHeader}>
+                  <Text style={[st.cardName, { color: colors.text }]} numberOfLines={1}>
+                    {c.name}
+                  </Text>
+                  <Text style={[st.cardPct, { color: c.color }]}>{pct}%</Text>
+                </View>
                 <Text style={[st.cardMastered, { color: colors.textMid }]}>
-                  {pct}% {t('journey.mastered')}
+                  {t('journey.mastered')}
                 </Text>
                 <View style={[st.progressTrack, { backgroundColor: colors.surface }]}>
-                  <View
-                    style={[
-                      st.progressFill,
-                      { backgroundColor: c.color, width: `${Math.max(3, pct)}%` },
-                    ]}
+                  <LinearGradient
+                    colors={[c.color, c.color + 'CC']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[st.progressFill, { width: `${Math.max(3, pct)}%` }]}
                   />
                 </View>
               </View>
@@ -124,19 +135,27 @@ export function ModeLibrary({ sideCampaignProgress }: Props) {
 const st = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 28,
+    paddingBottom: 36,
   },
   headerRow: {
-    marginBottom: 12,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flex: 1,
   },
   heading: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: -0.4,
   },
   subheading: {
     fontSize: 12,
     marginTop: 2,
+    fontWeight: '500',
   },
   grid: {
     flexDirection: 'row',
@@ -147,34 +166,54 @@ const st = StyleSheet.create({
     width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 14,
+    gap: 8,
+    paddingVertical: 12,
+    paddingRight: 12,
+    borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  stripe: {
+    width: 3,
+    alignSelf: 'stretch',
+    borderTopRightRadius: 2,
+    borderBottomRightRadius: 2,
+    marginRight: 4,
   },
   cardBody: {
     flex: 1,
-    gap: 4,
+    gap: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cardName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
+    flex: 1,
+    marginRight: 6,
+  },
+  cardPct: {
+    fontSize: 12,
+    fontWeight: '900',
   },
   cardMastered: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.4,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   progressTrack: {
     height: 4,
     borderRadius: 2,
     overflow: 'hidden',
-    marginTop: 2,
+    marginTop: 3,
   },
   progressFill: {
     height: '100%',

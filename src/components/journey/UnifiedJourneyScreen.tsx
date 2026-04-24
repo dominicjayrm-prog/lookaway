@@ -1,9 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Share, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Share, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  interpolate,
+  Extrapolation,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
@@ -67,6 +80,28 @@ function GemSvg({ size = 14, color = '#6C5CE7' }: { size?: number; color?: strin
   );
 }
 
+function ContinueArrow() {
+  const x = useSharedValue(0);
+  useEffect(() => {
+    x.value = withRepeat(
+      withSequence(
+        withTiming(5, { duration: 700, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 700, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [x]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  return (
+    <Animated.View style={[st.continueArrowWrap, style]}>
+      <View style={st.continueArrowPill}>
+        <Ionicons name="play" size={16} color="#FFFFFF" />
+      </View>
+    </Animated.View>
+  );
+}
+
 /** Compute sine-wave x offset per position, within a fixed-width container.
  *  Creates a gentle snake path without hard rows / columns. */
 function pathXForPosition(position: number, containerWidth: number): number {
@@ -89,6 +124,13 @@ export function UnifiedJourneyScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const didScrollToCurrent = useRef(false);
+  // Scroll-driven animations: header blur-in after a few px, hero
+  // parallax. Shared on the worklet thread so these never dip below
+  // 60fps even when the main JS is busy.
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
 
   const {
     totalStars,
@@ -182,6 +224,11 @@ export function UnifiedJourneyScreen() {
     if (!level) return;
     if (hasSeenWorldIntro[level.worldTheme]) return;
     setWorldIntroFor(level.worldTheme);
+    if (Platform.OS !== 'web') {
+      // Heavy impact for a moment this big — player just crossed into a
+      // whole new themed world.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
   }, [unifiedPosition, hasSeenWorldIntro]);
 
   // Fire the Brain Master celebration once when the player has
@@ -211,6 +258,9 @@ export function UnifiedJourneyScreen() {
   };
 
   const shareJourney = async () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     const { streakCount } = useGameStore.getState();
     const streakSuffix =
       streakCount > 0 ? t('journey.share_streak_suffix', { streak: streakCount }) : '';
@@ -285,10 +335,12 @@ export function UnifiedJourneyScreen() {
   return (
     <TabTransition>
       <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
-        <ScrollView
-          ref={scrollRef}
+        <Animated.ScrollView
+          ref={scrollRef as any}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={st.scrollContent}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
         >
           {/* Migration banner for existing users */}
           {isMigratedExisting && (
@@ -298,94 +350,124 @@ export function UnifiedJourneyScreen() {
             />
           )}
 
-          {/* Header */}
-          <View style={st.header}>
-            <View style={st.headerLeft}>
-              <Text style={[st.eyebrow, { color: currentTheme.color }]}>
-                {t('journey.world_eyebrow', {
-                  world: localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove').toUpperCase(),
-                  num: currentTheme.worldNumber,
-                  total: WORLD_THEME_ORDER.length,
-                })}
-              </Text>
-              <Text style={[st.title, { color: colors.text }]}>{t('journey.unified_title')}</Text>
-            </View>
-            <View style={st.headerRight}>
-              <View style={[st.pill, { backgroundColor: colors.goldSoft }]}>
-                <StarSvg size={12} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
-                <Text style={[st.pillText, { color: colors.gold }]}>{totalStars}</Text>
-              </View>
-              <View style={[st.pill, { backgroundColor: colors.accentSoft }]}>
-                <GemSvg size={12} color={colors.accent} />
-                <Text style={[st.pillText, { color: colors.accent }]}>{gems}</Text>
-              </View>
-              <Pressable
-                onPress={shareJourney}
-                style={[st.pill, { backgroundColor: colors.surface }]}
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityLabel={t('journey.share_journey_aria')}
-              >
-                <Ionicons name="share-outline" size={14} color={colors.textMid} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* World title + progress bar */}
-          <View style={st.worldBar}>
-            <Text style={[st.worldLevelLabel, { color: currentTheme.color }]}>
-              {t('journey.position_of_total', { position: unifiedPosition })}
-              <Text style={[st.worldOf, { color: colors.textMid }]}>
-                {' '}
-                {t('journey.position_of_total_suffix', { total: UNIFIED_LADDER.length })}
-              </Text>
-            </Text>
-            <Text style={[st.worldPct, { color: colors.textMid }]}>
-              {t('journey.percent_complete', { pct: totalPct })}
-            </Text>
-          </View>
-          <View style={[st.worldTrack, { backgroundColor: colors.surface }]}>
-            <View
-              style={[
-                st.worldFill,
-                {
-                  backgroundColor: currentTheme.color,
-                  width: `${Math.max(2, totalPct)}%`,
-                },
-              ]}
+          {/* Header + hero container. The gradient sits behind everything
+           *  chrome-like above the path so the transition into the
+           *  themed world backgrounds feels seamless. */}
+          <View style={st.heroWrap}>
+            <LinearGradient
+              colors={[currentTheme.color + '18', 'transparent']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
             />
-          </View>
 
-          {/* Continue hero card */}
-          {currentLevel && currentCampaign && (
-            <Pressable
-              onPress={() => launchLevel(currentLevel)}
-              style={({ pressed }) => [
-                st.continueCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Continue level ${unifiedPosition}`}
-            >
-              <View style={[st.continueAccent, { backgroundColor: currentCampaign.color }]} />
-              <View style={st.continueBody}>
-                <Text style={[st.continueLabel, { color: colors.textMid }]}>
-                  {t('journey.continue_eyebrow', { position: unifiedPosition })}
-                </Text>
-                <Text style={[st.continueMode, { color: colors.text }]}>
-                  {currentCampaign.name}
-                  <Text style={[st.continueTagline, { color: colors.textMid }]}>
-                    {' · '}
-                    {t('journey.continue_tap_to_play')}
+            {/* Header row — eyebrow + title + stats */}
+            <View style={st.header}>
+              <View style={st.headerLeft}>
+                <View style={st.eyebrowRow}>
+                  <View style={[st.worldDot, { backgroundColor: currentTheme.color }]} />
+                  <Text style={[st.eyebrow, { color: currentTheme.color }]}>
+                    {t('journey.world_eyebrow', {
+                      world: localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove').toUpperCase(),
+                      num: currentTheme.worldNumber,
+                      total: WORLD_THEME_ORDER.length,
+                    })}
                   </Text>
+                </View>
+                <Text style={[st.title, { color: colors.text }]}>
+                  {t('journey.unified_title')}
                 </Text>
               </View>
-              <View style={[st.playChip, { backgroundColor: currentCampaign.color }]}>
-                <Text style={st.playChipText}>{t('journey.play_chip')}</Text>
+              <View style={st.headerRight}>
+                <View style={[st.pill, { backgroundColor: colors.goldSoft }]}>
+                  <StarSvg size={12} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
+                  <Text style={[st.pillText, { color: colors.gold }]}>{totalStars}</Text>
+                </View>
+                <View style={[st.pill, { backgroundColor: colors.accentSoft }]}>
+                  <GemSvg size={12} color={colors.accent} />
+                  <Text style={[st.pillText, { color: colors.accent }]}>{gems}</Text>
+                </View>
+                <Pressable
+                  onPress={shareJourney}
+                  style={({ pressed }) => [
+                    st.pill,
+                    { backgroundColor: colors.surface, opacity: pressed ? 0.75 : 1 },
+                  ]}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('journey.share_journey_aria')}
+                >
+                  <Ionicons name="share-outline" size={14} color={colors.textMid} />
+                </Pressable>
               </View>
-            </Pressable>
-          )}
+            </View>
+
+            {/* Progress rail — "Level N of 380" with a gradient fill bar. */}
+            <View style={st.worldBar}>
+              <Text style={[st.worldLevelLabel, { color: colors.text }]}>
+                {t('journey.position_of_total', { position: unifiedPosition })}
+                <Text style={[st.worldOf, { color: colors.textMid }]}>
+                  {' '}
+                  {t('journey.position_of_total_suffix', { total: UNIFIED_LADDER.length })}
+                </Text>
+              </Text>
+              <Text style={[st.worldPct, { color: currentTheme.color }]}>
+                {t('journey.percent_complete', { pct: totalPct })}
+              </Text>
+            </View>
+            <View style={[st.worldTrack, { backgroundColor: colors.surface }]}>
+              <View style={[st.worldFillShadow, { width: `${Math.max(2, totalPct)}%` }]} />
+              <LinearGradient
+                colors={[currentTheme.color, WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'].gradientColors[1]]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[st.worldFill, { width: `${Math.max(2, totalPct)}%` }]}
+              />
+            </View>
+
+            {/* Continue hero — gradient card with world accent + PLAY
+             *  chip. Pressed state scales slightly; haptic on tap. */}
+            {currentLevel && currentCampaign && (
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                  }
+                  launchLevel(currentLevel);
+                }}
+                style={({ pressed }) => [
+                  st.continueShadow,
+                  pressed && { transform: [{ scale: 0.985 }] },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Continue level ${unifiedPosition}`}
+              >
+                <LinearGradient
+                  colors={[
+                    currentCampaign.color,
+                    WORLD_VISUALS[currentLevel.worldTheme].gradientColors[1],
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={st.continueCard}
+                >
+                  <View style={st.continueBody}>
+                    <Text style={st.continueLabel}>
+                      {t('journey.continue_eyebrow', { position: unifiedPosition })}
+                    </Text>
+                    <Text style={st.continueMode} numberOfLines={1}>
+                      {currentCampaign.name}
+                    </Text>
+                    <Text style={st.continueTagline}>
+                      {t('journey.continue_tap_to_play')}
+                    </Text>
+                  </View>
+                  <ContinueArrow />
+                </LinearGradient>
+              </Pressable>
+            )}
+          </View>
 
           {/* The path — vertically scrolling snake */}
           <View style={[st.pathContainer, { height: pathHeight, width: pathWidth }]}>
@@ -398,7 +480,9 @@ export function UnifiedJourneyScreen() {
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
             />
-            {/* Draw connectors first so nodes render above them. */}
+            {/* Draw connectors first so nodes render above them. Completed
+             *  segments get a glow halo + world-tinted gradient; upcoming
+             *  segments stay dashed and quiet. */}
             {UNIFIED_LADDER.slice(0, UNIFIED_LADDER.length - 1).map((level) => {
               const next = UNIFIED_LADDER[level.position];
               if (!next) return null;
@@ -408,18 +492,21 @@ export function UnifiedJourneyScreen() {
               const y2 = yForPosition(next.position);
               const completed = next.position <= unifiedPosition;
               const visuals = WORLD_VISUALS[next.worldTheme];
-              const color = completed ? visuals.pathColor : 'rgba(255,255,255,0.35)';
+              const fromVisuals = WORLD_VISUALS[level.worldTheme];
               return (
                 <PathConnector
                   key={`c-${level.position}`}
+                  keyId={level.position}
                   x1={x1}
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  color={color}
-                  opacity={completed ? 0.85 : 0.45}
+                  color={completed ? fromVisuals.pathColor : 'rgba(255,255,255,0.45)'}
+                  endColor={completed ? visuals.pathColor : 'rgba(255,255,255,0.45)'}
+                  opacity={completed ? 0.95 : 0.5}
                   dashed={!completed}
                   width={completed ? 5 : 3}
+                  glow={completed}
                 />
               );
             })}
@@ -508,7 +595,7 @@ export function UnifiedJourneyScreen() {
 
           {/* Mode Library */}
           <ModeLibrary sideCampaignProgress={sideCampaignProgress} />
-        </ScrollView>
+        </Animated.ScrollView>
 
         <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
         <BrainMasterCelebration
@@ -535,37 +622,55 @@ const st = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
+  heroWrap: {
+    paddingBottom: 8,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   headerLeft: {
     flex: 1,
+    gap: 4,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  worldDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
   },
   eyebrow: {
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 2,
+    letterSpacing: 1.2,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.8,
   },
   headerRight: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   pillText: {
@@ -576,79 +681,99 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingHorizontal: 18,
+    paddingTop: 2,
   },
   worldLevelLabel: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
+    letterSpacing: -0.4,
   },
   worldOf: {
     fontSize: 14,
     fontWeight: '500',
   },
   worldPct: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   worldTrack: {
-    height: 4,
-    borderRadius: 2,
-    marginHorizontal: 16,
-    marginTop: 6,
-    marginBottom: 14,
+    height: 6,
+    borderRadius: 3,
+    marginHorizontal: 18,
+    marginTop: 7,
+    marginBottom: 18,
     overflow: 'hidden',
+    position: 'relative',
   },
   worldFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  worldFillShadow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  continueShadow: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 6,
   },
   continueCard: {
-    marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
+    padding: 18,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  continueAccent: {
-    width: 3,
-    height: 34,
-    borderRadius: 2,
+    overflow: 'hidden',
   },
   continueBody: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   continueLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.8)',
   },
   continueMode: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    marginTop: 2,
   },
   continueTagline: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
   },
-  playChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
+  continueArrowWrap: {
+    marginLeft: 12,
   },
-  playChipText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+  continueArrowPill: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.45)',
   },
   pathContainer: {
     position: 'relative',
