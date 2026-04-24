@@ -212,6 +212,15 @@ export function UnifiedJourneyScreen() {
   // means it's further up the ladder than what's on screen. `null`
   // means the current node is inside the viewport — chip hidden.
   const [jumpDirection, setJumpDirection] = useState<'above' | 'below' | null>(null);
+  // Defer the heavy scenery + particle mount by one frame so the tab
+  // opens instantly (gradient slabs + nodes paint first) and the
+  // decorative layer fades in a moment later. Shaves the user-perceived
+  // 'takes ages to load' on the Journey tab.
+  const [decorationsReady, setDecorationsReady] = useState(false);
+  useEffect(() => {
+    const handle = setTimeout(() => setDecorationsReady(true), 40);
+    return () => clearTimeout(handle);
+  }, []);
 
   // Viewport culling — rendering all 380 level nodes + 379 SVG path
   // connectors at once is the single biggest perf risk on Android.
@@ -234,7 +243,11 @@ export function UnifiedJourneyScreen() {
   // scroll tick. Learned that the hard way.
   const maybeUpdateRange = useCallback((s: number, e: number) => {
     setVisibleRange((prev) => {
-      if (Math.abs(s - prev[0]) < 15 && Math.abs(e - prev[1]) < 15) return prev;
+      // Only re-render when the window drifts by 25+ positions (was
+      // 15). Larger dead-zone means fast scrolling triggers fewer
+      // React commits, which keeps the 60fps frame budget during
+      // flings. The VISIBLE_BUFFER of 40 still covers the gap.
+      if (Math.abs(s - prev[0]) < 25 && Math.abs(e - prev[1]) < 25) return prev;
       return [s, e];
     });
   }, []);
@@ -652,6 +665,7 @@ export function UnifiedJourneyScreen() {
               pathTopPadding={PATH_TOP_PADDING}
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
+              showDecorations={decorationsReady}
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming

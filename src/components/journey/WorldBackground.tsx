@@ -13,6 +13,11 @@ interface Props {
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
+  /** Gate the heavy stuff (scenery + particles) — when false, only
+   *  the gradient slabs + transition bands render. Lets the parent
+   *  delay the expensive paint until after first interaction so the
+   *  tab opens instantly on slower devices. */
+  showDecorations?: boolean;
 }
 
 /** Stacks five vertical gradient slabs, one per themed world, matching
@@ -36,6 +41,7 @@ export function WorldBackground({
   pathTopPadding,
   rowHeight,
   totalPositions,
+  showDecorations = true,
 }: Props) {
   const totalHeight = pathTopPadding + totalPositions * rowHeight + 40;
 
@@ -87,14 +93,18 @@ export function WorldBackground({
                 bottom: 0,
               }}
             />
-            <WorldScenery theme={theme} width={width} height={renderHeight} />
-            <WorldParticles
-              type={visuals.particleType}
-              color={visuals.particleColor}
-              width={width}
-              height={renderHeight}
-              density={14}
-            />
+            {showDecorations && (
+              <>
+                <WorldScenery theme={theme} width={width} height={renderHeight} />
+                <WorldParticles
+                  type={visuals.particleType}
+                  color={visuals.particleColor}
+                  width={width}
+                  height={renderHeight}
+                  density={14}
+                />
+              </>
+            )}
           </View>
         );
       })}
