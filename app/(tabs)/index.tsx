@@ -181,14 +181,17 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed, streakShields, recoveryWindowStart, lastPlayDate, setRecoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed, streakShields, recoveryWindowStart, lastPlayDate, setRecoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, unifiedPosition, currentWorldTheme } = useGameStore();
   // Next milestone teaser shown under the streak number on the home card.
   // Derived locally — claimed list is mirrored from Supabase by the
   // result-screen claim path.
   const nextStreakReward = getNextMilestone(streakCount, streakMilestonesClaimed);
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
-  // Parse world/level from ID format "w1-l3"
+  // Keep the legacy world/level parse around for any code that still
+  // displays "World 3 Level 5" — the weekly-challenge card and a
+  // couple of analytics events rely on it. The hero copy below moved
+  // to the unified-journey position.
   const idMatch = nextLevelId.match(/^w(\d+)-l(\d+)$/);
   const currentWorldId = idMatch ? parseInt(idMatch[1], 10) : 1;
   const nextLevelNumber = idMatch ? parseInt(idMatch[2], 10) : 1;
@@ -199,18 +202,22 @@ function PlayTab() {
 
   // Fetch level title from Supabase
 
-  // Contextual hero subtitle
+  // Contextual hero subtitle — driven by the unified journey cursor now
+  // that the campaign is one linear ladder. Still falls back to
+  // streak / variety messages when there's nothing special to say.
+  const TOTAL_LADDER = 380;
   const heroSubtitle = (() => {
-    const remaining = currentWorldLevels - (nextLevelNumber - 1);
-    if (nextLevelNumber === 1) return t('home.welcome_world', { world: currentWorldId });
-    if (remaining <= 3) {
+    const remaining = TOTAL_LADDER - unifiedPosition;
+    if (unifiedPosition === 1) return t('home.welcome_unified');
+    if (remaining <= 5 && remaining > 0) {
       return remaining === 1
-        ? t('home.levels_to_finish_one', { world: currentWorldId })
-        : t('home.levels_to_finish_many', { count: remaining, world: currentWorldId });
+        ? t('home.final_level')
+        : t('home.final_levels', { count: remaining });
     }
+    if (remaining === 0) return t('home.journey_complete');
     if (streakCount >= 3) return t('home.streak_keep_going', { count: streakCount });
     const subKeys = ['home.subtitle_1', 'home.subtitle_2', 'home.subtitle_3', 'home.subtitle_4'];
-    return t(subKeys[nextLevelNumber % subKeys.length]);
+    return t(subKeys[unifiedPosition % subKeys.length]);
   })();
 
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || t('common.player');

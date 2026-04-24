@@ -35,7 +35,10 @@ interface FriendProfileInput {
   username: string;
   avatar_color: string;
   total_stars: number;
+  /** @deprecated Use unified_position instead. Kept for back-compat. */
   highest_world: number;
+  /** 1-380 on the Unified Brain Journey. Feeds the friend stat cell. */
+  unified_position: number;
   last_seen: string | null;
   avatar_url?: string | null;
   equipped_frame?: string | null;
@@ -216,7 +219,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
             {/* Primary stat grid — 2 rows of 3 */}
             <View style={styles.statGrid}>
               <StatCell label={t('modals.friend_stat_stars')} value={String(profile.total_stars)} icon="star" iconColor={colors.gold} colors={colors} />
-              <StatCell label={t('modals.friend_stat_world')} value={String(profile.highest_world)} icon="map-outline" iconColor={colors.accent} colors={colors} />
+              <StatCell label={t('modals.friend_stat_level')} value={String(profile.unified_position ?? 1)} icon="flag-outline" iconColor={colors.accent} colors={colors} />
               <StatCell label={t('modals.friend_stat_memory')} value={memoryScore !== null ? `${memoryScore}%` : ' -'} icon="pulse" iconColor={colors.blue} colors={colors} />
             </View>
             <View style={styles.statGrid}>

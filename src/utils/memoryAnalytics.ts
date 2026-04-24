@@ -276,7 +276,7 @@ const MODE_FOR_DIMENSION_KEYS: Record<BrainProfileKey, string> = {
   sequence: 'analytics.mode.sequence',
   speed: 'analytics.mode.snap_match',
   focus: 'analytics.mode.counting_blitz',
-  consistency: 'analytics.mode.daily_challenges',
+  consistency: 'analytics.mode.colour_chain',
 };
 
 export function generateInsight(profile: BrainProfile): Insight {

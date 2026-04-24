@@ -103,9 +103,6 @@ export const EVENTS = {
   LEVEL_STARTED: 'level_started',
   LEVEL_COMPLETED: 'level_completed',
   LEVEL_FAILED: 'level_failed',
-  // Daily challenge
-  DAILY_CHALLENGE_STARTED: 'daily_challenge_started',
-  DAILY_CHALLENGE_COMPLETED: 'daily_challenge_completed',
   // Monetisation
   PAYWALL_SHOWN: 'paywall_shown',
   PAYWALL_DISMISSED: 'paywall_dismissed',

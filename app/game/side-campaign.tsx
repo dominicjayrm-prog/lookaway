@@ -291,6 +291,12 @@ function SideCampaignScreen() {
     setGemsEarned(gems);
     if (gems > 0) addGems(gems);
     if (earnedStars > 0) addStars(earnedStars);
+    // Advance the unified ladder if the player just cleared the level
+    // at their current ladder position. Plays from the Mode Library or
+    // replays at lower positions are no-ops (guard lives in the action).
+    if (earnedStars > 0 && levelId) {
+      useGameStore.getState().advanceUnifiedPosition(levelId);
+    }
 
     if (pct >= 50) {
       setPhase('complete');

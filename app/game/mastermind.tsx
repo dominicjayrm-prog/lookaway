@@ -94,6 +94,7 @@ export default function MastermindGameScreen() {
         // Record in game store
         const store = useGameStore.getState();
         store.recordLevelComplete(`w6-l${levelNum}`, stars, pct);
+        if (stars > 0) store.advanceUnifiedPosition(`w6-l${levelNum}`);
 
         // Check if all 40 levels are now complete → legendary unlock
         if (levelNum === 40) {
