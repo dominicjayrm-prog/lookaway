@@ -1288,6 +1288,8 @@
     "open_profile_aria": "Abrir perfil",
     "continue_label": "CONTINUAR",
     "world_level_title": "Mundo {world} — Nivel {level}",
+    "unified_level_title": "Nivel {position} de {total}",
+    "play_aria_unified": "Jugar nivel {position}",
     "welcome_world": "Bienvenido al Mundo {world}",
     "welcome_unified": "Tu viaje cerebral comienza aquí",
     "final_level": "¡Queda un nivel — dalo todo!",

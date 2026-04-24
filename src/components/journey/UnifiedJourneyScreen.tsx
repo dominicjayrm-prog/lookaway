@@ -178,6 +178,18 @@ export function UnifiedJourneyScreen() {
     Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
   ]);
 
+  // CRITICAL: this callback MUST be declared BEFORE the
+  // useAnimatedReaction below — otherwise Reanimated captures the
+  // still-undefined binding when it serialises the worklet for the
+  // UI thread, and runOnJS(undefined) crashes natively on the first
+  // scroll tick. Learned that the hard way.
+  const maybeUpdateRange = useCallback((s: number, e: number) => {
+    setVisibleRange((prev) => {
+      if (Math.abs(s - prev[0]) < 15 && Math.abs(e - prev[1]) < 15) return prev;
+      return [s, e];
+    });
+  }, []);
+
   // Shift the visible window when the scroll position drifts far
   // enough that the old window is no longer centred. We only re-render
   // when the center moves by >15 positions to avoid render thrash.
@@ -193,15 +205,8 @@ export function UnifiedJourneyScreen() {
       const nextEnd = Math.min(UNIFIED_LADDER.length, approxPos + VISIBLE_BUFFER);
       runOnJS(maybeUpdateRange)(nextStart, nextEnd);
     },
-    [],
+    [maybeUpdateRange],
   );
-
-  const maybeUpdateRange = useCallback((s: number, e: number) => {
-    setVisibleRange((prev) => {
-      if (Math.abs(s - prev[0]) < 15 && Math.abs(e - prev[1]) < 15) return prev;
-      return [s, e];
-    });
-  }, []);
 
   // Is this a brand-new player (position 1, no intro seen) or a
   // migrated existing user (position > 1, no intro seen)?
@@ -538,6 +543,7 @@ export function UnifiedJourneyScreen() {
               pathTopPadding={PATH_TOP_PADDING}
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
+              currentWorld={currentLevel?.worldTheme ?? 'emerald_grove'}
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming

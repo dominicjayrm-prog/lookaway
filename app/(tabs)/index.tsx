@@ -524,17 +524,21 @@ function PlayTab() {
             </View>
           </View>
 
-          {/* Level info */}
+          {/* Level info — uses the unified journey position (1-380)
+           *  rather than the legacy "World X Level Y" format so the
+           *  text matches the new one-path progression. */}
           <Text style={styles.heroContinueLabel}>{t('home.continue_label')}</Text>
-          <Text style={styles.heroLevelTitle}>{t('home.world_level_title', { world: currentWorldId, level: nextLevelNumber })}</Text>
+          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: 380 })}</Text>
           <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
-          {/* Progress bar */}
+          {/* Progress bar — fills by unified position instead of the
+           *  per-world count, so progress actually reflects the whole
+           *  journey not just the current world's slice. */}
           <View style={styles.heroProgressRow}>
             <View style={styles.heroProgressTrack}>
-              <View style={[styles.heroProgressFill, { width: `${Math.round(worldProgress * 100)}%` }]} />
+              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / 380) * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/{currentWorldLevels}</Text>
+            <Text style={styles.heroProgressText}>{unifiedPosition}/380</Text>
           </View>
 
           {/* Play button with press animation */}
@@ -546,7 +550,7 @@ function PlayTab() {
               router.push(`/game/${nextLevelId}`);
             }}
             accessibilityRole="button"
-            accessibilityLabel={t('home.play_aria', { world: currentWorldId, level: nextLevelNumber })}
+            accessibilityLabel={t('home.play_aria_unified', { position: unifiedPosition })}
           >
             <Text style={styles.heroPlayText}>{t('home.play_button')}</Text>
           </Pressable>

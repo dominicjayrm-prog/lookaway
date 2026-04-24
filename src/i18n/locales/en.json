@@ -1169,6 +1169,8 @@
     "open_profile_aria": "Open profile",
     "continue_label": "CONTINUE",
     "world_level_title": "World {world} — Level {level}",
+    "unified_level_title": "Level {position} of {total}",
+    "play_aria_unified": "Play level {position}",
     "welcome_world": "Welcome to World {world}",
     "welcome_unified": "Your brain journey starts here",
     "final_level": "One level left — finish strong!",
