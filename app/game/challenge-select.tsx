@@ -12,7 +12,7 @@
  * no more manual Easy/Medium/Hard picker. Online-only invites stay as
  * they were (no async fallback).
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -91,7 +91,16 @@ function ChallengeSelectScreen() {
   const [sending, setSending] = useState(false);
   const [friendProfile, setFriendProfile] = useState<FriendProfile | null>(null);
   const [recent, setRecent] = useState<RecentFriendChallenge | null>(null);
-  const selected = CHALLENGE_MODES[selectedMode];
+  // Ref-backed "sending" guard so a rapid double-tap can't queue two
+  // invites in the same tick (setState is async; `sending` the state
+  // lags behind). Every send path checks and sets the ref before
+  // setState.
+  const sendingRef = useRef(false);
+  // Fallback to Classic metadata if `selectedMode` ever ends up
+  // pointing at a mode not in CHALLENGE_MODES (e.g. a stale rematch
+  // row from a retired mode). Prevents the bottom-bar + auto-match
+  // hint from crashing on `.color` / `.name` access.
+  const selected = CHALLENGE_MODES[selectedMode] ?? CHALLENGE_MODES.classic;
 
   // Bottom-bar enter animation — slides up from below with a subtle
   // spring so the screen feels alive on mount.
@@ -171,90 +180,120 @@ function ChallengeSelectScreen() {
     };
   }, [friendId]);
 
-  /** Build the mode-specific shared seed both players will see. Classic
-   *  auto-picks levels from the world range matching the average of
-   *  both players' unified positions; exclusive modes generate a
-   *  deterministic blob locally. */
+  /** Build the mode-specific shared seed both players will see.
+   *  Takes `mode` explicitly so rematch / prefilled flows don't have
+   *  to wait for React's state update to propagate before they can
+   *  send. Classic auto-picks levels from the world range matching
+   *  the average of both players' unified positions; other modes
+   *  generate a deterministic blob locally. */
   const buildSharedSeed = useCallback(
-    async (userId: string, targetId: string): Promise<{ modeData: unknown; levelIds: string[] }> => {
-      if (selectedMode === 'classic') {
+    async (
+      mode: string,
+      userId: string,
+      targetId: string,
+    ): Promise<{ modeData: unknown; levelIds: string[] }> => {
+      if (mode === 'classic') {
         const { levelIds, difficulty, avgPosition } = await pickChallengeLevelsAutoMatch(userId, targetId);
         return { modeData: { difficulty, avgPosition }, levelIds };
       }
-      if (selectedMode === 'speed_recall') return { modeData: generateSpeedRecallData(), levelIds: [] };
-      if (selectedMode === 'snap_match') return { modeData: generateSnapMatchData(), levelIds: [] };
-      if (selectedMode === 'sequence') return { modeData: generateSequenceData(), levelIds: [] };
-      if (selectedMode === 'counting_blitz') return { modeData: generateCountingBlitzData(), levelIds: [] };
-      if (selectedMode === 'colour_chain') return { modeData: generateColourChainData(), levelIds: [] };
+      if (mode === 'speed_recall') return { modeData: generateSpeedRecallData(), levelIds: [] };
+      if (mode === 'snap_match') return { modeData: generateSnapMatchData(), levelIds: [] };
+      if (mode === 'sequence') return { modeData: generateSequenceData(), levelIds: [] };
+      if (mode === 'counting_blitz') return { modeData: generateCountingBlitzData(), levelIds: [] };
+      if (mode === 'colour_chain') return { modeData: generateColourChainData(), levelIds: [] };
       return { modeData: {}, levelIds: [] };
     },
-    [selectedMode],
+    [],
   );
 
-  const startInstantInvite = useCallback(async () => {
-    if (!user?.id || !friendId || sending) return;
-    setSending(true);
-    try {
-      const { modeData, levelIds } = await buildSharedSeed(user.id, friendId);
-      if (selectedMode === 'classic' && levelIds.length === 0) {
-        notify(t('challenge.cannot_create_title'), t('challenge.cannot_create_body'));
-        setSending(false);
-        return;
-      }
-      const id = await sendInvite({
-        challengerId: user.id,
-        challengedId: friendId,
-        mode: selectedMode,
-        modeData,
-        levelIds,
-      });
-      if (!id) {
-        notify(t('challenge.could_not_send_title'), t('challenge.could_not_send_body'));
-        setSending(false);
-        return;
-      }
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
-      router.replace({ pathname: '/game/challenge-waiting', params: { challengeId: id } });
-    } finally {
-      setSending(false);
-    }
-  }, [user?.id, friendId, sending, buildSharedSeed, selectedMode, router]);
-
-  const handleStart = useCallback(() => {
-    if (friendOnline === true) {
-      startInstantInvite();
-      return;
-    }
-    if (friendId) {
-      isUserOnline(friendId).then((online) => {
-        if (online) {
-          setFriendOnline(true);
-          startInstantInvite();
+  /** Fire the real invite for `mode`. Always pass the mode explicitly
+   *  — never read from `selectedMode` state here — so rematch flows
+   *  that rely on a fresh mode selection can send immediately without
+   *  waiting for a re-render. sendingRef blocks rapid double-taps at
+   *  tick granularity before setState has propagated. */
+  const startInstantInvite = useCallback(
+    async (mode: string) => {
+      if (!user?.id || !friendId) return;
+      if (sendingRef.current) return;
+      sendingRef.current = true;
+      setSending(true);
+      try {
+        const { modeData, levelIds } = await buildSharedSeed(mode, user.id, friendId);
+        if (mode === 'classic' && levelIds.length === 0) {
+          notify(t('challenge.cannot_create_title'), t('challenge.cannot_create_body'));
+          return;
+        }
+        const id = await sendInvite({
+          challengerId: user.id,
+          challengedId: friendId,
+          mode,
+          modeData,
+          levelIds,
+        });
+        if (!id) {
+          notify(t('challenge.could_not_send_title'), t('challenge.could_not_send_body'));
           return;
         }
         if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         }
-        notify(
-          t('challenge.friend_offline_title', { username: friendUsername || 'friend' }),
-          t('challenge.offline_body'),
-        );
-      });
-    } else {
-      notify(t('challenge.friend_unavailable_title'), t('challenge.friend_not_found_body'));
-    }
-  }, [friendOnline, friendId, friendUsername, startInstantInvite]);
+        router.replace({ pathname: '/game/challenge-waiting', params: { challengeId: id } });
+      } finally {
+        sendingRef.current = false;
+        setSending(false);
+      }
+    },
+    [user?.id, friendId, buildSharedSeed, router],
+  );
 
+  /** Gate: only allow sending when the friend is online. When not, fire
+   *  a Warning haptic and surface the "friend is offline" modal. Re-
+   *  polls once on tap so a friend who came online between 5s polls
+   *  isn't held back. */
+  const attemptSendForMode = useCallback(
+    (mode: string) => {
+      if (friendOnline === true) {
+        startInstantInvite(mode);
+        return;
+      }
+      if (friendId) {
+        isUserOnline(friendId).then((online) => {
+          if (online) {
+            setFriendOnline(true);
+            startInstantInvite(mode);
+            return;
+          }
+          if (Platform.OS !== 'web') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+          }
+          notify(
+            t('challenge.friend_offline_title', { username: friendUsername || 'friend' }),
+            t('challenge.offline_body'),
+          );
+        });
+      } else {
+        notify(t('challenge.friend_unavailable_title'), t('challenge.friend_not_found_body'));
+      }
+    },
+    [friendOnline, friendId, friendUsername, startInstantInvite],
+  );
+
+  /** Bottom-bar CTA handler — always sends the currently-selected mode. */
+  const handleStart = useCallback(() => {
+    attemptSendForMode(selectedMode);
+  }, [attemptSendForMode, selectedMode]);
+
+  /** Rematch chip handler — picks the mode from the recent match and
+   *  sends it DIRECTLY via attemptSendForMode(recent.mode). The old
+   *  implementation relied on setSelectedMode + a 260ms setTimeout
+   *  which captured a stale handleStart closure and could send the
+   *  previously-selected mode instead of the rematch one. */
   const handleRematch = useCallback(() => {
     if (!recent) return;
+    if (!CHALLENGE_MODES[recent.mode]) return; // stale / retired mode, no-op
     setSelectedMode(recent.mode);
-    // Short delay so the user SEES the card get selected before the
-    // send flow fires — feels more responsive than teleporting
-    // straight to the waiting screen.
-    setTimeout(() => handleStart(), 260);
-  }, [recent, handleStart]);
+    attemptSendForMode(recent.mode);
+  }, [recent, attemptSendForMode]);
 
   const handleRematchDismiss = useCallback(async () => {
     if (!friendId) return;
@@ -308,7 +347,15 @@ function ChallengeSelectScreen() {
               style={[
                 st.presenceRing,
                 {
-                  backgroundColor: friendOnline ? '#00B894' : colors.borderStrong,
+                  // Three states: online = green, offline = grey,
+                  // loading (null) = transparent so we don't mislead
+                  // the user into thinking the friend is offline
+                  // while we're still fetching their status.
+                  backgroundColor: friendOnline === true
+                    ? '#00B894'
+                    : friendOnline === false
+                      ? colors.borderStrong
+                      : 'transparent',
                   borderColor: colors.bg,
                 },
               ]}

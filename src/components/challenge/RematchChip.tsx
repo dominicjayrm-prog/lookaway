@@ -129,23 +129,28 @@ export function RematchChip({ recent, onTap, onDismiss }: Props) {
             </Text>
           </View>
 
-          {/* Right: arrow pill */}
+          {/* Right: arrow pill — reserves space in the row so the
+           *  centred text block doesn't drift under the dismiss × */}
           <View style={st.arrowPill}>
             <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
           </View>
-
-          {/* Dismiss × overlay. Small hit target at top-right so it
-           *  doesn't collide with the chip tap. */}
-          <Pressable
-            onPress={handleDismiss}
-            hitSlop={10}
-            style={st.closeBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('challenge.rematch_dismiss_aria')}
-          >
-            <Ionicons name="close" size={12} color={outcomeColor} />
-          </Pressable>
         </LinearGradient>
+      </Pressable>
+
+      {/* Dismiss × — rendered OUTSIDE the main Pressable and positioned
+       *  absolutely over the top-right of the chip. A nested Pressable
+       *  inside Pressable lets both fire on tap (the outer chip sees
+       *  the tap too since RN doesn't stopPropagation), which meant
+       *  dismissing the chip ALSO triggered the rematch send. Moving
+       *  it outside the tap hierarchy fixes the event-bubble issue. */}
+      <Pressable
+        onPress={handleDismiss}
+        hitSlop={12}
+        style={st.closeBtn}
+        accessibilityRole="button"
+        accessibilityLabel={t('challenge.rematch_dismiss_aria')}
+      >
+        <Ionicons name="close" size={14} color={outcomeColor} />
       </Pressable>
     </Animated.View>
   );
@@ -249,9 +254,13 @@ const st = StyleSheet.create({
   },
   closeBtn: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    padding: 4,
-    borderRadius: 999,
+    top: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
