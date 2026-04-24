@@ -775,166 +775,310 @@ function amberDunes(w: number, h: number): React.ReactNode {
 // --------------------------------------------------------------------
 function crystalDepths(w: number, h: number): React.ReactNode {
   const rand = seeded(3);
-  // Jellyfish scattered at random depths. Each is a rounded dome with
-  // 4-5 trailing tentacle curves.
-  const jellies: Array<{ x: number; y: number; size: number }> = [];
-  for (let i = 0; i < 9; i++) {
+
+  // Jellyfish of varied sizes + tentacle counts at random depths.
+  const jellies: Array<{ x: number; y: number; size: number; tentacles: number }> = [];
+  for (let i = 0; i < 14; i++) {
     jellies.push({
-      x: w * (0.08 + rand() * 0.84),
-      y: h * (0.1 + rand() * 0.8),
-      size: 14 + rand() * 18,
+      x: w * (0.06 + rand() * 0.88),
+      y: h * (0.06 + rand() * 0.85),
+      size: 12 + rand() * 22,
+      tentacles: 5 + Math.floor(rand() * 3),
     });
   }
-  // Coral clusters along the full slab — mostly on the sides.
-  const corals: Array<{ x: number; y: number; type: 'branch' | 'tower' | 'fan'; size: number }> = [];
-  for (let i = 0; i < 14; i++) {
-    const side = i % 2 === 0 ? rand() * 0.18 : 0.82 + rand() * 0.18;
+
+  // Coral clusters along the full slab. 22 total, weighted to the sides.
+  const corals: Array<{ x: number; y: number; type: 'branch' | 'tower' | 'fan' | 'brain'; size: number; palette: number }> = [];
+  for (let i = 0; i < 22; i++) {
+    const side = i % 2 === 0 ? rand() * 0.2 : 0.8 + rand() * 0.2;
     const typeRoll = rand();
-    const type = typeRoll < 0.4 ? 'branch' : typeRoll < 0.75 ? 'tower' : 'fan';
+    const type = typeRoll < 0.35 ? 'branch' : typeRoll < 0.6 ? 'tower' : typeRoll < 0.85 ? 'fan' : 'brain';
     corals.push({
       x: w * side,
-      y: h * (0.15 + (i / 14) * 0.82),
+      y: h * (0.15 + (i / 22) * 0.8) + (rand() - 0.5) * 30,
       type,
-      size: 20 + rand() * 18,
+      size: 18 + rand() * 20,
+      palette: Math.floor(rand() * 3),
     });
   }
-  // Small fish — three schools.
-  const fishSchools: Array<{ cx: number; cy: number }> = [];
-  for (let i = 0; i < 4; i++) {
+
+  // Sea anemones at the floor — wavy frond clusters in 4 spots.
+  const anemones = [0.12, 0.34, 0.66, 0.88].map((x, i) => ({
+    x: w * x,
+    y: h * (0.92 - (i % 2) * 0.02),
+    color: ['#9D4EDD', '#FFBA08', '#FF6B6B', '#C77DFF'][i],
+  }));
+
+  // Fish schools — 6 schools scattered throughout, each a loose chevron.
+  const fishSchools: Array<{ cx: number; cy: number; color: string; direction: 1 | -1 }> = [];
+  for (let i = 0; i < 6; i++) {
     fishSchools.push({
-      cx: w * (0.2 + rand() * 0.6),
-      cy: h * (0.1 + rand() * 0.8),
+      cx: w * (0.15 + rand() * 0.7),
+      cy: h * (0.1 + rand() * 0.78),
+      color: ['#03045E', '#FFBA08', '#FF6B6B'][Math.floor(rand() * 3)],
+      direction: rand() > 0.5 ? 1 : -1,
     });
   }
-  // Kelp strands rising from the floor.
-  const kelpX = [0.08, 0.22, 0.78, 0.9];
+
+  // Bigger silhouette fish — a couple of bigger fish (maybe a shark
+  // silhouette far in the distance) passing across the slab.
+  const bigFish = [
+    { x: w * 0.3, y: h * 0.35, size: 36, shark: false },
+    { x: w * 0.75, y: h * 0.6, size: 30, shark: false },
+    { x: w * 0.15, y: h * 0.8, size: 48, shark: true },
+  ];
+
+  // Kelp forest — 8 strands rising from the floor at varied heights.
+  const kelpStrands = [0.05, 0.12, 0.22, 0.35, 0.6, 0.74, 0.86, 0.94];
+
+  // Surface bubbles streaming upward — more + varied sizes.
+  const bubbles = Array.from({ length: 28 }).map(() => ({
+    x: rand() * w,
+    y: rand() * h,
+    r: 1 + rand() * 3,
+  }));
+
+  // Light caustics on the seafloor — wavy lines of light.
+  const caustics = Array.from({ length: 8 }).map(() => ({
+    x: rand() * w,
+    y: h * (0.93 + rand() * 0.05),
+    w: 16 + rand() * 20,
+  }));
 
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
         <LinearGradient id="depth-floor" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#023E8A" stopOpacity={0} />
-          <Stop offset="1" stopColor="#001A33" stopOpacity={0.75} />
+          <Stop offset="1" stopColor="#001A33" stopOpacity={0.85} />
         </LinearGradient>
         <RadialGradient id="jelly-body" cx="50%" cy="40%" r="60%">
-          <Stop offset="0" stopColor="#CAF0F8" stopOpacity={0.75} />
+          <Stop offset="0" stopColor="#CAF0F8" stopOpacity={0.85} />
           <Stop offset="1" stopColor="#48CAE4" stopOpacity={0.25} />
+        </RadialGradient>
+        <RadialGradient id="jelly-body-pink" cx="50%" cy="40%" r="60%">
+          <Stop offset="0" stopColor="#FFC8DD" stopOpacity={0.85} />
+          <Stop offset="1" stopColor="#C77DFF" stopOpacity={0.3} />
         </RadialGradient>
       </Defs>
 
-      {/* Surface bubbles streaming upward from random x-positions at
-       *  the top — suggests we're deep and the world extends above. */}
-      {Array.from({ length: 12 }).map((_, i) => (
+      {/* ---------- Surface bubbles (drifting upward suggestion) ---------- */}
+      {bubbles.map((b, i) => (
         <SvgCircle
           key={`bub-${i}`}
-          cx={w * (0.08 + (i / 12) * 0.85)}
-          cy={h * 0.02 + rand() * 30}
-          r={1.5 + rand() * 2.5}
+          cx={b.x}
+          cy={b.y}
+          r={b.r}
           fill="#CAF0F8"
-          opacity={0.35 + rand() * 0.3}
+          opacity={0.25 + (b.r - 1) * 0.12}
         />
       ))}
 
-      {/* Kelp — wavy vertical strands anchored at the floor. */}
-      {kelpX.map((xRatio, i) => {
-        const kx = w * xRatio;
-        const ky = h * 0.95;
-        const kh = 120 + (i % 2) * 40;
+      {/* ---------- Distant silhouette fish ---------- */}
+      {bigFish.map((f, i) => {
+        if (f.shark) {
+          return (
+            <G key={`big-${i}`} opacity={0.35}>
+              <Path
+                d={`M ${f.x - f.size} ${f.y} Q ${f.x - f.size * 0.3} ${f.y - f.size * 0.18} ${f.x + f.size * 0.5} ${f.y} Q ${f.x + f.size * 0.3} ${f.y + f.size * 0.18} ${f.x - f.size} ${f.y} Z`}
+                fill="#001A33"
+              />
+              {/* Dorsal fin */}
+              <Polygon
+                points={`${f.x - f.size * 0.2},${f.y - f.size * 0.1} ${f.x - f.size * 0.05},${f.y - f.size * 0.35} ${f.x + f.size * 0.05},${f.y - f.size * 0.08}`}
+                fill="#001A33"
+              />
+              {/* Tail */}
+              <Polygon
+                points={`${f.x + f.size * 0.5},${f.y} ${f.x + f.size * 0.7},${f.y - f.size * 0.2} ${f.x + f.size * 0.7},${f.y + f.size * 0.2}`}
+                fill="#001A33"
+              />
+            </G>
+          );
+        }
         return (
-          <Path
-            key={`kelp-${i}`}
-            d={`M ${kx} ${ky} Q ${kx + 14} ${ky - kh * 0.3} ${kx - 6} ${ky - kh * 0.6} T ${kx + 4} ${ky - kh}`}
-            stroke="#2D5A3D"
-            strokeWidth={3}
-            strokeLinecap="round"
-            fill="none"
-            opacity={0.55}
-          />
+          <G key={`big-${i}`} opacity={0.4}>
+            <Ellipse cx={f.x} cy={f.y} rx={f.size * 0.5} ry={f.size * 0.2} fill="#023E8A" />
+            <Polygon
+              points={`${f.x - f.size * 0.5},${f.y} ${f.x - f.size * 0.75},${f.y - f.size * 0.2} ${f.x - f.size * 0.75},${f.y + f.size * 0.2}`}
+              fill="#023E8A"
+            />
+          </G>
         );
       })}
 
-      {/* Coral formations — varied shapes along the sides. */}
+      {/* ---------- Kelp strands ---------- */}
+      {kelpStrands.map((xRatio, i) => {
+        const kx = w * xRatio;
+        const ky = h * 0.94;
+        const kh = 140 + (i % 3) * 50;
+        return (
+          <G key={`kelp-${i}`} opacity={0.6}>
+            <Path
+              d={`M ${kx} ${ky} Q ${kx + 16} ${ky - kh * 0.25} ${kx - 8} ${ky - kh * 0.5} T ${kx + 6} ${ky - kh * 0.8} T ${kx - 4} ${ky - kh}`}
+              stroke="#2D5A3D"
+              strokeWidth={3}
+              strokeLinecap="round"
+              fill="none"
+            />
+            {/* Small leaf pods along the strand */}
+            {[0.25, 0.55, 0.85].map((t, ki) => (
+              <Ellipse
+                key={ki}
+                cx={kx + (ki % 2 === 0 ? -4 : 4)}
+                cy={ky - kh * t}
+                rx={6}
+                ry={2}
+                fill="#40916C"
+                opacity={0.7}
+              />
+            ))}
+          </G>
+        );
+      })}
+
+      {/* ---------- Coral formations ---------- */}
       {corals.map((c, i) => {
+        const palettes = [
+          { main: '#FF6B6B', accent: '#FFBA08' }, // warm
+          { main: '#C77DFF', accent: '#FF8FAB' }, // pink/purple
+          { main: '#48CAE4', accent: '#90E0EF' }, // cool
+        ];
+        const colors = palettes[c.palette];
+
         if (c.type === 'branch') {
           return (
-            <G key={`coral-${i}`} opacity={0.6}>
+            <G key={`coral-${i}`} opacity={0.72}>
               <Path
-                d={`M ${c.x} ${c.y} L ${c.x} ${c.y - c.size * 0.9}
-                    M ${c.x} ${c.y - c.size * 0.4} L ${c.x - c.size * 0.4} ${c.y - c.size * 0.7}
-                    M ${c.x} ${c.y - c.size * 0.5} L ${c.x + c.size * 0.4} ${c.y - c.size * 0.8}
-                    M ${c.x - c.size * 0.2} ${c.y - c.size * 0.2} L ${c.x - c.size * 0.4} ${c.y - c.size * 0.35}`}
-                stroke="#FF6B6B"
+                d={`M ${c.x} ${c.y} L ${c.x} ${c.y - c.size * 0.95}
+                    M ${c.x} ${c.y - c.size * 0.35} L ${c.x - c.size * 0.45} ${c.y - c.size * 0.7}
+                    M ${c.x} ${c.y - c.size * 0.5} L ${c.x + c.size * 0.45} ${c.y - c.size * 0.8}
+                    M ${c.x - c.size * 0.2} ${c.y - c.size * 0.1} L ${c.x - c.size * 0.5} ${c.y - c.size * 0.3}
+                    M ${c.x + c.size * 0.2} ${c.y - c.size * 0.15} L ${c.x + c.size * 0.42} ${c.y - c.size * 0.4}`}
+                stroke={colors.main}
                 strokeWidth={c.size * 0.16}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Branch tip dots */}
+              <SvgCircle cx={c.x - c.size * 0.45} cy={c.y - c.size * 0.7} r={c.size * 0.08} fill={colors.accent} />
+              <SvgCircle cx={c.x + c.size * 0.45} cy={c.y - c.size * 0.8} r={c.size * 0.08} fill={colors.accent} />
+              <SvgCircle cx={c.x} cy={c.y - c.size * 0.95} r={c.size * 0.1} fill={colors.accent} />
+            </G>
+          );
+        }
+        if (c.type === 'tower') {
+          return (
+            <G key={`coral-${i}`} opacity={0.7}>
+              <Rect
+                x={c.x - c.size * 0.2}
+                y={c.y - c.size * 1.1}
+                width={c.size * 0.4}
+                height={c.size * 1.1}
+                rx={c.size * 0.12}
+                fill={colors.main}
+              />
+              {/* Polyp bumps */}
+              {[0.2, 0.5, 0.8].map((t, ti) => (
+                <SvgCircle key={ti} cx={c.x} cy={c.y - c.size * 1.1 * t} r={c.size * 0.12} fill={colors.accent} opacity={0.85} />
+              ))}
+              <SvgCircle cx={c.x} cy={c.y - c.size * 1.1} r={c.size * 0.24} fill={colors.accent} />
+            </G>
+          );
+        }
+        if (c.type === 'fan') {
+          return (
+            <G key={`coral-${i}`} opacity={0.7}>
+              <Path
+                d={`M ${c.x} ${c.y} Q ${c.x - c.size * 0.65} ${c.y - c.size * 0.3} ${c.x - c.size * 0.55} ${c.y - c.size * 0.95}
+                    M ${c.x} ${c.y} Q ${c.x - c.size * 0.35} ${c.y - c.size * 0.55} ${c.x - c.size * 0.25} ${c.y - c.size * 1.05}
+                    M ${c.x} ${c.y} Q ${c.x} ${c.y - c.size * 0.55} ${c.x + c.size * 0.1} ${c.y - c.size * 1.1}
+                    M ${c.x} ${c.y} Q ${c.x + c.size * 0.35} ${c.y - c.size * 0.55} ${c.x + c.size * 0.42} ${c.y - c.size * 1.0}
+                    M ${c.x} ${c.y} Q ${c.x + c.size * 0.65} ${c.y - c.size * 0.3} ${c.x + c.size * 0.6} ${c.y - c.size * 0.85}`}
+                stroke={colors.main}
+                strokeWidth={c.size * 0.1}
                 strokeLinecap="round"
                 fill="none"
               />
             </G>
           );
         }
-        if (c.type === 'tower') {
-          return (
-            <G key={`coral-${i}`} opacity={0.55}>
-              <Rect
-                x={c.x - c.size * 0.18}
-                y={c.y - c.size}
-                width={c.size * 0.36}
-                height={c.size}
-                rx={c.size * 0.1}
-                fill="#E85D04"
-              />
-              <SvgCircle cx={c.x} cy={c.y - c.size} r={c.size * 0.22} fill="#FFBA08" />
-            </G>
-          );
-        }
-        // fan
+        // brain coral
         return (
-          <G key={`coral-${i}`} opacity={0.55}>
-            <Path
-              d={`M ${c.x} ${c.y} Q ${c.x - c.size * 0.6} ${c.y - c.size * 0.3} ${c.x - c.size * 0.5} ${c.y - c.size * 0.9}
-                  M ${c.x} ${c.y} Q ${c.x - c.size * 0.3} ${c.y - c.size * 0.5} ${c.x - c.size * 0.2} ${c.y - c.size * 1.0}
-                  M ${c.x} ${c.y} Q ${c.x} ${c.y - c.size * 0.5} ${c.x + c.size * 0.1} ${c.y - c.size * 1.0}
-                  M ${c.x} ${c.y} Q ${c.x + c.size * 0.3} ${c.y - c.size * 0.5} ${c.x + c.size * 0.4} ${c.y - c.size * 0.95}
-                  M ${c.x} ${c.y} Q ${c.x + c.size * 0.6} ${c.y - c.size * 0.3} ${c.x + c.size * 0.55} ${c.y - c.size * 0.8}`}
-              stroke="#C77DFF"
-              strokeWidth={c.size * 0.1}
-              strokeLinecap="round"
-              fill="none"
-            />
+          <G key={`coral-${i}`} opacity={0.7}>
+            <Ellipse cx={c.x} cy={c.y - c.size * 0.3} rx={c.size * 0.55} ry={c.size * 0.35} fill={colors.main} />
+            {/* Brain ridges */}
+            {[-0.15, 0, 0.15].map((off, bi) => (
+              <Path
+                key={bi}
+                d={`M ${c.x - c.size * 0.4} ${c.y - c.size * 0.3 + c.size * off} Q ${c.x - c.size * 0.2} ${c.y - c.size * 0.3 + c.size * (off - 0.08)} ${c.x} ${c.y - c.size * 0.3 + c.size * off} Q ${c.x + c.size * 0.2} ${c.y - c.size * 0.3 + c.size * (off + 0.08)} ${c.x + c.size * 0.4} ${c.y - c.size * 0.3 + c.size * off}`}
+                stroke={colors.accent}
+                strokeWidth={0.8}
+                fill="none"
+              />
+            ))}
           </G>
         );
       })}
 
-      {/* Jellyfish — translucent bell + trailing tentacles. */}
+      {/* ---------- Sea anemones ---------- */}
+      {anemones.map((a, i) => (
+        <G key={`anem-${i}`} opacity={0.75}>
+          {/* Base bulb */}
+          <Ellipse cx={a.x} cy={a.y + 2} rx={10} ry={4} fill={a.color} opacity={0.5} />
+          {/* Tentacle rays */}
+          {Array.from({ length: 9 }).map((_, j) => {
+            const angle = (-90 + (j - 4) * 15) * Math.PI / 180;
+            const tx = a.x + Math.cos(angle) * 14;
+            const ty = a.y + Math.sin(angle) * 14;
+            return (
+              <Path
+                key={j}
+                d={`M ${a.x} ${a.y} Q ${a.x + Math.cos(angle) * 7} ${a.y + Math.sin(angle) * 7 - 2} ${tx} ${ty}`}
+                stroke={a.color}
+                strokeWidth={1.6}
+                fill="none"
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </G>
+      ))}
+
+      {/* ---------- Jellyfish ---------- */}
       {jellies.map((j, i) => {
-        const tentacles = 5;
+        const bodyFill = i % 3 === 0 ? 'url(#jelly-body-pink)' : 'url(#jelly-body)';
+        const tentacleColor = i % 3 === 0 ? '#FFC8DD' : '#CAF0F8';
         return (
           <G key={`jelly-${i}`}>
             <Ellipse
               cx={j.x}
               cy={j.y}
               rx={j.size}
-              ry={j.size * 0.7}
-              fill="url(#jelly-body)"
+              ry={j.size * 0.68}
+              fill={bodyFill}
             />
-            {/* Bell lower rim — a thin arc to anchor the tentacles. */}
+            {/* Bell rim */}
             <Path
-              d={`M ${j.x - j.size} ${j.y + j.size * 0.3} Q ${j.x} ${j.y + j.size * 0.8} ${j.x + j.size} ${j.y + j.size * 0.3}`}
-              stroke="#CAF0F8"
+              d={`M ${j.x - j.size} ${j.y + j.size * 0.3} Q ${j.x} ${j.y + j.size * 0.85} ${j.x + j.size} ${j.y + j.size * 0.3}`}
+              stroke={tentacleColor}
               strokeWidth={1.4}
               fill="none"
-              opacity={0.55}
+              opacity={0.6}
             />
-            {Array.from({ length: tentacles }).map((_, tI) => {
-              const tx = j.x - j.size * 0.7 + (tI / (tentacles - 1)) * j.size * 1.4;
-              const drop = j.size * (2 + (tI % 2) * 0.6);
+            {/* Soft glow spots on the bell */}
+            <Ellipse cx={j.x - j.size * 0.3} cy={j.y - j.size * 0.15} rx={j.size * 0.15} ry={j.size * 0.1} fill="#FFFFFF" opacity={0.3} />
+            {Array.from({ length: j.tentacles }).map((_, tI) => {
+              const tx = j.x - j.size * 0.7 + (tI / (j.tentacles - 1)) * j.size * 1.4;
+              const drop = j.size * (2 + (tI % 2) * 0.7);
               return (
                 <Path
                   key={tI}
-                  d={`M ${tx} ${j.y + j.size * 0.5} Q ${tx + (tI % 2 === 0 ? 4 : -4)} ${j.y + j.size + drop * 0.5} ${tx + (tI % 2 === 0 ? -2 : 2)} ${j.y + j.size + drop}`}
-                  stroke="#CAF0F8"
+                  d={`M ${tx} ${j.y + j.size * 0.45} Q ${tx + (tI % 2 === 0 ? 5 : -5)} ${j.y + j.size + drop * 0.35} ${tx + (tI % 2 === 0 ? -3 : 3)} ${j.y + j.size + drop * 0.7} T ${tx} ${j.y + j.size + drop}`}
+                  stroke={tentacleColor}
                   strokeWidth={1}
                   fill="none"
-                  opacity={0.45}
+                  opacity={0.5}
                 />
               );
             })}
@@ -942,50 +1086,83 @@ function crystalDepths(w: number, h: number): React.ReactNode {
         );
       })}
 
-      {/* Fish schools — simple silhouettes, 5 fish per school arranged
-       *  in a loose chevron. */}
+      {/* ---------- Fish schools ---------- */}
       {fishSchools.map((s, i) => (
-        <G key={`school-${i}`} opacity={0.55}>
+        <G key={`school-${i}`} opacity={0.65}>
           {[
             { dx: 0, dy: 0 },
-            { dx: -8, dy: -4 },
-            { dx: -16, dy: 0 },
-            { dx: -8, dy: 4 },
-            { dx: -20, dy: -6 },
+            { dx: -9, dy: -5 },
+            { dx: -18, dy: 0 },
+            { dx: -9, dy: 5 },
+            { dx: -22, dy: -7 },
+            { dx: -22, dy: 7 },
           ].map((p, j) => (
             <G key={j}>
               <Ellipse
-                cx={s.cx + p.dx}
+                cx={s.cx + p.dx * s.direction}
                 cy={s.cy + p.dy}
-                rx={4}
-                ry={2}
-                fill="#03045E"
+                rx={4.5}
+                ry={2.2}
+                fill={s.color}
               />
+              {/* Tail */}
               <Polygon
-                points={`${s.cx + p.dx - 4},${s.cy + p.dy} ${s.cx + p.dx - 7},${s.cy + p.dy - 2} ${s.cx + p.dx - 7},${s.cy + p.dy + 2}`}
-                fill="#03045E"
+                points={`${s.cx + (p.dx - 4.5 * s.direction) * s.direction},${s.cy + p.dy} ${s.cx + (p.dx - 7.5 * s.direction) * s.direction},${s.cy + p.dy - 2.5} ${s.cx + (p.dx - 7.5 * s.direction) * s.direction},${s.cy + p.dy + 2.5}`}
+                fill={s.color}
+              />
+              {/* Eye dot */}
+              <SvgCircle
+                cx={s.cx + (p.dx + 2 * s.direction) * s.direction}
+                cy={s.cy + p.dy - 0.5}
+                r={0.6}
+                fill="#FFFFFF"
               />
             </G>
           ))}
         </G>
       ))}
 
-      {/* Seafloor at the bottom of the slab — deeper, darker, with a
-       *  rippled surface. */}
+      {/* ---------- Seafloor ---------- */}
       <Path
-        d={`M 0 ${h * 0.88} Q ${w * 0.2} ${h * 0.82} ${w * 0.4} ${h * 0.86} T ${w * 0.75} ${h * 0.86} T ${w} ${h * 0.87} L ${w} ${h} L 0 ${h} Z`}
+        d={`M 0 ${h * 0.86} Q ${w * 0.18} ${h * 0.81} ${w * 0.38} ${h * 0.85} T ${w * 0.72} ${h * 0.85} T ${w} ${h * 0.86} L ${w} ${h} L 0 ${h} Z`}
         fill="url(#depth-floor)"
       />
-      {/* Sand ripples on the floor. */}
-      {[0.92, 0.94, 0.96].map((yRatio, i) => (
+
+      {/* ---------- Sand ripples + caustic lights on the floor ---------- */}
+      {[0.91, 0.94, 0.97].map((yRatio, i) => (
         <Path
           key={`ripple-${i}`}
-          d={`M 0 ${h * yRatio} Q ${w * 0.3} ${h * (yRatio - 0.005)} ${w * 0.6} ${h * yRatio} T ${w} ${h * yRatio}`}
+          d={`M 0 ${h * yRatio} Q ${w * 0.25} ${h * (yRatio - 0.005)} ${w * 0.5} ${h * yRatio} T ${w} ${h * yRatio}`}
           stroke="#001A33"
+          strokeWidth={0.8}
+          fill="none"
+          opacity={0.5}
+        />
+      ))}
+      {caustics.map((c, i) => (
+        <Path
+          key={`caus-${i}`}
+          d={`M ${c.x - c.w / 2} ${c.y} Q ${c.x - c.w / 4} ${c.y - 2} ${c.x} ${c.y} Q ${c.x + c.w / 4} ${c.y + 2} ${c.x + c.w / 2} ${c.y}`}
+          stroke="#CAF0F8"
           strokeWidth={1}
           fill="none"
-          opacity={0.45}
+          opacity={0.35}
         />
+      ))}
+
+      {/* ---------- Small bubble streams rising from kelp/floor ---------- */}
+      {[0.15, 0.45, 0.72].map((xRatio, i) => (
+        <G key={`stream-${i}`} opacity={0.5}>
+          {[0.88, 0.82, 0.74, 0.64].map((yRatio, bi) => (
+            <SvgCircle
+              key={bi}
+              cx={w * xRatio + (bi % 2 === 0 ? 2 : -2)}
+              cy={h * yRatio}
+              r={1.5 + bi * 0.4}
+              fill="#CAF0F8"
+            />
+          ))}
+        </G>
       ))}
     </Svg>
   );
