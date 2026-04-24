@@ -109,56 +109,71 @@ export function WorldBackground({
         );
       })}
 
-      {/* Cross-fade bands at each world boundary. Without these the
-       *  slab gradients' bottom stop (darkest) meets the next slab's
-       *  top stop (lightest) as a hard seam. The band is ~3 rows tall
-       *  and sits centred on the boundary y, gradient-filled from the
-       *  upper world's darkest shade at the TOP to the lower world's
-       *  lightest shade at the BOTTOM. Reads as a natural dissolve. */}
+      {/* Cross-fade bands at each world boundary. Two overlaid
+       *  gradients per seam — the upper biome's darkest shade fading
+       *  downward to transparent, and the lower biome's lightest shade
+       *  fading upward from transparent. Because both have transparent
+       *  mid-stops, they meet in the middle as a true alpha crossfade
+       *  rather than a single gradient's sharp colour flip. The band
+       *  is 10 rows tall (~860px), which is roughly a screen's worth
+       *  of vertical space — so you spend real scroll time in the
+       *  transition zone, not just a few frames. */}
       {WORLD_THEME_ORDER.slice(0, -1).map((upperTheme, i) => {
-        // In the flipped layout, the upper world (higher positions)
-        // sits above the lower world. upperTheme is the earlier entry
-        // in the array — check their ranges to know which is which.
         const lowerTheme = WORLD_THEME_ORDER[i + 1];
         const upper = WORLD_THEMES[upperTheme];
         const lower = WORLD_THEMES[lowerTheme];
-        // The "seam" is between the upper world's lowest position
-        // (start) and the lower world's highest position (end). In
-        // flipped coords these collide at the same y; we centre the
-        // band on the midpoint.
-        // Figure out which theme has the HIGHER position range (that's
-        // the one at the TOP of the canvas).
+        // In the flipped layout the world with the HIGHER position
+        // range sits at the top of the canvas.
         const topTheme = upper.range[0] > lower.range[0] ? upperTheme : lowerTheme;
         const bottomTheme = topTheme === upperTheme ? lowerTheme : upperTheme;
         const topVisuals = WORLD_VISUALS[topTheme];
         const bottomVisuals = WORLD_VISUALS[bottomTheme];
-        // The boundary y: the border between the two worlds lies at
-        // the y of the lower-of-the-two start positions. Take the
-        // smallest start of the pair (which for consecutive worlds is
-        // the start of the TOP-of-canvas world's range... actually
-        // just compute it directly from position).
         const topWorldLowestPos = WORLD_THEMES[topTheme].range[0];
         const boundaryY = pathTopPadding + (totalPositions - topWorldLowestPos + 1) * rowHeight - rowHeight / 2;
-        const bandHeight = rowHeight * 3;
+        const bandHeight = rowHeight * 10;
         const bandTop = boundaryY - bandHeight / 2;
+        const topDarkest = topVisuals.gradientColors[topVisuals.gradientColors.length - 1];
+        const bottomLightest = bottomVisuals.gradientColors[0];
+        // Transparent versions for the fade-out edges — expo-linear-
+        // gradient accepts 8-digit hex (#RRGGBBAA) so the transparent
+        // stop stays the SAME hue as the opaque one. If we just used
+        // a generic 'transparent' the gradient would fade through a
+        // neutral grey which looks muddy.
+        const topDarkestFaded = topDarkest + '00';
+        const bottomLightestFaded = bottomLightest + '00';
         return (
-          <LinearGradient
-            key={`seam-${upperTheme}-${lowerTheme}`}
-            colors={[
-              topVisuals.gradientColors[topVisuals.gradientColors.length - 1],
-              bottomVisuals.gradientColors[0],
-            ]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={{
-              position: 'absolute',
-              top: bandTop,
-              left: 0,
-              width,
-              height: bandHeight,
-            }}
-            pointerEvents="none"
-          />
+          <React.Fragment key={`seam-${upperTheme}-${lowerTheme}`}>
+            {/* Upper biome dark colour fading downward to transparent */}
+            <LinearGradient
+              colors={[topDarkest, topDarkest, topDarkestFaded]}
+              locations={[0, 0.15, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: bandTop,
+                left: 0,
+                width,
+                height: bandHeight,
+              }}
+              pointerEvents="none"
+            />
+            {/* Lower biome light colour fading upward from transparent */}
+            <LinearGradient
+              colors={[bottomLightestFaded, bottomLightest, bottomLightest]}
+              locations={[0, 0.85, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: bandTop,
+                left: 0,
+                width,
+                height: bandHeight,
+              }}
+              pointerEvents="none"
+            />
+          </React.Fragment>
         );
       })}
     </View>
