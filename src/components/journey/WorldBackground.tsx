@@ -19,7 +19,18 @@ interface Props {
  *  the ladder's y-coordinate ranges. Every world gets its own scenery
  *  silhouettes + particle drift so walking from the Grove to the Core
  *  feels cinematic — each environment reads distinct from the moment
- *  it scrolls into view, not just as a colour swatch. */
+ *  it scrolls into view, not just as a colour swatch.
+ *
+ *  Path is laid out bottom-to-top (Level 1 at the maximum y, final
+ *  level at y=pathTopPadding), so each slab's top is anchored to its
+ *  HIGHEST position (`end`), not its lowest.
+ *
+ *  Perf: each WorldParticles instance runs ~14 Reanimated worklets on
+ *  the UI thread. With five worlds that's ~70 particles total, well
+ *  inside comfortable frame-budget on mid-range Android. Scenery is
+ *  static SVG, so it rasterises once and then costs nothing. Viewport
+ *  culling on nodes + connectors (in UnifiedJourneyScreen) keeps the
+ *  heavy stuff off-screen hidden. */
 export function WorldBackground({
   width,
   pathTopPadding,
@@ -43,10 +54,11 @@ export function WorldBackground({
         const meta = WORLD_THEMES[theme];
         const visuals = WORLD_VISUALS[theme];
         const [start, end] = meta.range;
-        // Path is laid out BOTTOM-to-top (level 1 is at the maximum
-        // y, level 380 at y=PATH_TOP_PADDING). So the "top" of this
-        // world's slab corresponds to its HIGHEST position (`end`),
-        // not its lowest.
+        // Top of this world's slab in the flipped layout: the highest
+        // position number (end) sits closest to the top of the canvas,
+        // so `top` is based on `end`. We extend half a rowHeight above
+        // and below so the gradient bleeds gracefully into neighbours
+        // rather than leaving a hard seam.
         const top = pathTopPadding + (totalPositions - end) * rowHeight - rowHeight / 2;
         const slabHeight = (end - start + 1) * rowHeight;
         const clampedTop = Math.max(0, top);

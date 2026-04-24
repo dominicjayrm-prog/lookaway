@@ -3,15 +3,12 @@ import { View, Text, ScrollView, StyleSheet, Pressable, Share, Platform, useWind
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Polygon } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedScrollHandler,
   useAnimatedReaction,
   runOnJS,
-  interpolate,
-  Extrapolation,
   withRepeat,
   withTiming,
   withSequence,
@@ -40,7 +37,6 @@ import { localizedWorldName } from './worldI18n';
 import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
 import { PathConnector } from './PathConnector';
-import { ModeLibrary } from './ModeLibrary';
 import { WorldBackground } from './WorldBackground';
 import { WorldIntroModal } from './WorldIntroModal';
 import { WorldGate } from './WorldGate';
@@ -54,33 +50,6 @@ import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
 const PATH_TOP_PADDING = 32;
 const PATH_SIDE_MARGIN = 60;
-
-const SIDE_PREFIX: Record<string, string> = {
-  speed_recall: 'sr',
-  snap_match: 'sm',
-  sequence: 'seq',
-  counting_blitz: 'cb',
-  colour_chain: 'cc',
-};
-
-function StarSvg({ size = 14, color = '#D4A012' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 100 100">
-      <Polygon
-        points="50,5 63,35 95,35 69,57 79,90 50,70 21,90 31,57 5,35 37,35"
-        fill={color}
-      />
-    </Svg>
-  );
-}
-
-function GemSvg({ size = 14, color = '#6C5CE7' }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 100 100">
-      <Polygon points="50,10 90,40 70,90 30,90 10,40" fill={color} />
-    </Svg>
-  );
-}
 
 function ContinueArrow() {
   const x = useSharedValue(0);
@@ -123,13 +92,17 @@ function pathXForPosition(position: number, containerWidth: number): number {
  *  + footer` so we just mirror the linear mapping here.
  */
 function yForPosition(position: number): number {
+  // Candy-Crush style: Level 1 sits at the BOTTOM of the path, the
+  // final level at the TOP. As the player completes levels, they climb
+  // upward — which reads as "ascending" progress without us needing a
+  // visual metaphor. total - position gives us the flipped offset.
   return PATH_TOP_PADDING + (UNIFIED_LADDER.length - position) * ROW_HEIGHT;
 }
 
 export function UnifiedJourneyScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const didScrollToCurrent = useRef(false);
   // Scroll-driven animations: header blur-in after a few px, hero
@@ -142,7 +115,6 @@ export function UnifiedJourneyScreen() {
 
   const {
     totalStars,
-    gems,
     levelProgress,
     unifiedPosition,
     setLastPlayed,
@@ -203,9 +175,14 @@ export function UnifiedJourneyScreen() {
     () => scrollY.value,
     (current) => {
       'worklet';
+      // Inverse of yForPosition. With Level 1 at the bottom, scrollY=0
+      // shows the TOP of the ladder (highest position number) and the
+      // scroll grows as the viewport moves toward Level 1. So the
+      // approximate position at the top of the visible window is
+      // total - rowsScrolled.
       const total = UNIFIED_LADDER.length;
-      const offsetRows = Math.floor((current - PATH_TOP_PADDING) / ROW_HEIGHT);
-      const approxPos = Math.max(1, Math.min(total, total - offsetRows));
+      const rowsScrolled = Math.floor((current - PATH_TOP_PADDING) / ROW_HEIGHT);
+      const approxPos = Math.min(total, Math.max(1, total - rowsScrolled));
       const nextStart = Math.max(1, approxPos - VISIBLE_BUFFER);
       const nextEnd = Math.min(total, approxPos + VISIBLE_BUFFER);
       runOnJS(maybeUpdateRange)(nextStart, nextEnd);
@@ -268,17 +245,25 @@ export function UnifiedJourneyScreen() {
   const currentCampaign = currentLevel ? CAMPAIGNS[currentLevel.mode] : null;
 
   // Auto-scroll to the current level on first layout.
+  //
+  // Note: with the direction flipped so Level 1 sits at the bottom,
+  // the ScrollView's content is tall and scrollY=0 still shows the TOP
+  // (highest positions). Centering the current node in the viewport
+  // means subtracting roughly half the viewport height from its y —
+  // the hero header above the ScrollView eats some of that space, so
+  // we bias toward ~40% rather than a dead-centre 50%. That keeps the
+  // current node comfortably above the screen's midpoint where the
+  // eye naturally lands.
   useEffect(() => {
     if (didScrollToCurrent.current) return;
     const y = yForPosition(unifiedPosition);
-    // Centre the node in the viewport (rough — subtracts ~1/3 of screen).
-    const target = Math.max(0, y - 200);
+    const target = Math.max(0, y - screenHeight * 0.4);
     const timer = setTimeout(() => {
       scrollRef.current?.scrollTo({ y: target, animated: false });
       didScrollToCurrent.current = true;
     }, 120);
     return () => clearTimeout(timer);
-  }, [unifiedPosition]);
+  }, [unifiedPosition, screenHeight]);
 
   // Detect a first-time entry into a new world and queue the intro
   // modal. Only fires at world boundaries (76/151/226/301) — the first
@@ -431,45 +416,47 @@ export function UnifiedJourneyScreen() {
               pointerEvents="none"
             />
 
-            {/* Header row — eyebrow + title + stats */}
+            {/* Header row — the world name IS the hero. Tiny eyebrow
+             *  ("WORLD 3 OF 5") above, enormous world-tinted title
+             *  below. A single share button lives on the right. No
+             *  stars / gems pills — that chrome belongs on the home
+             *  tab, not the journey itself. */}
             <View style={st.header}>
               <View style={st.headerLeft}>
                 <View style={st.eyebrowRow}>
                   <View style={[st.worldDot, { backgroundColor: currentTheme.color }]} />
                   <Text style={[st.eyebrow, { color: currentTheme.color }]}>
-                    {t('journey.world_eyebrow', {
-                      world: localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove').toUpperCase(),
+                    {t('journey.world_num_of_total', {
                       num: currentTheme.worldNumber,
                       total: WORLD_THEME_ORDER.length,
                     })}
                   </Text>
                 </View>
-                <Text style={[st.title, { color: colors.text }]}>
-                  {t('journey.unified_title')}
+                <Text
+                  style={[st.worldTitle, { color: currentTheme.color }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove')}
                 </Text>
               </View>
-              <View style={st.headerRight}>
-                <View style={[st.pill, { backgroundColor: colors.goldSoft }]}>
-                  <StarSvg size={12} color={totalStars > 0 ? '#D4A012' : '#B2BEC3'} />
-                  <Text style={[st.pillText, { color: colors.gold }]}>{totalStars}</Text>
-                </View>
-                <View style={[st.pill, { backgroundColor: colors.accentSoft }]}>
-                  <GemSvg size={12} color={colors.accent} />
-                  <Text style={[st.pillText, { color: colors.accent }]}>{gems}</Text>
-                </View>
-                <Pressable
-                  onPress={shareJourney}
-                  style={({ pressed }) => [
-                    st.pill,
-                    { backgroundColor: colors.surface, opacity: pressed ? 0.75 : 1 },
-                  ]}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('journey.share_journey_aria')}
-                >
-                  <Ionicons name="share-outline" size={14} color={colors.textMid} />
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={shareJourney}
+                style={({ pressed }) => [
+                  st.shareButton,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.7 : 1,
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  },
+                ]}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={t('journey.share_journey_aria')}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.textMid} />
+              </Pressable>
             </View>
 
             {/* Progress rail — "Level N of 380" with a gradient fill bar. */}
@@ -667,8 +654,6 @@ export function UnifiedJourneyScreen() {
             })}
           </View>
 
-          {/* Mode Library */}
-          <ModeLibrary sideCampaignProgress={sideCampaignProgress} />
         </Animated.ScrollView>
 
         <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
@@ -702,14 +687,14 @@ const st = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   headerLeft: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -726,30 +711,33 @@ const st = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
   },
   eyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-  title: {
-    fontSize: 30,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: -0.8,
+    letterSpacing: 1.4,
   },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 6,
+  worldTitle: {
+    fontSize: 34,
+    fontWeight: '900',
+    letterSpacing: -1.1,
+    marginTop: 2,
+    // Subtle text shadow tinted by the world colour adds that
+    // embossed / premium feel without screaming for attention.
+    textShadowColor: 'rgba(0, 0, 0, 0.08)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  pill: {
-    flexDirection: 'row',
+  shareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  pillText: {
-    fontSize: 12,
-    fontWeight: '800',
+    justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 1,
   },
   worldBar: {
     flexDirection: 'row',

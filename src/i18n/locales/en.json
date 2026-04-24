@@ -989,6 +989,7 @@
     "unified_title": "Brain Journey",
     "unified_subtitle": "One path. Six minds. {total} levels.",
     "world_eyebrow": "{world} · WORLD {num} OF {total}",
+    "world_num_of_total": "WORLD {num} OF {total}",
     "position_of_total": "Level {position}",
     "position_of_total_suffix": "of {total}",
     "percent_complete": "{pct}% complete",

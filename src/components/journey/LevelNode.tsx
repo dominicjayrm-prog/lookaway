@@ -415,6 +415,8 @@ const st = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 5,
     borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowOpacity: 0.45,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -427,8 +429,6 @@ const st = StyleSheet.create({
     // reserving a min width. 56 is comfortable for any 5-char word
     // at fontSize 10 + 1.2 letter-spacing.
     minWidth: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   playChipText: {
     color: '#FFFFFF',
@@ -436,6 +436,7 @@ const st = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.2,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   starRow: {
     flexDirection: 'row',
