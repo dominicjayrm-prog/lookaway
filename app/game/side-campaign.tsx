@@ -529,7 +529,7 @@ function SideCampaignScreen() {
             <Text style={[s.gemsText, { color: colors.gold }]}>+{gemsEarned} gems</Text>
           )}
           <View style={s.buttonRow}>
-            <Pressable style={[s.btn, s.btnSecondary, { borderColor: mColor }]} onPress={() => router.back()}>
+            <Pressable style={[s.btn, s.btnSecondary, { borderColor: mColor }]} onPress={() => router.replace('/(tabs)/journey')}>
               <Text style={[s.btnTextSecondary, { color: mColor }]}>{t('challenge.back_to_map')}</Text>
             </Pressable>
             <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={goToNextLevel}>
@@ -546,7 +546,7 @@ function SideCampaignScreen() {
           <Text style={[s.bigScore, { color: colors.text }]}>{scorePct}%</Text>
           <Text style={[s.subtitle, { color: colors.textMid }]}>{t('game_indicators.you_need_pass')}</Text>
           <View style={s.buttonRow}>
-            <Pressable style={[s.btn, s.btnSecondary, { borderColor: colors.textMid }]} onPress={() => router.back()}>
+            <Pressable style={[s.btn, s.btnSecondary, { borderColor: colors.textMid }]} onPress={() => router.replace('/(tabs)/journey')}>
               <Text style={[s.btnTextSecondary, { color: colors.textMid }]}>{t('challenge.back_to_map')}</Text>
             </Pressable>
             <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
