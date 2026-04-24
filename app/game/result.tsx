@@ -87,7 +87,7 @@ function AnimatedScore({ value, style }: { value: number; style: object }) {
 function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress, levelPowerUpsUsed, sessionLevelCount, bumpSessionLevelCount } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, advanceUnifiedPosition, addStars, incrementStreak, addGems, levelProgress, levelPowerUpsUsed, sessionLevelCount, bumpSessionLevelCount } = useGameStore();
   const [challengeToast, setChallengeToast] = useState<WeeklyChallenge | null>(null);
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
@@ -138,6 +138,10 @@ function ResultScreen() {
       setImproved(didImprove);
       const earned = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
+      // Advance the unified ladder cursor only when this IS the player's
+      // current ladder position. Replays and Mode-Library side-plays are
+      // recorded (stars still awarded) but don't jump the journey forward.
+      if (stars > 0) advanceUnifiedPosition(level.id);
       // Gem sound deferred to home/map screen for smoother feel
       if (stars > 0) addStars(stars);
       incrementStreak();
