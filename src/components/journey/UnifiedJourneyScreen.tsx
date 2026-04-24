@@ -25,6 +25,8 @@ import { ChapterBadge } from './ChapterBadge';
 import { PathConnector } from './PathConnector';
 import { ModeLibrary } from './ModeLibrary';
 import { WorldBackground } from './WorldBackground';
+import { WorldIntroModal } from './WorldIntroModal';
+import { WorldGate } from './WorldGate';
 import { WORLD_VISUALS } from './worldVisuals';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
@@ -87,7 +89,11 @@ export function UnifiedJourneyScreen() {
     levelProgress,
     unifiedPosition,
     setLastPlayed,
+    hasSeenWorldIntro,
+    markWorldIntroSeen,
   } = useGameStore();
+
+  const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
 
   const [sideCampaignProgress, setSideCampaignProgress] = useState<
     Record<string, { stars: number; best_score: number }>
@@ -146,6 +152,22 @@ export function UnifiedJourneyScreen() {
     }, 120);
     return () => clearTimeout(timer);
   }, [unifiedPosition]);
+
+  // Detect a first-time entry into a new world and queue the intro
+  // modal. Runs whenever the position changes — the modal is
+  // single-shot per world via `hasSeenWorldIntro`.
+  useEffect(() => {
+    const level = getUnifiedLevel(unifiedPosition);
+    if (!level) return;
+    if (!isWorldTransition(unifiedPosition) && unifiedPosition !== 1) return;
+    if (hasSeenWorldIntro[level.worldTheme]) return;
+    setWorldIntroFor(level.worldTheme);
+  }, [unifiedPosition, hasSeenWorldIntro]);
+
+  const dismissWorldIntro = () => {
+    if (worldIntroFor) markWorldIntroSeen(worldIntroFor);
+    setWorldIntroFor(null);
+  };
 
   const launchLevel = (level: UnifiedLevel) => {
     const store = useGameStore.getState();
@@ -339,24 +361,18 @@ export function UnifiedJourneyScreen() {
                   )}
                   {isWorldTransition(level.position) && (
                     <View
-                      style={[
-                        st.worldGateBanner,
-                        {
-                          top: y - 60,
-                          backgroundColor: WORLD_THEMES[level.worldTheme].color + '22',
-                          borderColor: WORLD_THEMES[level.worldTheme].color,
-                        },
-                      ]}
+                      style={{
+                        position: 'absolute',
+                        top: y - 70,
+                        left: 0,
+                        right: 0,
+                      }}
                       pointerEvents="none"
                     >
-                      <Text
-                        style={[
-                          st.worldGateText,
-                          { color: WORLD_THEMES[level.worldTheme].color },
-                        ]}
-                      >
-                        ENTERING {WORLD_THEMES[level.worldTheme].name.toUpperCase()}
-                      </Text>
+                      <WorldGate
+                        nextWorld={level.worldTheme}
+                        locked={level.position > unifiedPosition}
+                      />
                     </View>
                   )}
                   <View
@@ -383,6 +399,8 @@ export function UnifiedJourneyScreen() {
           {/* Mode Library */}
           <ModeLibrary sideCampaignProgress={sideCampaignProgress} />
         </ScrollView>
+
+        <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
       </SafeAreaView>
     </TabTransition>
   );
@@ -512,20 +530,5 @@ const st = StyleSheet.create({
   },
   pathContainer: {
     position: 'relative',
-  },
-  worldGateBanner: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  worldGateText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1,
   },
 });
