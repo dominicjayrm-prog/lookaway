@@ -880,45 +880,208 @@ function auroraPeaks(w: number, h: number): React.ReactNode {
 }
 
 // --------------------------------------------------------------------
-// Inferno Core — placeholder until next turn.
+// Inferno Core — the final world. Smoke plumes rising at the top,
+// a distant volcanic eruption silhouette, 6 obsidian spires at varied
+// heights repeating down the slab, bubbling lava pools at many depths,
+// hot glowing ground cracks, and a molten lava river at the very
+// bottom (where the player arrived — Level 301).
 // --------------------------------------------------------------------
 function infernoCore(w: number, h: number): React.ReactNode {
+  const rand = seeded(5);
+  // Six obsidian spires of differing heights, alternating sides so
+  // the path stays unobstructed.
+  const spires: Array<{ x: number; baseY: number; height: number; width: number }> = [];
+  for (let i = 0; i < 10; i++) {
+    const side = i % 2 === 0 ? 0.04 + rand() * 0.2 : 0.76 + rand() * 0.2;
+    spires.push({
+      x: w * side,
+      baseY: h * (0.15 + (i / 10) * 0.8),
+      height: 55 + rand() * 90,
+      width: 20 + rand() * 18,
+    });
+  }
+  // Lava pools scattered throughout.
+  const lavaPools: Array<{ cx: number; cy: number; rx: number; ry: number }> = [];
+  for (let i = 0; i < 8; i++) {
+    lavaPools.push({
+      cx: w * (0.12 + rand() * 0.76),
+      cy: h * (0.22 + (i / 8) * 0.72),
+      rx: 20 + rand() * 30,
+      ry: 5 + rand() * 8,
+    });
+  }
+  // Ground cracks — short zigzags of hot glow.
+  const cracks: Array<{ points: string }> = [];
+  for (let i = 0; i < 14; i++) {
+    const sx = w * rand();
+    const sy = h * (0.3 + rand() * 0.65);
+    const pts = [`${sx},${sy}`];
+    let cx = sx;
+    let cy = sy;
+    const segs = 3 + Math.floor(rand() * 3);
+    for (let j = 0; j < segs; j++) {
+      cx += (rand() - 0.5) * 60;
+      cy += (rand() - 0.2) * 20;
+      pts.push(`${cx},${cy}`);
+    }
+    cracks.push({ points: pts.join(' L ').replace(/^/, 'M ') });
+  }
+  // Smoke plumes rising from lava pools near the top of the slab.
+  const plumes = [
+    { x: w * 0.22, baseY: h * 0.28 },
+    { x: w * 0.55, baseY: h * 0.18 },
+    { x: w * 0.82, baseY: h * 0.34 },
+  ];
+
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
-        <LinearGradient id="lava-glow" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0} />
-          <Stop offset="1" stopColor="#FFBA08" stopOpacity={0.6} />
+        <LinearGradient id="lava-top" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0.85} />
+          <Stop offset="1" stopColor="#E85D04" stopOpacity={0.9} />
         </LinearGradient>
+        <LinearGradient id="lava-river" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0} />
+          <Stop offset="0.3" stopColor="#E85D04" stopOpacity={0.55} />
+          <Stop offset="1" stopColor="#9D0208" stopOpacity={0.85} />
+        </LinearGradient>
+        <LinearGradient id="smoke-plume" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#1A0A0A" stopOpacity={0} />
+          <Stop offset="0.5" stopColor="#2B1B1B" stopOpacity={0.5} />
+          <Stop offset="1" stopColor="#1A0A0A" stopOpacity={0.7} />
+        </LinearGradient>
+        <LinearGradient id="spire-face" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#1A0A0A" stopOpacity={0.95} />
+          <Stop offset="0.5" stopColor="#3A1010" stopOpacity={0.9} />
+          <Stop offset="1" stopColor="#1A0A0A" stopOpacity={0.95} />
+        </LinearGradient>
+        <RadialGradient id="ember-glow" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0.6} />
+          <Stop offset="1" stopColor="#FFBA08" stopOpacity={0} />
+        </RadialGradient>
       </Defs>
+
+      {/* Distant volcanic eruption silhouette peeking at the top. */}
       <Polygon
-        points={`${w * 0.1},${h * 0.6} ${w * 0.12},${h * 0.3} ${w * 0.14},${h * 0.58} ${w * 0.16},${h * 0.62}`}
+        points={`${w * 0.3},${h * 0.12} ${w * 0.42},${h * 0.02} ${w * 0.5},${h * 0.05} ${w * 0.58},${h * 0.02} ${w * 0.68},${h * 0.12}`}
         fill="#1A0A0A"
-        opacity={0.8}
+        opacity={0.75}
       />
-      <Polygon
-        points={`${w * 0.72},${h * 0.65} ${w * 0.74},${h * 0.35} ${w * 0.78},${h * 0.62}`}
-        fill="#1A0A0A"
-        opacity={0.8}
-      />
+      {/* Eruption glow crown */}
       <Path
-        d={`M 0 ${h * 0.88} Q ${w * 0.25} ${h * 0.82} ${w * 0.5} ${h * 0.9} T ${w} ${h * 0.88} L ${w} ${h} L 0 ${h} Z`}
-        fill="url(#lava-glow)"
-      />
-      <Path
-        d={`M ${w * 0.15} ${h * 0.95} L ${w * 0.22} ${h * 0.93} L ${w * 0.3} ${h * 0.96}`}
-        stroke="#E85D04"
-        strokeWidth={1.5}
-        fill="none"
-        opacity={0.7}
-      />
-      <Path
-        d={`M ${w * 0.65} ${h * 0.97} L ${w * 0.7} ${h * 0.94} L ${w * 0.82} ${h * 0.96}`}
+        d={`M ${w * 0.45} ${h * 0.05} Q ${w * 0.5} ${h * 0.01} ${w * 0.55} ${h * 0.05}`}
         stroke="#FFBA08"
-        strokeWidth={1.5}
+        strokeWidth={3}
         fill="none"
-        opacity={0.6}
+        opacity={0.65}
       />
+      <SvgCircle cx={w * 0.5} cy={h * 0.04} r={h * 0.045} fill="url(#ember-glow)" />
+
+      {/* Rising smoke plumes — wide soft billows that fade upward. */}
+      {plumes.map((p, i) => (
+        <G key={`plume-${i}`} opacity={0.6}>
+          <Ellipse cx={p.x} cy={p.baseY} rx={30} ry={14} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x + 6} cy={p.baseY - 20} rx={22} ry={12} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x - 8} cy={p.baseY - 40} rx={18} ry={10} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x + 4} cy={p.baseY - 58} rx={14} ry={8} fill="url(#smoke-plume)" />
+        </G>
+      ))}
+
+      {/* Obsidian spires — sharp faceted triangles with darker side
+       *  face for depth. */}
+      {spires.map((s, i) => {
+        const { x, baseY, height, width } = s;
+        const apexY = baseY - height;
+        const leftX = x - width / 2;
+        const rightX = x + width / 2;
+        return (
+          <G key={`spire-${i}`}>
+            {/* Main facet */}
+            <Polygon
+              points={`${leftX},${baseY} ${x},${apexY} ${rightX},${baseY}`}
+              fill="url(#spire-face)"
+            />
+            {/* Darker shadow facet on one side */}
+            <Polygon
+              points={`${leftX},${baseY} ${x},${apexY} ${x - width * 0.1},${baseY - height * 0.5}`}
+              fill="#0A0000"
+              opacity={0.55}
+            />
+            {/* Thin glowing fissure line climbing the spire */}
+            <Path
+              d={`M ${x - width * 0.1} ${baseY - 4} L ${x - width * 0.05} ${baseY - height * 0.4} L ${x + width * 0.05} ${baseY - height * 0.7}`}
+              stroke="#FFBA08"
+              strokeWidth={0.8}
+              fill="none"
+              opacity={0.45}
+            />
+          </G>
+        );
+      })}
+
+      {/* Lava pools — glowing ovals with a hot inner core. */}
+      {lavaPools.map((p, i) => (
+        <G key={`pool-${i}`}>
+          <Ellipse
+            cx={p.cx}
+            cy={p.cy + 6}
+            rx={p.rx * 1.2}
+            ry={p.ry * 1.4}
+            fill="url(#ember-glow)"
+            opacity={0.5}
+          />
+          <Ellipse cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} fill="url(#lava-top)" />
+          <Ellipse
+            cx={p.cx}
+            cy={p.cy - 1}
+            rx={p.rx * 0.7}
+            ry={p.ry * 0.55}
+            fill="#FFE8A3"
+            opacity={0.7}
+          />
+        </G>
+      ))}
+
+      {/* Ground cracks — jagged glowing lines. */}
+      {cracks.map((c, i) => (
+        <Path
+          key={`crack-${i}`}
+          d={c.points}
+          stroke={i % 2 === 0 ? '#FFBA08' : '#E85D04'}
+          strokeWidth={1.2}
+          fill="none"
+          opacity={0.55 + (i % 3) * 0.1}
+          strokeLinecap="round"
+        />
+      ))}
+
+      {/* Main lava river at the bottom — the player's arrival point. */}
+      <Path
+        d={`M 0 ${h * 0.84} Q ${w * 0.2} ${h * 0.78} ${w * 0.45} ${h * 0.84} T ${w * 0.8} ${h * 0.84} T ${w} ${h * 0.85} L ${w} ${h} L 0 ${h} Z`}
+        fill="url(#lava-river)"
+      />
+      {/* River surface highlights — hot yellow streaks. */}
+      {[0.88, 0.92, 0.96].map((yRatio, i) => (
+        <Path
+          key={`streak-${i}`}
+          d={`M 0 ${h * yRatio} Q ${w * 0.3} ${h * (yRatio - 0.008)} ${w * 0.6} ${h * yRatio} T ${w} ${h * yRatio}`}
+          stroke={i === 0 ? '#FFE8A3' : '#FFBA08'}
+          strokeWidth={1.2}
+          fill="none"
+          opacity={0.55 - i * 0.1}
+        />
+      ))}
+      {/* A handful of floating embers drift over the river. */}
+      {Array.from({ length: 14 }).map((_, i) => (
+        <SvgCircle
+          key={`ember-${i}`}
+          cx={w * rand()}
+          cy={h * (0.86 + rand() * 0.12)}
+          r={1 + rand() * 1.5}
+          fill="#FFBA08"
+          opacity={0.6 + rand() * 0.3}
+        />
+      ))}
     </Svg>
   );
 }
