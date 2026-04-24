@@ -21,6 +21,7 @@ import {
   type ModeId,
   type WorldTheme,
 } from '@/src/data/unifiedJourney';
+import { localizedWorldName } from './worldI18n';
 import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
 import { PathConnector } from './PathConnector';
@@ -33,6 +34,7 @@ import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
 import { BrainMasterCelebration } from './BrainMasterCelebration';
+import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
 const PATH_TOP_PADDING = 32;
@@ -98,10 +100,13 @@ export function UnifiedJourneyScreen() {
     markWorldIntroSeen,
     hasSeenUnifiedIntro,
     markUnifiedIntroSeen,
+    hasSeenBrainMaster,
+    markBrainMasterSeen,
   } = useGameStore();
 
   const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
   const [showBrainMaster, setShowBrainMaster] = useState(false);
+  const [showOutOfLives, setShowOutOfLives] = useState(false);
 
   // Is this a brand-new player (position 1, no intro seen) or a
   // migrated existing user (position > 1, no intro seen)?
@@ -167,23 +172,25 @@ export function UnifiedJourneyScreen() {
   }, [unifiedPosition]);
 
   // Detect a first-time entry into a new world and queue the intro
-  // modal. Runs whenever the position changes — the modal is
+  // modal. Only fires at world boundaries (76/151/226/301) — the first
+  // world (Emerald Grove) doesn't get a standalone intro because
+  // UnifiedIntro already introduces all five. The modal is
   // single-shot per world via `hasSeenWorldIntro`.
   useEffect(() => {
+    if (!isWorldTransition(unifiedPosition)) return;
     const level = getUnifiedLevel(unifiedPosition);
     if (!level) return;
-    if (!isWorldTransition(unifiedPosition) && unifiedPosition !== 1) return;
     if (hasSeenWorldIntro[level.worldTheme]) return;
     setWorldIntroFor(level.worldTheme);
   }, [unifiedPosition, hasSeenWorldIntro]);
 
   // Fire the Brain Master celebration once when the player has
-  // completed every level. UNIFIED_LADDER.length is 380; checking for
-  // progress === length means they cleared position 380 and the cursor
-  // clamped there.
+  // completed every level. Gated on `hasSeenBrainMaster` so it never
+  // re-fires after dismissal — without that, the modal would pop every
+  // time the journey screen mounts after the player reaches 380.
   useEffect(() => {
+    if (hasSeenBrainMaster) return;
     if (unifiedPosition < UNIFIED_LADDER.length) return;
-    // Only show if they've actually earned stars on position 380's level.
     const final = getUnifiedLevel(UNIFIED_LADDER.length);
     if (!final) return;
     const stars =
@@ -191,7 +198,12 @@ export function UnifiedJourneyScreen() {
         ? levelProgress[final.levelId]?.stars ?? 0
         : sideCampaignProgress[final.levelId]?.stars ?? 0;
     if (stars > 0) setShowBrainMaster(true);
-  }, [unifiedPosition, levelProgress, sideCampaignProgress]);
+  }, [unifiedPosition, levelProgress, sideCampaignProgress, hasSeenBrainMaster]);
+
+  const closeBrainMaster = () => {
+    setShowBrainMaster(false);
+    markBrainMasterSeen();
+  };
 
   const dismissWorldIntro = () => {
     if (worldIntroFor) markWorldIntroSeen(worldIntroFor);
@@ -200,10 +212,16 @@ export function UnifiedJourneyScreen() {
 
   const shareJourney = async () => {
     const { streakCount } = useGameStore.getState();
-    const streakStr = streakCount > 0 ? ` · 🔥 ${streakCount}-day streak` : '';
+    const streakSuffix =
+      streakCount > 0 ? t('journey.share_streak_suffix', { streak: streakCount }) : '';
     try {
       await Share.share({
-        message: `🧠 Level ${unifiedPosition}/${UNIFIED_LADDER.length} · ⭐ ${totalStars} stars${streakStr} · Blanked`,
+        message: t('journey.share_message', {
+          position: unifiedPosition,
+          total: UNIFIED_LADDER.length,
+          stars: totalStars,
+          streak: streakSuffix,
+        }),
       });
     } catch {}
   };
@@ -211,8 +229,12 @@ export function UnifiedJourneyScreen() {
   const launchLevel = (level: UnifiedLevel) => {
     const store = useGameStore.getState();
     store.checkLifeRegen();
-    if (store.lives <= 0) {
-      // Out of lives; parent may wrap this in a modal in future.
+    // The unlimited-lives IAP bypasses the lives check entirely — matches
+    // the behaviour of the per-mode world maps so players who've paid for
+    // it aren't blocked here either.
+    const hasUnlimited = store.hasUnlimitedLives();
+    if (store.lives <= 0 && !hasUnlimited) {
+      setShowOutOfLives(true);
       return;
     }
     setLastPlayed(level.mode, level.levelId);
@@ -280,9 +302,13 @@ export function UnifiedJourneyScreen() {
           <View style={st.header}>
             <View style={st.headerLeft}>
               <Text style={[st.eyebrow, { color: currentTheme.color }]}>
-                {currentTheme.name.toUpperCase()} · WORLD {currentTheme.worldNumber} OF {WORLD_THEME_ORDER.length}
+                {t('journey.world_eyebrow', {
+                  world: localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove').toUpperCase(),
+                  num: currentTheme.worldNumber,
+                  total: WORLD_THEME_ORDER.length,
+                })}
               </Text>
-              <Text style={[st.title, { color: colors.text }]}>Brain Journey</Text>
+              <Text style={[st.title, { color: colors.text }]}>{t('journey.unified_title')}</Text>
             </View>
             <View style={st.headerRight}>
               <View style={[st.pill, { backgroundColor: colors.goldSoft }]}>
@@ -298,7 +324,7 @@ export function UnifiedJourneyScreen() {
                 style={[st.pill, { backgroundColor: colors.surface }]}
                 hitSlop={6}
                 accessibilityRole="button"
-                accessibilityLabel="Share your journey"
+                accessibilityLabel={t('journey.share_journey_aria')}
               >
                 <Ionicons name="share-outline" size={14} color={colors.textMid} />
               </Pressable>
@@ -308,12 +334,15 @@ export function UnifiedJourneyScreen() {
           {/* World title + progress bar */}
           <View style={st.worldBar}>
             <Text style={[st.worldLevelLabel, { color: currentTheme.color }]}>
-              Level {unifiedPosition}
+              {t('journey.position_of_total', { position: unifiedPosition })}
               <Text style={[st.worldOf, { color: colors.textMid }]}>
-                {' '}of {UNIFIED_LADDER.length}
+                {' '}
+                {t('journey.position_of_total_suffix', { total: UNIFIED_LADDER.length })}
               </Text>
             </Text>
-            <Text style={[st.worldPct, { color: colors.textMid }]}>{totalPct}% complete</Text>
+            <Text style={[st.worldPct, { color: colors.textMid }]}>
+              {t('journey.percent_complete', { pct: totalPct })}
+            </Text>
           </View>
           <View style={[st.worldTrack, { backgroundColor: colors.surface }]}>
             <View
@@ -342,17 +371,18 @@ export function UnifiedJourneyScreen() {
               <View style={[st.continueAccent, { backgroundColor: currentCampaign.color }]} />
               <View style={st.continueBody}>
                 <Text style={[st.continueLabel, { color: colors.textMid }]}>
-                  LEVEL {unifiedPosition} · CONTINUE
+                  {t('journey.continue_eyebrow', { position: unifiedPosition })}
                 </Text>
                 <Text style={[st.continueMode, { color: colors.text }]}>
                   {currentCampaign.name}
                   <Text style={[st.continueTagline, { color: colors.textMid }]}>
-                    {' · '}Tap to play
+                    {' · '}
+                    {t('journey.continue_tap_to_play')}
                   </Text>
                 </Text>
               </View>
               <View style={[st.playChip, { backgroundColor: currentCampaign.color }]}>
-                <Text style={st.playChipText}>PLAY</Text>
+                <Text style={st.playChipText}>{t('journey.play_chip')}</Text>
               </View>
             </Pressable>
           )}
@@ -483,7 +513,15 @@ export function UnifiedJourneyScreen() {
         <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
         <BrainMasterCelebration
           visible={showBrainMaster}
-          onClose={() => setShowBrainMaster(false)}
+          onClose={closeBrainMaster}
+        />
+        <OutOfLivesModal
+          visible={showOutOfLives}
+          onClose={() => setShowOutOfLives(false)}
+          onGoToShop={() => {
+            setShowOutOfLives(false);
+            router.push('/(tabs)/shop');
+          }}
         />
       </SafeAreaView>
     </TabTransition>

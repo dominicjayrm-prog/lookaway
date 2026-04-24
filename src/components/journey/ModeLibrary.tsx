@@ -67,9 +67,11 @@ export function ModeLibrary({ sideCampaignProgress }: Props) {
   return (
     <View style={st.container}>
       <View style={st.headerRow}>
-        <Text style={[st.heading, { color: colors.text }]}>{t('journey.mode_library_title') || 'Mode Library'}</Text>
+        <Text style={[st.heading, { color: colors.text }]}>
+          {t('journey.mode_library_title')}
+        </Text>
         <Text style={[st.subheading, { color: colors.textMid }]}>
-          {t('journey.mode_library_sub') || 'Master one mode at a time'}
+          {t('journey.mode_library_sub')}
         </Text>
       </View>
 
@@ -99,7 +101,7 @@ export function ModeLibrary({ sideCampaignProgress }: Props) {
                   {c.name}
                 </Text>
                 <Text style={[st.cardMastered, { color: colors.textMid }]}>
-                  {pct}% {t('journey.mastered') || 'MASTERED'}
+                  {pct}% {t('journey.mastered')}
                 </Text>
                 <View style={[st.progressTrack, { backgroundColor: colors.surface }]}>
                   <View

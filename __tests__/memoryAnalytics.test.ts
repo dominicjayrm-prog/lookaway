@@ -202,7 +202,7 @@ describe('generateInsight', () => {
     const insight = generateInsight({
       visual: 80, spatial: 80, sequence: 80, speed: 80, focus: 80, consistency: 10,
     });
-    // consistency is weakest → suggest "daily challenges"
-    expect(insight.body).toMatch(/daily challenges/i);
+    // Consistency maps to Colour Chain after the daily-challenge retirement.
+    expect(insight.body).toMatch(/colour chain/i);
   });
 });

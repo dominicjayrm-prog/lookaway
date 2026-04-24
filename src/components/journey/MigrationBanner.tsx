@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 
 interface Props {
   unifiedPosition: number;
@@ -18,17 +19,17 @@ export function MigrationBanner({ unifiedPosition, onDismiss }: Props) {
       <Ionicons name="sparkles" size={18} color={colors.accent} />
       <View style={st.body}>
         <Text style={[st.title, { color: colors.text }]}>
-          Your journey is unified
+          {t('journey.migration_title')}
         </Text>
         <Text style={[st.sub, { color: colors.textMid }]}>
-          Progress carried over — you're on level {unifiedPosition}.
+          {t('journey.migration_sub', { position: unifiedPosition })}
         </Text>
       </View>
       <Pressable
         onPress={onDismiss}
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss"
+        accessibilityLabel={t('journey.migration_dismiss_aria')}
       >
         <Ionicons name="close" size={18} color={colors.textMid} />
       </Pressable>

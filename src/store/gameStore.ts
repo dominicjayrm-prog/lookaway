@@ -235,6 +235,7 @@ interface SavedState {
   lastPlayedLevelId?: string | null;
   hasSeenUnifiedIntro?: boolean;
   hasSeenWorldIntro?: Partial<Record<WorldTheme, boolean>>;
+  hasSeenBrainMaster?: boolean;
 }
 
 // One-time migration: lift legacy `blanked_login_rewards` key into the main
@@ -284,6 +285,7 @@ function migrateUnifiedJourney(saved: SavedState): SavedState {
   saved.currentWorldTheme = getWorldForPosition(position);
   saved.hasSeenUnifiedIntro = saved.hasSeenUnifiedIntro ?? false;
   saved.hasSeenWorldIntro = saved.hasSeenWorldIntro ?? {};
+  saved.hasSeenBrainMaster = saved.hasSeenBrainMaster ?? false;
   saved.lastPlayedMode = saved.lastPlayedMode ?? null;
   saved.lastPlayedLevelId = saved.lastPlayedLevelId ?? null;
   return saved;
@@ -326,6 +328,7 @@ function saveState(state: GameStore) {
       lastPlayedLevelId: state.lastPlayedLevelId,
       hasSeenUnifiedIntro: state.hasSeenUnifiedIntro,
       hasSeenWorldIntro: state.hasSeenWorldIntro,
+      hasSeenBrainMaster: state.hasSeenBrainMaster,
       localUpdatedAt: stampedAt,
       // Stamp the authUserId this blob belongs to. On cold start
       // CloudSyncLoader compares this against the incoming auth
@@ -446,6 +449,10 @@ export interface GameStore {
   /** Per-world flag for the one-time "Welcome to X" celebration shown on
    *  entry to a new themed world. */
   hasSeenWorldIntro: Partial<Record<WorldTheme, boolean>>;
+  /** Sticky one-shot for the Level 380 Brain Master celebration so it
+   *  doesn't re-fire every time the journey screen mounts after the
+   *  player has already seen it. */
+  hasSeenBrainMaster: boolean;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
   completedScores: number[];
@@ -536,6 +543,9 @@ export interface GameStore {
   markUnifiedIntroSeen: () => void;
   /** Flip the per-world intro modal off after it's been shown once. */
   markWorldIntroSeen: (world: WorldTheme) => void;
+  /** Flip the Brain Master celebration off so it doesn't re-fire on
+   *  subsequent app loads after the player has already seen it. */
+  markBrainMasterSeen: () => void;
 
   // Cloud sync
   syncToCloud: () => void;
@@ -656,6 +666,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     lastPlayedLevelId: saved.lastPlayedLevelId ?? null,
     hasSeenUnifiedIntro: saved.hasSeenUnifiedIntro ?? false,
     hasSeenWorldIntro: saved.hasSeenWorldIntro ?? {},
+    hasSeenBrainMaster: saved.hasSeenBrainMaster ?? false,
     powerUps: { ...DEFAULT_POWERUPS, ...saved.powerUps },
     levelProgress: saved.levelProgress ?? {},
     completedScores: saved.completedScores ?? [],
@@ -977,6 +988,12 @@ export const useGameStore = create<GameStore>((set, get) => {
       setTimeout(() => saveState(get()), 0);
     },
 
+    markBrainMasterSeen: () => {
+      if (get().hasSeenBrainMaster) return;
+      set({ hasSeenBrainMaster: true });
+      setTimeout(() => saveState(get()), 0);
+    },
+
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
@@ -1133,6 +1150,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           lastPlayedLevelId: saved.lastPlayedLevelId ?? null,
           hasSeenUnifiedIntro: saved.hasSeenUnifiedIntro ?? false,
           hasSeenWorldIntro: saved.hasSeenWorldIntro ?? {},
+          hasSeenBrainMaster: saved.hasSeenBrainMaster ?? false,
           _hydrated: true,
         });
       } else {
@@ -1207,6 +1225,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         lastPlayedLevelId: null,
         hasSeenUnifiedIntro: false,
         hasSeenWorldIntro: {},
+        hasSeenBrainMaster: false,
         levelProgress: {},
         completedScores: [],
         powerUps: { ...DEFAULT_POWERUPS },
@@ -1531,6 +1550,38 @@ export const useGameStore = create<GameStore>((set, get) => {
         // `localHasProgress` flag, which silently overrode the merged value.
         maxLives: Math.max(safeLocal.maxLives, cloud.maxLives),
         loginReward: pickLoginReward(),
+        // Unified journey position: recompute from the merged progress
+        // so a fresh install on a second device lands on the correct
+        // ladder position instead of position 1. Without this, the
+        // unified_position field doesn't sync to cloud (no DB column
+        // yet) and would desync across devices.
+        unifiedPosition: ((): number => {
+          let firstUncompleted = 1;
+          for (const level of UNIFIED_LADDER) {
+            const entry = mergedProgress[level.levelId];
+            if (!entry || entry.stars <= 0) {
+              firstUncompleted = level.position;
+              break;
+            }
+            firstUncompleted = level.position + 1;
+          }
+          const computed = Math.min(TOTAL_POSITIONS, Math.max(1, firstUncompleted));
+          return Math.max(computed, safeLocal.unifiedPosition ?? 1);
+        })(),
+        currentWorldTheme: getWorldForPosition(
+          Math.max(
+            safeLocal.unifiedPosition ?? 1,
+            (() => {
+              let p = 1;
+              for (const level of UNIFIED_LADDER) {
+                const entry = mergedProgress[level.levelId];
+                if (!entry || entry.stars <= 0) { p = level.position; break; }
+                p = level.position + 1;
+              }
+              return Math.min(TOTAL_POSITIONS, Math.max(1, p));
+            })(),
+          ),
+        ),
         // Unblock cloud writes now that we've merged the real cloud
         // state into local. Before this flip, saveState skips its
         // debounced cloud sync so the boot-time default state can't

@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Polygon, Circle as SvgCircle, Path, Rect } from 'react-native-svg';
 import { Animated, Easing } from 'react-native';
 import type { ModeId } from '@/src/data/unifiedJourney';
+import { t } from '@/src/i18n';
 
 export type NodeState = 'completed' | 'current' | 'locked' | 'unlocked';
 
@@ -90,7 +91,10 @@ export function LevelNode({
       disabled={isLocked}
       style={{ alignItems: 'center' }}
       accessibilityRole="button"
-      accessibilityLabel={`Level ${position}, ${state}`}
+      accessibilityLabel={t('journey.node_aria', {
+        position,
+        state: t(`journey.node_state_${state === 'unlocked' ? 'current' : state}`),
+      })}
     >
       {/* Pulsing glow ring for current node */}
       {isCurrent && (
@@ -135,7 +139,7 @@ export function LevelNode({
       {/* Play badge below current node */}
       {isCurrent && (
         <View style={[st.playBadge, { backgroundColor: CURRENT_BADGE_COLOR }]}>
-          <Text style={st.playBadgeText}>PLAY</Text>
+          <Text style={st.playBadgeText}>{t('journey.play_chip')}</Text>
         </View>
       )}
 

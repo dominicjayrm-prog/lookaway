@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { WORLD_THEMES, WORLD_THEME_ORDER } from '@/src/data/unifiedJourney';
 import { CAMPAIGNS, CAMPAIGN_ORDER } from '@/src/data/campaigns';
+import { t } from '@/src/i18n';
+import { localizedWorldName } from './worldI18n';
 
 interface Props {
   onComplete: () => void;
@@ -46,20 +48,28 @@ export function UnifiedIntro({ onComplete }: Props) {
       >
         {/* Card 1 — the Journey */}
         <View style={[st.card, { width: SCREEN_WIDTH }]}>
-          <Text style={[st.eyebrow, { color: colors.accent }]}>THE BRAIN JOURNEY</Text>
+          <Text style={[st.eyebrow, { color: colors.accent }]}>
+            {t('journey.intro.eyebrow_1')}
+          </Text>
           <Text style={[st.bigNumber, { color: colors.accent }]}>380</Text>
-          <Text style={[st.title, { color: colors.text }]}>Levels. One path.</Text>
+          <Text style={[st.title, { color: colors.text }]}>
+            {t('journey.intro.title_1')}
+          </Text>
           <Text style={[st.body, { color: colors.textMid }]}>
-            No menus. No unlocks to chase. Just the next level, then the one after.
+            {t('journey.intro.body_1')}
           </Text>
         </View>
 
         {/* Card 2 — the Modes */}
         <View style={[st.card, { width: SCREEN_WIDTH }]}>
-          <Text style={[st.eyebrow, { color: colors.accent }]}>SIX WAYS TO TRAIN</Text>
-          <Text style={[st.title, { color: colors.text }]}>Every mode, rotated</Text>
+          <Text style={[st.eyebrow, { color: colors.accent }]}>
+            {t('journey.intro.eyebrow_2')}
+          </Text>
+          <Text style={[st.title, { color: colors.text }]}>
+            {t('journey.intro.title_2')}
+          </Text>
           <Text style={[st.body, { color: colors.textMid }]}>
-            You'll taste each mode in the first 25 levels. No gatekeeping.
+            {t('journey.intro.body_2')}
           </Text>
           <View style={st.modeGrid}>
             {CAMPAIGN_ORDER.map((id) => {
@@ -76,10 +86,14 @@ export function UnifiedIntro({ onComplete }: Props) {
 
         {/* Card 3 — the Worlds */}
         <View style={[st.card, { width: SCREEN_WIDTH }]}>
-          <Text style={[st.eyebrow, { color: colors.accent }]}>FIVE WORLDS TO EXPLORE</Text>
-          <Text style={[st.title, { color: colors.text }]}>From forest to volcano</Text>
+          <Text style={[st.eyebrow, { color: colors.accent }]}>
+            {t('journey.intro.eyebrow_3')}
+          </Text>
+          <Text style={[st.title, { color: colors.text }]}>
+            {t('journey.intro.title_3')}
+          </Text>
           <Text style={[st.body, { color: colors.textMid }]}>
-            Each world has its own mood and look. Earn them by playing.
+            {t('journey.intro.body_3')}
           </Text>
           <View style={st.worldColumn}>
             {WORLD_THEME_ORDER.map((theme) => {
@@ -87,7 +101,9 @@ export function UnifiedIntro({ onComplete }: Props) {
               return (
                 <View key={theme} style={st.worldRow}>
                   <View style={[st.worldDot, { backgroundColor: meta.color }]} />
-                  <Text style={[st.worldName, { color: colors.text }]}>{meta.name}</Text>
+                  <Text style={[st.worldName, { color: colors.text }]}>
+                    {localizedWorldName(theme)}
+                  </Text>
                   <Text style={[st.worldRange, { color: colors.textMid }]}>
                     {meta.range[0]}–{meta.range[1]}
                   </Text>
@@ -123,7 +139,9 @@ export function UnifiedIntro({ onComplete }: Props) {
             { backgroundColor: colors.accent, opacity: pressed ? 0.9 : 1 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={cardIdx < 2 ? 'Next' : 'Start Level 1'}
+          accessibilityLabel={
+            cardIdx < 2 ? t('journey.intro.next_aria') : t('journey.intro.start_aria')
+          }
         >
           <LinearGradient
             colors={[colors.accent, colors.accent + 'DD']}
@@ -132,7 +150,7 @@ export function UnifiedIntro({ onComplete }: Props) {
             style={st.ctaInner}
           >
             <Text style={st.ctaText}>
-              {cardIdx < 2 ? 'Next' : 'Start Level 1'}
+              {cardIdx < 2 ? t('journey.intro.next') : t('journey.intro.start')}
             </Text>
           </LinearGradient>
         </Pressable>

@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { WORLD_THEMES, type WorldTheme } from '@/src/data/unifiedJourney';
 import { WORLD_VISUALS } from './worldVisuals';
+import { t } from '@/src/i18n';
+import { localizedWorldName } from './worldI18n';
 
 interface Props {
   nextWorld: WorldTheme;
@@ -35,8 +37,10 @@ export function WorldGate({ nextWorld, locked }: Props) {
       <View style={st.content}>
         {locked && <LockSvg size={16} color="rgba(255,255,255,0.85)" />}
         <View style={st.textBlock}>
-          <Text style={st.eyebrow}>WORLD {meta.worldNumber} AHEAD</Text>
-          <Text style={st.title}>{meta.name}</Text>
+          <Text style={st.eyebrow}>
+            {t('journey.world_gate_ahead', { num: meta.worldNumber })}
+          </Text>
+          <Text style={st.title}>{localizedWorldName(nextWorld)}</Text>
         </View>
       </View>
     </LinearGradient>

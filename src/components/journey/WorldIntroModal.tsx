@@ -3,6 +3,8 @@ import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WORLD_THEMES, WORLD_THEME_ORDER, type WorldTheme } from '@/src/data/unifiedJourney';
 import { WORLD_VISUALS } from './worldVisuals';
+import { t } from '@/src/i18n';
+import { localizedWorldName, localizedWorldAtmosphere } from './worldI18n';
 
 interface Props {
   world: WorldTheme | null;
@@ -31,11 +33,18 @@ export function WorldIntroModal({ world, onClose }: Props) {
           style={st.card}
         >
           <Text style={st.eyebrow}>
-            WORLD {meta.worldNumber} OF {WORLD_THEME_ORDER.length} · UNLOCKED
+            {t('journey.world_intro_eyebrow', {
+              num: meta.worldNumber,
+              total: WORLD_THEME_ORDER.length,
+            })}
           </Text>
-          <Text style={st.title}>{meta.name}</Text>
-          <Text style={st.range}>Levels {start} – {end}</Text>
-          <Text style={st.atmosphere}>{visuals.atmosphere}</Text>
+          <Text style={st.title}>{localizedWorldName(world)}</Text>
+          <Text style={st.range}>
+            {t('journey.world_intro_range', { start, end })}
+          </Text>
+          <Text style={st.atmosphere}>
+            {localizedWorldAtmosphere(world, visuals.atmosphere)}
+          </Text>
 
           <Pressable
             onPress={onClose}
@@ -44,9 +53,13 @@ export function WorldIntroModal({ world, onClose }: Props) {
               { backgroundColor: '#FFFFFF', opacity: pressed ? 0.88 : 1 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Enter ${meta.name}`}
+            accessibilityLabel={t('journey.world_intro_aria', {
+              name: localizedWorldName(world),
+            })}
           >
-            <Text style={[st.ctaText, { color: meta.color }]}>Enter →</Text>
+            <Text style={[st.ctaText, { color: meta.color }]}>
+              {t('journey.world_intro_cta')}
+            </Text>
           </Pressable>
         </LinearGradient>
       </View>

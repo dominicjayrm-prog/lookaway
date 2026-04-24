@@ -3,6 +3,8 @@ import { View, Text, Modal, Pressable, StyleSheet, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Blink } from '@/src/components/Blink';
 import { useGameStore } from '@/src/store';
+import { t } from '@/src/i18n';
+import { UNIFIED_LADDER } from '@/src/data/unifiedJourney';
 
 interface Props {
   visible: boolean;
@@ -18,7 +20,11 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
   const share = async () => {
     try {
       await Share.share({
-        message: `I just finished all 380 levels of BLANKED. ${totalStars} stars, ${streakCount}-day streak. Brain Master. 🧠👑`,
+        message: t('journey.brain_master.share_message', {
+          total: UNIFIED_LADDER.length,
+          stars: totalStars,
+          streak: streakCount,
+        }),
       });
     } catch {}
   };
@@ -27,30 +33,31 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <LinearGradient colors={['#FFD700', '#D4A012', '#8B6914']} style={st.overlay}>
         <View style={st.content}>
-          <Text style={st.eyebrow}>LEVEL 380 · COMPLETE</Text>
-          <Text style={st.title}>BRAIN MASTER</Text>
+          <Text style={st.eyebrow}>
+            {t('journey.brain_master.eyebrow', { total: UNIFIED_LADDER.length })}
+          </Text>
+          <Text style={st.title}>{t('journey.brain_master.title')}</Text>
 
           <View style={st.blinkWrap}>
             <Blink expression="celebrate" size={180} />
           </View>
 
-          <Text style={st.blurb}>
-            You walked from the grove to the core. Every mode, every world.
-            You are in the top 0.3% of Blanked minds.
-          </Text>
+          <Text style={st.blurb}>{t('journey.brain_master.blurb')}</Text>
 
           <View style={st.statsRow}>
             <View style={st.stat}>
               <Text style={st.statValue}>{totalStars}</Text>
-              <Text style={st.statLabel}>STARS</Text>
+              <Text style={st.statLabel}>{t('journey.brain_master.stars_label')}</Text>
             </View>
             <View style={st.stat}>
-              <Text style={st.statValue}>380</Text>
-              <Text style={st.statLabel}>LEVELS</Text>
+              <Text style={st.statValue}>{UNIFIED_LADDER.length}</Text>
+              <Text style={st.statLabel}>{t('journey.brain_master.levels_label')}</Text>
             </View>
             <View style={st.stat}>
               <Text style={st.statValue}>{streakCount}</Text>
-              <Text style={st.statLabel}>DAY STREAK</Text>
+              <Text style={st.statLabel}>
+                {t('journey.brain_master.day_streak_label')}
+              </Text>
             </View>
           </View>
 
@@ -61,9 +68,9 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
               { opacity: pressed ? 0.9 : 1 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Share your journey"
+            accessibilityLabel={t('journey.brain_master.share_aria')}
           >
-            <Text style={st.shareText}>Share your journey</Text>
+            <Text style={st.shareText}>{t('journey.brain_master.share_cta')}</Text>
           </Pressable>
 
           <Pressable
@@ -73,9 +80,9 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
               { opacity: pressed ? 0.8 : 1 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={t('journey.brain_master.close_aria')}
           >
-            <Text style={st.closeText}>Done</Text>
+            <Text style={st.closeText}>{t('journey.brain_master.done_cta')}</Text>
           </Pressable>
         </View>
       </LinearGradient>
