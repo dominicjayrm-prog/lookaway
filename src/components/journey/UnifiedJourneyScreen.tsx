@@ -45,6 +45,7 @@ import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
 import { BrainMasterCelebration } from './BrainMasterCelebration';
+import { JourneySplash } from './JourneySplash';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
@@ -222,6 +223,19 @@ export function UnifiedJourneyScreen() {
     return () => clearTimeout(handle);
   }, []);
 
+  // Splash overlay shown during the first mount. Hides the React
+  // reconciliation work (node trees, path connectors, scenery SVGs,
+  // particle worklets) behind a beautiful biome gradient + Blink.
+  // Flips to false ~450ms after mount — long enough for the scroll
+  // content to paint but short enough to feel instant rather than
+  // loading. Once the fade-out completes we drop the splash entirely.
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashMounted, setSplashMounted] = useState(true);
+  useEffect(() => {
+    const hideHandle = setTimeout(() => setSplashVisible(false), 450);
+    return () => clearTimeout(hideHandle);
+  }, []);
+
   // Viewport culling — rendering all 380 level nodes + 379 SVG path
   // connectors at once is the single biggest perf risk on Android.
   // Instead we track the scroll position and only render a window of
@@ -230,11 +244,27 @@ export function UnifiedJourneyScreen() {
   // showing a node mid-spawn. The initial range centres on
   // unifiedPosition so the auto-scroll lands on already-rendered
   // content.
+  //
+  // First mount uses a TIGHT window (±12) so the initial React commit
+  // only has to build ~24 nodes + connectors. Once the splash has
+  // faded and the user is ready to scroll, we expand to the full ±40
+  // buffer. Reduces perceived first-open latency dramatically.
   const VISIBLE_BUFFER = 40;
+  const INITIAL_VISIBLE_BUFFER = 12;
   const [visibleRange, setVisibleRange] = useState<[number, number]>(() => [
-    Math.max(1, unifiedPosition - VISIBLE_BUFFER),
-    Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
+    Math.max(1, unifiedPosition - INITIAL_VISIBLE_BUFFER),
+    Math.min(UNIFIED_LADDER.length, unifiedPosition + INITIAL_VISIBLE_BUFFER),
   ]);
+  useEffect(() => {
+    // Expand to the full buffer once the splash has faded out. We
+    // wait until splashMounted is false (fade completed) so the
+    // expansion work happens when no one is looking.
+    if (splashMounted) return;
+    setVisibleRange([
+      Math.max(1, unifiedPosition - VISIBLE_BUFFER),
+      Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
+    ]);
+  }, [splashMounted, unifiedPosition]);
 
   // CRITICAL: this callback MUST be declared BEFORE the
   // useAnimatedReaction below — otherwise Reanimated captures the
@@ -825,6 +855,15 @@ export function UnifiedJourneyScreen() {
           }}
         />
       </SafeAreaView>
+      {/* Splash overlay — covers everything on first mount, fades out
+       *  ~450ms later once the heavy reconciliation has settled. */}
+      {splashMounted && (
+        <JourneySplash
+          worldTheme={currentLevel?.worldTheme ?? 'emerald_grove'}
+          visible={splashVisible}
+          onHidden={() => setSplashMounted(false)}
+        />
+      )}
       </View>
     </TabTransition>
   );
