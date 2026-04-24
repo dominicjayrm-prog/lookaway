@@ -506,24 +506,36 @@ export function UnifiedJourneyScreen() {
     );
   }
 
-  // Tint the whole-screen backdrop with the current world's darkest
-  // gradient stop. Any gutter the scroll doesn't cover (above the
-  // status bar area, below Level 1 on bounce, during bounce at the
-  // top) shows this colour instead of the app's default white — so
-  // the biome reads as continuous all the way to the edges.
+  // Current world's full 3-stop gradient — used for the fixed backdrop
+  // behind everything so the status-bar area and the space between the
+  // path bottom and the tab bar show a living biome gradient rather
+  // than a flat colour strip.
   const currentVisuals = WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'];
-  const gutterColor = currentVisuals.gradientColors[currentVisuals.gradientColors.length - 1];
+  const backdropColors = currentVisuals.gradientColors;
 
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: gutterColor }]} edges={['top']}>
-        <Animated.ScrollView
-          ref={scrollRef as any}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[st.scrollContent, { backgroundColor: gutterColor }]}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-        >
+      <View style={{ flex: 1 }}>
+        {/* Biome backdrop — a full-screen gradient matching the current
+         *  world. Sits behind the SafeAreaView + ScrollView so EVERY
+         *  pixel behind the tab (even areas the scroll doesn't reach)
+         *  carries biome colour. The gradient changes as the player
+         *  crosses into a new world. */}
+        <LinearGradient
+          colors={backdropColors}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+        <SafeAreaView style={[st.container, { backgroundColor: 'transparent' }]} edges={['top']}>
+          <Animated.ScrollView
+            ref={scrollRef as any}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={st.scrollContent}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+          >
           {/* Migration banner for existing users */}
           {isMigratedExisting && (
             <MigrationBanner
@@ -813,6 +825,7 @@ export function UnifiedJourneyScreen() {
           }}
         />
       </SafeAreaView>
+      </View>
     </TabTransition>
   );
 }
