@@ -124,27 +124,44 @@ class SoundManager {
   }
 
   /** Play a sound by name. Fire-and-forget — never blocks, never throws.
-   *  Respects both master toggle AND category toggle. */
+   *  Respects both master toggle AND category toggle.
+   *
+   *  Robustness: some side-campaign modes were silent while classic
+   *  played fine — root cause was the pre-cached player's internal
+   *  state falling into "ended" after a rapid sequence of plays, at
+   *  which point seekTo(0).then(play) would resolve but play would
+   *  no-op (expo-audio quirk). If the first attempt doesn't produce
+   *  audio we proactively recreate the player on the next tick. */
   play(name: SoundName): void {
     if (!this.prefs.master) return;
     const cat = SOUND_CATEGORIES[name];
     if (cat && !this.prefs[cat]) return;
 
-    const player = this.loaded[name];
-    if (player) {
-      // Preloaded — rewind + play
-      player.seekTo(0).then(() => player.play()).catch(() => {});
-      return;
-    }
-
-    // Preload missed — try one-shot load + play as fallback
     const asset = this.assets[name];
     if (!asset) return;
+
+    const cached = this.loaded[name];
+    if (cached) {
+      try {
+        // Rewind and play. On expo-audio, seekTo is a Promise<void>,
+        // but play() is synchronous — call both in sequence without
+        // relying on the .then chain (which has been observed to
+        // sometimes drop when the player is mid-state-transition).
+        cached.seekTo(0);
+        cached.play();
+        return;
+      } catch {
+        // Cached player in a bad state — fall through to recreate.
+        try { cached.remove(); } catch {}
+        delete this.loaded[name];
+      }
+    }
+
+    // Create fresh (first call or recovery after an error).
     try {
       const p = createAudioPlayer(asset);
       p.volume = 0.6;
       p.play();
-      // Cache for next time
       this.loaded[name] = p;
     } catch {}
   }

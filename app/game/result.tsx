@@ -292,8 +292,13 @@ function ResultScreen() {
   // ── Navigation handlers ──
   const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
   const handleNextWorld = () => { resetGame(); router.dismissAll(); router.push(`/world/${nextWorldId}`); };
-  const handleBackToMap = () => { resetGame(); router.dismissAll(); router.push(`/world/${worldId}`); };
-  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else { router.dismissAll(); router.push(`/world/${worldId}`); } };
+  // Back to Map now returns to the unified Journey tab rather than the
+  // legacy Classic world map. The old flow pushed `/world/{worldId}`
+  // onto the stack, which meant pressing back from the world map
+  // unwound all the way to the level Ready screen — confusing. Jumping
+  // to the tabs with replace guarantees a clean exit.
+  const handleBackToMap = () => { resetGame(); router.dismissAll(); router.replace('/(tabs)/journey'); };
+  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else { router.dismissAll(); router.replace('/(tabs)/journey'); } };
 
   let gemText: string | null = null;
   if (passed && gemsEarned > 0) {

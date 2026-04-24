@@ -73,6 +73,72 @@ function ContinueArrow() {
   );
 }
 
+/** Floating chip shown when the player has scrolled away from their
+ *  current level. Shows an arrow (up or down) + "Level N" label.
+ *  Tap → smooth-scroll back. Appears + disappears with a spring +
+ *  fade. The arrow itself nudges rhythmically to suggest 'tap me'. */
+function JumpToCurrentChip({
+  direction,
+  position,
+  tint,
+  onPress,
+  bottomInset,
+}: {
+  direction: 'above' | 'below';
+  position: number;
+  tint: string;
+  onPress: () => void;
+  bottomInset: number;
+}) {
+  const visible = useSharedValue(0);
+  const nudge = useSharedValue(0);
+
+  useEffect(() => {
+    visible.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
+  }, [visible]);
+
+  useEffect(() => {
+    nudge.value = withRepeat(
+      withSequence(
+        withTiming(direction === 'above' ? -3 : 3, { duration: 600, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 600, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [direction, nudge]);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: visible.value,
+    transform: [{ scale: 0.9 + visible.value * 0.1 }, { translateY: (1 - visible.value) * 20 }],
+  }));
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: nudge.value }],
+  }));
+
+  const iconName = direction === 'above' ? 'chevron-up' : 'chevron-down';
+
+  return (
+    <Animated.View style={[st.jumpChipWrap, { bottom: bottomInset + 20 }, containerStyle]}>
+      <Pressable
+        onPress={onPress}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={`Jump to level ${position}`}
+      >
+        <View style={[st.jumpChip, { backgroundColor: tint, shadowColor: tint }]}>
+          <Animated.View style={arrowStyle}>
+            <Ionicons name={iconName} size={16} color="#FFFFFF" />
+          </Animated.View>
+          <Text style={st.jumpChipLabel} numberOfLines={1} allowFontScaling={false}>
+            Level {position}
+          </Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 /** Compute sine-wave x offset per position, within a fixed-width container.
  *  Creates a gentle snake path without hard rows / columns. */
 function pathXForPosition(position: number, containerWidth: number): number {
@@ -141,6 +207,20 @@ export function UnifiedJourneyScreen() {
   const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
   const [showBrainMaster, setShowBrainMaster] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
+  // Jump-to-current indicator: 'above' means the current level sits
+  // above the viewport (player has scrolled down past it), 'below'
+  // means it's further up the ladder than what's on screen. `null`
+  // means the current node is inside the viewport — chip hidden.
+  const [jumpDirection, setJumpDirection] = useState<'above' | 'below' | null>(null);
+  // Defer the heavy scenery + particle mount by one frame so the tab
+  // opens instantly (gradient slabs + nodes paint first) and the
+  // decorative layer fades in a moment later. Shaves the user-perceived
+  // 'takes ages to load' on the Journey tab.
+  const [decorationsReady, setDecorationsReady] = useState(false);
+  useEffect(() => {
+    const handle = setTimeout(() => setDecorationsReady(true), 40);
+    return () => clearTimeout(handle);
+  }, []);
 
   // Viewport culling — rendering all 380 level nodes + 379 SVG path
   // connectors at once is the single biggest perf risk on Android.
@@ -163,14 +243,31 @@ export function UnifiedJourneyScreen() {
   // scroll tick. Learned that the hard way.
   const maybeUpdateRange = useCallback((s: number, e: number) => {
     setVisibleRange((prev) => {
-      if (Math.abs(s - prev[0]) < 15 && Math.abs(e - prev[1]) < 15) return prev;
+      // Only re-render when the window drifts by 25+ positions (was
+      // 15). Larger dead-zone means fast scrolling triggers fewer
+      // React commits, which keeps the 60fps frame budget during
+      // flings. The VISIBLE_BUFFER of 40 still covers the gap.
+      if (Math.abs(s - prev[0]) < 25 && Math.abs(e - prev[1]) < 25) return prev;
       return [s, e];
     });
+  }, []);
+
+  // Derived on the UI thread: y coord of the current level node.
+  const currentLevelY = PATH_TOP_PADDING + (UNIFIED_LADDER.length - unifiedPosition) * ROW_HEIGHT;
+
+  // JS-thread handler for jump-direction changes. Keep it separate from
+  // the visible-range handler so a nudge in one doesn't stomp the
+  // other; React batches the setStates.
+  const maybeUpdateJumpDirection = useCallback((dir: 'above' | 'below' | null) => {
+    setJumpDirection((prev) => (prev === dir ? prev : dir));
   }, []);
 
   // Shift the visible window when the scroll position drifts far
   // enough that the old window is no longer centred. Mirrors the flip
   // in yForPosition — higher scrollY means a LOWER position now.
+  // Same worklet computes whether the current level node is outside
+  // the viewport so the floating jump-to-current chip knows which
+  // arrow to show.
   useAnimatedReaction(
     () => scrollY.value,
     (current) => {
@@ -186,9 +283,32 @@ export function UnifiedJourneyScreen() {
       const nextStart = Math.max(1, approxPos - VISIBLE_BUFFER);
       const nextEnd = Math.min(total, approxPos + VISIBLE_BUFFER);
       runOnJS(maybeUpdateRange)(nextStart, nextEnd);
+
+      // Jump-to-current: is the current node visible in the viewport?
+      // Viewport y range is [current, current + screenHeight]. We give
+      // a half-screen of comfort zone on each side before surfacing
+      // the chip — avoids flicker when the node is barely off-screen.
+      const viewportTop = current;
+      const viewportBottom = current + screenHeight;
+      const comfort = screenHeight * 0.5;
+      let dir: 'above' | 'below' | null = null;
+      if (currentLevelY < viewportTop - comfort) dir = 'above';
+      else if (currentLevelY > viewportBottom + comfort) dir = 'below';
+      runOnJS(maybeUpdateJumpDirection)(dir);
     },
-    [maybeUpdateRange],
+    [maybeUpdateRange, maybeUpdateJumpDirection, currentLevelY, screenHeight],
   );
+
+  // Tap handler for the floating chip: smooth-scroll back to the
+  // current level's node, centring it just above the viewport
+  // midpoint (same bias as the initial auto-scroll).
+  const jumpToCurrent = useCallback(() => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    const target = Math.max(0, currentLevelY - screenHeight * 0.4);
+    scrollRef.current?.scrollTo({ y: target, animated: true });
+  }, [currentLevelY, screenHeight]);
 
   // Is this a brand-new player (position 1, no intro seen) or a
   // migrated existing user (position > 1, no intro seen)?
@@ -386,13 +506,21 @@ export function UnifiedJourneyScreen() {
     );
   }
 
+  // Tint the whole-screen backdrop with the current world's darkest
+  // gradient stop. Any gutter the scroll doesn't cover (above the
+  // status bar area, below Level 1 on bounce, during bounce at the
+  // top) shows this colour instead of the app's default white — so
+  // the biome reads as continuous all the way to the edges.
+  const currentVisuals = WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'];
+  const gutterColor = currentVisuals.gradientColors[currentVisuals.gradientColors.length - 1];
+
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
+      <SafeAreaView style={[st.container, { backgroundColor: gutterColor }]} edges={['top']}>
         <Animated.ScrollView
           ref={scrollRef as any}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={st.scrollContent}
+          contentContainerStyle={[st.scrollContent, { backgroundColor: gutterColor }]}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
@@ -404,10 +532,12 @@ export function UnifiedJourneyScreen() {
             />
           )}
 
-          {/* Header + hero container. The gradient sits behind everything
-           *  chrome-like above the path so the transition into the
-           *  themed world backgrounds feels seamless. */}
-          <View style={st.heroWrap}>
+          {/* Header + hero container. Explicit light bg so the header
+           *  content (text + progress bar + continue card) stays
+           *  readable even when the surrounding scroll gutter is
+           *  biome-tinted. The LinearGradient adds a subtle world
+           *  accent at the top for warmth. */}
+          <View style={[st.heroWrap, { backgroundColor: colors.bg }]}>
             <LinearGradient
               colors={[currentTheme.color + '18', 'transparent']}
               start={{ x: 0.5, y: 0 }}
@@ -525,7 +655,7 @@ export function UnifiedJourneyScreen() {
             )}
           </View>
 
-          {/* The path — vertically scrolling snake */}
+          {/* The path — vertically scrolling snake. */}
           <View style={[st.pathContainer, { height: pathHeight, width: pathWidth }]}>
             {/* Themed world backgrounds: 5 stacked gradient slabs, each
              *  with its own particle system. Rendered first so path +
@@ -535,6 +665,7 @@ export function UnifiedJourneyScreen() {
               pathTopPadding={PATH_TOP_PADDING}
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
+              showDecorations={decorationsReady}
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming
@@ -655,6 +786,18 @@ export function UnifiedJourneyScreen() {
           </View>
 
         </Animated.ScrollView>
+
+        {/* Floating jump-to-current chip. Hidden when the current
+         *  node is already on screen. */}
+        {jumpDirection && currentLevel && (
+          <JumpToCurrentChip
+            direction={jumpDirection}
+            position={unifiedPosition}
+            tint={currentCampaign?.color ?? currentTheme.color}
+            onPress={jumpToCurrent}
+            bottomInset={0}
+          />
+        )}
 
         <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
         <BrainMasterCelebration
@@ -839,5 +982,31 @@ const st = StyleSheet.create({
   },
   pathContainer: {
     position: 'relative',
+  },
+  jumpChipWrap: {
+    position: 'absolute',
+    right: 16,
+    // `bottom` is set dynamically to respect the safe-area inset.
+  },
+  jumpChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  jumpChipLabel: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    includeFontPadding: false,
   },
 });

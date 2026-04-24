@@ -18,6 +18,7 @@ import { useGameStore } from '@/src/store';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { fetchLevelById } from '@/src/data/levels';
 import { mastermindToStandardLevel, getMastermindLevel, type MastermindLevel } from '@/src/data/mastermindLevels';
+import { getPositionForLevelId } from '@/src/data/unifiedJourney';
 import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
 import { getStarsForScore } from '@/src/utils/scoring';
 import type { PowerUpId } from '@/src/utils/scoring';
@@ -269,7 +270,7 @@ function GameScreen() {
         >
           <Text style={[styles.closeButton, { color: tc.textMid }]}>{String.fromCharCode(10005)}</Text>
         </Pressable>
-        <Badge label={t('game.level_badge', { number: level.levelNumber })} />
+        <Badge label={t('game.level_badge', { number: getPositionForLevelId(level.id) ?? level.levelNumber })} />
         <View style={styles.headerSpacer} />
       </View>
 
