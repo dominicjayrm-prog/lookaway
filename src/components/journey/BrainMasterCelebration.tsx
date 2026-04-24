@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, Share, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -15,6 +15,8 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { Blink } from '@/src/components/Blink';
 import { useGameStore } from '@/src/store';
+import { supabase } from '@/src/lib/supabase';
+import { log } from '@/src/lib/logger';
 import { t } from '@/src/i18n';
 import { UNIFIED_LADDER } from '@/src/data/unifiedJourney';
 import { useEquippedBlinkExpression } from '@/src/hooks/useEquippedBlink';
@@ -37,6 +39,48 @@ export function BrainMasterCelebration({ visible, onClose }: Props) {
 function BrainMasterBody({ onClose }: { onClose: () => void }) {
   const { totalStars, streakCount } = useGameStore();
   const blinkExpression = useEquippedBlinkExpression();
+  // Real Brain Master count from Supabase, surfaced as "Brain Master #N".
+  // Falls back to a generic "every level complete" blurb if the query
+  // fails (offline, RLS hiccup) — we never show a fabricated percentage.
+  const [rank, setRank] = useState<number | null>(null);
+  const [totalMasters, setTotalMasters] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const myId = session?.user?.id;
+        if (!myId) return;
+        // Count the number of other users who hit L380 BEFORE me. We use
+        // the profile's updated_at as a proxy for "when they reached
+        // Brain Master" — imperfect for users who've written to their
+        // profile for other reasons after completion, but good enough
+        // for a bragging-rights number. If exactness ever matters we
+        // can add a dedicated brain_master_completed_at column.
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('updated_at')
+          .eq('id', myId)
+          .single();
+
+        const [{ count: countAhead }, { count: totalCount }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('unified_position', 380)
+            .lt('updated_at', myProfile?.updated_at ?? new Date().toISOString()),
+          supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('unified_position', 380),
+        ]);
+        if (typeof countAhead === 'number') setRank(countAhead + 1);
+        if (typeof totalCount === 'number') setTotalMasters(totalCount);
+      } catch (e) {
+        log.error('journey', 'brain master rank fetch failed', e);
+      }
+    })();
+  }, []);
 
   const cardScale = useSharedValue(0.6);
   const cardOpacity = useSharedValue(0);
@@ -124,7 +168,14 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
             </Animated.View>
 
             <Animated.View style={statsStyle}>
-              <Text style={st.blurb}>{t('journey.brain_master.blurb')}</Text>
+              {/* Rank blurb — real data from Supabase. Falls back to the
+               *  generic "every level complete" copy so we never invent
+               *  a stat we can't verify. */}
+              <Text style={st.blurb}>
+                {rank !== null
+                  ? t('journey.brain_master.rank_blurb', { rank })
+                  : t('journey.brain_master.blurb')}
+              </Text>
 
               <View style={st.statsRow}>
                 <StatBubble value={totalStars} label={t('journey.brain_master.stars_label')} />

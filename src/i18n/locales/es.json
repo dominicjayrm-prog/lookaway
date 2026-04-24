@@ -1150,7 +1150,8 @@
     "brain_master": {
       "eyebrow": "NIVEL {total} · COMPLETADO",
       "title": "MAESTRO CEREBRAL",
-      "blurb": "Caminaste desde la arboleda hasta el núcleo. Cada modo, cada mundo. Estás en el 0,3% superior de las mentes de Blanked.",
+      "blurb": "Caminaste desde la arboleda hasta el núcleo. Cada modo, cada mundo — completado. Bienvenido a Maestro Cerebral.",
+      "rank_blurb": "Caminaste desde la arboleda hasta el núcleo. Cada modo, cada mundo. Eres el Maestro Cerebral #{rank}.",
       "stars_label": "ESTRELLAS",
       "levels_label": "NIVELES",
       "day_streak_label": "RACHA DE DÍAS",

@@ -8,6 +8,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedScrollHandler,
+  useAnimatedReaction,
+  runOnJS,
   interpolate,
   Extrapolation,
   withRepeat,
@@ -145,15 +147,70 @@ export function UnifiedJourneyScreen() {
     hasSeenBrainMaster,
     markBrainMasterSeen,
   } = useGameStore();
+  // Cloud hydration flag — until loadFromCloud has completed at least
+  // once, the intro / migration banner / world intro / Brain Master
+  // modals stay dormant. Without this guard, a signed-in user on a
+  // fresh app open would briefly see the first-run intro before the
+  // real state arrives, then have it swapped under them. For guests
+  // (no auth) _cloudHydrated flips true immediately so there's no
+  // delay added to offline flows.
+  const cloudHydrated = useGameStore((s) => s._cloudHydrated);
+  const authUserId = useGameStore((s) => s._authUserId);
+  // Treat guest users (no auth) as already hydrated — they have no
+  // cloud state to wait for.
+  const readyForIntroDecisions = cloudHydrated || !authUserId;
 
   const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
   const [showBrainMaster, setShowBrainMaster] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
 
+  // Viewport culling — rendering all 380 level nodes + 379 SVG path
+  // connectors at once is the single biggest perf risk on Android.
+  // Instead we track the scroll position and only render a window of
+  // nodes around the current viewport. A buffer of ±40 positions
+  // (~3400px) above / below keeps scrolling smooth without ever
+  // showing a node mid-spawn. The initial range centres on
+  // unifiedPosition so the auto-scroll lands on already-rendered
+  // content.
+  const VISIBLE_BUFFER = 40;
+  const [visibleRange, setVisibleRange] = useState<[number, number]>(() => [
+    Math.max(1, unifiedPosition - VISIBLE_BUFFER),
+    Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
+  ]);
+
+  // Shift the visible window when the scroll position drifts far
+  // enough that the old window is no longer centred. We only re-render
+  // when the center moves by >15 positions to avoid render thrash.
+  useAnimatedReaction(
+    () => scrollY.value,
+    (current) => {
+      'worklet';
+      const approxPos = Math.max(
+        1,
+        Math.floor((current - PATH_TOP_PADDING) / ROW_HEIGHT) + 1,
+      );
+      const nextStart = Math.max(1, approxPos - VISIBLE_BUFFER);
+      const nextEnd = Math.min(UNIFIED_LADDER.length, approxPos + VISIBLE_BUFFER);
+      runOnJS(maybeUpdateRange)(nextStart, nextEnd);
+    },
+    [],
+  );
+
+  const maybeUpdateRange = useCallback((s: number, e: number) => {
+    setVisibleRange((prev) => {
+      if (Math.abs(s - prev[0]) < 15 && Math.abs(e - prev[1]) < 15) return prev;
+      return [s, e];
+    });
+  }, []);
+
   // Is this a brand-new player (position 1, no intro seen) or a
   // migrated existing user (position > 1, no intro seen)?
-  const isBrandNew = !hasSeenUnifiedIntro && unifiedPosition === 1;
-  const isMigratedExisting = !hasSeenUnifiedIntro && unifiedPosition > 1;
+  // Both gated on cloud hydration so we never show the intro to a
+  // signed-in user BEFORE their cloud state arrives — that was the
+  // flash-of-wrong-UI bug where existing users would briefly see the
+  // 3-card intro before loadFromCloud swapped in their real position.
+  const isBrandNew = readyForIntroDecisions && !hasSeenUnifiedIntro && unifiedPosition === 1;
+  const isMigratedExisting = readyForIntroDecisions && !hasSeenUnifiedIntro && unifiedPosition > 1;
 
   const [sideCampaignProgress, setSideCampaignProgress] = useState<
     Record<string, { stars: number; best_score: number }>
@@ -219,6 +276,7 @@ export function UnifiedJourneyScreen() {
   // UnifiedIntro already introduces all five. The modal is
   // single-shot per world via `hasSeenWorldIntro`.
   useEffect(() => {
+    if (!readyForIntroDecisions) return;
     if (!isWorldTransition(unifiedPosition)) return;
     const level = getUnifiedLevel(unifiedPosition);
     if (!level) return;
@@ -229,13 +287,14 @@ export function UnifiedJourneyScreen() {
       // whole new themed world.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-  }, [unifiedPosition, hasSeenWorldIntro]);
+  }, [readyForIntroDecisions, unifiedPosition, hasSeenWorldIntro]);
 
   // Fire the Brain Master celebration once when the player has
   // completed every level. Gated on `hasSeenBrainMaster` so it never
   // re-fires after dismissal — without that, the modal would pop every
   // time the journey screen mounts after the player reaches 380.
   useEffect(() => {
+    if (!readyForIntroDecisions) return;
     if (hasSeenBrainMaster) return;
     if (unifiedPosition < UNIFIED_LADDER.length) return;
     const final = getUnifiedLevel(UNIFIED_LADDER.length);
@@ -245,7 +304,7 @@ export function UnifiedJourneyScreen() {
         ? levelProgress[final.levelId]?.stars ?? 0
         : sideCampaignProgress[final.levelId]?.stars ?? 0;
     if (stars > 0) setShowBrainMaster(true);
-  }, [unifiedPosition, levelProgress, sideCampaignProgress, hasSeenBrainMaster]);
+  }, [readyForIntroDecisions, unifiedPosition, levelProgress, sideCampaignProgress, hasSeenBrainMaster]);
 
   const closeBrainMaster = () => {
     setShowBrainMaster(false);
@@ -482,8 +541,11 @@ export function UnifiedJourneyScreen() {
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming
-             *  segments stay dashed and quiet. */}
-            {UNIFIED_LADDER.slice(0, UNIFIED_LADDER.length - 1).map((level) => {
+             *  segments stay dashed and quiet. Viewport-culled so we only
+             *  render connectors inside the current visible window. */}
+            {UNIFIED_LADDER.slice(0, UNIFIED_LADDER.length - 1)
+              .filter((level) => level.position >= visibleRange[0] && level.position <= visibleRange[1])
+              .map((level) => {
               const next = UNIFIED_LADDER[level.position];
               if (!next) return null;
               const x1 = pathXForPosition(level.position, pathWidth);
@@ -512,7 +574,9 @@ export function UnifiedJourneyScreen() {
             })}
 
             {/* Level nodes + chapter badges */}
-            {UNIFIED_LADDER.map((level) => {
+            {UNIFIED_LADDER
+              .filter((level) => level.position >= visibleRange[0] && level.position <= visibleRange[1])
+              .map((level) => {
               const x = pathXForPosition(level.position, pathWidth);
               const y = yForPosition(level.position);
               const stars = getStars(level.levelId, level.mode);

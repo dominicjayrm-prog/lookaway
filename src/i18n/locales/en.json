@@ -1031,7 +1031,8 @@
     "brain_master": {
       "eyebrow": "LEVEL {total} · COMPLETE",
       "title": "BRAIN MASTER",
-      "blurb": "You walked from the grove to the core. Every mode, every world. You are in the top 0.3% of Blanked minds.",
+      "blurb": "You walked from the grove to the core. Every mode, every world — complete. Welcome to Brain Master.",
+      "rank_blurb": "You walked from the grove to the core. Every mode, every world. You are Brain Master #{rank}.",
       "stars_label": "STARS",
       "levels_label": "LEVELS",
       "day_streak_label": "DAY STREAK",

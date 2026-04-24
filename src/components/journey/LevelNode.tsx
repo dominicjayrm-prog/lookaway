@@ -76,7 +76,7 @@ function CheckGlyph({ size = 16, color = '#FFF' }: { size?: number; color?: stri
   );
 }
 
-export function LevelNode({
+function LevelNodeInner({
   position,
   mode,
   modeColor,
@@ -323,6 +323,24 @@ export function LevelNode({
     </Animated.View>
   );
 }
+
+/** Memoised wrapper — the journey screen re-renders whenever scroll
+ *  position or level progress changes; nodes that aren't the current
+ *  one have identical props frame-to-frame so we can skip their
+ *  reconciliation entirely. Custom comparator because `onPress` is a
+ *  new closure each parent render and we don't want that to bust the
+ *  memo. */
+export const LevelNode = React.memo(LevelNodeInner, (prev, next) => {
+  return (
+    prev.position === next.position
+    && prev.mode === next.mode
+    && prev.modeColor === next.modeColor
+    && prev.state === next.state
+    && prev.stars === next.stars
+    && prev.size === next.size
+    && prev.enterDelay === next.enterDelay
+  );
+});
 
 function PlayChip({ color }: { color: string }) {
   const bob = useSharedValue(0);
