@@ -386,13 +386,21 @@ export function UnifiedJourneyScreen() {
     );
   }
 
+  // Tint the whole-screen backdrop with the current world's darkest
+  // gradient stop. Any gutter the scroll doesn't cover (above the
+  // status bar area, below Level 1 on bounce, during bounce at the
+  // top) shows this colour instead of the app's default white — so
+  // the biome reads as continuous all the way to the edges.
+  const currentVisuals = WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'];
+  const gutterColor = currentVisuals.gradientColors[currentVisuals.gradientColors.length - 1];
+
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
+      <SafeAreaView style={[st.container, { backgroundColor: gutterColor }]} edges={['top']}>
         <Animated.ScrollView
           ref={scrollRef as any}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={st.scrollContent}
+          contentContainerStyle={[st.scrollContent, { backgroundColor: gutterColor }]}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
@@ -404,10 +412,12 @@ export function UnifiedJourneyScreen() {
             />
           )}
 
-          {/* Header + hero container. The gradient sits behind everything
-           *  chrome-like above the path so the transition into the
-           *  themed world backgrounds feels seamless. */}
-          <View style={st.heroWrap}>
+          {/* Header + hero container. Explicit light bg so the header
+           *  content (text + progress bar + continue card) stays
+           *  readable even when the surrounding scroll gutter is
+           *  biome-tinted. The LinearGradient adds a subtle world
+           *  accent at the top for warmth. */}
+          <View style={[st.heroWrap, { backgroundColor: colors.bg }]}>
             <LinearGradient
               colors={[currentTheme.color + '18', 'transparent']}
               start={{ x: 0.5, y: 0 }}
@@ -525,7 +535,7 @@ export function UnifiedJourneyScreen() {
             )}
           </View>
 
-          {/* The path — vertically scrolling snake */}
+          {/* The path — vertically scrolling snake. */}
           <View style={[st.pathContainer, { height: pathHeight, width: pathWidth }]}>
             {/* Themed world backgrounds: 5 stacked gradient slabs, each
              *  with its own particle system. Rendered first so path +
