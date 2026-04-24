@@ -24,6 +24,8 @@ import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
 import { PathConnector } from './PathConnector';
 import { ModeLibrary } from './ModeLibrary';
+import { WorldBackground } from './WorldBackground';
+import { WORLD_VISUALS } from './worldVisuals';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
 const PATH_TOP_PADDING = 32;
@@ -270,6 +272,15 @@ export function UnifiedJourneyScreen() {
 
           {/* The path — vertically scrolling snake */}
           <View style={[st.pathContainer, { height: pathHeight, width: pathWidth }]}>
+            {/* Themed world backgrounds: 5 stacked gradient slabs, each
+             *  with its own particle system. Rendered first so path +
+             *  nodes layer above. */}
+            <WorldBackground
+              width={pathWidth}
+              pathTopPadding={PATH_TOP_PADDING}
+              rowHeight={ROW_HEIGHT}
+              totalPositions={UNIFIED_LADDER.length}
+            />
             {/* Draw connectors first so nodes render above them. */}
             {UNIFIED_LADDER.slice(0, UNIFIED_LADDER.length - 1).map((level) => {
               const next = UNIFIED_LADDER[level.position];
@@ -279,7 +290,8 @@ export function UnifiedJourneyScreen() {
               const x2 = pathXForPosition(next.position, pathWidth);
               const y2 = yForPosition(next.position);
               const completed = next.position <= unifiedPosition;
-              const color = completed ? WORLD_THEMES[next.worldTheme].color : colors.borderStrong;
+              const visuals = WORLD_VISUALS[next.worldTheme];
+              const color = completed ? visuals.pathColor : 'rgba(255,255,255,0.35)';
               return (
                 <PathConnector
                   key={`c-${level.position}`}
@@ -288,9 +300,9 @@ export function UnifiedJourneyScreen() {
                   x2={x2}
                   y2={y2}
                   color={color}
-                  opacity={completed ? 0.65 : 0.35}
+                  opacity={completed ? 0.85 : 0.45}
                   dashed={!completed}
-                  width={completed ? 4 : 3}
+                  width={completed ? 5 : 3}
                 />
               );
             })}
