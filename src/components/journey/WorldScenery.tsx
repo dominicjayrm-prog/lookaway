@@ -49,148 +49,360 @@ function seeded(seed: number) {
 }
 
 // --------------------------------------------------------------------
-// Emerald Grove — dense forest: canopy silhouettes, repeating tree
-// clusters down both sides, hanging vines, mushrooms on the ground,
-// soft sunbeams filtering through. Bottom of slab is the forest floor
-// (Level 1); top bleeds into Amber Dunes.
+// Emerald Grove — dense forest with depth:
+//   1. A hazy back layer of distant tree silhouettes (far, low opacity)
+//   2. Oak-like rounded-canopy trees at mid depth (varied sizes)
+//   3. Conifer / pine pointed trees at front (alternating sides)
+//   4. Dappled sunlight (soft glowing circles, NOT vertical beams)
+//   5. Ground layer: varied mushroom clusters, flower patches, grass
+//      tufts, a couple of fallen logs
+//   6. A bird gliding between canopies
+// All assembled using a seeded PRNG so items look naturally scattered
+// without reshuffling on each render.
 // --------------------------------------------------------------------
 function emeraldGrove(w: number, h: number): React.ReactNode {
   const rand = seeded(1);
-  const trees: Array<{ x: number; y: number; size: number; side: 'l' | 'r' }> = [];
-  // 14 tree clusters, alternating sides, roughly evenly distributed
-  // down the slab with jitter so they don't line up.
-  const count = 14;
-  for (let i = 0; i < count; i++) {
-    const t = i / count;
-    const jitter = (rand() - 0.5) * (h / count) * 0.6;
-    const y = h * 0.08 + t * h * 0.86 + jitter;
+
+  // Back-layer silhouettes: 20 distant trees dotted across the width
+  // at low opacity, just behind the gradient.
+  const backTrees = Array.from({ length: 22 }).map(() => ({
+    x: rand() * w,
+    y: rand() * h,
+    r: 18 + rand() * 14,
+  }));
+
+  // Mid layer: rounded-canopy oaks, 12 on each side (24 total).
+  const midTrees: Array<{ x: number; y: number; size: number; side: 'l' | 'r' }> = [];
+  const midCount = 24;
+  for (let i = 0; i < midCount; i++) {
+    const t = i / midCount;
+    const jitter = (rand() - 0.5) * (h / midCount) * 0.7;
+    const y = h * 0.05 + t * h * 0.88 + jitter;
     const side: 'l' | 'r' = i % 2 === 0 ? 'l' : 'r';
-    const size = 42 + rand() * 22;
-    const x = side === 'l' ? rand() * (w * 0.22) : w - rand() * (w * 0.22);
-    trees.push({ x, y, size, side });
+    const size = 48 + rand() * 26;
+    const maxInset = 0.2;
+    const x = side === 'l' ? rand() * (w * maxInset) : w - rand() * (w * maxInset);
+    midTrees.push({ x, y, size, side });
   }
-  const mushrooms: Array<{ x: number; y: number; r: number; color: string }> = [];
-  const mushroomCount = 12;
-  for (let i = 0; i < mushroomCount; i++) {
-    mushrooms.push({
-      x: (i / mushroomCount) * w + rand() * 18,
-      y: h - 10 - rand() * 28,
-      r: 2 + rand() * 3,
-      color: rand() > 0.5 ? '#FFC8DD' : '#FFE8A3',
-    });
+
+  // Front layer: sharper conifers further in-screen, alternating sides.
+  const pines: Array<{ x: number; y: number; size: number }> = [];
+  for (let i = 0; i < 18; i++) {
+    const t = i / 18;
+    const jitter = (rand() - 0.5) * 50;
+    const y = h * 0.08 + t * h * 0.84 + jitter;
+    const side = i % 2 === 0 ? 'l' : 'r';
+    const offset = 0.07 + rand() * 0.08;
+    const x = side === 'l' ? w * offset : w * (1 - offset);
+    pines.push({ x, y, size: 28 + rand() * 22 });
   }
+
+  // Dappled light spots — soft glowing circles scattered through the
+  // slab. Replaces the old vertical beam-stripes which read as bars.
+  const dapples = Array.from({ length: 16 }).map(() => ({
+    x: rand() * w,
+    y: rand() * h,
+    r: 22 + rand() * 30,
+  }));
+
+  // Ground layer items — confined to the bottom 12% band.
+  const mushrooms = Array.from({ length: 22 }).map((_, i) => ({
+    x: (i / 22) * w + rand() * 20 - 10,
+    y: h * (0.88 + rand() * 0.1),
+    r: 2.5 + rand() * 2.5,
+    // Red-white spotted vs. tan — two variants for a proper forest look.
+    variant: rand() > 0.5 ? 'red' : 'tan',
+  }));
+  const grassTufts = Array.from({ length: 30 }).map((_, i) => ({
+    x: (i / 30) * w + rand() * 20,
+    y: h - 4 - rand() * 16,
+  }));
+  const flowers = Array.from({ length: 14 }).map(() => ({
+    x: rand() * w,
+    y: h * (0.9 + rand() * 0.08),
+    color: ['#FFC8DD', '#FFE8A3', '#FFFFFF', '#C9B1FF'][Math.floor(rand() * 4)],
+  }));
+  // Two fallen logs in the ground band.
+  const logs = [
+    { x: w * 0.18, y: h * 0.96, len: w * 0.18 },
+    { x: w * 0.64, y: h * 0.93, len: w * 0.22 },
+  ];
+
+  // Single bird gliding in the mid-upper area.
+  const bird = { x: w * 0.55, y: h * 0.18, size: 8 };
+
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
         <LinearGradient id="grove-canopy-top" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#0F3D2B" stopOpacity={0.55} />
+          <Stop offset="0" stopColor="#0F3D2B" stopOpacity={0.65} />
           <Stop offset="1" stopColor="#0F3D2B" stopOpacity={0} />
         </LinearGradient>
         <LinearGradient id="grove-ground" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#0F3D2B" stopOpacity={0} />
-          <Stop offset="1" stopColor="#0B2E1F" stopOpacity={0.6} />
+          <Stop offset="1" stopColor="#061810" stopOpacity={0.85} />
         </LinearGradient>
+        <RadialGradient id="grove-dapple" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#FFF3B0" stopOpacity={0.22} />
+          <Stop offset="1" stopColor="#FFF3B0" stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id="mushroom-red" cx="50%" cy="40%" r="60%">
+          <Stop offset="0" stopColor="#FF8A8A" stopOpacity={0.9} />
+          <Stop offset="1" stopColor="#C1272D" stopOpacity={0.85} />
+        </RadialGradient>
       </Defs>
 
-      {/* Top-edge canopy silhouette — bleeds out of the top of the slab
-       *  so it feels like the forest extends upward past the viewport. */}
+      {/* ---------- LAYER 1: Back silhouettes (hazy depth) ---------- */}
+      {backTrees.map((b, i) => (
+        <Ellipse
+          key={`bg-${i}`}
+          cx={b.x}
+          cy={b.y}
+          rx={b.r}
+          ry={b.r * 0.85}
+          fill="#1B4332"
+          opacity={0.18}
+        />
+      ))}
+
+      {/* ---------- Top-edge canopy: wavy, bleeds out of slab ---------- */}
       <Path
-        d={`M 0 0 L 0 ${h * 0.08} Q ${w * 0.15} ${h * 0.03} ${w * 0.32} ${h * 0.07} Q ${w * 0.52} ${h * 0.11} ${w * 0.72} ${h * 0.05} Q ${w * 0.88} ${h * 0.02} ${w} ${h * 0.08} L ${w} 0 Z`}
+        d={`M 0 0 L 0 ${h * 0.09} Q ${w * 0.12} ${h * 0.03} ${w * 0.28} ${h * 0.08} Q ${w * 0.46} ${h * 0.12} ${w * 0.62} ${h * 0.05} Q ${w * 0.8} 0 ${w * 0.92} ${h * 0.06} Q ${w * 0.98} ${h * 0.08} ${w} ${h * 0.04} L ${w} 0 Z`}
         fill="#0F3D2B"
-        opacity={0.35}
+        opacity={0.5}
       />
       <Path
-        d={`M 0 ${h * 0.04} Q ${w * 0.25} 0 ${w * 0.5} ${h * 0.05} Q ${w * 0.75} ${h * 0.1} ${w} ${h * 0.03} L ${w} 0 L 0 0 Z`}
+        d={`M 0 ${h * 0.02} Q ${w * 0.22} 0 ${w * 0.45} ${h * 0.05} Q ${w * 0.72} ${h * 0.1} ${w} ${h * 0.02} L ${w} 0 L 0 0 Z`}
         fill="url(#grove-canopy-top)"
       />
 
-      {/* Tree clusters. Each tree: tall dark trunk + rounded canopy
-       *  above. Side trees only — we leave the centre clear for the
-       *  path. */}
-      {trees.map((t, i) => {
+      {/* ---------- Dappled sunlight (soft radial pools) ---------- */}
+      {dapples.map((d, i) => (
+        <SvgCircle
+          key={`dapple-${i}`}
+          cx={d.x}
+          cy={d.y}
+          r={d.r}
+          fill="url(#grove-dapple)"
+        />
+      ))}
+
+      {/* ---------- LAYER 2: Mid-depth oak trees ---------- */}
+      {midTrees.map((t, i) => {
         const trunkW = t.size * 0.18;
-        const trunkH = t.size * 1.2;
-        const canopyR = t.size * 0.55;
+        const trunkH = t.size * 1.3;
+        const canopyR = t.size * 0.62;
         return (
-          <G key={`tree-${i}`} opacity={0.6}>
-            {/* Trunk */}
+          <G key={`mid-${i}`} opacity={0.7}>
             <Rect
               x={t.x - trunkW / 2}
               y={t.y}
               width={trunkW}
               height={trunkH}
-              fill="#3D2817"
+              fill="#2B1810"
               rx={1}
             />
-            {/* Layered conical canopy — three stacked ellipses. */}
+            {/* Bark shadow line for depth */}
+            <Rect
+              x={t.x - trunkW / 2}
+              y={t.y}
+              width={trunkW * 0.35}
+              height={trunkH}
+              fill="#180A06"
+              opacity={0.5}
+            />
+            {/* Three-layer billowy canopy */}
             <Ellipse
               cx={t.x}
               cy={t.y - canopyR * 0.2}
-              rx={canopyR * 1.1}
-              ry={canopyR * 0.85}
-              fill="#0F3D2B"
-              opacity={0.85}
+              rx={canopyR * 1.15}
+              ry={canopyR * 0.9}
+              fill="#0B2E1F"
             />
             <Ellipse
-              cx={t.x}
-              cy={t.y - canopyR * 0.7}
-              rx={canopyR * 0.85}
-              ry={canopyR * 0.7}
+              cx={t.x + canopyR * 0.15}
+              cy={t.y - canopyR * 0.55}
+              rx={canopyR * 0.95}
+              ry={canopyR * 0.78}
               fill="#1B4332"
-              opacity={0.9}
             />
             <Ellipse
-              cx={t.x}
-              cy={t.y - canopyR * 1.1}
-              rx={canopyR * 0.55}
-              ry={canopyR * 0.5}
+              cx={t.x - canopyR * 0.12}
+              cy={t.y - canopyR * 0.95}
+              rx={canopyR * 0.7}
+              ry={canopyR * 0.6}
               fill="#2D6A4F"
             />
-            {/* Hanging vine from the side of the canopy. */}
+            {/* Small highlight pop */}
+            <Ellipse
+              cx={t.x - canopyR * 0.25}
+              cy={t.y - canopyR * 1.05}
+              rx={canopyR * 0.22}
+              ry={canopyR * 0.18}
+              fill="#52B788"
+              opacity={0.6}
+            />
+            {/* Hanging vine on the outer side */}
             {t.side === 'l' ? (
               <Path
-                d={`M ${t.x - canopyR * 0.9} ${t.y - canopyR * 0.2} Q ${t.x - canopyR * 1.1} ${t.y + canopyR * 0.6} ${t.x - canopyR * 0.8} ${t.y + canopyR * 1.3}`}
+                d={`M ${t.x - canopyR * 0.95} ${t.y - canopyR * 0.1} Q ${t.x - canopyR * 1.15} ${t.y + canopyR * 0.5} ${t.x - canopyR * 0.9} ${t.y + canopyR * 1.1} Q ${t.x - canopyR * 0.7} ${t.y + canopyR * 1.6} ${t.x - canopyR * 0.85} ${t.y + canopyR * 2.0}`}
                 stroke="#52B788"
-                strokeWidth={1.2}
+                strokeWidth={1.4}
                 fill="none"
-                opacity={0.55}
+                opacity={0.65}
               />
             ) : (
               <Path
-                d={`M ${t.x + canopyR * 0.9} ${t.y - canopyR * 0.2} Q ${t.x + canopyR * 1.1} ${t.y + canopyR * 0.6} ${t.x + canopyR * 0.8} ${t.y + canopyR * 1.3}`}
+                d={`M ${t.x + canopyR * 0.95} ${t.y - canopyR * 0.1} Q ${t.x + canopyR * 1.15} ${t.y + canopyR * 0.5} ${t.x + canopyR * 0.9} ${t.y + canopyR * 1.1} Q ${t.x + canopyR * 0.7} ${t.y + canopyR * 1.6} ${t.x + canopyR * 0.85} ${t.y + canopyR * 2.0}`}
                 stroke="#52B788"
-                strokeWidth={1.2}
+                strokeWidth={1.4}
                 fill="none"
-                opacity={0.55}
+                opacity={0.65}
               />
             )}
           </G>
         );
       })}
 
-      {/* Ground band + mushroom cluster along the forest floor. */}
+      {/* ---------- LAYER 3: Foreground pines ---------- */}
+      {pines.map((p, i) => {
+        const trunkW = p.size * 0.1;
+        const trunkH = p.size * 0.3;
+        return (
+          <G key={`pine-${i}`} opacity={0.85}>
+            <Rect
+              x={p.x - trunkW / 2}
+              y={p.y}
+              width={trunkW}
+              height={trunkH}
+              fill="#2B1810"
+            />
+            {/* Stacked triangular fronds — 4 layers, each smaller. */}
+            <Polygon
+              points={`${p.x - p.size * 0.55},${p.y} ${p.x},${p.y - p.size * 0.55} ${p.x + p.size * 0.55},${p.y}`}
+              fill="#0B2E1F"
+            />
+            <Polygon
+              points={`${p.x - p.size * 0.45},${p.y - p.size * 0.3} ${p.x},${p.y - p.size * 0.85} ${p.x + p.size * 0.45},${p.y - p.size * 0.3}`}
+              fill="#1B4332"
+            />
+            <Polygon
+              points={`${p.x - p.size * 0.35},${p.y - p.size * 0.6} ${p.x},${p.y - p.size * 1.15} ${p.x + p.size * 0.35},${p.y - p.size * 0.6}`}
+              fill="#2D6A4F"
+            />
+            <Polygon
+              points={`${p.x - p.size * 0.22},${p.y - p.size * 0.9} ${p.x},${p.y - p.size * 1.35} ${p.x + p.size * 0.22},${p.y - p.size * 0.9}`}
+              fill="#40916C"
+            />
+          </G>
+        );
+      })}
+
+      {/* ---------- Gliding bird silhouette ---------- */}
+      <G opacity={0.55}>
+        <Path
+          d={`M ${bird.x - bird.size} ${bird.y} Q ${bird.x - bird.size * 0.5} ${bird.y - bird.size * 0.6} ${bird.x} ${bird.y} Q ${bird.x + bird.size * 0.5} ${bird.y - bird.size * 0.6} ${bird.x + bird.size} ${bird.y}`}
+          stroke="#0B2E1F"
+          strokeWidth={1.5}
+          fill="none"
+          strokeLinecap="round"
+        />
+      </G>
+
+      {/* ---------- Ground band ---------- */}
       <Path
-        d={`M 0 ${h * 0.88} Q ${w * 0.5} ${h * 0.84} ${w} ${h * 0.89} L ${w} ${h} L 0 ${h} Z`}
+        d={`M 0 ${h * 0.86} Q ${w * 0.3} ${h * 0.83} ${w * 0.65} ${h * 0.87} T ${w} ${h * 0.86} L ${w} ${h} L 0 ${h} Z`}
         fill="url(#grove-ground)"
       />
-      {mushrooms.map((m, i) => (
-        <G key={`mushroom-${i}`}>
-          <Ellipse
-            cx={m.x}
-            cy={m.y}
-            rx={m.r * 1.3}
-            ry={m.r * 0.7}
-            fill={m.color}
-            opacity={0.7}
+
+      {/* ---------- Fallen logs ---------- */}
+      {logs.map((l, i) => (
+        <G key={`log-${i}`} opacity={0.75}>
+          <Rect
+            x={l.x}
+            y={l.y - 5}
+            width={l.len}
+            height={10}
+            rx={5}
+            fill="#3D2817"
           />
           <Rect
-            x={m.x - m.r * 0.25}
-            y={m.y}
-            width={m.r * 0.5}
-            height={m.r * 1.1}
-            fill="#F5E6D3"
-            opacity={0.5}
+            x={l.x + 3}
+            y={l.y - 3}
+            width={l.len - 6}
+            height={3}
+            rx={1.5}
+            fill="#5A3A22"
+            opacity={0.7}
           />
+        </G>
+      ))}
+
+      {/* ---------- Grass tufts ---------- */}
+      {grassTufts.map((g, i) => (
+        <G key={`grass-${i}`} opacity={0.65}>
+          <Polygon
+            points={`${g.x - 3},${g.y + 3} ${g.x - 4},${g.y - 5} ${g.x - 2},${g.y + 2}`}
+            fill="#40916C"
+          />
+          <Polygon
+            points={`${g.x},${g.y + 3} ${g.x - 1},${g.y - 7} ${g.x + 1},${g.y + 2}`}
+            fill="#52B788"
+          />
+          <Polygon
+            points={`${g.x + 3},${g.y + 3} ${g.x + 4},${g.y - 5} ${g.x + 2},${g.y + 2}`}
+            fill="#40916C"
+          />
+        </G>
+      ))}
+
+      {/* ---------- Flower clumps ---------- */}
+      {flowers.map((f, i) => (
+        <G key={`flower-${i}`}>
+          <SvgCircle cx={f.x - 2} cy={f.y - 1} r={1.5} fill={f.color} opacity={0.85} />
+          <SvgCircle cx={f.x + 2} cy={f.y - 1} r={1.5} fill={f.color} opacity={0.85} />
+          <SvgCircle cx={f.x} cy={f.y - 3} r={1.5} fill={f.color} opacity={0.85} />
+          <SvgCircle cx={f.x} cy={f.y} r={1} fill="#FFE8A3" opacity={0.9} />
+        </G>
+      ))}
+
+      {/* ---------- Mushrooms (two variants) ---------- */}
+      {mushrooms.map((m, i) => (
+        <G key={`mushroom-${i}`}>
+          {/* Stem */}
+          <Rect
+            x={m.x - m.r * 0.3}
+            y={m.y}
+            width={m.r * 0.6}
+            height={m.r * 1.4}
+            rx={m.r * 0.15}
+            fill="#F5E6D3"
+            opacity={0.85}
+          />
+          {/* Cap */}
+          {m.variant === 'red' ? (
+            <>
+              <Ellipse
+                cx={m.x}
+                cy={m.y}
+                rx={m.r * 1.5}
+                ry={m.r * 0.9}
+                fill="url(#mushroom-red)"
+              />
+              {/* Two white spots on the cap */}
+              <SvgCircle cx={m.x - m.r * 0.6} cy={m.y - m.r * 0.2} r={m.r * 0.2} fill="#FFFFFF" opacity={0.85} />
+              <SvgCircle cx={m.x + m.r * 0.4} cy={m.y + m.r * 0.1} r={m.r * 0.15} fill="#FFFFFF" opacity={0.85} />
+            </>
+          ) : (
+            <Ellipse
+              cx={m.x}
+              cy={m.y}
+              rx={m.r * 1.4}
+              ry={m.r * 0.8}
+              fill="#D4A373"
+              opacity={0.9}
+            />
+          )}
         </G>
       ))}
     </Svg>
