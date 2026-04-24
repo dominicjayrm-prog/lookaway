@@ -98,6 +98,59 @@ export function WorldBackground({
           </View>
         );
       })}
+
+      {/* Cross-fade bands at each world boundary. Without these the
+       *  slab gradients' bottom stop (darkest) meets the next slab's
+       *  top stop (lightest) as a hard seam. The band is ~3 rows tall
+       *  and sits centred on the boundary y, gradient-filled from the
+       *  upper world's darkest shade at the TOP to the lower world's
+       *  lightest shade at the BOTTOM. Reads as a natural dissolve. */}
+      {WORLD_THEME_ORDER.slice(0, -1).map((upperTheme, i) => {
+        // In the flipped layout, the upper world (higher positions)
+        // sits above the lower world. upperTheme is the earlier entry
+        // in the array — check their ranges to know which is which.
+        const lowerTheme = WORLD_THEME_ORDER[i + 1];
+        const upper = WORLD_THEMES[upperTheme];
+        const lower = WORLD_THEMES[lowerTheme];
+        // The "seam" is between the upper world's lowest position
+        // (start) and the lower world's highest position (end). In
+        // flipped coords these collide at the same y; we centre the
+        // band on the midpoint.
+        // Figure out which theme has the HIGHER position range (that's
+        // the one at the TOP of the canvas).
+        const topTheme = upper.range[0] > lower.range[0] ? upperTheme : lowerTheme;
+        const bottomTheme = topTheme === upperTheme ? lowerTheme : upperTheme;
+        const topVisuals = WORLD_VISUALS[topTheme];
+        const bottomVisuals = WORLD_VISUALS[bottomTheme];
+        // The boundary y: the border between the two worlds lies at
+        // the y of the lower-of-the-two start positions. Take the
+        // smallest start of the pair (which for consecutive worlds is
+        // the start of the TOP-of-canvas world's range... actually
+        // just compute it directly from position).
+        const topWorldLowestPos = WORLD_THEMES[topTheme].range[0];
+        const boundaryY = pathTopPadding + (totalPositions - topWorldLowestPos + 1) * rowHeight - rowHeight / 2;
+        const bandHeight = rowHeight * 3;
+        const bandTop = boundaryY - bandHeight / 2;
+        return (
+          <LinearGradient
+            key={`seam-${upperTheme}-${lowerTheme}`}
+            colors={[
+              topVisuals.gradientColors[topVisuals.gradientColors.length - 1],
+              bottomVisuals.gradientColors[0],
+            ]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={{
+              position: 'absolute',
+              top: bandTop,
+              left: 0,
+              width,
+              height: bandHeight,
+            }}
+            pointerEvents="none"
+          />
+        );
+      })}
     </View>
   );
 }
