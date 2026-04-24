@@ -43,6 +43,15 @@ import {
   startRecoveryWindow,
   RECOVERY_WINDOW_MS,
 } from '@/src/utils/streakRecovery';
+import {
+  WORLD_THEMES,
+  WORLD_THEME_ORDER,
+  getUnifiedLevel,
+  getWorldForPosition,
+  type WorldTheme,
+} from '@/src/data/unifiedJourney';
+import { CAMPAIGNS } from '@/src/data/campaigns';
+import { localizedWorldName } from '@/src/components/journey/worldI18n';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 // World names resolve via t() inside the component body so switching
@@ -188,16 +197,7 @@ function PlayTab() {
   const nextStreakReward = getNextMilestone(streakCount, streakMilestonesClaimed);
   const nextLevelId = getNextUnplayedLevelId(); // Re-computes when levelProgress changes
 
-  // Keep the legacy world/level parse around for any code that still
-  // displays "World 3 Level 5" — the weekly-challenge card and a
-  // couple of analytics events rely on it. The hero copy below moved
-  // to the unified-journey position.
-  const idMatch = nextLevelId.match(/^w(\d+)-l(\d+)$/);
-  const currentWorldId = idMatch ? parseInt(idMatch[1], 10) : 1;
-  const nextLevelNumber = idMatch ? parseInt(idMatch[2], 10) : 1;
-  const currentWorldLevels = WORLD_LEVEL_COUNTS[(currentWorldId - 1)] ?? 20;
   const completedCount = getCompletedLevelCount();
-  const worldProgress = Math.max(0, nextLevelNumber - 1) / currentWorldLevels;
   const memoryScore = getMemoryScore();
 
   // Fetch level title from Supabase
@@ -524,29 +524,62 @@ function PlayTab() {
             </View>
           </View>
 
-          {/* Level info */}
+          {/* Level info — uses the unified journey position (1-380)
+           *  rather than the legacy "World X Level Y" format so the
+           *  text matches the new one-path progression. */}
           <Text style={styles.heroContinueLabel}>{t('home.continue_label')}</Text>
-          <Text style={styles.heroLevelTitle}>{t('home.world_level_title', { world: currentWorldId, level: nextLevelNumber })}</Text>
+          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: 380 })}</Text>
           <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
-          {/* Progress bar */}
+          {/* Progress bar — fills by unified position instead of the
+           *  per-world count, so progress actually reflects the whole
+           *  journey not just the current world's slice. */}
           <View style={styles.heroProgressRow}>
             <View style={styles.heroProgressTrack}>
-              <View style={[styles.heroProgressFill, { width: `${Math.round(worldProgress * 100)}%` }]} />
+              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / 380) * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{nextLevelNumber - 1}/{currentWorldLevels}</Text>
+            <Text style={styles.heroProgressText}>{unifiedPosition}/380</Text>
           </View>
 
-          {/* Play button with press animation */}
+          {/* Play button with press animation. Routes to the level at
+           *  the player's current UNIFIED position — so "Play Level 247"
+           *  actually launches level 247 in the ladder, not whatever
+           *  getNextUnplayedLevelId returned (which only knows about
+           *  Classic and could mismatch the hero copy). */}
           <Pressable
             style={({ pressed }) => [styles.heroPlayButton, pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }]}
             onPress={() => {
               useGameStore.getState().checkLifeRegen();
               if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
-              router.push(`/game/${nextLevelId}`);
+              const current = getUnifiedLevel(unifiedPosition);
+              if (!current) {
+                // Ladder exhausted or bad state — fall back to Classic next unplayed.
+                router.push(`/game/${nextLevelId}`);
+                return;
+              }
+              useGameStore.getState().setLastPlayed(current.mode, current.levelId);
+              if (current.mode === 'classic') {
+                router.push(`/game/${current.levelId}`);
+                return;
+              }
+              const match = current.levelId.match(/^[a-z]+_w(\d+)_l(\d+)$/);
+              const worldNumber = match?.[1] ?? '1';
+              const levelNumber = match?.[2] ?? '1';
+              const campaign = CAMPAIGNS[current.mode];
+              const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
+              router.push({
+                pathname: '/game/side-campaign',
+                params: {
+                  levelId: current.levelId,
+                  mode: current.mode,
+                  worldNumber,
+                  levelNumber,
+                  worldName,
+                },
+              });
             }}
             accessibilityRole="button"
-            accessibilityLabel={t('home.play_aria', { world: currentWorldId, level: nextLevelNumber })}
+            accessibilityLabel={t('home.play_aria_unified', { position: unifiedPosition })}
           >
             <Text style={styles.heroPlayText}>{t('home.play_button')}</Text>
           </Pressable>
@@ -628,16 +661,18 @@ function PlayTab() {
             </Pressable>
           </View>
           <View style={styles.journeyPills}>
-            {WORLD_NAME_KEYS.map((nameKey, i) => {
-              const name = t(nameKey);
-              const wc = WORLD_COLORS[i];
-              const isCurrentWorld = i + 1 === currentWorldId;
-              const isCompleted = i + 1 < currentWorldId;
-              const isLocked = i + 1 > currentWorldId;
+            {WORLD_THEME_ORDER.map((theme, i) => {
+              const meta = WORLD_THEMES[theme];
+              const wc = meta.color;
+              const playerTheme = getWorldForPosition(unifiedPosition);
+              const playerIdx = WORLD_THEME_ORDER.indexOf(playerTheme);
+              const isCurrentWorld = i === playerIdx;
+              const isCompleted = i < playerIdx;
+              const isLocked = i > playerIdx;
               return (
-                <View key={i} style={[styles.worldPill, {
+                <View key={theme} style={[styles.worldPill, {
                   backgroundColor: isCurrentWorld || isCompleted ? wc + '12' : wc + '06',
-                  borderWidth: isCurrentWorld ? 1.5 : isCompleted ? 1 : 1,
+                  borderWidth: isCurrentWorld ? 1.5 : 1,
                   borderColor: isCurrentWorld ? wc + '35' : isCompleted ? wc + '20' : wc + '10',
                   opacity: isLocked ? 0.7 : 1,
                 }]}>
@@ -647,7 +682,7 @@ function PlayTab() {
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.65}
-                  >{name}</Text>
+                  >{localizedWorldName(theme)}</Text>
                 </View>
               );
             })}

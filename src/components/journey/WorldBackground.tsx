@@ -13,17 +13,27 @@ interface Props {
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
+  /** The world the player is currently in (derived from unified
+   *  position). We render scenery + particles ONLY for this world and
+   *  leave the other four as flat gradients. This cuts what would
+   *  otherwise be 5 huge SVG trees + 80 simultaneous particle
+   *  animations down to 1 + ~12 — the single biggest perf win on
+   *  the Journey tab. Scenery/particles fade-in/out as the player
+   *  crosses a world boundary. */
+  currentWorld: WorldTheme;
 }
 
 /** Stacks five vertical gradient slabs, one per themed world, matching
- *  the ladder's y-coordinate ranges. Each slab gets its own particle
- *  system so the visual environment matches what the player's walking
- *  through. */
+ *  the ladder's y-coordinate ranges. Only the CURRENT world slab
+ *  renders its scenery + particles — the rest stay quiet solid
+ *  gradients so we don't stack dozens of SVG layers into a single
+ *  scrollview. */
 export function WorldBackground({
   width,
   pathTopPadding,
   rowHeight,
   totalPositions,
+  currentWorld,
 }: Props) {
   const totalHeight = pathTopPadding + totalPositions * rowHeight + 40;
 
@@ -45,6 +55,7 @@ export function WorldBackground({
         const top = pathTopPadding + (start - 1) * rowHeight - rowHeight / 2;
         const slabHeight = (end - start + 1) * rowHeight;
         const clampedTop = Math.max(0, top);
+        const isCurrent = theme === currentWorld;
         return (
           <View
             key={theme}
@@ -60,16 +71,26 @@ export function WorldBackground({
               colors={visuals.gradientColors}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
-              style={{ position: 'absolute', inset: 0, width, height: slabHeight + rowHeight }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
             />
-            <WorldScenery theme={theme} width={width} height={slabHeight + rowHeight} />
-            <WorldParticles
-              type={visuals.particleType}
-              color={visuals.particleColor}
-              width={width}
-              height={slabHeight + rowHeight}
-              density={16}
-            />
+            {isCurrent && (
+              <>
+                <WorldScenery theme={theme} width={width} height={slabHeight + rowHeight} />
+                <WorldParticles
+                  type={visuals.particleType}
+                  color={visuals.particleColor}
+                  width={width}
+                  height={slabHeight + rowHeight}
+                  density={12}
+                />
+              </>
+            )}
           </View>
         );
       })}
