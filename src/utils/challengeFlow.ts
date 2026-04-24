@@ -102,6 +102,53 @@ function pickWithSpread<T extends { id: string }>(
 }
 
 /**
+ * Auto-match difficulty bucketing lives in its own tiny module so
+ * unit tests don't need to mock Supabase to assert tranche boundaries.
+ * Re-exported here for backwards compatibility with callers that
+ * import both the pure math and the network-backed helpers.
+ */
+export { bucketUnifiedToDifficulty, averageUnifiedPosition } from '@/src/utils/challengeAutoMatch';
+import { bucketUnifiedToDifficulty as bucketFn } from '@/src/utils/challengeAutoMatch';
+
+/** Fetch the unified_position for a user. Falls back to 1 if the
+ *  column is null or the query fails so auto-match has a safe floor. */
+async function getUnifiedPosition(userId: string): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('unified_position')
+      .eq('id', userId)
+      .single();
+    const pos = data?.unified_position;
+    if (typeof pos === 'number' && pos >= 1 && pos <= 380) return pos;
+    return 1;
+  } catch {
+    return 1;
+  }
+}
+
+/**
+ * Drop-in replacement for `pickChallengeLevels` when the caller doesn't
+ * want to pick a difficulty manually. Reads both players' unified
+ * positions, averages them, buckets to a difficulty tier, then
+ * delegates to `pickChallengeLevels` which already has the
+ * world-spread + completed-by-both-players logic the team likes.
+ */
+export async function pickChallengeLevelsAutoMatch(
+  challengerId: string,
+  challengedId: string,
+): Promise<{ levelIds: string[]; difficulty: ChallengeDifficulty; avgPosition: number }> {
+  const [mine, theirs] = await Promise.all([
+    getUnifiedPosition(challengerId),
+    getUnifiedPosition(challengedId),
+  ]);
+  const avg = Math.floor((mine + theirs) / 2);
+  const difficulty = bucketFn(avg) as ChallengeDifficulty;
+  const levelIds = await pickChallengeLevels(challengerId, challengedId, difficulty);
+  return { levelIds, difficulty, avgPosition: avg };
+}
+
+/**
  * Pick 5 random level ids scoped to the requested difficulty tier,
  * preferring levels both players have already completed. Returns the
  * chosen ids WITHOUT inserting a challenge row. The caller inserts
@@ -667,5 +714,62 @@ export async function expireInvite(challengeId: string): Promise<void> {
       .eq('status', 'invited');
   } catch (e) {
     log.error('challenges', 'expireInvite threw', e, { challengeId });
+  }
+}
+
+/** Shape of a completed challenge between the current user and a
+ *  specific friend, scoped to the last 48 hours. Powers the "Rematch"
+ *  chip on the challenge-select screen — one-tap re-challenge with
+ *  the same mode. */
+export interface RecentFriendChallenge {
+  id: string;
+  mode: string;
+  myScore: number;
+  theirScore: number;
+  /** Who won from THIS user's perspective. 'draw' when tied. */
+  outcome: 'won' | 'lost' | 'draw';
+  createdAt: string;
+}
+
+const RECENT_CHALLENGE_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/** Find the most recent completed challenge between `myId` and
+ *  `theirId` within the last 48 hours, or null if none. Used by the
+ *  Rematch chip so a player can re-challenge with one tap. */
+export async function getRecentChallengeWithFriend(
+  myId: string,
+  theirId: string,
+): Promise<RecentFriendChallenge | null> {
+  if (!myId || !theirId) return null;
+  try {
+    const cutoff = new Date(Date.now() - RECENT_CHALLENGE_WINDOW_MS).toISOString();
+    const { data } = await supabase
+      .from('friend_challenges')
+      .select('id, mode, challenger_id, challenged_id, challenger_score, challenged_score, status, created_at')
+      .eq('status', 'completed')
+      .or(
+        `and(challenger_id.eq.${myId},challenged_id.eq.${theirId}),and(challenger_id.eq.${theirId},challenged_id.eq.${myId})`,
+      )
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return null;
+    const iWasChallenger = data.challenger_id === myId;
+    const myScore = iWasChallenger ? (data.challenger_score ?? 0) : (data.challenged_score ?? 0);
+    const theirScore = iWasChallenger ? (data.challenged_score ?? 0) : (data.challenger_score ?? 0);
+    const outcome: 'won' | 'lost' | 'draw' =
+      myScore > theirScore ? 'won' : myScore < theirScore ? 'lost' : 'draw';
+    return {
+      id: data.id,
+      mode: data.mode,
+      myScore,
+      theirScore,
+      outcome,
+      createdAt: data.created_at,
+    };
+  } catch (e) {
+    log.error('challenges', 'getRecentChallengeWithFriend threw', e, { myId, theirId });
+    return null;
   }
 }
