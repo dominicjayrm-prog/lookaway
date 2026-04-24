@@ -18,6 +18,7 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
 import { useGameStore } from '@/src/store';
 import { getMastermindLevel, type MastermindLevel, type MastermindQuestion } from '@/src/data/mastermindLevels';
+import { getPositionForLevelId } from '@/src/data/unifiedJourney';
 import { MastermindSceneCard } from '@/src/components/MastermindSceneCard';
 import { MastermindStageIndicator } from '@/src/components/MastermindStageIndicator';
 import { useMastermindStages } from '@/src/hooks/useMastermindStages';
@@ -138,7 +139,7 @@ export default function MastermindGameScreen() {
           <View style={[st.badge, { backgroundColor: 'rgba(212,160,18,0.12)' }]}>
             <Text style={st.badgeText}>{t('challenge.mastermind_badge')}</Text>
           </View>
-          <Text style={[st.readyTitle, { color: colors.text }]}>Level {levelNum}</Text>
+          <Text style={[st.readyTitle, { color: colors.text }]}>Level {getPositionForLevelId(`w6-l${levelNum}`) ?? levelNum}</Text>
           <Text style={[st.readySub, { color: colors.textMid }]}>
             {level.stageCount} stages · {level.secondsPerStage}s each · {totalQuestions} questions
           </Text>

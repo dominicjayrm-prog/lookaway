@@ -10,6 +10,7 @@ import { LevelCache } from '@/src/utils/levelCache';
 import { log } from '@/src/lib/logger';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import { CHALLENGE_MODES, getScorePercentage, getMaxScore } from '@/src/data/challengeModes';
+import { getPositionForLevelId } from '@/src/data/unifiedJourney';
 import { generateSideCampaignData } from '@/src/utils/sideCampaignGenerators';
 import { logActivity } from '@/src/utils/activity';
 import SnapMatchGame from '@/src/components/modes/SnapMatchGame';
@@ -36,6 +37,11 @@ function SideCampaignScreen() {
   const { levelId, mode, worldNumber, levelNumber, worldName } = useLocalSearchParams<{
     levelId: string; mode: string; worldNumber: string; levelNumber: string; worldName: string;
   }>();
+  // Prefer the unified position (1-380) for display. Falls back to the
+  // per-world levelNumber if this levelId isn't registered in the
+  // unified ladder (shouldn't happen post-migration but keeps legacy
+  // entry points working).
+  const displayLevel = getPositionForLevelId(levelId ?? '') ?? Number(levelNumber ?? 1);
   const router = useRouter();
   const { colors } = useTheme();
   const { addGems, loseLife, addStars } = useGameStore();
@@ -392,7 +398,7 @@ function SideCampaignScreen() {
         </Pressable>
         <View style={s.headerCenter}>
           <Text style={[s.headerTitle, { color: mColor }]}>{worldName}</Text>
-          <Text style={[s.headerSub, { color: colors.textMid }]}>Level {levelNumber}</Text>
+          <Text style={[s.headerSub, { color: colors.textMid }]}>Level {displayLevel}</Text>
         </View>
         <View style={{ width: 44 }} />
       </View>
@@ -403,7 +409,7 @@ function SideCampaignScreen() {
           <View style={[s.modeBadge, { backgroundColor: mColor + '15' }]}>
             <Text style={[s.modeBadgeText, { color: mColor }]}>{modeConfig?.name ?? mode}</Text>
           </View>
-          <Text style={[s.bigTitle, { color: colors.text }]}>Level {levelNumber}</Text>
+          <Text style={[s.bigTitle, { color: colors.text }]}>Level {displayLevel}</Text>
           <Text style={[s.subtitle, { color: colors.textMid }]}>{worldName}</Text>
           <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
             if (isExternalMode) setPhase('show');
