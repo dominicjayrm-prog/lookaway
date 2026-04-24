@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { WORLD_THEMES, WORLD_THEME_ORDER, type WorldTheme } from '@/src/data/unifiedJourney';
+import { WORLD_THEMES, WORLD_THEME_ORDER } from '@/src/data/unifiedJourney';
 import { WORLD_VISUALS } from './worldVisuals';
 import { WorldParticles } from './WorldParticles';
 import { WorldScenery } from './WorldScenery';
@@ -13,22 +13,20 @@ interface Props {
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
-  /** The world the player is currently in. Kept for future biasing
-   *  (e.g. bumping particle density for the active world) but every
-   *  world now renders its own scenery + particles so the whole
-   *  journey feels alive as you scroll through it. */
-  currentWorld: WorldTheme;
 }
 
-/** Stacks five vertical gradient slabs — one per themed world — each
- *  with its own scenery layer + drifting particle system. Because the
- *  path is rendered bottom-up (Level 1 at the bottom, final level at
- *  the top) the slab positioning mirrors that: a world's range [start,
- *  end] maps to `top = padding + (total - end) * rowHeight`, which
- *  places higher-numbered levels near the top of the canvas.
+/** Stacks five vertical gradient slabs, one per themed world, matching
+ *  the ladder's y-coordinate ranges. Every world gets its own scenery
+ *  silhouettes + particle drift so walking from the Grove to the Core
+ *  feels cinematic — each environment reads distinct from the moment
+ *  it scrolls into view, not just as a colour swatch.
  *
- *  Perf: each WorldParticles instance runs ~12 Reanimated worklets on
- *  the UI thread. With five worlds that's ~60 particles total, well
+ *  Path is laid out bottom-to-top (Level 1 at the maximum y, final
+ *  level at y=pathTopPadding), so each slab's top is anchored to its
+ *  HIGHEST position (`end`), not its lowest.
+ *
+ *  Perf: each WorldParticles instance runs ~14 Reanimated worklets on
+ *  the UI thread. With five worlds that's ~70 particles total, well
  *  inside comfortable frame-budget on mid-range Android. Scenery is
  *  static SVG, so it rasterises once and then costs nothing. Viewport
  *  culling on nodes + connectors (in UnifiedJourneyScreen) keeps the
@@ -38,7 +36,6 @@ export function WorldBackground({
   pathTopPadding,
   rowHeight,
   totalPositions,
-  currentWorld: _currentWorld,
 }: Props) {
   const totalHeight = pathTopPadding + totalPositions * rowHeight + 40;
 
@@ -63,8 +60,9 @@ export function WorldBackground({
         // and below so the gradient bleeds gracefully into neighbours
         // rather than leaving a hard seam.
         const top = pathTopPadding + (totalPositions - end) * rowHeight - rowHeight / 2;
-        const slabHeight = (end - start + 1) * rowHeight + rowHeight;
+        const slabHeight = (end - start + 1) * rowHeight;
         const clampedTop = Math.max(0, top);
+        const renderHeight = slabHeight + rowHeight;
         return (
           <View
             key={theme}
@@ -73,7 +71,8 @@ export function WorldBackground({
               top: clampedTop,
               left: 0,
               width,
-              height: slabHeight,
+              height: renderHeight,
+              overflow: 'hidden',
             }}
           >
             <LinearGradient
@@ -88,13 +87,13 @@ export function WorldBackground({
                 bottom: 0,
               }}
             />
-            <WorldScenery theme={theme} width={width} height={slabHeight} />
+            <WorldScenery theme={theme} width={width} height={renderHeight} />
             <WorldParticles
               type={visuals.particleType}
               color={visuals.particleColor}
               width={width}
-              height={slabHeight}
-              density={12}
+              height={renderHeight}
+              density={14}
             />
           </View>
         );
