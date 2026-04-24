@@ -366,7 +366,11 @@ function PlayChip({ color }: { color: string }) {
         style,
       ]}
     >
-      <Text style={st.playChipText}>{t('journey.play_chip')}</Text>
+      <Text
+        style={st.playChipText}
+        numberOfLines={1}
+        allowFontScaling={false}
+      >{t('journey.play_chip')}</Text>
     </Animated.View>
   );
 }
@@ -408,8 +412,8 @@ const st = StyleSheet.create({
   playChip: {
     position: 'absolute',
     bottom: -14,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
     borderRadius: 999,
     shadowOpacity: 0.45,
     shadowRadius: 6,
@@ -417,12 +421,21 @@ const st = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    // Guarantee the chip is always wide enough for the localised
+    // text on one line — "JUGAR" in Spanish was clipping to "ju\ngar"
+    // on some phones because the chip hugged its text instead of
+    // reserving a min width. 56 is comfortable for any 5-char word
+    // at fontSize 10 + 1.2 letter-spacing.
+    minWidth: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   playChipText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.2,
+    textAlign: 'center',
   },
   starRow: {
     flexDirection: 'row',

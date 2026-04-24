@@ -116,8 +116,14 @@ function pathXForPosition(position: number, containerWidth: number): number {
   return centerX + wave * amplitude;
 }
 
+/** Level 1 sits at the BOTTOM of the scroll canvas and 380 at the
+ *  top — the classic mobile-game "climb upward" metaphor. Higher y
+ *  means an earlier level; the player has to scroll UP to see what's
+ *  next. The container height remains `PATH_TOP_PADDING + N*ROW_HEIGHT
+ *  + footer` so we just mirror the linear mapping here.
+ */
 function yForPosition(position: number): number {
-  return PATH_TOP_PADDING + (position - 1) * ROW_HEIGHT;
+  return PATH_TOP_PADDING + (UNIFIED_LADDER.length - position) * ROW_HEIGHT;
 }
 
 export function UnifiedJourneyScreen() {
@@ -191,18 +197,17 @@ export function UnifiedJourneyScreen() {
   }, []);
 
   // Shift the visible window when the scroll position drifts far
-  // enough that the old window is no longer centred. We only re-render
-  // when the center moves by >15 positions to avoid render thrash.
+  // enough that the old window is no longer centred. Mirrors the flip
+  // in yForPosition — higher scrollY means a LOWER position now.
   useAnimatedReaction(
     () => scrollY.value,
     (current) => {
       'worklet';
-      const approxPos = Math.max(
-        1,
-        Math.floor((current - PATH_TOP_PADDING) / ROW_HEIGHT) + 1,
-      );
+      const total = UNIFIED_LADDER.length;
+      const offsetRows = Math.floor((current - PATH_TOP_PADDING) / ROW_HEIGHT);
+      const approxPos = Math.max(1, Math.min(total, total - offsetRows));
       const nextStart = Math.max(1, approxPos - VISIBLE_BUFFER);
-      const nextEnd = Math.min(UNIFIED_LADDER.length, approxPos + VISIBLE_BUFFER);
+      const nextEnd = Math.min(total, approxPos + VISIBLE_BUFFER);
       runOnJS(maybeUpdateRange)(nextStart, nextEnd);
     },
     [maybeUpdateRange],
@@ -543,7 +548,6 @@ export function UnifiedJourneyScreen() {
               pathTopPadding={PATH_TOP_PADDING}
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
-              currentWorld={currentLevel?.worldTheme ?? 'emerald_grove'}
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming
