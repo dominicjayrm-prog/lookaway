@@ -11,6 +11,14 @@ import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMileston
 import { shouldShowReviewPrompt, type ReviewPromptState } from '@/src/lib/reviewPrompt';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { applyLanguage, type LanguagePreference } from '@/src/i18n';
+import {
+  UNIFIED_LADDER,
+  getPositionForLevelId,
+  getWorldForPosition,
+  TOTAL_POSITIONS,
+  type ModeId,
+  type WorldTheme,
+} from '@/src/data/unifiedJourney';
 
 /**
  * Every AsyncStorage key that belongs to ONE user and must be wiped
@@ -218,6 +226,15 @@ interface SavedState {
   equippedNameColor?: string;
   equippedExpression?: string;
   loginReward?: LoginRewardState;
+  // Unified Brain Journey — one linear ladder of 380 levels that snakes
+  // through five themed worlds. `unifiedPosition` is the highest position
+  // the player has unlocked (they're currently playing this number).
+  unifiedPosition?: number;
+  currentWorldTheme?: WorldTheme;
+  lastPlayedMode?: ModeId | null;
+  lastPlayedLevelId?: string | null;
+  hasSeenUnifiedIntro?: boolean;
+  hasSeenWorldIntro?: Partial<Record<WorldTheme, boolean>>;
 }
 
 // One-time migration: lift legacy `blanked_login_rewards` key into the main
@@ -241,13 +258,44 @@ function migrateLoginReward(saved: SavedState): SavedState {
   return saved;
 }
 
+/**
+ * First-run migration for the Unified Brain Journey. Existing users with
+ * progress in `levelProgress` land on the first uncompleted position in
+ * the ladder — preserving their sense of "where they are" across the
+ * rollout. New users start at position 1.
+ *
+ * Runs once, detected by `unifiedPosition === undefined`. After migration
+ * the field is set and this is a no-op on subsequent loads.
+ */
+function migrateUnifiedJourney(saved: SavedState): SavedState {
+  if (saved.unifiedPosition !== undefined) return saved;
+  const progress = saved.levelProgress ?? {};
+  let firstUncompleted = 1;
+  for (const level of UNIFIED_LADDER) {
+    const entry = progress[level.levelId];
+    if (!entry || entry.stars <= 0) {
+      firstUncompleted = level.position;
+      break;
+    }
+    firstUncompleted = level.position + 1;
+  }
+  const position = Math.min(TOTAL_POSITIONS, Math.max(1, firstUncompleted));
+  saved.unifiedPosition = position;
+  saved.currentWorldTheme = getWorldForPosition(position);
+  saved.hasSeenUnifiedIntro = saved.hasSeenUnifiedIntro ?? false;
+  saved.hasSeenWorldIntro = saved.hasSeenWorldIntro ?? {};
+  saved.lastPlayedMode = saved.lastPlayedMode ?? null;
+  saved.lastPlayedLevelId = saved.lastPlayedLevelId ?? null;
+  return saved;
+}
+
 function loadState(): SavedState {
   try {
-    if (typeof window === 'undefined') return migrateLoginReward({});
+    if (typeof window === 'undefined') return migrateUnifiedJourney(migrateLoginReward({}));
     const saved = localStorage.getItem('blanked-progress');
     const parsed = saved ? (JSON.parse(saved) as SavedState) : {};
-    return migrateLoginReward(parsed);
-  } catch { return migrateLoginReward({}); }
+    return migrateUnifiedJourney(migrateLoginReward(parsed));
+  } catch { return migrateUnifiedJourney(migrateLoginReward({})); }
 }
 
 function saveState(state: GameStore) {
@@ -272,6 +320,12 @@ function saveState(state: GameStore) {
       ownedCosmetics: state.ownedCosmetics, equippedFrame: state.equippedFrame,
       equippedBanner: state.equippedBanner, equippedNameColor: state.equippedNameColor, equippedExpression: state.equippedExpression,
       loginReward: state.loginReward,
+      unifiedPosition: state.unifiedPosition,
+      currentWorldTheme: state.currentWorldTheme,
+      lastPlayedMode: state.lastPlayedMode,
+      lastPlayedLevelId: state.lastPlayedLevelId,
+      hasSeenUnifiedIntro: state.hasSeenUnifiedIntro,
+      hasSeenWorldIntro: state.hasSeenWorldIntro,
       localUpdatedAt: stampedAt,
       // Stamp the authUserId this blob belongs to. On cold start
       // CloudSyncLoader compares this against the incoming auth
@@ -373,6 +427,25 @@ export interface GameStore {
    *  Default 'system'. Persisted locally + synced via profiles. */
   preferredLanguage: LanguagePreference;
   totalStars: number; highestWorld: number;
+  // Unified Brain Journey: the single linear ladder players walk.
+  /** Highest position (1-380) the player has reached. They are currently
+   *  playing this level; completing it calls `advanceUnifiedPosition`. */
+  unifiedPosition: number;
+  /** Derived from `unifiedPosition`. Cached so render code doesn't have to
+   *  recompute on every frame. */
+  currentWorldTheme: WorldTheme;
+  /** Most recent mode + level the player actually opened — either via the
+   *  unified path or via the Mode Library. Used by the Journey "Continue"
+   *  hero card to say "Level 28 · Snap Match" instead of a generic CTA. */
+  lastPlayedMode: ModeId | null;
+  lastPlayedLevelId: string | null;
+  /** True once the first-time intro sequence has been dismissed. New users
+   *  see three swipe cards explaining the journey; existing users see a
+   *  migration banner that dismisses to true the same way. */
+  hasSeenUnifiedIntro: boolean;
+  /** Per-world flag for the one-time "Welcome to X" celebration shown on
+   *  entry to a new themed world. */
+  hasSeenWorldIntro: Partial<Record<WorldTheme, boolean>>;
   powerUps: PowerUpInventory;
   levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }>;
   completedScores: number[];
@@ -448,6 +521,21 @@ export interface GameStore {
 
   // Level completion with economy
   recordLevelComplete: (id: string, stars: number, pct: number) => number; // returns gems earned
+
+  // Unified Brain Journey
+  /** Advance the unified ladder position if the just-completed level
+   *  matches the player's CURRENT position. Levels played via the Mode
+   *  Library (or replays of older ladder levels) never jump the cursor
+   *  ahead — progress there is independent. */
+  advanceUnifiedPosition: (completedLevelId: string) => void;
+  /** Record the last level the player actually opened (ladder OR library).
+   *  Feeds the "Continue Level X" chip on the Journey screen. */
+  setLastPlayed: (mode: ModeId, levelId: string) => void;
+  /** Flip the first-time intro / migration banner off. Sticky — the intro
+   *  never reappears once dismissed. */
+  markUnifiedIntroSeen: () => void;
+  /** Flip the per-world intro modal off after it's been shown once. */
+  markWorldIntroSeen: (world: WorldTheme) => void;
 
   // Cloud sync
   syncToCloud: () => void;
@@ -562,6 +650,12 @@ export const useGameStore = create<GameStore>((set, get) => {
     streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
     totalStars: saved.totalStars ?? 0,
     highestWorld: saved.highestWorld ?? 1,
+    unifiedPosition: saved.unifiedPosition ?? 1,
+    currentWorldTheme: saved.currentWorldTheme ?? getWorldForPosition(saved.unifiedPosition ?? 1),
+    lastPlayedMode: saved.lastPlayedMode ?? null,
+    lastPlayedLevelId: saved.lastPlayedLevelId ?? null,
+    hasSeenUnifiedIntro: saved.hasSeenUnifiedIntro ?? false,
+    hasSeenWorldIntro: saved.hasSeenWorldIntro ?? {},
     powerUps: { ...DEFAULT_POWERUPS, ...saved.powerUps },
     levelProgress: saved.levelProgress ?? {},
     completedScores: saved.completedScores ?? [],
@@ -847,6 +941,42 @@ export const useGameStore = create<GameStore>((set, get) => {
       return gemsEarned;
     },
 
+    advanceUnifiedPosition: (completedLevelId) => {
+      const ladderPos = getPositionForLevelId(completedLevelId);
+      if (ladderPos === undefined) return;
+      const { unifiedPosition } = get();
+      // Only the CURRENT position advances the cursor. Playing an older
+      // level from the Mode Library (or replaying to earn extra stars)
+      // must not skip positions forward.
+      if (ladderPos !== unifiedPosition) return;
+      const next = Math.min(TOTAL_POSITIONS, unifiedPosition + 1);
+      set({
+        unifiedPosition: next,
+        currentWorldTheme: getWorldForPosition(next),
+      });
+      setTimeout(() => saveState(get()), 0);
+    },
+
+    setLastPlayed: (mode, levelId) => {
+      const { lastPlayedMode, lastPlayedLevelId } = get();
+      if (lastPlayedMode === mode && lastPlayedLevelId === levelId) return;
+      set({ lastPlayedMode: mode, lastPlayedLevelId: levelId });
+      setTimeout(() => saveState(get()), 0);
+    },
+
+    markUnifiedIntroSeen: () => {
+      if (get().hasSeenUnifiedIntro) return;
+      set({ hasSeenUnifiedIntro: true });
+      setTimeout(() => saveState(get()), 0);
+    },
+
+    markWorldIntroSeen: (world) => {
+      const current = get().hasSeenWorldIntro;
+      if (current[world]) return;
+      set({ hasSeenWorldIntro: { ...current, [world]: true } });
+      setTimeout(() => saveState(get()), 0);
+    },
+
     getNextUnplayedLevelId: () => { const { levelProgress } = get(); const ids = buildLevelIds(); return ids.find((id) => !(id in levelProgress)) ?? ids[ids.length - 1]; },
     getMemoryScore: () => { const { completedScores } = get(); if (completedScores.length === 0) return 0; return Math.round(completedScores.reduce((a, v) => a + v, 0) / completedScores.length); },
     getCompletedLevelCount: () => Object.keys(get().levelProgress).length,
@@ -997,6 +1127,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           equippedNameColor: (saved.ownedCosmetics ?? []).includes(saved.equippedNameColor ?? '') || saved.equippedNameColor === 'name_default' ? (saved.equippedNameColor ?? 'name_default') : 'name_default',
           equippedExpression: (saved.ownedCosmetics ?? []).includes(saved.equippedExpression ?? '') || saved.equippedExpression === 'expr_normal' ? (saved.equippedExpression ?? 'expr_normal') : 'expr_normal',
           loginReward: saved.loginReward ?? { ...INITIAL_LOGIN_REWARD_STATE },
+          unifiedPosition: saved.unifiedPosition ?? 1,
+          currentWorldTheme: saved.currentWorldTheme ?? getWorldForPosition(saved.unifiedPosition ?? 1),
+          lastPlayedMode: saved.lastPlayedMode ?? null,
+          lastPlayedLevelId: saved.lastPlayedLevelId ?? null,
+          hasSeenUnifiedIntro: saved.hasSeenUnifiedIntro ?? false,
+          hasSeenWorldIntro: saved.hasSeenWorldIntro ?? {},
           _hydrated: true,
         });
       } else {
@@ -1065,6 +1201,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         // Progress
         totalStars: 0,
         highestWorld: 1,
+        unifiedPosition: 1,
+        currentWorldTheme: 'emerald_grove' as WorldTheme,
+        lastPlayedMode: null,
+        lastPlayedLevelId: null,
+        hasSeenUnifiedIntro: false,
+        hasSeenWorldIntro: {},
         levelProgress: {},
         completedScores: [],
         powerUps: { ...DEFAULT_POWERUPS },
