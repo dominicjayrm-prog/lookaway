@@ -1093,6 +1093,3 @@ const SCENERY_BY_THEME: Record<WorldTheme, (w: number, h: number) => React.React
   aurora_peaks: auroraPeaks,
   inferno_core: infernoCore,
 };
-
-// Keep imports that each biome may later need.
-export const __sceneryImports = { RadialGradient };
