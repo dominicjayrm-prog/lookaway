@@ -366,7 +366,13 @@ function PlayChip({ color }: { color: string }) {
         style,
       ]}
     >
-      <Text style={st.playChipText}>{t('journey.play_chip')}</Text>
+      <Text
+        style={st.playChipText}
+        numberOfLines={1}
+        allowFontScaling={false}
+      >
+        {t('journey.play_chip')}
+      </Text>
     </Animated.View>
   );
 }
@@ -408,9 +414,12 @@ const st = StyleSheet.create({
   playChip: {
     position: 'absolute',
     bottom: -14,
+    minWidth: 56,
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowOpacity: 0.45,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -423,6 +432,8 @@ const st = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.2,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   starRow: {
     flexDirection: 'row',

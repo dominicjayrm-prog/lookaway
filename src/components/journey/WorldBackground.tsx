@@ -13,27 +13,32 @@ interface Props {
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
-  /** The world the player is currently in (derived from unified
-   *  position). We render scenery + particles ONLY for this world and
-   *  leave the other four as flat gradients. This cuts what would
-   *  otherwise be 5 huge SVG trees + 80 simultaneous particle
-   *  animations down to 1 + ~12 — the single biggest perf win on
-   *  the Journey tab. Scenery/particles fade-in/out as the player
-   *  crosses a world boundary. */
+  /** The world the player is currently in. Kept for future biasing
+   *  (e.g. bumping particle density for the active world) but every
+   *  world now renders its own scenery + particles so the whole
+   *  journey feels alive as you scroll through it. */
   currentWorld: WorldTheme;
 }
 
-/** Stacks five vertical gradient slabs, one per themed world, matching
- *  the ladder's y-coordinate ranges. Only the CURRENT world slab
- *  renders its scenery + particles — the rest stay quiet solid
- *  gradients so we don't stack dozens of SVG layers into a single
- *  scrollview. */
+/** Stacks five vertical gradient slabs — one per themed world — each
+ *  with its own scenery layer + drifting particle system. Because the
+ *  path is rendered bottom-up (Level 1 at the bottom, final level at
+ *  the top) the slab positioning mirrors that: a world's range [start,
+ *  end] maps to `top = padding + (total - end) * rowHeight`, which
+ *  places higher-numbered levels near the top of the canvas.
+ *
+ *  Perf: each WorldParticles instance runs ~12 Reanimated worklets on
+ *  the UI thread. With five worlds that's ~60 particles total, well
+ *  inside comfortable frame-budget on mid-range Android. Scenery is
+ *  static SVG, so it rasterises once and then costs nothing. Viewport
+ *  culling on nodes + connectors (in UnifiedJourneyScreen) keeps the
+ *  heavy stuff off-screen hidden. */
 export function WorldBackground({
   width,
   pathTopPadding,
   rowHeight,
   totalPositions,
-  currentWorld,
+  currentWorld: _currentWorld,
 }: Props) {
   const totalHeight = pathTopPadding + totalPositions * rowHeight + 40;
 
@@ -52,10 +57,14 @@ export function WorldBackground({
         const meta = WORLD_THEMES[theme];
         const visuals = WORLD_VISUALS[theme];
         const [start, end] = meta.range;
-        const top = pathTopPadding + (start - 1) * rowHeight - rowHeight / 2;
-        const slabHeight = (end - start + 1) * rowHeight;
+        // Top of this world's slab in the flipped layout: the highest
+        // position number (end) sits closest to the top of the canvas,
+        // so `top` is based on `end`. We extend half a rowHeight above
+        // and below so the gradient bleeds gracefully into neighbours
+        // rather than leaving a hard seam.
+        const top = pathTopPadding + (totalPositions - end) * rowHeight - rowHeight / 2;
+        const slabHeight = (end - start + 1) * rowHeight + rowHeight;
         const clampedTop = Math.max(0, top);
-        const isCurrent = theme === currentWorld;
         return (
           <View
             key={theme}
@@ -64,7 +73,7 @@ export function WorldBackground({
               top: clampedTop,
               left: 0,
               width,
-              height: slabHeight + rowHeight,
+              height: slabHeight,
             }}
           >
             <LinearGradient
@@ -79,18 +88,14 @@ export function WorldBackground({
                 bottom: 0,
               }}
             />
-            {isCurrent && (
-              <>
-                <WorldScenery theme={theme} width={width} height={slabHeight + rowHeight} />
-                <WorldParticles
-                  type={visuals.particleType}
-                  color={visuals.particleColor}
-                  width={width}
-                  height={slabHeight + rowHeight}
-                  density={12}
-                />
-              </>
-            )}
+            <WorldScenery theme={theme} width={width} height={slabHeight} />
+            <WorldParticles
+              type={visuals.particleType}
+              color={visuals.particleColor}
+              width={width}
+              height={slabHeight}
+              density={12}
+            />
           </View>
         );
       })}
