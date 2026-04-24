@@ -28,6 +28,8 @@ import { WorldBackground } from './WorldBackground';
 import { WorldIntroModal } from './WorldIntroModal';
 import { WorldGate } from './WorldGate';
 import { WORLD_VISUALS } from './worldVisuals';
+import { UnifiedIntro } from './UnifiedIntro';
+import { MigrationBanner } from './MigrationBanner';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
 const PATH_TOP_PADDING = 32;
@@ -91,9 +93,16 @@ export function UnifiedJourneyScreen() {
     setLastPlayed,
     hasSeenWorldIntro,
     markWorldIntroSeen,
+    hasSeenUnifiedIntro,
+    markUnifiedIntroSeen,
   } = useGameStore();
 
   const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
+
+  // Is this a brand-new player (position 1, no intro seen) or a
+  // migrated existing user (position > 1, no intro seen)?
+  const isBrandNew = !hasSeenUnifiedIntro && unifiedPosition === 1;
+  const isMigratedExisting = !hasSeenUnifiedIntro && unifiedPosition > 1;
 
   const [sideCampaignProgress, setSideCampaignProgress] = useState<
     Record<string, { stars: number; best_score: number }>
@@ -212,6 +221,15 @@ export function UnifiedJourneyScreen() {
 
   const totalPct = Math.round((unifiedPosition / UNIFIED_LADDER.length) * 100);
 
+  // Brand-new players get the three-card intro before anything else.
+  if (isBrandNew) {
+    return (
+      <TabTransition>
+        <UnifiedIntro onComplete={markUnifiedIntroSeen} />
+      </TabTransition>
+    );
+  }
+
   return (
     <TabTransition>
       <SafeAreaView style={[st.container, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -220,6 +238,14 @@ export function UnifiedJourneyScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={st.scrollContent}
         >
+          {/* Migration banner for existing users */}
+          {isMigratedExisting && (
+            <MigrationBanner
+              unifiedPosition={unifiedPosition}
+              onDismiss={markUnifiedIntroSeen}
+            />
+          )}
+
           {/* Header */}
           <View style={st.header}>
             <View style={st.headerLeft}>
