@@ -55,27 +55,27 @@ export const CAMPAIGNS: Record<string, Campaign> = {
   speed_recall: mkCampaign(
     'speed_recall', 'data.campaigns.speed_recall_name', 'data.campaigns.speed_recall_desc',
     ['data.worlds.speed_recall_1', 'data.worlds.speed_recall_2', 'data.worlds.speed_recall_3'],
-    '#FF6B6B', 1, 45, 3, [15, 15, 15],
+    '#FF6B6B', 0, 45, 3, [15, 15, 15],
   ),
   snap_match: mkCampaign(
     'snap_match', 'data.campaigns.snap_match_name', 'data.campaigns.snap_match_desc',
     ['data.worlds.snap_match_1', 'data.worlds.snap_match_2', 'data.worlds.snap_match_3'],
-    '#0984E3', 2, 45, 3, [15, 15, 15],
+    '#0984E3', 0, 45, 3, [15, 15, 15],
   ),
   sequence: mkCampaign(
     'sequence', 'data.campaigns.sequence_name', 'data.campaigns.sequence_desc',
     ['data.worlds.sequence_1', 'data.worlds.sequence_2', 'data.worlds.sequence_3'],
-    '#D4A012', 3, 36, 3, [12, 12, 12],
+    '#D4A012', 0, 36, 3, [12, 12, 12],
   ),
   counting_blitz: mkCampaign(
     'counting_blitz', 'data.campaigns.counting_blitz_name', 'data.campaigns.counting_blitz_desc',
     ['data.worlds.counting_blitz_1', 'data.worlds.counting_blitz_2'],
-    '#00B894', 4, 30, 2, [15, 15],
+    '#00B894', 0, 30, 2, [15, 15],
   ),
   colour_chain: mkCampaign(
     'colour_chain', 'data.campaigns.colour_chain_name', 'data.campaigns.colour_chain_desc',
     ['data.worlds.colour_chain_1', 'data.worlds.colour_chain_2'],
-    '#FD79A8', 5, 24, 2, [12, 12],
+    '#FD79A8', 0, 24, 2, [12, 12],
   ),
 };
 

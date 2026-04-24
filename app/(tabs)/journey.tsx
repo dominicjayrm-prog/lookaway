@@ -137,23 +137,11 @@ function JourneyTab() {
     }, [])
   );
 
-  // Classic world completion check
-  function getClassicWorldsCompleted(): number {
-    const wl = [20, 30, 35, 35, 40, 40];
-    let done = 0;
-    for (let w = 0; w < 6; w++) {
-      let allDone = true;
-      for (let l = 1; l <= wl[w]; l++) { if (!levelProgress[`w${w + 1}-l${l}`]) { allDone = false; break; } }
-      if (allDone) done = w + 1; else break;
-    }
-    return done;
-  }
-  const classicWorldsDone = getClassicWorldsCompleted();
-
   // Build modes array with computed data
   const modes = CAMPAIGN_ORDER.map(id => {
     const c = CAMPAIGNS[id];
-    const locked = classicWorldsDone < c.unlockAfterWorld;
+    // All modes are always unlocked under the unified journey system.
+    const locked = false;
     let completedLevels = 0;
     let totalCompletedStars = 0;
 
