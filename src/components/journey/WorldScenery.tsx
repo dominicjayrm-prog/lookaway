@@ -79,8 +79,6 @@ function emeraldGrove(w: number, h: number): React.ReactNode {
       color: rand() > 0.5 ? '#FFC8DD' : '#FFE8A3',
     });
   }
-  const sunbeamX = [0.18, 0.46, 0.72];
-
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
@@ -92,33 +90,7 @@ function emeraldGrove(w: number, h: number): React.ReactNode {
           <Stop offset="0" stopColor="#0F3D2B" stopOpacity={0} />
           <Stop offset="1" stopColor="#0B2E1F" stopOpacity={0.6} />
         </LinearGradient>
-        <LinearGradient id="grove-sunbeam" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFF6C4" stopOpacity={0.18} />
-          <Stop offset="1" stopColor="#FFF6C4" stopOpacity={0} />
-        </LinearGradient>
       </Defs>
-
-      {/* Soft sunbeams filtering through the canopy — repeating down the
-       *  slab so every screenful has at least one visible. */}
-      {sunbeamX.map((xRatio, i) => {
-        const x = w * xRatio;
-        const bandCount = 4;
-        return (
-          <G key={`sun-${i}`}>
-            {Array.from({ length: bandCount }).map((_, b) => {
-              const bandY = (b / bandCount) * h;
-              const bandH = h / bandCount + 120;
-              return (
-                <Path
-                  key={b}
-                  d={`M ${x - 20} ${bandY} L ${x - 80} ${bandY + bandH} L ${x + 80} ${bandY + bandH} L ${x + 20} ${bandY} Z`}
-                  fill="url(#grove-sunbeam)"
-                />
-              );
-            })}
-          </G>
-        );
-      })}
 
       {/* Top-edge canopy silhouette — bleeds out of the top of the slab
        *  so it feels like the forest extends upward past the viewport. */}
@@ -221,24 +193,6 @@ function emeraldGrove(w: number, h: number): React.ReactNode {
           />
         </G>
       ))}
-      {/* Ground-level fern tufts on alternating sides. */}
-      {Array.from({ length: 6 }).map((_, i) => {
-        const fx = i % 2 === 0 ? w * 0.06 : w * 0.94;
-        const fy = h - 18 - (i * 30) % h;
-        return (
-          <G key={`fern-${i}`} opacity={0.5}>
-            {[-10, -4, 2, 8].map((dx, j) => (
-              <Path
-                key={j}
-                d={`M ${fx + dx} ${fy} Q ${fx + dx + (dx > 0 ? 4 : -4)} ${fy - 10} ${fx + dx + (dx > 0 ? 2 : -2)} ${fy - 18}`}
-                stroke="#52B788"
-                strokeWidth={1.2}
-                fill="none"
-              />
-            ))}
-          </G>
-        );
-      })}
     </Svg>
   );
 }
@@ -496,10 +450,6 @@ function crystalDepths(w: number, h: number): React.ReactNode {
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
-        <LinearGradient id="depth-ray" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#CAF0F8" stopOpacity={0.22} />
-          <Stop offset="1" stopColor="#CAF0F8" stopOpacity={0} />
-        </LinearGradient>
         <LinearGradient id="depth-floor" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#023E8A" stopOpacity={0} />
           <Stop offset="1" stopColor="#001A33" stopOpacity={0.75} />
@@ -509,20 +459,6 @@ function crystalDepths(w: number, h: number): React.ReactNode {
           <Stop offset="1" stopColor="#48CAE4" stopOpacity={0.25} />
         </RadialGradient>
       </Defs>
-
-      {/* God-rays angling down from the surface. 5 across the top, long
-       *  enough to reach roughly the top 60% of the slab. */}
-      {[0.12, 0.3, 0.5, 0.72, 0.9].map((xRatio, i) => {
-        const top = w * xRatio;
-        const bottomOffset = (i % 2 === 0 ? -1 : 1) * w * 0.06;
-        return (
-          <Path
-            key={`ray-${i}`}
-            d={`M ${top - 10} 0 L ${top + bottomOffset - 40} ${h * 0.7} L ${top + bottomOffset + 40} ${h * 0.7} L ${top + 10} 0 Z`}
-            fill="url(#depth-ray)"
-          />
-        );
-      })}
 
       {/* Surface bubbles streaming upward from random x-positions at
        *  the top — suggests we're deep and the world extends above. */}
