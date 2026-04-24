@@ -1441,67 +1441,108 @@ function auroraPeaks(w: number, h: number): React.ReactNode {
 // --------------------------------------------------------------------
 function infernoCore(w: number, h: number): React.ReactNode {
   const rand = seeded(5);
-  // Six obsidian spires of differing heights, alternating sides so
-  // the path stays unobstructed.
-  const spires: Array<{ x: number; baseY: number; height: number; width: number }> = [];
-  for (let i = 0; i < 10; i++) {
-    const side = i % 2 === 0 ? 0.04 + rand() * 0.2 : 0.76 + rand() * 0.2;
+
+  // 14 obsidian spires of differing heights (was 10), some jagged
+  // with multi-apex tops, some thin + tall.
+  const spires: Array<{ x: number; baseY: number; height: number; width: number; jagged: boolean }> = [];
+  for (let i = 0; i < 14; i++) {
+    const side = i % 2 === 0 ? 0.03 + rand() * 0.22 : 0.75 + rand() * 0.22;
     spires.push({
       x: w * side,
-      baseY: h * (0.15 + (i / 10) * 0.8),
-      height: 55 + rand() * 90,
-      width: 20 + rand() * 18,
+      baseY: h * (0.1 + (i / 14) * 0.85),
+      height: 60 + rand() * 110,
+      width: 18 + rand() * 24,
+      jagged: rand() > 0.5,
     });
   }
-  // Lava pools scattered throughout.
+
+  // 12 lava pools (was 8), varied sizes, some bubbling.
   const lavaPools: Array<{ cx: number; cy: number; rx: number; ry: number }> = [];
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     lavaPools.push({
-      cx: w * (0.12 + rand() * 0.76),
-      cy: h * (0.22 + (i / 8) * 0.72),
-      rx: 20 + rand() * 30,
-      ry: 5 + rand() * 8,
+      cx: w * (0.1 + rand() * 0.8),
+      cy: h * (0.2 + (i / 12) * 0.72),
+      rx: 18 + rand() * 34,
+      ry: 4 + rand() * 9,
     });
   }
-  // Ground cracks — short zigzags of hot glow.
+
+  // 22 ground cracks (was 14), more variety.
   const cracks: Array<{ points: string }> = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 22; i++) {
     const sx = w * rand();
-    const sy = h * (0.3 + rand() * 0.65);
+    const sy = h * (0.25 + rand() * 0.68);
     const pts = [`${sx},${sy}`];
     let cx = sx;
     let cy = sy;
-    const segs = 3 + Math.floor(rand() * 3);
+    const segs = 3 + Math.floor(rand() * 4);
     for (let j = 0; j < segs; j++) {
-      cx += (rand() - 0.5) * 60;
-      cy += (rand() - 0.2) * 20;
+      cx += (rand() - 0.5) * 70;
+      cy += (rand() - 0.2) * 22;
       pts.push(`${cx},${cy}`);
     }
     cracks.push({ points: pts.join(' L ').replace(/^/, 'M ') });
   }
-  // Smoke plumes rising from lava pools near the top of the slab.
+
+  // 6 smoke plumes (was 3) spread across the slab.
   const plumes = [
-    { x: w * 0.22, baseY: h * 0.28 },
-    { x: w * 0.55, baseY: h * 0.18 },
-    { x: w * 0.82, baseY: h * 0.34 },
+    { x: w * 0.18, baseY: h * 0.32 },
+    { x: w * 0.42, baseY: h * 0.22 },
+    { x: w * 0.6, baseY: h * 0.42 },
+    { x: w * 0.78, baseY: h * 0.28 },
+    { x: w * 0.3, baseY: h * 0.64 },
+    { x: w * 0.85, baseY: h * 0.58 },
   ];
+
+  // Rising ember particles throughout the slab — varied density.
+  const embers = Array.from({ length: 40 }).map(() => ({
+    x: rand() * w,
+    y: rand() * h,
+    r: 0.8 + rand() * 2.2,
+  }));
+
+  // Three small lava waterfall spots off the edges of spires.
+  const lavaFalls = [
+    { x: w * 0.1, y: h * 0.38, h: 40 },
+    { x: w * 0.88, y: h * 0.55, h: 50 },
+    { x: w * 0.22, y: h * 0.78, h: 35 },
+  ];
+
+  // Floating volcanic rocks levitating in the heat.
+  const floatingRocks = Array.from({ length: 8 }).map(() => ({
+    x: rand() * w,
+    y: h * (0.2 + rand() * 0.6),
+    size: 3 + rand() * 4,
+  }));
+
+  // Ember trails (short dotted lines following a rising arc).
+  const emberTrails = Array.from({ length: 6 }).map(() => ({
+    x: rand() * w,
+    y: h * (0.5 + rand() * 0.4),
+  }));
 
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
       <Defs>
         <LinearGradient id="lava-top" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0.85} />
+          <Stop offset="0" stopColor="#FFE8A3" stopOpacity={0.95} />
+          <Stop offset="0.4" stopColor="#FFBA08" stopOpacity={0.9} />
           <Stop offset="1" stopColor="#E85D04" stopOpacity={0.9} />
         </LinearGradient>
         <LinearGradient id="lava-river" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#FFBA08" stopOpacity={0} />
-          <Stop offset="0.3" stopColor="#E85D04" stopOpacity={0.55} />
-          <Stop offset="1" stopColor="#9D0208" stopOpacity={0.85} />
+          <Stop offset="0.25" stopColor="#FFBA08" stopOpacity={0.6} />
+          <Stop offset="0.5" stopColor="#E85D04" stopOpacity={0.85} />
+          <Stop offset="1" stopColor="#9D0208" stopOpacity={0.95} />
+        </LinearGradient>
+        <LinearGradient id="lava-fall" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFE8A3" stopOpacity={0.9} />
+          <Stop offset="1" stopColor="#E85D04" stopOpacity={0.85} />
         </LinearGradient>
         <LinearGradient id="smoke-plume" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#1A0A0A" stopOpacity={0} />
-          <Stop offset="0.5" stopColor="#2B1B1B" stopOpacity={0.5} />
-          <Stop offset="1" stopColor="#1A0A0A" stopOpacity={0.7} />
+          <Stop offset="0.5" stopColor="#2B1B1B" stopOpacity={0.55} />
+          <Stop offset="1" stopColor="#1A0A0A" stopOpacity={0.75} />
         </LinearGradient>
         <LinearGradient id="spire-face" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor="#1A0A0A" stopOpacity={0.95} />
@@ -1512,127 +1553,222 @@ function infernoCore(w: number, h: number): React.ReactNode {
           <Stop offset="0" stopColor="#FFBA08" stopOpacity={0.6} />
           <Stop offset="1" stopColor="#FFBA08" stopOpacity={0} />
         </RadialGradient>
+        <RadialGradient id="hot-haze" cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#FFBA08" stopOpacity={0.18} />
+          <Stop offset="1" stopColor="#FFBA08" stopOpacity={0} />
+        </RadialGradient>
       </Defs>
 
-      {/* Distant volcanic eruption silhouette peeking at the top. */}
+      {/* ---------- Volcanic eruption silhouette at the top ---------- */}
       <Polygon
-        points={`${w * 0.3},${h * 0.12} ${w * 0.42},${h * 0.02} ${w * 0.5},${h * 0.05} ${w * 0.58},${h * 0.02} ${w * 0.68},${h * 0.12}`}
-        fill="#1A0A0A"
-        opacity={0.75}
+        points={`${w * 0.25},${h * 0.15} ${w * 0.38},${h * 0.04} ${w * 0.46},${h * 0.07} ${w * 0.52},${h * 0.02} ${w * 0.58},${h * 0.06} ${w * 0.66},${h * 0.03} ${w * 0.75},${h * 0.15}`}
+        fill="#0A0000"
+        opacity={0.85}
       />
       {/* Eruption glow crown */}
+      <SvgCircle cx={w * 0.5} cy={h * 0.04} r={h * 0.07} fill="url(#ember-glow)" />
       <Path
-        d={`M ${w * 0.45} ${h * 0.05} Q ${w * 0.5} ${h * 0.01} ${w * 0.55} ${h * 0.05}`}
+        d={`M ${w * 0.42} ${h * 0.06} Q ${w * 0.5} ${h * 0.01} ${w * 0.58} ${h * 0.06}`}
         stroke="#FFBA08"
         strokeWidth={3}
         fill="none"
-        opacity={0.65}
+        opacity={0.7}
+        strokeLinecap="round"
       />
-      <SvgCircle cx={w * 0.5} cy={h * 0.04} r={h * 0.045} fill="url(#ember-glow)" />
+      {/* Lava spurts */}
+      {[-0.06, -0.02, 0.02, 0.06].map((dx, i) => (
+        <Path
+          key={`spurt-${i}`}
+          d={`M ${w * (0.5 + dx)} ${h * 0.04} Q ${w * (0.5 + dx * 1.4)} ${h * 0.01} ${w * (0.5 + dx * 0.8)} ${h * 0.0}`}
+          stroke="#FFE8A3"
+          strokeWidth={2}
+          fill="none"
+          opacity={0.75}
+          strokeLinecap="round"
+        />
+      ))}
 
-      {/* Rising smoke plumes — wide soft billows that fade upward. */}
+      {/* ---------- Ambient hot-haze pockets (drift into the slab) ---------- */}
+      {Array.from({ length: 12 }).map((_, i) => (
+        <SvgCircle
+          key={`haze-${i}`}
+          cx={rand() * w}
+          cy={h * (0.1 + rand() * 0.8)}
+          r={25 + rand() * 35}
+          fill="url(#hot-haze)"
+        />
+      ))}
+
+      {/* ---------- Rising smoke plumes ---------- */}
       {plumes.map((p, i) => (
-        <G key={`plume-${i}`} opacity={0.6}>
-          <Ellipse cx={p.x} cy={p.baseY} rx={30} ry={14} fill="url(#smoke-plume)" />
-          <Ellipse cx={p.x + 6} cy={p.baseY - 20} rx={22} ry={12} fill="url(#smoke-plume)" />
-          <Ellipse cx={p.x - 8} cy={p.baseY - 40} rx={18} ry={10} fill="url(#smoke-plume)" />
-          <Ellipse cx={p.x + 4} cy={p.baseY - 58} rx={14} ry={8} fill="url(#smoke-plume)" />
+        <G key={`plume-${i}`} opacity={0.65}>
+          <Ellipse cx={p.x} cy={p.baseY} rx={32} ry={15} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x + 7} cy={p.baseY - 22} rx={25} ry={13} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x - 9} cy={p.baseY - 44} rx={20} ry={11} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x + 5} cy={p.baseY - 64} rx={16} ry={9} fill="url(#smoke-plume)" />
+          <Ellipse cx={p.x - 3} cy={p.baseY - 82} rx={12} ry={7} fill="url(#smoke-plume)" opacity={0.7} />
         </G>
       ))}
 
-      {/* Obsidian spires — sharp faceted triangles with darker side
-       *  face for depth. */}
+      {/* ---------- Obsidian spires ---------- */}
       {spires.map((s, i) => {
-        const { x, baseY, height, width } = s;
+        const { x, baseY, height, width, jagged } = s;
         const apexY = baseY - height;
         const leftX = x - width / 2;
         const rightX = x + width / 2;
         return (
           <G key={`spire-${i}`}>
             {/* Main facet */}
-            <Polygon
-              points={`${leftX},${baseY} ${x},${apexY} ${rightX},${baseY}`}
-              fill="url(#spire-face)"
-            />
-            {/* Darker shadow facet on one side */}
+            {jagged ? (
+              // Jagged multi-peak silhouette
+              <Polygon
+                points={`${leftX},${baseY} ${x - width * 0.25},${apexY + height * 0.3} ${x - width * 0.15},${apexY + height * 0.15} ${x},${apexY} ${x + width * 0.1},${apexY + height * 0.1} ${x + width * 0.25},${apexY + height * 0.25} ${rightX},${baseY}`}
+                fill="url(#spire-face)"
+              />
+            ) : (
+              <Polygon
+                points={`${leftX},${baseY} ${x},${apexY} ${rightX},${baseY}`}
+                fill="url(#spire-face)"
+              />
+            )}
+            {/* Darker shadow side */}
             <Polygon
               points={`${leftX},${baseY} ${x},${apexY} ${x - width * 0.1},${baseY - height * 0.5}`}
               fill="#0A0000"
-              opacity={0.55}
+              opacity={0.6}
             />
-            {/* Thin glowing fissure line climbing the spire */}
+            {/* Glowing fissure climbing the spire */}
             <Path
-              d={`M ${x - width * 0.1} ${baseY - 4} L ${x - width * 0.05} ${baseY - height * 0.4} L ${x + width * 0.05} ${baseY - height * 0.7}`}
+              d={`M ${x - width * 0.12} ${baseY - 6} L ${x - width * 0.05} ${baseY - height * 0.4} L ${x + width * 0.06} ${baseY - height * 0.7} L ${x} ${apexY + 8}`}
               stroke="#FFBA08"
-              strokeWidth={0.8}
+              strokeWidth={1}
               fill="none"
-              opacity={0.45}
+              opacity={0.6}
             />
+            {/* Glow halo at the base */}
+            <Ellipse cx={x} cy={baseY + 2} rx={width * 0.8} ry={4} fill="url(#ember-glow)" opacity={0.6} />
           </G>
         );
       })}
 
-      {/* Lava pools — glowing ovals with a hot inner core. */}
+      {/* ---------- Lava waterfalls ---------- */}
+      {lavaFalls.map((lf, i) => (
+        <G key={`fall-${i}`}>
+          <Rect x={lf.x - 2} y={lf.y} width={4} height={lf.h} fill="url(#lava-fall)" />
+          {/* Splash at base */}
+          <Ellipse cx={lf.x} cy={lf.y + lf.h} rx={10} ry={3} fill="#FFBA08" opacity={0.8} />
+          <Ellipse cx={lf.x} cy={lf.y + lf.h} rx={18} ry={5} fill="url(#ember-glow)" />
+        </G>
+      ))}
+
+      {/* ---------- Ground cracks ---------- */}
+      {cracks.map((c, i) => (
+        <Path
+          key={`crack-${i}`}
+          d={c.points}
+          stroke={i % 3 === 0 ? '#FFE8A3' : i % 3 === 1 ? '#FFBA08' : '#E85D04'}
+          strokeWidth={1.2}
+          fill="none"
+          opacity={0.6 + (i % 3) * 0.1}
+          strokeLinecap="round"
+        />
+      ))}
+
+      {/* ---------- Floating volcanic rocks ---------- */}
+      {floatingRocks.map((r, i) => (
+        <G key={`rock-${i}`}>
+          <Polygon
+            points={`${r.x - r.size},${r.y} ${r.x - r.size * 0.5},${r.y - r.size} ${r.x + r.size * 0.3},${r.y - r.size * 0.8} ${r.x + r.size},${r.y - r.size * 0.2} ${r.x + r.size * 0.6},${r.y + r.size * 0.4}`}
+            fill="#2B1010"
+            opacity={0.85}
+          />
+          {/* Hot glow on lower edge */}
+          <Path
+            d={`M ${r.x - r.size} ${r.y} L ${r.x + r.size} ${r.y - r.size * 0.2}`}
+            stroke="#E85D04"
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.7}
+          />
+          {/* Tiny trail dots below */}
+          <SvgCircle cx={r.x} cy={r.y + r.size + 3} r={0.6} fill="#FFBA08" opacity={0.7} />
+          <SvgCircle cx={r.x + 1} cy={r.y + r.size + 7} r={0.5} fill="#FFBA08" opacity={0.5} />
+        </G>
+      ))}
+
+      {/* ---------- Lava pools ---------- */}
       {lavaPools.map((p, i) => (
         <G key={`pool-${i}`}>
           <Ellipse
             cx={p.cx}
             cy={p.cy + 6}
-            rx={p.rx * 1.2}
-            ry={p.ry * 1.4}
+            rx={p.rx * 1.3}
+            ry={p.ry * 1.5}
             fill="url(#ember-glow)"
-            opacity={0.5}
+            opacity={0.55}
           />
           <Ellipse cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} fill="url(#lava-top)" />
-          <Ellipse
-            cx={p.cx}
-            cy={p.cy - 1}
-            rx={p.rx * 0.7}
-            ry={p.ry * 0.55}
-            fill="#FFE8A3"
-            opacity={0.7}
-          />
+          <Ellipse cx={p.cx} cy={p.cy - 1} rx={p.rx * 0.7} ry={p.ry * 0.55} fill="#FFE8A3" opacity={0.8} />
+          {/* Bubbling dots */}
+          {i % 2 === 0 && (
+            <>
+              <SvgCircle cx={p.cx - p.rx * 0.3} cy={p.cy - 1} r={1.2} fill="#FFE8A3" />
+              <SvgCircle cx={p.cx + p.rx * 0.2} cy={p.cy - 0.5} r={0.9} fill="#FFE8A3" />
+            </>
+          )}
         </G>
       ))}
 
-      {/* Ground cracks — jagged glowing lines. */}
-      {cracks.map((c, i) => (
-        <Path
-          key={`crack-${i}`}
-          d={c.points}
-          stroke={i % 2 === 0 ? '#FFBA08' : '#E85D04'}
-          strokeWidth={1.2}
-          fill="none"
-          opacity={0.55 + (i % 3) * 0.1}
-          strokeLinecap="round"
-        />
-      ))}
-
-      {/* Main lava river at the bottom — the player's arrival point. */}
-      <Path
-        d={`M 0 ${h * 0.84} Q ${w * 0.2} ${h * 0.78} ${w * 0.45} ${h * 0.84} T ${w * 0.8} ${h * 0.84} T ${w} ${h * 0.85} L ${w} ${h} L 0 ${h} Z`}
-        fill="url(#lava-river)"
-      />
-      {/* River surface highlights — hot yellow streaks. */}
-      {[0.88, 0.92, 0.96].map((yRatio, i) => (
-        <Path
-          key={`streak-${i}`}
-          d={`M 0 ${h * yRatio} Q ${w * 0.3} ${h * (yRatio - 0.008)} ${w * 0.6} ${h * yRatio} T ${w} ${h * yRatio}`}
-          stroke={i === 0 ? '#FFE8A3' : '#FFBA08'}
-          strokeWidth={1.2}
-          fill="none"
-          opacity={0.55 - i * 0.1}
-        />
-      ))}
-      {/* A handful of floating embers drift over the river. */}
-      {Array.from({ length: 14 }).map((_, i) => (
+      {/* ---------- Rising embers + trails ---------- */}
+      {embers.map((e, i) => (
         <SvgCircle
           key={`ember-${i}`}
-          cx={w * rand()}
-          cy={h * (0.86 + rand() * 0.12)}
-          r={1 + rand() * 1.5}
+          cx={e.x}
+          cy={e.y}
+          r={e.r}
           fill="#FFBA08"
-          opacity={0.6 + rand() * 0.3}
+          opacity={0.55 + e.r * 0.1}
+        />
+      ))}
+      {emberTrails.map((t, i) => (
+        <G key={`trail-${i}`} opacity={0.6}>
+          {[0, 0.3, 0.6, 0.9].map((f, ti) => (
+            <SvgCircle
+              key={ti}
+              cx={t.x + (ti % 2 === 0 ? 2 : -2)}
+              cy={t.y - f * 40}
+              r={1.2 - f * 0.6}
+              fill="#FFBA08"
+            />
+          ))}
+        </G>
+      ))}
+
+      {/* ---------- Main lava river at the bottom ---------- */}
+      <Path
+        d={`M 0 ${h * 0.82} Q ${w * 0.18} ${h * 0.76} ${w * 0.4} ${h * 0.82} T ${w * 0.7} ${h * 0.82} T ${w} ${h * 0.83} L ${w} ${h} L 0 ${h} Z`}
+        fill="url(#lava-river)"
+      />
+      {/* River surface highlights */}
+      {[0.86, 0.9, 0.94, 0.97].map((yRatio, i) => (
+        <Path
+          key={`streak-${i}`}
+          d={`M 0 ${h * yRatio} Q ${w * 0.25} ${h * (yRatio - 0.008)} ${w * 0.55} ${h * yRatio} T ${w} ${h * yRatio}`}
+          stroke={i === 0 ? '#FFE8A3' : i === 1 ? '#FFBA08' : '#E85D04'}
+          strokeWidth={1.2}
+          fill="none"
+          opacity={0.6 - i * 0.12}
+        />
+      ))}
+      {/* Floating embers over the river */}
+      {Array.from({ length: 20 }).map((_, i) => (
+        <SvgCircle
+          key={`river-ember-${i}`}
+          cx={rand() * w}
+          cy={h * (0.84 + rand() * 0.14)}
+          r={1 + rand() * 1.6}
+          fill="#FFE8A3"
+          opacity={0.65 + rand() * 0.3}
         />
       ))}
     </Svg>
