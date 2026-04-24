@@ -417,32 +417,84 @@ function emeraldGrove(w: number, h: number): React.ReactNode {
 // --------------------------------------------------------------------
 function amberDunes(w: number, h: number): React.ReactNode {
   const rand = seeded(2);
+
+  // Dune ridges that tile the FULL slab height, not just the top.
+  // Each ridge is a gently waving horizontal band at decreasing
+  // intervals, alternating shadow depth so the eye reads depth as
+  // you scroll past.
+  const duneRidges: Array<{ y: number; amp: number; opacity: number; tone: 'light' | 'dark' }> = [];
+  {
+    const step = 160;
+    for (let y = 40; y < h - 120; y += step + Math.floor(rand() * 40)) {
+      duneRidges.push({
+        y,
+        amp: 22 + rand() * 34,
+        opacity: 0.25 + rand() * 0.35,
+        tone: rand() > 0.55 ? 'dark' : 'light',
+      });
+    }
+  }
+
   // Cacti scattered in the mid band, alternating sides so the path
-  // stays clear.
-  const cacti: Array<{ x: number; y: number; size: number }> = [];
-  const cactusCount = 9;
-  for (let i = 0; i < cactusCount; i++) {
-    const side = i % 2 === 0 ? rand() * 0.22 : 0.78 + rand() * 0.2;
+  // stays clear. Mix of saguaros (two arms) and barrel cacti.
+  const cacti: Array<{ x: number; y: number; size: number; kind: 'saguaro' | 'barrel' }> = [];
+  for (let i = 0; i < 14; i++) {
+    const side = i % 2 === 0 ? rand() * 0.18 : 0.82 + rand() * 0.16;
     cacti.push({
       x: w * side,
-      y: h * 0.2 + (i / cactusCount) * h * 0.7,
-      size: 18 + rand() * 12,
+      y: h * (0.1 + (i / 14) * 0.85) + (rand() - 0.5) * 30,
+      size: 18 + rand() * 14,
+      kind: rand() > 0.3 ? 'saguaro' : 'barrel',
     });
   }
-  // Obelisks — ancient stone pillars poking out of the dunes.
+
+  // Ancient obelisks — stone pillars poking out of the dunes. 6
+  // scattered, occasionally in pairs.
   const obelisks: Array<{ x: number; y: number; height: number }> = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     obelisks.push({
-      x: w * (0.08 + rand() * 0.84),
-      y: h * (0.18 + rand() * 0.7),
-      height: 28 + rand() * 22,
+      x: w * (0.06 + rand() * 0.88),
+      y: h * (0.15 + rand() * 0.78),
+      height: 28 + rand() * 28,
     });
   }
-  // Pyramid silhouettes — two at different sizes, far apart.
+
+  // Pyramid silhouettes at two depths — far (hazy) and closer. Three
+  // total at varied positions down the slab.
   const pyramids = [
-    { cx: w * 0.28, baseY: h * 0.45, w: 120, h: 70 },
-    { cx: w * 0.72, baseY: h * 0.72, w: 180, h: 100 },
+    { cx: w * 0.3, baseY: h * 0.25, width: 140, height: 80, far: true },
+    { cx: w * 0.72, baseY: h * 0.56, width: 200, height: 120, far: false },
+    { cx: w * 0.18, baseY: h * 0.82, width: 110, height: 65, far: true },
   ];
+
+  // Lonely palm tree silhouettes at 4 spots.
+  const palms: Array<{ x: number; y: number; size: number }> = [];
+  for (let i = 0; i < 4; i++) {
+    palms.push({
+      x: w * (0.12 + rand() * 0.76),
+      y: h * (0.25 + i * 0.22) + (rand() - 0.5) * 40,
+      size: 26 + rand() * 12,
+    });
+  }
+
+  // Bleached bones on the sand — two skulls and a couple of rib sets.
+  const bones = [
+    { x: w * 0.08, y: h * 0.94, kind: 'skull' as const },
+    { x: w * 0.86, y: h * 0.97, kind: 'ribs' as const },
+    { x: w * 0.42, y: h * 0.98, kind: 'ribs' as const },
+  ];
+
+  // Sand ripple arcs on the foreground dune.
+  const ripples = [0.88, 0.91, 0.94, 0.97];
+
+  // Tumbling sand-grass tufts.
+  const grassTufts = Array.from({ length: 18 }).map((_, i) => ({
+    x: (i / 18) * w + rand() * 30,
+    y: h * (0.7 + rand() * 0.28),
+  }));
+
+  // A vulture circling in the sky-ish upper band.
+  const vulture = { x: w * 0.58, y: h * 0.15, size: 10 };
 
   return (
     <Svg width={w} height={h} style={{ position: 'absolute' }}>
@@ -453,7 +505,7 @@ function amberDunes(w: number, h: number): React.ReactNode {
         </LinearGradient>
         <LinearGradient id="dune-shadow-b" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#5A3A22" stopOpacity={0} />
-          <Stop offset="1" stopColor="#5A3A22" stopOpacity={0.5} />
+          <Stop offset="1" stopColor="#4A2A18" stopOpacity={0.65} />
         </LinearGradient>
         <RadialGradient id="sun-halo" cx="50%" cy="50%" r="60%">
           <Stop offset="0" stopColor="#FFE8A3" stopOpacity={0.7} />
@@ -462,152 +514,250 @@ function amberDunes(w: number, h: number): React.ReactNode {
         </RadialGradient>
         <LinearGradient id="heat-haze" x1="0" y1="0" x2="1" y2="0">
           <Stop offset="0" stopColor="#FEFAE0" stopOpacity={0} />
-          <Stop offset="0.5" stopColor="#FEFAE0" stopOpacity={0.18} />
+          <Stop offset="0.5" stopColor="#FEFAE0" stopOpacity={0.25} />
           <Stop offset="1" stopColor="#FEFAE0" stopOpacity={0} />
+        </LinearGradient>
+        <LinearGradient id="palm-frond" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#2D5A3D" stopOpacity={0} />
+          <Stop offset="0.5" stopColor="#2D5A3D" stopOpacity={0.85} />
+          <Stop offset="1" stopColor="#2D5A3D" stopOpacity={0} />
         </LinearGradient>
       </Defs>
 
-      {/* Giant setting sun near the top of the slab with a soft halo. */}
-      <SvgCircle cx={w * 0.78} cy={h * 0.08} r={h * 0.11} fill="url(#sun-halo)" />
-      <SvgCircle cx={w * 0.78} cy={h * 0.08} r={h * 0.05} fill="#FFE8A3" opacity={0.9} />
-      <SvgCircle cx={w * 0.78} cy={h * 0.08} r={h * 0.028} fill="#FFFFFF" opacity={0.85} />
-      {/* Sun rays — thin wedges radiating out. */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        const angle = (i / 8) * Math.PI * 2;
-        const r1 = h * 0.055;
-        const r2 = h * 0.12;
+      {/* ---------- Setting sun with halo + rays ---------- */}
+      <SvgCircle cx={w * 0.78} cy={h * 0.07} r={h * 0.12} fill="url(#sun-halo)" />
+      <SvgCircle cx={w * 0.78} cy={h * 0.07} r={h * 0.055} fill="#FFE8A3" opacity={0.95} />
+      <SvgCircle cx={w * 0.78} cy={h * 0.07} r={h * 0.03} fill="#FFFFFF" opacity={0.92} />
+      {Array.from({ length: 12 }).map((_, i) => {
+        const angle = (i / 12) * Math.PI * 2;
+        const r1 = h * 0.06;
+        const r2 = h * 0.135;
         const cx = w * 0.78;
-        const cy = h * 0.08;
+        const cy = h * 0.07;
         const x1 = cx + Math.cos(angle) * r1;
         const y1 = cy + Math.sin(angle) * r1;
         const x2 = cx + Math.cos(angle) * r2;
         const y2 = cy + Math.sin(angle) * r2;
         return (
           <Path
-            key={i}
+            key={`ray-${i}`}
             d={`M ${x1} ${y1} L ${x2} ${y2}`}
             stroke="#FFE8A3"
             strokeWidth={2}
             strokeLinecap="round"
-            opacity={0.45}
+            opacity={0.5}
           />
         );
       })}
 
-      {/* Pyramid silhouettes in the background. */}
+      {/* ---------- Vulture silhouette ---------- */}
+      <G opacity={0.55}>
+        <Path
+          d={`M ${vulture.x - vulture.size} ${vulture.y} Q ${vulture.x - vulture.size * 0.5} ${vulture.y - vulture.size * 0.55} ${vulture.x} ${vulture.y + vulture.size * 0.15} Q ${vulture.x + vulture.size * 0.5} ${vulture.y - vulture.size * 0.55} ${vulture.x + vulture.size} ${vulture.y}`}
+          stroke="#3D2817"
+          strokeWidth={1.8}
+          fill="none"
+          strokeLinecap="round"
+        />
+      </G>
+
+      {/* ---------- Pyramid silhouettes ---------- */}
       {pyramids.map((p, i) => (
-        <Polygon
-          key={`pyr-${i}`}
-          points={`${p.cx - p.w / 2},${p.baseY} ${p.cx},${p.baseY - p.h} ${p.cx + p.w / 2},${p.baseY}`}
-          fill="#5A3A22"
-          opacity={0.45}
+        <G key={`pyr-${i}`} opacity={p.far ? 0.35 : 0.55}>
+          <Polygon
+            points={`${p.cx - p.width / 2},${p.baseY} ${p.cx},${p.baseY - p.height} ${p.cx + p.width / 2},${p.baseY}`}
+            fill={p.far ? '#7F5539' : '#5A3A22'}
+          />
+          {/* Shadow side for depth */}
+          <Polygon
+            points={`${p.cx},${p.baseY - p.height} ${p.cx + p.width / 2},${p.baseY} ${p.cx + p.width / 4},${p.baseY}`}
+            fill="#3D2817"
+            opacity={0.5}
+          />
+        </G>
+      ))}
+
+      {/* ---------- Dune ridges (tiled throughout the slab) ---------- */}
+      {duneRidges.map((d, i) => (
+        <Path
+          key={`dune-${i}`}
+          d={`M 0 ${d.y} Q ${w * 0.25} ${d.y - d.amp * 0.6} ${w * 0.5} ${d.y - d.amp * 0.2} T ${w} ${d.y - d.amp * 0.4} L ${w} ${d.y + 120} L 0 ${d.y + 120} Z`}
+          fill={d.tone === 'dark' ? 'url(#dune-shadow-b)' : 'url(#dune-shadow-a)'}
+          opacity={d.opacity}
         />
       ))}
 
-      {/* Three receding dune ridges. The topmost is lightest; each
-       *  subsequent ridge darker + taller to create depth. Repeat
-       *  throughout the slab so the landscape keeps flowing. */}
-      {Array.from({ length: 5 }).map((_, i) => {
-        const y = h * (0.22 + i * 0.17);
-        const opacity = 0.25 + i * 0.08;
-        return (
-          <Path
-            key={`dune-a-${i}`}
-            d={`M 0 ${y} Q ${w * 0.2} ${y - 20} ${w * 0.45} ${y - 4} T ${w * 0.9} ${y - 10} L ${w} ${y + 2} L ${w} ${y + 80} L 0 ${y + 80} Z`}
-            fill="url(#dune-shadow-a)"
-            opacity={opacity}
-          />
-        );
-      })}
-      {Array.from({ length: 4 }).map((_, i) => {
-        const y = h * (0.32 + i * 0.2);
-        return (
-          <Path
-            key={`dune-b-${i}`}
-            d={`M 0 ${y} Q ${w * 0.35} ${y - 30} ${w * 0.65} ${y - 8} T ${w} ${y} L ${w} ${y + 120} L 0 ${y + 120} Z`}
-            fill="url(#dune-shadow-b)"
-            opacity={0.45 + i * 0.05}
-          />
-        );
-      })}
-
-      {/* Obelisks scattered throughout. */}
-      {obelisks.map((o, i) => (
-        <G key={`obelisk-${i}`} opacity={0.6}>
-          <Polygon
-            points={`${o.x - 3},${o.y} ${o.x + 3},${o.y} ${o.x + 3},${o.y - o.height + 6} ${o.x},${o.y - o.height} ${o.x - 3},${o.y - o.height + 6}`}
-            fill="#3D2817"
-          />
-          {/* Small carved band near the top. */}
-          <Rect x={o.x - 3} y={o.y - o.height + 14} width={6} height={2} fill="#2B1B10" />
-        </G>
-      ))}
-
-      {/* Cacti — saguaro silhouettes, two arms. */}
-      {cacti.map((c, i) => (
-        <G key={`cactus-${i}`} opacity={0.55}>
-          <Rect
-            x={c.x - c.size * 0.12}
-            y={c.y - c.size}
-            width={c.size * 0.24}
-            height={c.size}
-            rx={c.size * 0.12}
-            fill="#2D5A3D"
-          />
-          {/* Left arm */}
-          <Path
-            d={`M ${c.x - c.size * 0.12} ${c.y - c.size * 0.5} L ${c.x - c.size * 0.45} ${c.y - c.size * 0.5} L ${c.x - c.size * 0.45} ${c.y - c.size * 0.8}`}
-            stroke="#2D5A3D"
-            strokeWidth={c.size * 0.16}
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Right arm */}
-          <Path
-            d={`M ${c.x + c.size * 0.12} ${c.y - c.size * 0.65} L ${c.x + c.size * 0.4} ${c.y - c.size * 0.65} L ${c.x + c.size * 0.4} ${c.y - c.size * 0.9}`}
-            stroke="#2D5A3D"
-            strokeWidth={c.size * 0.16}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </G>
-      ))}
-
-      {/* Foreground dune — deepest shadow at the very bottom of the
-       *  slab, i.e. the start of the world where the player arrives. */}
-      <Path
-        d={`M 0 ${h * 0.9} Q ${w * 0.3} ${h * 0.84} ${w * 0.55} ${h * 0.9} T ${w} ${h * 0.92} L ${w} ${h} L 0 ${h} Z`}
-        fill="#5A3A22"
-        opacity={0.55}
-      />
-
-      {/* Heat haze bands near the horizon — subtle horizontal streaks. */}
-      {[0.14, 0.19, 0.24].map((yRatio, i) => (
+      {/* ---------- Heat-haze bands near the sun / horizon ---------- */}
+      {[0.11, 0.14, 0.17, 0.2].map((yRatio, i) => (
         <Rect
           key={`haze-${i}`}
-          x={w * 0.1}
+          x={w * 0.08}
           y={h * yRatio}
-          width={w * 0.8}
-          height={2}
+          width={w * 0.84}
+          height={1.5}
           fill="url(#heat-haze)"
-          opacity={0.6}
+          opacity={0.7 - i * 0.12}
         />
       ))}
 
-      {/* Scattered dune-grass tufts dotted along the ridges. */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const gx = (i / 10) * w + rand() * 30;
-        const gy = h * 0.78 + (rand() - 0.5) * 40;
-        return (
-          <G key={`grass-${i}`} opacity={0.5}>
-            {[-3, 0, 3].map((dx, j) => (
+      {/* ---------- Palm trees ---------- */}
+      {palms.map((p, i) => (
+        <G key={`palm-${i}`} opacity={0.55}>
+          {/* Trunk — curved */}
+          <Path
+            d={`M ${p.x} ${p.y} Q ${p.x + 6} ${p.y - p.size * 0.5} ${p.x - 3} ${p.y - p.size * 1.1}`}
+            stroke="#5A3A22"
+            strokeWidth={p.size * 0.1}
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Fronds — 5 radiating from the top */}
+          {[-65, -30, 0, 30, 65].map((angle, fi) => {
+            const rad = (angle * Math.PI) / 180;
+            const len = p.size * 0.7;
+            const apexX = p.x - 3;
+            const apexY = p.y - p.size * 1.1;
+            const ex = apexX + Math.cos(rad - Math.PI / 2) * len;
+            const ey = apexY + Math.sin(rad - Math.PI / 2) * len;
+            return (
               <Path
-                key={j}
-                d={`M ${gx + dx} ${gy} L ${gx + dx + (dx > 0 ? 1 : -1)} ${gy - 6}`}
-                stroke="#8B7355"
-                strokeWidth={1}
+                key={fi}
+                d={`M ${apexX} ${apexY} Q ${(apexX + ex) / 2} ${(apexY + ey) / 2 - 5} ${ex} ${ey}`}
+                stroke="#2D5A3D"
+                strokeWidth={2.5}
+                fill="none"
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </G>
+      ))}
+
+      {/* ---------- Obelisks ---------- */}
+      {obelisks.map((o, i) => (
+        <G key={`obelisk-${i}`} opacity={0.7}>
+          <Polygon
+            points={`${o.x - 3.5},${o.y} ${o.x + 3.5},${o.y} ${o.x + 3.5},${o.y - o.height + 7} ${o.x},${o.y - o.height} ${o.x - 3.5},${o.y - o.height + 7}`}
+            fill="#3D2817"
+          />
+          {/* Carved bands */}
+          <Rect x={o.x - 3.5} y={o.y - o.height + 14} width={7} height={2} fill="#2B1B10" />
+          <Rect x={o.x - 3.5} y={o.y - o.height * 0.5} width={7} height={1.5} fill="#2B1B10" />
+          {/* Sand pile at the base */}
+          <Ellipse cx={o.x} cy={o.y + 1} rx={10} ry={3} fill="#7F5539" opacity={0.5} />
+        </G>
+      ))}
+
+      {/* ---------- Cacti ---------- */}
+      {cacti.map((c, i) => {
+        if (c.kind === 'saguaro') {
+          return (
+            <G key={`cactus-${i}`} opacity={0.65}>
+              <Rect
+                x={c.x - c.size * 0.13}
+                y={c.y - c.size}
+                width={c.size * 0.26}
+                height={c.size}
+                rx={c.size * 0.12}
+                fill="#2D5A3D"
+              />
+              {/* Ridges on the trunk */}
+              <Rect x={c.x - c.size * 0.05} y={c.y - c.size} width={c.size * 0.02} height={c.size} fill="#1B4332" />
+              {/* Arms */}
+              <Path
+                d={`M ${c.x - c.size * 0.13} ${c.y - c.size * 0.55} L ${c.x - c.size * 0.48} ${c.y - c.size * 0.55} L ${c.x - c.size * 0.48} ${c.y - c.size * 0.85}`}
+                stroke="#2D5A3D"
+                strokeWidth={c.size * 0.18}
+                strokeLinecap="round"
                 fill="none"
               />
+              <Path
+                d={`M ${c.x + c.size * 0.13} ${c.y - c.size * 0.7} L ${c.x + c.size * 0.42} ${c.y - c.size * 0.7} L ${c.x + c.size * 0.42} ${c.y - c.size * 0.95}`}
+                stroke="#2D5A3D"
+                strokeWidth={c.size * 0.18}
+                strokeLinecap="round"
+                fill="none"
+              />
+              {/* Tiny flower on top */}
+              <SvgCircle cx={c.x} cy={c.y - c.size - 2} r={1.8} fill="#FFC8DD" opacity={0.8} />
+            </G>
+          );
+        }
+        // Barrel cactus
+        return (
+          <G key={`cactus-${i}`} opacity={0.65}>
+            <Ellipse cx={c.x} cy={c.y - c.size * 0.35} rx={c.size * 0.3} ry={c.size * 0.45} fill="#2D5A3D" />
+            {/* Vertical ridges */}
+            {[-0.5, 0, 0.5].map((m, mi) => (
+              <Path
+                key={mi}
+                d={`M ${c.x + c.size * 0.1 * m} ${c.y - c.size * 0.7} Q ${c.x + c.size * 0.12 * m} ${c.y - c.size * 0.35} ${c.x + c.size * 0.1 * m} ${c.y - 0.05}`}
+                stroke="#1B4332"
+                strokeWidth={0.8}
+                fill="none"
+              />
+            ))}
+            <SvgCircle cx={c.x} cy={c.y - c.size * 0.8} r={1.2} fill="#FFE8A3" opacity={0.85} />
+          </G>
+        );
+      })}
+
+      {/* ---------- Foreground dune (deepest) ---------- */}
+      <Path
+        d={`M 0 ${h * 0.88} Q ${w * 0.28} ${h * 0.83} ${w * 0.52} ${h * 0.89} T ${w * 0.88} ${h * 0.88} T ${w} ${h * 0.9} L ${w} ${h} L 0 ${h} Z`}
+        fill="#4A2A18"
+        opacity={0.75}
+      />
+
+      {/* ---------- Sand ripple arcs ---------- */}
+      {ripples.map((yRatio, i) => (
+        <Path
+          key={`ripple-${i}`}
+          d={`M 0 ${h * yRatio} Q ${w * 0.3} ${h * (yRatio - 0.005)} ${w * 0.6} ${h * yRatio} T ${w} ${h * yRatio}`}
+          stroke="#3D2817"
+          strokeWidth={0.8}
+          fill="none"
+          opacity={0.5 - i * 0.08}
+        />
+      ))}
+
+      {/* ---------- Dune grass tufts ---------- */}
+      {grassTufts.map((g, i) => (
+        <G key={`grass-${i}`} opacity={0.55}>
+          {[-3, -1, 1, 3].map((dx, gi) => (
+            <Path
+              key={gi}
+              d={`M ${g.x + dx} ${g.y + 2} L ${g.x + dx + (dx > 0 ? 1 : -1)} ${g.y - 7}`}
+              stroke="#8B7355"
+              strokeWidth={0.9}
+              fill="none"
+              strokeLinecap="round"
+            />
+          ))}
+        </G>
+      ))}
+
+      {/* ---------- Bleached bones ---------- */}
+      {bones.map((b, i) => {
+        if (b.kind === 'skull') {
+          return (
+            <G key={`bone-${i}`} opacity={0.7}>
+              <Ellipse cx={b.x} cy={b.y} rx={6} ry={5} fill="#F5E6D3" />
+              {/* Eye sockets */}
+              <Ellipse cx={b.x - 2} cy={b.y - 1} rx={1.2} ry={1.4} fill="#3D2817" />
+              <Ellipse cx={b.x + 2} cy={b.y - 1} rx={1.2} ry={1.4} fill="#3D2817" />
+              {/* Horns */}
+              <Path d={`M ${b.x - 5} ${b.y - 2} Q ${b.x - 9} ${b.y - 5} ${b.x - 10} ${b.y - 1}`} stroke="#F5E6D3" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+              <Path d={`M ${b.x + 5} ${b.y - 2} Q ${b.x + 9} ${b.y - 5} ${b.x + 10} ${b.y - 1}`} stroke="#F5E6D3" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+            </G>
+          );
+        }
+        // Rib cage
+        return (
+          <G key={`bone-${i}`} opacity={0.6}>
+            <Path d={`M ${b.x - 10} ${b.y} L ${b.x + 10} ${b.y}`} stroke="#F5E6D3" strokeWidth={1.5} strokeLinecap="round" />
+            {[-8, -4, 0, 4, 8].map((dx, bi) => (
+              <Path key={bi} d={`M ${b.x + dx} ${b.y} Q ${b.x + dx - 2} ${b.y + 4} ${b.x + dx - 1} ${b.y + 6}`} stroke="#F5E6D3" strokeWidth={1.2} fill="none" strokeLinecap="round" />
             ))}
           </G>
         );
