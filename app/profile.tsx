@@ -283,7 +283,6 @@ function ProfileScreen() {
       await supabase.from('friend_challenges').delete().or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`);
       await supabase.from('friendships').delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
       await supabase.from('economy_events').delete().eq('user_id', userId);
-      await supabase.from('daily_results').delete().eq('user_id', userId);
       await supabase.from('streak_rewards').delete().eq('user_id', userId);
       // Profile last — streak_rewards CASCADE would handle it but explicit
       // is safer if RLS on the cascade side ever changes.

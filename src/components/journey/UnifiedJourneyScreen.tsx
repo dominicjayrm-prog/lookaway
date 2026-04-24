@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Share, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon } from 'react-native-svg';
@@ -30,6 +31,8 @@ import { WorldGate } from './WorldGate';
 import { WORLD_VISUALS } from './worldVisuals';
 import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
+import { BlinkOnPath } from './BlinkOnPath';
+import { BrainMasterCelebration } from './BrainMasterCelebration';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
 const PATH_TOP_PADDING = 32;
@@ -98,6 +101,7 @@ export function UnifiedJourneyScreen() {
   } = useGameStore();
 
   const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
+  const [showBrainMaster, setShowBrainMaster] = useState(false);
 
   // Is this a brand-new player (position 1, no intro seen) or a
   // migrated existing user (position > 1, no intro seen)?
@@ -173,9 +177,35 @@ export function UnifiedJourneyScreen() {
     setWorldIntroFor(level.worldTheme);
   }, [unifiedPosition, hasSeenWorldIntro]);
 
+  // Fire the Brain Master celebration once when the player has
+  // completed every level. UNIFIED_LADDER.length is 380; checking for
+  // progress === length means they cleared position 380 and the cursor
+  // clamped there.
+  useEffect(() => {
+    if (unifiedPosition < UNIFIED_LADDER.length) return;
+    // Only show if they've actually earned stars on position 380's level.
+    const final = getUnifiedLevel(UNIFIED_LADDER.length);
+    if (!final) return;
+    const stars =
+      final.mode === 'classic'
+        ? levelProgress[final.levelId]?.stars ?? 0
+        : sideCampaignProgress[final.levelId]?.stars ?? 0;
+    if (stars > 0) setShowBrainMaster(true);
+  }, [unifiedPosition, levelProgress, sideCampaignProgress]);
+
   const dismissWorldIntro = () => {
     if (worldIntroFor) markWorldIntroSeen(worldIntroFor);
     setWorldIntroFor(null);
+  };
+
+  const shareJourney = async () => {
+    const { streakCount } = useGameStore.getState();
+    const streakStr = streakCount > 0 ? ` · 🔥 ${streakCount}-day streak` : '';
+    try {
+      await Share.share({
+        message: `🧠 Level ${unifiedPosition}/${UNIFIED_LADDER.length} · ⭐ ${totalStars} stars${streakStr} · Blanked`,
+      });
+    } catch {}
   };
 
   const launchLevel = (level: UnifiedLevel) => {
@@ -263,6 +293,15 @@ export function UnifiedJourneyScreen() {
                 <GemSvg size={12} color={colors.accent} />
                 <Text style={[st.pillText, { color: colors.accent }]}>{gems}</Text>
               </View>
+              <Pressable
+                onPress={shareJourney}
+                style={[st.pill, { backgroundColor: colors.surface }]}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel="Share your journey"
+              >
+                <Ionicons name="share-outline" size={14} color={colors.textMid} />
+              </Pressable>
             </View>
           </View>
 
@@ -417,6 +456,21 @@ export function UnifiedJourneyScreen() {
                       onPress={() => launchLevel(level)}
                     />
                   </View>
+                  {state === 'current' && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        // Place Blink ~40px to the right of the node,
+                        // flipping to the left when the node sits on the
+                        // right half of the screen so he never clips off.
+                        left: x > pathWidth / 2 ? x - 80 : x + 50,
+                        top: y - 18,
+                      }}
+                      pointerEvents="none"
+                    >
+                      <BlinkOnPath mode={level.mode} size={36} />
+                    </View>
+                  )}
                 </React.Fragment>
               );
             })}
@@ -427,6 +481,10 @@ export function UnifiedJourneyScreen() {
         </ScrollView>
 
         <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
+        <BrainMasterCelebration
+          visible={showBrainMaster}
+          onClose={() => setShowBrainMaster(false)}
+        />
       </SafeAreaView>
     </TabTransition>
   );
