@@ -1056,7 +1056,8 @@
     "node_aria": "Level {position}, {state}",
     "node_state_completed": "completed",
     "node_state_current": "current",
-    "node_state_locked": "locked"
+    "node_state_locked": "locked",
+    "splash_entering": "ENTERING"
   },
   "notifications": {
     "streak_risk_title": "Your streak is at risk!",

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Image } from 'react-native';
+import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WORLD_THEMES, WORLD_THEME_ORDER, type WorldTheme } from '@/src/data/unifiedJourney';
-import { WORLD_VISUALS, WORLD_BIOME_IMAGES } from './worldVisuals';
+import { WORLD_VISUALS } from './worldVisuals';
 import { WorldParticles } from './WorldParticles';
+import { BiomeHero } from './BiomeHero';
 
 interface Props {
   /** Total path canvas dimensions — must match the render container
@@ -12,40 +13,43 @@ interface Props {
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
-  /** Gate the heavy stuff (particles) — when false only the
-   *  backdrop images render. Lets the parent delay the expensive paint
+  /** Gate the heavy stuff (particles + hero) — when false only the
+   *  flat gradients render. Lets the parent delay the expensive paint
    *  until after first interaction. */
   showDecorations?: boolean;
-  /** Which world is currently in the player's viewport. Particles only
-   *  render for THIS world so we have one drift system on screen at a
-   *  time instead of all five. Defaults to all worlds rendering if not
-   *  provided (for backwards compat). */
+  /** Which world is currently in the player's viewport. Particles
+   *  only render for THIS world so we have one drift system on screen
+   *  at a time instead of all five. */
   viewportWorld?: WorldTheme;
 }
 
-// Native aspect of the AI-generated biome PNGs (1024 × 1792). Tiles
-// render at this ratio so artwork stays undistorted — stretching to
-// fit the full ~6500px slab read as a smeared mess.
-const IMAGE_ASPECT = 1792 / 1024;
+/** Height of the hero graphic anchored to the top of each biome slab.
+ *  Tall enough to feel like a proper "entry point" when crossing into
+ *  a new world, short enough to leave most of the slab as
+ *  pure-gradient calm. */
+const HERO_HEIGHT = 720;
 
-/** Stacks five vertical biome backdrops, one per themed world. Each
- *  slab is filled by tiling the biome PNG vertically at its natural
- *  aspect ratio (no stretch) — the seams between tiles are hidden by
- *  edge-fade gradients that blend the top/bottom 15% of every tile
- *  back to the biome's mid colour. End result: the artwork stays
- *  crisp + recognisable, and you never see a hard repeat line.
+/** Stacks five vertical biome slabs, one per themed world. Each slab
+ *  is a rich 6-stop LinearGradient (sky → mid bands → ground) with a
+ *  signature hero graphic at the top edge — sun for Dunes, moon for
+ *  Peaks, eruption for Inferno, etc. The body of each slab is intent-
+ *  ionally sparse: just the gradient + drifting particles.
  *
  *  Path is laid out bottom-to-top (Level 1 at the maximum y, final
  *  level at y=pathTopPadding), so each slab's top is anchored to its
- *  HIGHEST position (`end`), not its lowest.
+ *  HIGHEST position (`end`), not its lowest. The hero therefore sits
+ *  at the BOUNDARY into the next world up — which is the moment the
+ *  player crosses into that biome.
  *
  *  Cross-fade bands at each world boundary use overlapping alpha
- *  gradients to blend the seam between adjacent biomes.
+ *  gradients so the seam between adjacent biomes melts away.
  *
- *  Perf: tiles are static <Image> components — iOS / Android both
- *  cache the same source asset across instances, so the per-tile
- *  cost is negligible. Particles are limited to the current viewport
- *  world so we never animate more than ~14 worklets at once. */
+ *  Perf:
+ *  - Zero image decoding (no PNG assets).
+ *  - 5 LinearGradient slabs + 4 cross-fade bands + 5 hero SVGs +
+ *    1 particle system (current viewport only).
+ *  - All static. Whole journey backdrop costs about as much as a
+ *    single Image element used to.  */
 export function WorldBackground({
   width,
   pathTopPadding,
@@ -55,7 +59,6 @@ export function WorldBackground({
   viewportWorld,
 }: Props) {
   const totalHeight = pathTopPadding + totalPositions * rowHeight + 40;
-  const tileHeight = width * IMAGE_ASPECT;
 
   return (
     <View
@@ -81,9 +84,6 @@ export function WorldBackground({
         const slabHeight = (end - start + 1) * rowHeight;
         const clampedTop = Math.max(0, top);
         const renderHeight = slabHeight + rowHeight;
-        const tileCount = Math.ceil(renderHeight / tileHeight);
-        const midColor = visuals.gradientColors[1];
-        const midColorTransparent = midColor + '00';
         const isViewportWorld = viewportWorld === theme;
         return (
           <View
@@ -98,9 +98,8 @@ export function WorldBackground({
               backgroundColor: visuals.backgroundColor,
             }}
           >
-            {/* Gradient base — sits behind the image tiles so any
-             *  transparency in the artwork still shows biome colour
-             *  rather than pure black. */}
+            {/* Six-stop gradient — the entire backdrop for this biome.
+             *  No image, no tile seams, no decode lag. */}
             <LinearGradient
               colors={visuals.gradientColors}
               start={{ x: 0.5, y: 0 }}
@@ -114,79 +113,28 @@ export function WorldBackground({
               }}
             />
 
-            {/* Image tiles — full natural aspect, stacked top-to-bottom.
-             *  Each tile gets a top + bottom fade overlay so seams
-             *  disappear into the biome's mid colour. */}
-            {Array.from({ length: tileCount }).map((_, i) => {
-              const tileTop = i * tileHeight;
-              return (
-                <View
-                  key={`tile-${i}`}
-                  style={{
-                    position: 'absolute',
-                    top: tileTop,
-                    left: 0,
-                    width,
-                    height: tileHeight,
-                  }}
-                >
-                  <Image
-                    source={WORLD_BIOME_IMAGES[theme]}
-                    style={{ width, height: tileHeight }}
-                    resizeMode="cover"
-                    fadeDuration={0}
-                  />
-                  {/* Top edge fade — blends INTO the previous tile.
-                   *  Skipped on the first tile so the top of the world
-                   *  shows the artwork in full. */}
-                  {i > 0 && (
-                    <LinearGradient
-                      colors={[midColor, midColorTransparent]}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: tileHeight * 0.18,
-                      }}
-                      pointerEvents="none"
-                    />
-                  )}
-                  {/* Bottom edge fade — blends OUT to the next tile.
-                   *  Skipped on the last tile because the cross-fade
-                   *  band into the next biome handles that boundary. */}
-                  {i < tileCount - 1 && (
-                    <LinearGradient
-                      colors={[midColorTransparent, midColor]}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: tileHeight * 0.18,
-                      }}
-                      pointerEvents="none"
-                    />
-                  )}
-                </View>
-              );
-            })}
+            {/* Hero element — sits at the TOP of each slab, the
+             *  threshold where the player crosses into this world.
+             *  Doesn't tile, doesn't repeat — just one beautiful
+             *  fixed-size graphic per biome. Skipped for the very
+             *  first world (Emerald Grove sits at the bottom of the
+             *  scroll and players don't 'enter' it — they start
+             *  there). */}
+            {showDecorations && start > 1 && (
+              <BiomeHero hero={visuals.hero} width={width} height={HERO_HEIGHT} />
+            )}
 
-            {/* Particles — only for the currently-visible world. Cuts
-             *  the worklet count from 70 down to 14, and the active
-             *  drift fades to nothing the moment you scroll out of
-             *  this biome. */}
+            {/* Drift particles — only for the currently-visible world.
+             *  Cuts the worklet count from ~70 down to ~18 and the
+             *  active drift fades to nothing the moment you scroll
+             *  into a different biome. */}
             {showDecorations && isViewportWorld && (
               <WorldParticles
                 type={visuals.particleType}
                 color={visuals.particleColor}
                 width={width}
                 height={renderHeight}
-                density={14}
+                density={18}
               />
             )}
           </View>
@@ -197,7 +145,7 @@ export function WorldBackground({
        *  gradients per seam — the upper biome's darkest shade fading
        *  downward to transparent, and the lower biome's lightest shade
        *  fading upward from transparent. Where they meet in the middle
-       *  they true-alpha-blend. 10 rows tall (~860px) spends real
+       *  they true-alpha-blend. 8 rows tall (~688px) spends real
        *  scroll time in the transition zone. */}
       {WORLD_THEME_ORDER.slice(0, -1).map((upperTheme, i) => {
         const lowerTheme = WORLD_THEME_ORDER[i + 1];
@@ -209,7 +157,7 @@ export function WorldBackground({
         const bottomVisuals = WORLD_VISUALS[bottomTheme];
         const topWorldLowestPos = WORLD_THEMES[topTheme].range[0];
         const boundaryY = pathTopPadding + (totalPositions - topWorldLowestPos + 1) * rowHeight - rowHeight / 2;
-        const bandHeight = rowHeight * 10;
+        const bandHeight = rowHeight * 8;
         const bandTop = boundaryY - bandHeight / 2;
         const topDarkest = topVisuals.gradientColors[topVisuals.gradientColors.length - 1];
         const bottomLightest = bottomVisuals.gradientColors[0];
@@ -219,7 +167,7 @@ export function WorldBackground({
           <React.Fragment key={`seam-${upperTheme}-${lowerTheme}`}>
             <LinearGradient
               colors={[topDarkest, topDarkest, topDarkestFaded]}
-              locations={[0, 0.15, 1]}
+              locations={[0, 0.18, 1]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={{
@@ -233,7 +181,7 @@ export function WorldBackground({
             />
             <LinearGradient
               colors={[bottomLightestFaded, bottomLightest, bottomLightest]}
-              locations={[0, 0.85, 1]}
+              locations={[0, 0.82, 1]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={{
