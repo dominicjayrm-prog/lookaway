@@ -262,12 +262,34 @@ export function UnifiedJourneyScreen() {
     setJumpDirection((prev) => (prev === dir ? prev : dir));
   }, []);
 
+  // Viewport world — the world currently CENTRED in the player's view.
+  // Drives the full-screen biome backdrop so it tracks what's on
+  // screen, not where the player's progression is. Without this the
+  // backdrop stayed locked to the player's current world (e.g. a
+  // Crystal-Depths player scrolling down to look at Grove still saw
+  // a blue tint behind everything — that was the 'blue bars' bug).
+  // Initial viewport world derived from unifiedPosition (currentLevel
+  // hasn't been declared yet at this point in the component body —
+  // computing inline avoids a TDZ error). The worklet below updates
+  // it as the player scrolls.
+  const [viewportWorld, setViewportWorld] = useState<WorldTheme>(() => {
+    if (unifiedPosition >= 301) return 'inferno_core';
+    if (unifiedPosition >= 226) return 'aurora_peaks';
+    if (unifiedPosition >= 151) return 'crystal_depths';
+    if (unifiedPosition >= 76) return 'amber_dunes';
+    return 'emerald_grove';
+  });
+  const maybeUpdateViewportWorld = useCallback((next: WorldTheme) => {
+    setViewportWorld((prev) => (prev === next ? prev : next));
+  }, []);
+
   // Shift the visible window when the scroll position drifts far
   // enough that the old window is no longer centred. Mirrors the flip
   // in yForPosition — higher scrollY means a LOWER position now.
   // Same worklet computes whether the current level node is outside
-  // the viewport so the floating jump-to-current chip knows which
-  // arrow to show.
+  // the viewport (so the jump chip knows which arrow to show) AND
+  // which world theme is at the centre of the screen (for the
+  // backdrop gradient).
   useAnimatedReaction(
     () => scrollY.value,
     (current) => {
@@ -285,9 +307,6 @@ export function UnifiedJourneyScreen() {
       runOnJS(maybeUpdateRange)(nextStart, nextEnd);
 
       // Jump-to-current: is the current node visible in the viewport?
-      // Viewport y range is [current, current + screenHeight]. We give
-      // a half-screen of comfort zone on each side before surfacing
-      // the chip — avoids flicker when the node is barely off-screen.
       const viewportTop = current;
       const viewportBottom = current + screenHeight;
       const comfort = screenHeight * 0.5;
@@ -295,8 +314,22 @@ export function UnifiedJourneyScreen() {
       if (currentLevelY < viewportTop - comfort) dir = 'above';
       else if (currentLevelY > viewportBottom + comfort) dir = 'below';
       runOnJS(maybeUpdateJumpDirection)(dir);
+
+      // Viewport world — find which biome contains the screen-centre
+      // position. Inlined from getWorldForPosition since worklets
+      // can't safely call into JS-side modules.
+      const centerPos = Math.min(
+        total,
+        Math.max(1, total - Math.floor((current + screenHeight / 2 - PATH_TOP_PADDING) / ROW_HEIGHT)),
+      );
+      let nextWorld: WorldTheme = 'emerald_grove';
+      if (centerPos >= 301) nextWorld = 'inferno_core';
+      else if (centerPos >= 226) nextWorld = 'aurora_peaks';
+      else if (centerPos >= 151) nextWorld = 'crystal_depths';
+      else if (centerPos >= 76) nextWorld = 'amber_dunes';
+      runOnJS(maybeUpdateViewportWorld)(nextWorld);
     },
-    [maybeUpdateRange, maybeUpdateJumpDirection, currentLevelY, screenHeight],
+    [maybeUpdateRange, maybeUpdateJumpDirection, maybeUpdateViewportWorld, currentLevelY, screenHeight],
   );
 
   // Tap handler for the floating chip: smooth-scroll back to the
@@ -506,24 +539,37 @@ export function UnifiedJourneyScreen() {
     );
   }
 
-  // Tint the whole-screen backdrop with the current world's darkest
-  // gradient stop. Any gutter the scroll doesn't cover (above the
-  // status bar area, below Level 1 on bounce, during bounce at the
-  // top) shows this colour instead of the app's default white — so
-  // the biome reads as continuous all the way to the edges.
-  const currentVisuals = WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'];
-  const gutterColor = currentVisuals.gradientColors[currentVisuals.gradientColors.length - 1];
+  // Full-screen biome backdrop — uses the world that's currently
+  // CENTRED in the viewport so the chrome above/below the scroll
+  // matches what the player is looking at, not where their progress
+  // is. Without this the backdrop locks to the player's level and
+  // creates the 'blue bars while looking at green forest' bug.
+  const viewportVisuals = WORLD_VISUALS[viewportWorld];
+  const backdropColors = viewportVisuals.gradientColors;
 
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: gutterColor }]} edges={['top']}>
-        <Animated.ScrollView
-          ref={scrollRef as any}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[st.scrollContent, { backgroundColor: gutterColor }]}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-        >
+      <View style={{ flex: 1 }}>
+        {/* Biome backdrop — full-screen LinearGradient in the current
+         *  viewport's biome colours. Sits behind the SafeAreaView and
+         *  the ScrollView so EVERY gutter pixel (status-bar area,
+         *  below the path, scroll-bounce regions) carries living
+         *  biome colour rather than a flat strip. */}
+        <LinearGradient
+          colors={backdropColors}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+        <SafeAreaView style={[st.container, { backgroundColor: 'transparent' }]} edges={['top']}>
+          <Animated.ScrollView
+            ref={scrollRef as any}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={st.scrollContent}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+          >
           {/* Migration banner for existing users */}
           {isMigratedExisting && (
             <MigrationBanner
@@ -666,6 +712,7 @@ export function UnifiedJourneyScreen() {
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
               showDecorations={decorationsReady}
+              viewportWorld={viewportWorld}
             />
             {/* Draw connectors first so nodes render above them. Completed
              *  segments get a glow halo + world-tinted gradient; upcoming
@@ -813,6 +860,7 @@ export function UnifiedJourneyScreen() {
           }}
         />
       </SafeAreaView>
+      </View>
     </TabTransition>
   );
 }
