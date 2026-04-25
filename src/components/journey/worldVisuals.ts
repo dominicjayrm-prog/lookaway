@@ -65,3 +65,17 @@ export const WORLD_VISUALS: Record<WorldTheme, WorldVisualConfig> = {
     atmosphere: 'The core burns. Obsidian pillars lean over lava rivers; only the sharpest minds make it through.',
   },
 };
+
+/** Per-biome backdrop artwork. Each PNG is 1024×1792 (~9:16, AI-
+ *  generated atmospheric art) and gets stretched to fill the full
+ *  ~6500px world slab. require()'d at module load so the bundler
+ *  inlines the asset. Replaces ~3,000 lines of procedural SVG scenery
+ *  that used to live in WorldScenery.tsx — way better quality and
+ *  way faster to render. */
+export const WORLD_BIOME_IMAGES: Record<WorldTheme, number> = {
+  emerald_grove: require('@/assets/biomes/emerald_grove.png'),
+  amber_dunes: require('@/assets/biomes/amber_dunes.png'),
+  crystal_depths: require('@/assets/biomes/crystal_depths.png'),
+  aurora_peaks: require('@/assets/biomes/aurora_peaks.png'),
+  inferno_core: require('@/assets/biomes/inferno_core.png'),
+};
