@@ -24,23 +24,16 @@ import { TabTransition } from '@/src/components/TabTransition';
 import { CAMPAIGNS } from '@/src/data/campaigns';
 import {
   UNIFIED_LADDER,
-  WORLD_THEMES,
-  WORLD_THEME_ORDER,
   getUnifiedLevel,
   isChapterStart,
-  isWorldTransition,
   type UnifiedLevel,
   type ModeId,
-  type WorldTheme,
 } from '@/src/data/unifiedJourney';
-import { localizedWorldName } from './worldI18n';
 import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
 import { PathConnector } from './PathConnector';
 import { WorldBackground } from './WorldBackground';
-import { WorldIntroModal } from './WorldIntroModal';
-import { WorldGate } from './WorldGate';
-import { WORLD_VISUALS } from './worldVisuals';
+import { JOURNEY_PALETTE } from './worldVisuals';
 import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
@@ -184,8 +177,6 @@ export function UnifiedJourneyScreen() {
     levelProgress,
     unifiedPosition,
     setLastPlayed,
-    hasSeenWorldIntro,
-    markWorldIntroSeen,
     hasSeenUnifiedIntro,
     markUnifiedIntroSeen,
     hasSeenBrainMaster,
@@ -204,7 +195,6 @@ export function UnifiedJourneyScreen() {
   // cloud state to wait for.
   const readyForIntroDecisions = cloudHydrated || !authUserId;
 
-  const [worldIntroFor, setWorldIntroFor] = useState<WorldTheme | null>(null);
   const [showBrainMaster, setShowBrainMaster] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   // Jump-to-current indicator: 'above' means the current level sits
@@ -212,29 +202,37 @@ export function UnifiedJourneyScreen() {
   // means it's further up the ladder than what's on screen. `null`
   // means the current node is inside the viewport — chip hidden.
   const [jumpDirection, setJumpDirection] = useState<'above' | 'below' | null>(null);
-  // Defer the heavy scenery + particle mount by one frame so the tab
-  // opens instantly (gradient slabs + nodes paint first) and the
-  // decorative layer fades in a moment later. Shaves the user-perceived
-  // 'takes ages to load' on the Journey tab.
-  const [decorationsReady, setDecorationsReady] = useState(false);
-  useEffect(() => {
-    const handle = setTimeout(() => setDecorationsReady(true), 40);
-    return () => clearTimeout(handle);
-  }, []);
+  // Decorations gating — unused now that the bg is a single solid
+  // gradient with nothing to defer. Kept for the showDecorations prop
+  // shape on WorldBackground.
+  const decorationsReady = true;
 
   // Viewport culling — rendering all 380 level nodes + 379 SVG path
   // connectors at once is the single biggest perf risk on Android.
   // Instead we track the scroll position and only render a window of
-  // nodes around the current viewport. A buffer of ±40 positions
-  // (~3400px) above / below keeps scrolling smooth without ever
-  // showing a node mid-spawn. The initial range centres on
-  // unifiedPosition so the auto-scroll lands on already-rendered
-  // content.
+  // nodes around the current viewport. The window grows after first
+  // mount: ±10 positions on the very first commit (~20 nodes for fast
+  // first paint), then expanded to ±40 on the next frame so the user
+  // can scroll smoothly.
   const VISIBLE_BUFFER = 40;
+  const INITIAL_VISIBLE_BUFFER = 10;
   const [visibleRange, setVisibleRange] = useState<[number, number]>(() => [
-    Math.max(1, unifiedPosition - VISIBLE_BUFFER),
-    Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
+    Math.max(1, unifiedPosition - INITIAL_VISIBLE_BUFFER),
+    Math.min(UNIFIED_LADDER.length, unifiedPosition + INITIAL_VISIBLE_BUFFER),
   ]);
+  // Expand the visible window after mount so the journey opens fast
+  // but smooth-scrolls into the wider buffer right after.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setVisibleRange((prev) => {
+        const lo = Math.max(1, unifiedPosition - VISIBLE_BUFFER);
+        const hi = Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER);
+        if (prev[0] === lo && prev[1] === hi) return prev;
+        return [lo, hi];
+      });
+    }, 60);
+    return () => clearTimeout(handle);
+  }, [unifiedPosition]);
 
   // CRITICAL: this callback MUST be declared BEFORE the
   // useAnimatedReaction below — otherwise Reanimated captures the
@@ -361,7 +359,6 @@ export function UnifiedJourneyScreen() {
 
   // Derive current level info for hero card.
   const currentLevel = getUnifiedLevel(unifiedPosition);
-  const currentTheme = WORLD_THEMES[currentLevel?.worldTheme ?? 'emerald_grove'];
   const currentCampaign = currentLevel ? CAMPAIGNS[currentLevel.mode] : null;
 
   // Auto-scroll to the current level on first layout.
@@ -385,25 +382,6 @@ export function UnifiedJourneyScreen() {
     return () => clearTimeout(timer);
   }, [unifiedPosition, screenHeight]);
 
-  // Detect a first-time entry into a new world and queue the intro
-  // modal. Only fires at world boundaries (76/151/226/301) — the first
-  // world (Emerald Grove) doesn't get a standalone intro because
-  // UnifiedIntro already introduces all five. The modal is
-  // single-shot per world via `hasSeenWorldIntro`.
-  useEffect(() => {
-    if (!readyForIntroDecisions) return;
-    if (!isWorldTransition(unifiedPosition)) return;
-    const level = getUnifiedLevel(unifiedPosition);
-    if (!level) return;
-    if (hasSeenWorldIntro[level.worldTheme]) return;
-    setWorldIntroFor(level.worldTheme);
-    if (Platform.OS !== 'web') {
-      // Heavy impact for a moment this big — player just crossed into a
-      // whole new themed world.
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    }
-  }, [readyForIntroDecisions, unifiedPosition, hasSeenWorldIntro]);
-
   // Fire the Brain Master celebration once when the player has
   // completed every level. Gated on `hasSeenBrainMaster` so it never
   // re-fires after dismissal — without that, the modal would pop every
@@ -424,11 +402,6 @@ export function UnifiedJourneyScreen() {
   const closeBrainMaster = () => {
     setShowBrainMaster(false);
     markBrainMasterSeen();
-  };
-
-  const dismissWorldIntro = () => {
-    if (worldIntroFor) markWorldIntroSeen(worldIntroFor);
-    setWorldIntroFor(null);
   };
 
   const shareJourney = async () => {
@@ -483,18 +456,6 @@ export function UnifiedJourneyScreen() {
     });
   };
 
-  // Figure out which world we're currently in + progress through it.
-  const worldProgress = useMemo(() => {
-    const [start, end] = currentTheme.range;
-    const inWorld = Math.min(unifiedPosition, end) - start + 1;
-    const totalInWorld = end - start + 1;
-    return {
-      inWorld: Math.max(0, inWorld),
-      totalInWorld,
-      pct: Math.round((Math.max(0, inWorld) / totalInWorld) * 100),
-    };
-  }, [currentTheme, unifiedPosition]);
-
   const totalPct = Math.round((unifiedPosition / UNIFIED_LADDER.length) * 100);
 
   // Brand-new players get the three-card intro before anything else.
@@ -506,21 +467,16 @@ export function UnifiedJourneyScreen() {
     );
   }
 
-  // Tint the whole-screen backdrop with the current world's darkest
-  // gradient stop. Any gutter the scroll doesn't cover (above the
-  // status bar area, below Level 1 on bounce, during bounce at the
-  // top) shows this colour instead of the app's default white — so
-  // the biome reads as continuous all the way to the edges.
-  const currentVisuals = WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'];
-  const gutterColor = currentVisuals.gradientColors[currentVisuals.gradientColors.length - 1];
-
+  // The whole screen sits on the single pastel purple bg. Any gutter
+  // the scroll doesn't cover (status bar area, below Level 1 on
+  // bounce) reads as the same continuous purple.
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: gutterColor }]} edges={['top']}>
+      <SafeAreaView style={[st.container, { backgroundColor: JOURNEY_PALETTE.bg }]} edges={['top']}>
         <Animated.ScrollView
           ref={scrollRef as any}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[st.scrollContent, { backgroundColor: gutterColor }]}
+          contentContainerStyle={[st.scrollContent, { backgroundColor: JOURNEY_PALETTE.bg }]}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
         >
@@ -532,51 +488,20 @@ export function UnifiedJourneyScreen() {
             />
           )}
 
-          {/* Header + hero container. Explicit light bg so the header
-           *  content (text + progress bar + continue card) stays
-           *  readable even when the surrounding scroll gutter is
-           *  biome-tinted. The LinearGradient adds a subtle world
-           *  accent at the top for warmth. */}
-          <View style={[st.heroWrap, { backgroundColor: colors.bg }]}>
-            <LinearGradient
-              colors={[currentTheme.color + '18', 'transparent']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-              pointerEvents="none"
-            />
-
-            {/* Header row — the world name IS the hero. Tiny eyebrow
-             *  ("WORLD 3 OF 5") above, enormous world-tinted title
-             *  below. A single share button lives on the right. No
-             *  stars / gems pills — that chrome belongs on the home
-             *  tab, not the journey itself. */}
+          {/* Header + hero container. The whole journey is one
+           *  continuous chill purple canvas now — no world chrome,
+           *  just the player's position and a share button. */}
+          <View style={[st.heroWrap, { backgroundColor: 'transparent' }]}>
+            {/* Header row — share button on the right, that's it. */}
             <View style={st.header}>
-              <View style={st.headerLeft}>
-                <View style={st.eyebrowRow}>
-                  <View style={[st.worldDot, { backgroundColor: currentTheme.color }]} />
-                  <Text style={[st.eyebrow, { color: currentTheme.color }]}>
-                    {t('journey.world_num_of_total', {
-                      num: currentTheme.worldNumber,
-                      total: WORLD_THEME_ORDER.length,
-                    })}
-                  </Text>
-                </View>
-                <Text
-                  style={[st.worldTitle, { color: currentTheme.color }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {localizedWorldName(currentLevel?.worldTheme ?? 'emerald_grove')}
-                </Text>
-              </View>
+              <View style={st.headerLeft} />
               <Pressable
                 onPress={shareJourney}
                 style={({ pressed }) => [
                   st.shareButton,
                   {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
+                    backgroundColor: '#FFFFFF',
+                    borderColor: 'rgba(0,0,0,0.06)',
                     opacity: pressed ? 0.7 : 1,
                     transform: [{ scale: pressed ? 0.94 : 1 }],
                   },
@@ -589,7 +514,8 @@ export function UnifiedJourneyScreen() {
               </Pressable>
             </View>
 
-            {/* Progress rail — "Level N of 380" with a gradient fill bar. */}
+            {/* Progress rail — "Level N of 380" with a single-tone
+             *  purple fill bar. */}
             <View style={st.worldBar}>
               <Text style={[st.worldLevelLabel, { color: colors.text }]}>
                 {t('journey.position_of_total', { position: unifiedPosition })}
@@ -598,14 +524,14 @@ export function UnifiedJourneyScreen() {
                   {t('journey.position_of_total_suffix', { total: UNIFIED_LADDER.length })}
                 </Text>
               </Text>
-              <Text style={[st.worldPct, { color: currentTheme.color }]}>
+              <Text style={[st.worldPct, { color: JOURNEY_PALETTE.accent }]}>
                 {t('journey.percent_complete', { pct: totalPct })}
               </Text>
             </View>
-            <View style={[st.worldTrack, { backgroundColor: colors.surface }]}>
+            <View style={[st.worldTrack, { backgroundColor: 'rgba(255,255,255,0.5)' }]}>
               <View style={[st.worldFillShadow, { width: `${Math.max(2, totalPct)}%` }]} />
               <LinearGradient
-                colors={[currentTheme.color, WORLD_VISUALS[currentLevel?.worldTheme ?? 'emerald_grove'].gradientColors[1]]}
+                colors={[JOURNEY_PALETTE.accent, JOURNEY_PALETTE.accentDeep]}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={[st.worldFill, { width: `${Math.max(2, totalPct)}%` }]}
@@ -630,10 +556,7 @@ export function UnifiedJourneyScreen() {
                 accessibilityLabel={`Continue level ${unifiedPosition}`}
               >
                 <LinearGradient
-                  colors={[
-                    currentCampaign.color,
-                    WORLD_VISUALS[currentLevel.worldTheme].gradientColors[1],
-                  ]}
+                  colors={[JOURNEY_PALETTE.accent, JOURNEY_PALETTE.accentDeep]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={st.continueCard}
@@ -681,8 +604,6 @@ export function UnifiedJourneyScreen() {
               const x2 = pathXForPosition(next.position, pathWidth);
               const y2 = yForPosition(next.position);
               const completed = next.position <= unifiedPosition;
-              const visuals = WORLD_VISUALS[next.worldTheme];
-              const fromVisuals = WORLD_VISUALS[level.worldTheme];
               return (
                 <PathConnector
                   key={`c-${level.position}`}
@@ -691,8 +612,8 @@ export function UnifiedJourneyScreen() {
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  color={completed ? fromVisuals.pathColor : 'rgba(255,255,255,0.45)'}
-                  endColor={completed ? visuals.pathColor : 'rgba(255,255,255,0.45)'}
+                  color={completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
+                  endColor={completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
                   opacity={completed ? 0.95 : 0.5}
                   dashed={!completed}
                   width={completed ? 5 : 3}
@@ -731,22 +652,6 @@ export function UnifiedJourneyScreen() {
                       pointerEvents="none"
                     >
                       <ChapterBadge modeName={campaign?.name ?? level.mode} modeColor={modeColor} compact />
-                    </View>
-                  )}
-                  {isWorldTransition(level.position) && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: y - 70,
-                        left: 0,
-                        right: 0,
-                      }}
-                      pointerEvents="none"
-                    >
-                      <WorldGate
-                        nextWorld={level.worldTheme}
-                        locked={level.position > unifiedPosition}
-                      />
                     </View>
                   )}
                   <View
@@ -793,13 +698,12 @@ export function UnifiedJourneyScreen() {
           <JumpToCurrentChip
             direction={jumpDirection}
             position={unifiedPosition}
-            tint={currentCampaign?.color ?? currentTheme.color}
+            tint={currentCampaign?.color ?? JOURNEY_PALETTE.accent}
             onPress={jumpToCurrent}
             bottomInset={0}
           />
         )}
 
-        <WorldIntroModal world={worldIntroFor} onClose={dismissWorldIntro} />
         <BrainMasterCelebration
           visible={showBrainMaster}
           onClose={closeBrainMaster}
