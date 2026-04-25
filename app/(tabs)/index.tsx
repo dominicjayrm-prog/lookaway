@@ -44,14 +44,9 @@ import {
   RECOVERY_WINDOW_MS,
 } from '@/src/utils/streakRecovery';
 import {
-  WORLD_THEMES,
-  WORLD_THEME_ORDER,
   getUnifiedLevel,
-  getWorldForPosition,
-  type WorldTheme,
 } from '@/src/data/unifiedJourney';
 import { CAMPAIGNS } from '@/src/data/campaigns';
-import { localizedWorldName } from '@/src/components/journey/worldI18n';
 
 const WORLD_COLORS = ['#00B894','#0984E3','#6C5CE7','#D4A012','#FF6B6B','#1A1A18'];
 // World names resolve via t() inside the component body so switching
@@ -648,47 +643,6 @@ function PlayTab() {
           </Pressable>
         </View>
 
-        {/* Your Journey */}
-        <View style={[styles.journeyCard, { backgroundColor: colors.card }]}>
-          <View style={styles.journeyHeader}>
-            <Text style={[styles.journeyTitle, { color: colors.text }]}>{t('home.journey_title')}</Text>
-            <Pressable
-              onPress={() => router.push('/(tabs)/journey')}
-              accessibilityRole="button"
-              accessibilityLabel={t('home.journey_see_all_aria')}
-            >
-              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600' }}>{t('home.journey_see_all')}</Text>
-            </Pressable>
-          </View>
-          <View style={styles.journeyPills}>
-            {WORLD_THEME_ORDER.map((theme, i) => {
-              const meta = WORLD_THEMES[theme];
-              const wc = meta.color;
-              const playerTheme = getWorldForPosition(unifiedPosition);
-              const playerIdx = WORLD_THEME_ORDER.indexOf(playerTheme);
-              const isCurrentWorld = i === playerIdx;
-              const isCompleted = i < playerIdx;
-              const isLocked = i > playerIdx;
-              return (
-                <View key={theme} style={[styles.worldPill, {
-                  backgroundColor: isCurrentWorld || isCompleted ? wc + '12' : wc + '06',
-                  borderWidth: isCurrentWorld ? 1.5 : 1,
-                  borderColor: isCurrentWorld ? wc + '35' : isCompleted ? wc + '20' : wc + '10',
-                  opacity: isLocked ? 0.7 : 1,
-                }]}>
-                  <Text style={[styles.worldPillNum, { color: isCurrentWorld || isCompleted ? wc : wc + '80' }]}>{i + 1}</Text>
-                  <Text
-                    style={[styles.worldPillName, { color: isCurrentWorld || isCompleted ? wc : wc + '60' }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.65}
-                  >{localizedWorldName(theme)}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
         {/* Weekly Challenges */}
         <WeeklyChallengesCard />
 
@@ -860,12 +814,5 @@ const styles = StyleSheet.create({
   toastText: { fontSize: 13, fontWeight: '700' },
 
   // Journey
-  journeyCard: { marginHorizontal: 16, marginTop: 14, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
-  journeyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  journeyTitle: { fontSize: 13, fontWeight: '700' },
-  journeyPills: { flexDirection: 'row', gap: 6 },
-  worldPill: { flex: 1, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
-  worldPillNum: { fontSize: 12, fontWeight: '700' },
-  worldPillName: { fontSize: 8, fontWeight: '600', marginTop: 1 },
 
 });
