@@ -1526,7 +1526,8 @@
     "node_aria": "Nivel {position}, {state}",
     "node_state_completed": "completado",
     "node_state_current": "actual",
-    "node_state_locked": "bloqueado"
+    "node_state_locked": "bloqueado",
+    "splash_entering": "ENTRANDO"
   },
   "notifications": {
     "streak_risk_title": "¡Tu racha está en peligro!",
