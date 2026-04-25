@@ -1,29 +1,24 @@
 import React from 'react';
 import { View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { JOURNEY_PALETTE } from './worldVisuals';
 
 interface Props {
   /** Total path canvas dimensions — must match the render container
-   *  above the background so the gradient fills the entire scrollable
+   *  above the background so the fill covers the entire scrollable
    *  region. */
   width: number;
   pathTopPadding: number;
   rowHeight: number;
   totalPositions: number;
-  /** Kept for API compatibility. The journey is one continuous canvas
-   *  now and decorations live on the parent screen, not here. */
+  /** Kept for API compatibility. */
   showDecorations?: boolean;
 }
 
-/** Single pastel-purple backdrop for the entire journey path. No
- *  per-world slabs, no cross-fade bands, no SVG scenery, no particle
- *  systems — those used to differentiate biomes back when the journey
- *  was theme'd, but the design now treats the full ladder as one
- *  unified chill purple canvas.
- *
- *  Renders as one LinearGradient sized to the path container. About
- *  as cheap as a backdrop can get. */
+/** Single flat pastel-purple backdrop for the entire journey path.
+ *  No gradient, no per-world slabs, no scenery, no particles. The
+ *  flat fill matches the SafeAreaView + ScrollView container colour
+ *  so the top safe-area, the path, and the bottom gutter all read as
+ *  one continuous unbroken colour — no horizontal seams. */
 export function WorldBackground({
   width,
   pathTopPadding,
@@ -43,19 +38,6 @@ export function WorldBackground({
         backgroundColor: JOURNEY_PALETTE.bg,
       }}
       pointerEvents="none"
-    >
-      <LinearGradient
-        colors={JOURNEY_PALETTE.gradientColors}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-    </View>
+    />
   );
 }
