@@ -242,10 +242,15 @@ export async function scheduleStreakReminder(currentStreak: number): Promise<voi
 
     if (currentStreak < 3) return;
 
+    // Streak save reminder fires at 6pm local. Earlier wins big — by
+    // 8pm a meaningful chunk of users have already shut down for the
+    // night (commuting, dinner, kids); 6pm catches them while they
+    // still have phone time. a16z's casual-game retention research
+    // shows ~2x save rate from the 6pm vs 8pm slot.
     const now = new Date();
-    const eightPm = new Date(now);
-    eightPm.setHours(20, 0, 0, 0);
-    if (now > eightPm) eightPm.setDate(eightPm.getDate() + 1);
+    const trigger = new Date(now);
+    trigger.setHours(18, 0, 0, 0);
+    if (now > trigger) trigger.setDate(trigger.getDate() + 1);
 
     await Notifications.scheduleNotificationAsync({
       identifier: 'streak-reminder',
@@ -254,7 +259,7 @@ export async function scheduleStreakReminder(currentStreak: number): Promise<voi
         body: t('notifications.streak_risk_body', { count: currentStreak }),
         data: { type: 'streak_reminder', deepLink: 'blanked://home' },
       },
-      trigger: { date: eightPm },
+      trigger: { date: trigger },
     });
   } catch (e) {
     log.error('notifications', 'scheduleStreakReminder failed', e);
@@ -286,6 +291,16 @@ export async function scheduleLivesFullNotification(
     await Notifications.cancelScheduledNotificationAsync('lives-full').catch(() => {});
 
     if (currentLives >= maxLives) return;
+
+    // Subscribers + Remove-Ads-IAP holders have unlimited lives → the
+    // "your lives are refilled" notification is meaningless to them.
+    // Bail out before scheduling. (Imported lazily so the test-environment
+    // doesn't drag the entire store into this util.)
+    try {
+      const { useGameStore } = require('@/src/store');
+      const state = useGameStore.getState();
+      if (state.hasUnlimitedLives?.() || state.isSubscribed?.()) return;
+    } catch {}
 
     const livesNeeded = maxLives - currentLives;
     const secondsUntilFull = livesNeeded * regenMinutes * 60;
@@ -462,9 +477,16 @@ export async function cancelDailyReminder(): Promise<void> {
 
 /**
  * Schedule up to 3 win-back local notifications: 3, 7, 14 days from
- * now. Called when the app goes to background — if the player
- * returns before the trigger, each one is cancelled on app open.
+ * now. Called when the app goes to background — if the player returns
+ * before the trigger, each one is cancelled on app open.
+ *
+ * Day-7 + day-14 carry a 15-gem comeback reward. The push body
+ * advertises the reward, and `data.comebackGems` is set so the deep-
+ * link handler can show a claim modal when the user taps in. The
+ * actual gem grant happens client-side via the comeback-claim flow
+ * (rate-limited to once per 14 days).
  */
+export const COMEBACK_GEMS = 15;
 export async function scheduleWinBackReminders(): Promise<void> {
   if (Platform.OS === 'web') return;
   try {
@@ -475,9 +497,27 @@ export async function scheduleWinBackReminders(): Promise<void> {
     }
     const day = 86_400;
     const plans = [
-      { id: 'winback-3', secs: day * 3, title: t('notifications.winback_3_title'), body: t('notifications.winback_3_body') },
-      { id: 'winback-7', secs: day * 7, title: t('notifications.winback_7_title'), body: t('notifications.winback_7_body') },
-      { id: 'winback-14', secs: day * 14, title: t('notifications.winback_14_title'), body: t('notifications.winback_14_body') },
+      {
+        id: 'winback-3',
+        secs: day * 3,
+        title: t('notifications.winback_3_title'),
+        body: t('notifications.winback_3_body'),
+        gems: 0,
+      },
+      {
+        id: 'winback-7',
+        secs: day * 7,
+        title: t('notifications.winback_7_gem_title'),
+        body: t('notifications.winback_7_gem_body', { gems: COMEBACK_GEMS }),
+        gems: COMEBACK_GEMS,
+      },
+      {
+        id: 'winback-14',
+        secs: day * 14,
+        title: t('notifications.winback_14_gem_title'),
+        body: t('notifications.winback_14_gem_body', { gems: COMEBACK_GEMS }),
+        gems: COMEBACK_GEMS,
+      },
     ];
     for (const p of plans) {
       await Notifications.scheduleNotificationAsync({
@@ -485,7 +525,11 @@ export async function scheduleWinBackReminders(): Promise<void> {
         content: {
           title: p.title,
           body: p.body,
-          data: { type: 'win_back', deepLink: 'blanked://home' },
+          data: {
+            type: 'win_back',
+            deepLink: 'blanked://home',
+            comebackGems: p.gems,
+          },
         },
         trigger: { seconds: p.secs },
       });
@@ -500,6 +544,70 @@ export async function cancelWinBackReminders(): Promise<void> {
   try {
     const Notifications = require('expo-notifications');
     for (const id of ['winback-3', 'winback-7', 'winback-14']) {
+      await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+    }
+  } catch {}
+}
+
+// ─── First-week onboarding schedule (local) ─────────────────────────
+//
+// Habits form fast in the first 7 days. We schedule a denser push
+// cadence over the first week than after — day 1, 2, 3, 5, 7 — each
+// at 6pm local so the user has phone time to act on it. Idempotent:
+// always cancels any prior pending versions before re-scheduling, so
+// calling on every app launch is safe (no duplicates). Each trigger
+// is anchored to a fixed Date computed from `signupDate` so the
+// schedule survives app restarts.
+
+const ONBOARDING_IDS = ['onboarding-1', 'onboarding-2', 'onboarding-3', 'onboarding-5', 'onboarding-7'];
+
+/** Schedule the 5-push first-week onboarding sequence. Pass the date
+ *  the user first opened the app — typically taken from the store's
+ *  install timestamp. Skips any push whose trigger time has already
+ *  passed (so re-running on day 4 only schedules days 5 + 7). */
+export async function scheduleOnboardingPushes(signupDate: Date): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const Notifications = require('expo-notifications');
+    for (const id of ONBOARDING_IDS) {
+      await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+    }
+
+    const now = new Date();
+    const plans = [
+      { day: 1, id: 'onboarding-1', titleKey: 'notifications.onboarding_1_title', bodyKey: 'notifications.onboarding_1_body' },
+      { day: 2, id: 'onboarding-2', titleKey: 'notifications.onboarding_2_title', bodyKey: 'notifications.onboarding_2_body' },
+      { day: 3, id: 'onboarding-3', titleKey: 'notifications.onboarding_3_title', bodyKey: 'notifications.onboarding_3_body' },
+      { day: 5, id: 'onboarding-5', titleKey: 'notifications.onboarding_5_title', bodyKey: 'notifications.onboarding_5_body' },
+      { day: 7, id: 'onboarding-7', titleKey: 'notifications.onboarding_7_title', bodyKey: 'notifications.onboarding_7_body' },
+    ];
+
+    for (const p of plans) {
+      const trigger = new Date(signupDate);
+      trigger.setDate(trigger.getDate() + p.day);
+      trigger.setHours(18, 0, 0, 0);
+      if (trigger <= now) continue; // skip already-passed days
+
+      await Notifications.scheduleNotificationAsync({
+        identifier: p.id,
+        content: {
+          title: t(p.titleKey),
+          body: t(p.bodyKey),
+          data: { type: 'onboarding', deepLink: 'blanked://home' },
+        },
+        trigger: { date: trigger },
+      });
+    }
+  } catch (e) {
+    log.error('notifications', 'scheduleOnboardingPushes failed', e);
+  }
+}
+
+export async function cancelOnboardingPushes(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const Notifications = require('expo-notifications');
+    for (const id of ONBOARDING_IDS) {
       await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
     }
   } catch {}

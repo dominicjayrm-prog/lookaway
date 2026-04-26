@@ -7,7 +7,7 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'web' },
 }));
 
-import { REWARDS, checkDailyReward, advanceLoginReward, INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
+import { REWARDS, REWARD_CYCLE_DAYS, checkDailyReward, advanceLoginReward, INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 
 function todayStr(): string {
   return new Date().toISOString().split('T')[0];
@@ -20,25 +20,44 @@ function yesterdayStr(): string {
 }
 
 describe('REWARDS', () => {
-  it('has 7 days of rewards', () => {
-    expect(REWARDS).toHaveLength(7);
+  it('has 30 days of rewards', () => {
+    expect(REWARDS).toHaveLength(REWARD_CYCLE_DAYS);
+    expect(REWARD_CYCLE_DAYS).toBe(30);
   });
 
   it('each reward has required fields', () => {
     REWARDS.forEach(r => {
       expect(r.day).toBeGreaterThanOrEqual(1);
-      expect(r.day).toBeLessThanOrEqual(7);
-      expect(r.type).toMatch(/^(gems|cosmetic|powerup)$/);
-      expect(r.amount).toBeGreaterThan(0);
+      expect(r.day).toBeLessThanOrEqual(REWARD_CYCLE_DAYS);
+      expect(r.type).toMatch(/^(gems|cosmetic|powerup|legendary)$/);
       expect(r.icon).toBeTruthy();
+      // Per-type required field
+      if (r.type === 'gems') expect(r.amount).toBeGreaterThan(0);
+      if (r.type === 'powerup') expect(r.qty).toBeGreaterThan(0);
+      if (r.type === 'legendary') expect(r.bonusGems).toBeGreaterThan(0);
+      if (r.type === 'cosmetic') expect(r.cosmeticType).toMatch(/^(frame|banner|expression)$/);
     });
   });
 
-  it('day 7 is special (gift)', () => {
+  it('day 7 is a legendary milestone', () => {
     const day7 = REWARDS[6];
     expect(day7.day).toBe(7);
-    expect(day7.type).toBe('gems');
-    expect(day7.amount).toBe(25);
+    expect(day7.type).toBe('legendary');
+    if (day7.type === 'legendary') expect(day7.bonusGems).toBe(25);
+  });
+
+  it('day 14 is a legendary milestone', () => {
+    const day14 = REWARDS[13];
+    expect(day14.day).toBe(14);
+    expect(day14.type).toBe('legendary');
+    if (day14.type === 'legendary') expect(day14.bonusGems).toBe(30);
+  });
+
+  it('day 30 is the grand finale legendary', () => {
+    const day30 = REWARDS[29];
+    expect(day30.day).toBe(30);
+    expect(day30.type).toBe('legendary');
+    if (day30.type === 'legendary') expect(day30.bonusGems).toBe(50);
   });
 });
 
@@ -73,12 +92,20 @@ describe('checkDailyReward', () => {
     expect(result.streak).toBe(1);
   });
 
-  it('cycles back to day 1 after day 7', () => {
-    const prev: LoginRewardState = { currentDay: 7, lastClaimDate: yesterdayStr(), streak: 7 };
+  it('cycles back to day 1 after day 30', () => {
+    const prev: LoginRewardState = { currentDay: 30, lastClaimDate: yesterdayStr(), streak: 30 };
     const result = checkDailyReward(prev);
     expect(result.available).toBe(true);
     expect(result.currentDay).toBe(1);
-    expect(result.streak).toBe(8);
+    expect(result.streak).toBe(31);
+  });
+
+  it('advances day-by-day through the middle of the cycle', () => {
+    const prev: LoginRewardState = { currentDay: 14, lastClaimDate: yesterdayStr(), streak: 14 };
+    const result = checkDailyReward(prev);
+    expect(result.available).toBe(true);
+    expect(result.currentDay).toBe(15);
+    expect(result.streak).toBe(15);
   });
 });
 

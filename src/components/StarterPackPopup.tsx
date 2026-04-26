@@ -205,7 +205,7 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
           {/* Items list */}
           <View style={st.itemsList}>
             {items.map((item, i) => (
-              <View key={i} style={[st.itemRow, i < ITEMS.length - 1 && st.itemBorder]}>
+              <View key={i} style={[st.itemRow, i < items.length - 1 && st.itemBorder]}>
                 <View style={[st.itemIcon, { backgroundColor: item.bg }]}>
                   <item.Icon size={18} color={item.color} />
                 </View>
