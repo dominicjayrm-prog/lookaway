@@ -45,6 +45,14 @@ export function ComebackRewardModal({ visible, onClose }: Props) {
   useEffect(() => {
     if (!visible) return;
     setClaimed(false);
+    // Reset animation values from any previous show — useRef values
+    // persist across re-shows, so without this the second show would
+    // start from the end-of-last animation (already-1) and the entrance
+    // would be invisible.
+    backdrop.setValue(0);
+    cardScale.setValue(0.85);
+    cardOpacity.setValue(0);
+    sparkRotate.setValue(0);
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
@@ -53,10 +61,14 @@ export function ComebackRewardModal({ visible, onClose }: Props) {
       RNAnimated.spring(cardScale, { toValue: 1, friction: 6, tension: 110, useNativeDriver: false }),
       RNAnimated.timing(cardOpacity, { toValue: 1, duration: 280, useNativeDriver: false }),
     ]).start();
-    // Slow continuous rotation on the spark behind the gem.
-    RNAnimated.loop(
+    // Slow continuous rotation on the spark behind the gem. Stash a
+    // handle so we can stop it on hide — otherwise the loop keeps
+    // running on the UI thread even when the modal is offscreen.
+    const sparkLoop = RNAnimated.loop(
       RNAnimated.timing(sparkRotate, { toValue: 1, duration: 16_000, useNativeDriver: true }),
-    ).start();
+    );
+    sparkLoop.start();
+    return () => sparkLoop.stop();
   }, [visible, backdrop, cardScale, cardOpacity, sparkRotate]);
 
   const handleClaim = async () => {

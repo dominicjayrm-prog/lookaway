@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState as useStateLocal } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Alert, AppState, AppStateStatus, Linking, Platform } from 'react-native';
 import { Stack, useRouter, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -477,19 +477,53 @@ function StreakRewardToastMounter() {
 
 /** Mounts the comeback-reward modal on app launch when the player
  *  qualifies (away 7+ days, last claim 14+ days ago, has at least one
- *  prior play session). Fires the eligibility check ONCE per app
- *  cold-start — not on every re-render. */
+ *  prior play session).
+ *
+ *  Runs the eligibility check:
+ *  1. Once when cloud hydration completes (so we read the LATEST
+ *     lastPlayDate from the cloud, not a stale local copy)
+ *  2. Again whenever the app returns to foreground (so a player who
+ *     leaves the tab open for 8 days then opens the app sees the
+ *     modal — without this, `checked.current` would block forever).
+ *
+ *  Guarded so we never schedule a second check while the first is
+ *  still in flight. */
 function ComebackRewardMounter() {
-  const [visible, setVisible] = useStateLocal<boolean>(false);
-  const checked = useRef(false);
+  const [visible, setVisible] = useState<boolean>(false);
+  const cloudHydrated = useGameStore((s) => s._cloudHydrated);
+  const authUserId = useGameStore((s) => s._authUserId);
+  const checking = useRef(false);
 
+  // Treat guests as 'hydrated' since they have no cloud state to wait for.
+  const ready = cloudHydrated || !authUserId;
+
+  const runCheck = useCallback(() => {
+    if (checking.current || visible) return;
+    checking.current = true;
+    shouldShowComebackReward()
+      .then((eligible) => {
+        if (eligible) setVisible(true);
+      })
+      .catch(() => {})
+      .finally(() => {
+        checking.current = false;
+      });
+  }, [visible]);
+
+  // Initial check after cloud hydration settles.
   useEffect(() => {
-    if (checked.current) return;
-    checked.current = true;
-    shouldShowComebackReward().then((eligible) => {
-      if (eligible) setVisible(true);
-    }).catch(() => {});
-  }, [setVisible]);
+    if (!ready) return;
+    runCheck();
+  }, [ready, runCheck]);
+
+  // Re-check every time the app foregrounds, in case the user left
+  // the app open across a churn boundary.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'active' && ready) runCheck();
+    });
+    return () => sub.remove();
+  }, [ready, runCheck]);
 
   return <ComebackRewardModal visible={visible} onClose={() => setVisible(false)} />;
 }

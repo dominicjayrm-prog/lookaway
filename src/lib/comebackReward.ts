@@ -51,14 +51,19 @@ export async function shouldShowComebackReward(): Promise<boolean> {
   }
 }
 
-/** Grant the gems + persist the claim timestamp. Idempotent — safe to
- *  call on a stale modal because the persisted timestamp gates future
- *  prompts via shouldShowComebackReward. */
+/** Grant the gems + persist the claim timestamp. Order matters:
+ *  we write the cooldown FIRST so even if the gem grant somehow
+ *  triggers a crash on the next line, the user can't claim again
+ *  via app reopen. Idempotent — safe to call on a stale modal because
+ *  the persisted timestamp gates future prompts via
+ *  shouldShowComebackReward. */
 export async function claimComebackReward(): Promise<void> {
   try {
+    // Persist the claim BEFORE granting gems so a mid-grant failure
+    // can't lead to a re-claim on next launch.
+    await AsyncStorage.setItem(STORAGE_KEY, new Date().toISOString());
     const store = useGameStore.getState();
     store.addGems(COMEBACK_REWARD_GEMS);
-    await AsyncStorage.setItem(STORAGE_KEY, new Date().toISOString());
     log.breadcrumb('comebackReward', 'claimed', { gems: COMEBACK_REWARD_GEMS });
   } catch (e) {
     log.error('comebackReward', 'claimComebackReward failed', e);
