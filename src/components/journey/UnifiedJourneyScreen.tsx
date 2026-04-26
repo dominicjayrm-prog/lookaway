@@ -414,7 +414,10 @@ export function UnifiedJourneyScreen() {
     } catch {}
   };
 
-  const launchLevel = (level: UnifiedLevel) => {
+  // useCallback so visibleNodes' onPress closures stay reference-stable
+  // across renders — without this, the visibleNodes memo would recompute
+  // on every render (because launchLevel would be a fresh function).
+  const launchLevel = useCallback((level: UnifiedLevel) => {
     const store = useGameStore.getState();
     store.checkLifeRegen();
     // The unlimited-lives IAP bypasses the lives check entirely — matches
@@ -445,9 +448,82 @@ export function UnifiedJourneyScreen() {
         worldName,
       },
     });
-  };
+  }, [router, setLastPlayed]);
 
   const totalPct = Math.round((unifiedPosition / UNIFIED_LADDER.length) * 100);
+
+  // Pre-computed visible-window data — this used to filter+map UNIFIED
+  // LADDER (380 entries) on every render via inline JSX. Memoising
+  // means we only recompute when the visible window or progression
+  // state actually changes. Both arrays are derived from the same
+  // window slice so they share the cost.
+  const visibleConnectors = useMemo(() => {
+    const out: Array<{
+      position: number;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      completed: boolean;
+    }> = [];
+    const [lo, hi] = visibleRange;
+    for (let i = 0; i < UNIFIED_LADDER.length - 1; i++) {
+      const level = UNIFIED_LADDER[i];
+      if (level.position < lo || level.position > hi) continue;
+      const next = UNIFIED_LADDER[i + 1];
+      out.push({
+        position: level.position,
+        x1: pathXForPosition(level.position, pathWidth),
+        y1: yForPosition(level.position),
+        x2: pathXForPosition(next.position, pathWidth),
+        y2: yForPosition(next.position),
+        completed: next.position <= unifiedPosition,
+      });
+    }
+    return out;
+  }, [visibleRange, unifiedPosition, pathWidth]);
+
+  const visibleNodes = useMemo(() => {
+    const out: Array<{
+      position: number;
+      mode: ModeId;
+      modeColor: string;
+      state: NodeState;
+      stars: number;
+      x: number;
+      y: number;
+      showChapterBadge: boolean;
+      chapterName: string;
+      onPress: () => void;
+    }> = [];
+    const [lo, hi] = visibleRange;
+    for (let i = 0; i < UNIFIED_LADDER.length; i++) {
+      const level = UNIFIED_LADDER[i];
+      if (level.position < lo || level.position > hi) continue;
+      const campaign = CAMPAIGNS[level.mode];
+      const modeColor = campaign?.color ?? '#6C5CE7';
+      let state: NodeState;
+      if (level.position < unifiedPosition) state = 'completed';
+      else if (level.position === unifiedPosition) state = 'current';
+      else state = 'locked';
+      out.push({
+        position: level.position,
+        mode: level.mode,
+        modeColor,
+        state,
+        stars: getStars(level.levelId, level.mode),
+        x: pathXForPosition(level.position, pathWidth),
+        y: yForPosition(level.position),
+        showChapterBadge: isChapterStart(level.position) && level.position !== 1,
+        chapterName: campaign?.name ?? level.mode,
+        // Closure captured — `level` is stable per UNIFIED_LADDER entry,
+        // so this onPress only changes when this entry's position
+        // re-enters the window.
+        onPress: () => launchLevel(level),
+      });
+    }
+    return out;
+  }, [visibleRange, unifiedPosition, pathWidth, getStars, launchLevel]);
 
   // Brand-new players get the three-card intro before anything else.
   if (isBrandNew) {
@@ -590,104 +666,75 @@ export function UnifiedJourneyScreen() {
               totalPositions={UNIFIED_LADDER.length}
               showDecorations={decorationsReady}
             />
-            {/* Draw connectors first so nodes render above them. Completed
-             *  segments get a glow halo + world-tinted gradient; upcoming
-             *  segments stay dashed and quiet. Viewport-culled so we only
-             *  render connectors inside the current visible window. */}
-            {UNIFIED_LADDER.slice(0, UNIFIED_LADDER.length - 1)
-              .filter((level) => level.position >= visibleRange[0] && level.position <= visibleRange[1])
-              .map((level) => {
-              const next = UNIFIED_LADDER[level.position];
-              if (!next) return null;
-              const x1 = pathXForPosition(level.position, pathWidth);
-              const y1 = yForPosition(level.position);
-              const x2 = pathXForPosition(next.position, pathWidth);
-              const y2 = yForPosition(next.position);
-              const completed = next.position <= unifiedPosition;
-              return (
-                <PathConnector
-                  key={`c-${level.position}`}
-                  keyId={level.position}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  color={completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
-                  endColor={completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
-                  opacity={completed ? 0.95 : 0.5}
-                  dashed={!completed}
-                  width={completed ? 5 : 3}
-                  glow={completed}
-                />
-              );
-            })}
+            {/* Draw connectors first so nodes render above them.
+             *  Viewport-culled via the visibleConnectors memo so we
+             *  only render segments inside the current visible window. */}
+            {visibleConnectors.map((c) => (
+              <PathConnector
+                key={`c-${c.position}`}
+                keyId={c.position}
+                x1={c.x1}
+                y1={c.y1}
+                x2={c.x2}
+                y2={c.y2}
+                color={c.completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
+                endColor={c.completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
+                opacity={c.completed ? 0.95 : 0.5}
+                dashed={!c.completed}
+                width={c.completed ? 5 : 3}
+                glow={c.completed}
+              />
+            ))}
 
-            {/* Level nodes + chapter badges */}
-            {UNIFIED_LADDER
-              .filter((level) => level.position >= visibleRange[0] && level.position <= visibleRange[1])
-              .map((level) => {
-              const x = pathXForPosition(level.position, pathWidth);
-              const y = yForPosition(level.position);
-              const stars = getStars(level.levelId, level.mode);
-              const campaign = CAMPAIGNS[level.mode];
-              const modeColor = campaign?.color ?? '#6C5CE7';
-
-              let state: NodeState;
-              if (level.position < unifiedPosition) state = 'completed';
-              else if (level.position === unifiedPosition) state = 'current';
-              else state = 'locked';
-
-              const showChapterBadge =
-                isChapterStart(level.position) && level.position !== 1;
-
-              return (
-                <React.Fragment key={level.position}>
-                  {showChapterBadge && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: x - 55,
-                        top: y - 38,
-                      }}
-                      pointerEvents="none"
-                    >
-                      <ChapterBadge modeName={campaign?.name ?? level.mode} modeColor={modeColor} compact />
-                    </View>
-                  )}
+            {/* Level nodes + chapter badges — also from the memoised
+             *  visibleNodes slice. */}
+            {visibleNodes.map((n) => (
+              <React.Fragment key={n.position}>
+                {n.showChapterBadge && (
                   <View
                     style={{
                       position: 'absolute',
-                      left: x - 32,
-                      top: y - 27,
+                      left: n.x - 55,
+                      top: n.y - 38,
                     }}
+                    pointerEvents="none"
                   >
-                    <LevelNode
-                      position={level.position}
-                      mode={level.mode}
-                      modeColor={modeColor}
-                      state={state}
-                      stars={stars}
-                      onPress={() => launchLevel(level)}
-                    />
+                    <ChapterBadge modeName={n.chapterName} modeColor={n.modeColor} compact />
                   </View>
-                  {state === 'current' && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        // Place Blink ~40px to the right of the node,
-                        // flipping to the left when the node sits on the
-                        // right half of the screen so he never clips off.
-                        left: x > pathWidth / 2 ? x - 80 : x + 50,
-                        top: y - 18,
-                      }}
-                      pointerEvents="none"
-                    >
-                      <BlinkOnPath size={36} />
-                    </View>
-                  )}
-                </React.Fragment>
-              );
-            })}
+                )}
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: n.x - 32,
+                    top: n.y - 27,
+                  }}
+                >
+                  <LevelNode
+                    position={n.position}
+                    mode={n.mode}
+                    modeColor={n.modeColor}
+                    state={n.state}
+                    stars={n.stars}
+                    onPress={n.onPress}
+                  />
+                </View>
+                {n.state === 'current' && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      // Place Blink ~40px to the right of the node,
+                      // flipping to the left when the node sits on the
+                      // right half of the screen so he never clips off.
+                      left: n.x > pathWidth / 2 ? n.x - 80 : n.x + 50,
+                      top: n.y - 18,
+                    }}
+                    pointerEvents="none"
+                  >
+                    <BlinkOnPath size={36} />
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
           </View>
 
         </Animated.ScrollView>
