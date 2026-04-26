@@ -320,8 +320,19 @@ export function UnifiedJourneyScreen() {
     Record<string, { stars: number; best_score: number }>
   >({});
 
+  // Throttle the refetch: fetching from Supabase on every tab focus
+  // was firing a network round-trip + re-render every time the user
+  // tapped between Home / Friends / Shop and back. With a 5s window
+  // we still pick up changes after the player completes a side-
+  // campaign level (which always takes longer than 5s to finish +
+  // navigate back), but quick tab swaps reuse the cached data.
+  const lastSideFetchAt = useRef(0);
+
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastSideFetchAt.current < 5000) return;
+      lastSideFetchAt.current = now;
       (async () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
