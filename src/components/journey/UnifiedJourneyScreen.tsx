@@ -31,7 +31,7 @@ import {
 } from '@/src/data/unifiedJourney';
 import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
-import { PathConnector } from './PathConnector';
+import { JourneyPathSvg } from './JourneyPathSvg';
 import { WorldBackground } from './WorldBackground';
 import { JOURNEY_PALETTE } from './worldVisuals';
 import { UnifiedIntro } from './UnifiedIntro';
@@ -677,25 +677,14 @@ export function UnifiedJourneyScreen() {
               totalPositions={UNIFIED_LADDER.length}
               showDecorations={decorationsReady}
             />
-            {/* Draw connectors first so nodes render above them.
-             *  Viewport-culled via the visibleConnectors memo so we
-             *  only render segments inside the current visible window. */}
-            {visibleConnectors.map((c) => (
-              <PathConnector
-                key={`c-${c.position}`}
-                keyId={c.position}
-                x1={c.x1}
-                y1={c.y1}
-                x2={c.x2}
-                y2={c.y2}
-                color={c.completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
-                endColor={c.completed ? '#FFFFFF' : 'rgba(255,255,255,0.55)'}
-                opacity={c.completed ? 0.95 : 0.5}
-                dashed={!c.completed}
-                width={c.completed ? 5 : 3}
-                glow={c.completed}
-              />
-            ))}
+            {/* All connectors drawn inside ONE Svg element rather
+             *  than 80 separate ones. Cuts the native view count and
+             *  the per-render cost dramatically. */}
+            <JourneyPathSvg
+              segments={visibleConnectors}
+              width={pathWidth}
+              height={pathHeight}
+            />
 
             {/* Level nodes + chapter badges — also from the memoised
              *  visibleNodes slice. */}
