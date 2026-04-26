@@ -163,7 +163,6 @@ export function UnifiedJourneyScreen() {
   const { colors } = useTheme();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
-  const didScrollToCurrent = useRef(false);
   // Scroll-driven animations: header blur-in after a few px, hero
   // parallax. Shared on the worklet thread so these never dip below
   // 60fps even when the main JS is busy.
@@ -371,16 +370,8 @@ export function UnifiedJourneyScreen() {
   // we bias toward ~40% rather than a dead-centre 50%. That keeps the
   // current node comfortably above the screen's midpoint where the
   // eye naturally lands.
-  useEffect(() => {
-    if (didScrollToCurrent.current) return;
-    const y = yForPosition(unifiedPosition);
-    const target = Math.max(0, y - screenHeight * 0.4);
-    const timer = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: target, animated: false });
-      didScrollToCurrent.current = true;
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [unifiedPosition, screenHeight]);
+  // Auto-scroll-to-current is handled by ScrollView's contentOffset
+  // prop now — no post-mount setTimeout, no visible jump.
 
   // Fire the Brain Master celebration once when the player has
   // completed every level. Gated on `hasSeenBrainMaster` so it never
@@ -479,6 +470,15 @@ export function UnifiedJourneyScreen() {
           contentContainerStyle={[st.scrollContent, { backgroundColor: JOURNEY_PALETTE.bg }]}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
+          // Pre-position the scroll on the current level BEFORE first
+          // render commits — eliminates the visible 'jump' that the
+          // post-mount setTimeout used to cause. The initial offset is
+          // ~40% above the screen midpoint so the current node lands
+          // comfortably above-centre where the eye lands first.
+          contentOffset={{
+            x: 0,
+            y: Math.max(0, yForPosition(unifiedPosition) - screenHeight * 0.4),
+          }}
         >
           {/* Migration banner for existing users */}
           {isMigratedExisting && (

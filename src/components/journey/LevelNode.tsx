@@ -8,7 +8,6 @@ import Animated, {
   withTiming,
   withSpring,
   withSequence,
-  withDelay,
   Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -25,9 +24,6 @@ interface Props {
   stars: number; // 0-3
   onPress?: () => void;
   size?: number;
-  /** Animation delay in ms — lets the parent stagger nodes as they
-   *  scroll into view. Default 0 (no delay). */
-  enterDelay?: number;
 }
 
 const NODE_SIZE_DEFAULT = 58;
@@ -84,27 +80,22 @@ function LevelNodeInner({
   stars,
   onPress,
   size = NODE_SIZE_DEFAULT,
-  enterDelay = 0,
 }: Props) {
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.35);
   const pressScale = useSharedValue(1);
   const sparkleRotate = useSharedValue(0);
-  const enterOpacity = useSharedValue(0);
-  const enterScale = useSharedValue(0.85);
 
   const isLocked = state === 'locked';
   const isCurrent = state === 'current';
   const isCompleted = state === 'completed';
 
-  // Enter animation — fade + spring-in. Staggered by parent via enterDelay.
-  useEffect(() => {
-    enterOpacity.value = withDelay(enterDelay, withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) }));
-    enterScale.value = withDelay(
-      enterDelay,
-      withSpring(1, { damping: 14, stiffness: 180, mass: 0.8 }),
-    );
-  }, [enterDelay, enterOpacity, enterScale]);
+  // Note: previously this component ran a spring-in entry animation
+  // on every mount. Because the journey screen viewport-culls nodes
+  // (so any time the visible window expands or you scroll, the
+  // newly-revealed nodes mount), entry animations were firing in
+  // batches of 20+ simultaneously — producing the 'weird glitchy
+  // thingy' on first tab open. Removed entirely. Nodes just exist.
 
   // Current-node loops: breathing pulse + glow wave + sparkle rotation.
   useEffect(() => {
@@ -151,9 +142,10 @@ function LevelNodeInner({
     pressScale.value = withSpring(1, { damping: 12, stiffness: 240 });
   };
 
+  // Just press scale — no entry animation any more. Node is solid +
+  // visible the moment it mounts.
   const rootStyle = useAnimatedStyle(() => ({
-    opacity: enterOpacity.value,
-    transform: [{ scale: enterScale.value * pressScale.value }],
+    transform: [{ scale: pressScale.value }],
   }));
 
   const nodeStyle = useAnimatedStyle(() => ({
@@ -338,7 +330,6 @@ export const LevelNode = React.memo(LevelNodeInner, (prev, next) => {
     && prev.state === next.state
     && prev.stars === next.stars
     && prev.size === next.size
-    && prev.enterDelay === next.enterDelay
   );
 });
 
