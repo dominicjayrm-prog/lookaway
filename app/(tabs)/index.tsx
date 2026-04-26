@@ -185,7 +185,7 @@ function PlayTab() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed, streakShields, recoveryWindowStart, lastPlayDate, setRecoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, unifiedPosition, currentWorldTheme } = useGameStore();
+  const { gems, lives, streakCount, totalStars, getNextUnplayedLevelId, getMemoryScore, getCompletedLevelCount, levelProgress, equippedExpression, avatarUrl: storeAvatarUrl, streakMilestonesClaimed, streakShields, recoveryWindowStart, lastPlayDate, setRecoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, unifiedPosition } = useGameStore();
   // Next milestone teaser shown under the streak number on the home card.
   // Derived locally — claimed list is mirrored from Supabase by the
   // result-screen claim path.
