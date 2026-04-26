@@ -1,6 +1,6 @@
 /**
- * Daily Login Reward popup — shows a 7-day calendar with today's reward highlighted.
- * Beautiful on-brand design with animations.
+ * Daily Login Reward popup — shows a 30-day calendar (5 rows × 6 days)
+ * with today's reward highlighted, legendary milestones at days 7, 14, 30.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { t } from '@/src/i18n';
@@ -8,7 +8,15 @@ import { View, Text, StyleSheet, Pressable, Modal, Animated as RNAnimated, Dimen
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { REWARDS, checkDailyReward, advanceLoginReward, pickCosmeticReward } from '@/src/utils/dailyLoginRewards';
+import {
+  REWARDS,
+  REWARD_CYCLE_DAYS,
+  checkDailyReward,
+  advanceLoginReward,
+  pickCosmeticReward,
+  pickRandomLegendary,
+  pickRandomPowerUpId,
+} from '@/src/utils/dailyLoginRewards';
 import { getCosmeticById, type Cosmetic } from '@/src/data/cosmetics';
 import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
 
@@ -80,14 +88,15 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     setClaimed(true);
     setClaimedReward(reward);
 
-    // Apply reward
+    // Apply reward — discriminated union handles each type explicitly
     let unlockedCosmetic: Cosmetic | null = null;
     if (reward.type === 'gems') {
       addGems(reward.amount);
-    } else if ((reward as any).type === 'powerup' && (reward as any).powerupId) {
-      buyPowerUp((reward as any).powerupId, reward.amount, 0);
-    } else if (reward.type === 'cosmetic' && (reward as any).cosmeticType) {
-      const cosmeticId = pickCosmeticReward((reward as any).cosmeticType, ownedCosmetics);
+    } else if (reward.type === 'powerup') {
+      const powerUpId = pickRandomPowerUpId();
+      buyPowerUp(powerUpId, reward.qty, 0);
+    } else if (reward.type === 'cosmetic') {
+      const cosmeticId = pickCosmeticReward(reward.cosmeticType, ownedCosmetics);
       if (cosmeticId) {
         unlockCosmetic(cosmeticId);
         const item = getCosmeticById(cosmeticId);
@@ -96,12 +105,20 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
         // All cosmetics of this type owned — give bonus gems instead
         addGems(10);
       }
-    }
-
-    // Day 7 mystery bonus
-    if (reward.day === 7) {
-      var mysteryGems = 5 + Math.floor(Math.random() * 16); // 5-20 bonus gems
-      addGems(mysteryGems);
+    } else if (reward.type === 'legendary') {
+      // Bonus gems always go through; the legendary cosmetic is the
+      // headline drop. If the player already owns every legendary in
+      // the eligible pool we top up with extra gems so the day still
+      // feels meaningful.
+      addGems(reward.bonusGems);
+      const cosmeticId = pickRandomLegendary(ownedCosmetics);
+      if (cosmeticId) {
+        unlockCosmetic(cosmeticId);
+        const item = getCosmeticById(cosmeticId);
+        if (item) unlockedCosmetic = item as Cosmetic;
+      } else {
+        addGems(50);
+      }
     }
 
     RNAnimated.spring(claimScale, { toValue: 1, friction: 3, tension: 200, useNativeDriver: false }).start();
@@ -183,27 +200,44 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
           {/* Header */}
           <View style={[st.header, { backgroundColor: '#6C5CE7' }]}>
             <Text style={st.headerLabel}>{t('celebrations.daily_reward_label')}</Text>
-            <Text style={st.headerTitle}>Day {rewardDay} of 7</Text>
+            <Text style={st.headerTitle}>Day {rewardDay} of {REWARD_CYCLE_DAYS}</Text>
             {streak > 1 && <Text style={st.headerStreak}>{'\uD83D\uDD25'} {streak}-day login streak</Text>}
           </View>
 
-          {/* 7-day grid */}
+          {/* 30-day grid — 6 columns × 5 rows. Legendary days (7, 14, 30)
+              keep a gold ring + full opacity even when future, so the
+              player can spot the milestone payouts at a glance. */}
           <View style={st.grid}>
             {REWARDS.map((r, i) => {
               var isToday = i + 1 === rewardDay;
               var isPast = i + 1 < rewardDay;
               var isFuture = i + 1 > rewardDay;
+              var isLegendary = r.type === 'legendary';
+              var ringColor = isLegendary
+                ? '#D4A012'
+                : isToday ? '#6C5CE7'
+                : isPast ? colors.correct + '30'
+                : colors.border;
               return (
                 <View key={i} style={[st.dayCell, {
-                  backgroundColor: isToday ? '#6C5CE7' + '15' : isPast ? colors.correctSoft : colors.surface,
-                  borderWidth: isToday ? 2 : 1,
-                  borderColor: isToday ? '#6C5CE7' : isPast ? colors.correct + '30' : colors.border,
-                  opacity: isFuture ? 0.5 : 1,
+                  backgroundColor: isLegendary
+                    ? '#D4A012' + '18'
+                    : isToday ? '#6C5CE7' + '15'
+                    : isPast ? colors.correctSoft
+                    : colors.surface,
+                  borderWidth: isToday || isLegendary ? 2 : 1,
+                  borderColor: ringColor,
+                  opacity: isFuture && !isLegendary ? 0.55 : 1,
                 }]}>
-                  <Text style={[st.dayNumber, { color: isToday ? '#6C5CE7' : isPast ? colors.correct : colors.textMid }]}>
+                  <Text style={[st.dayNumber, {
+                    color: isLegendary ? '#D4A012'
+                      : isToday ? '#6C5CE7'
+                      : isPast ? colors.correct
+                      : colors.textMid,
+                  }]}>
                     {isPast ? '\u2713' : `D${i + 1}`}
                   </Text>
-                  <Text style={[st.dayIcon, { opacity: isFuture ? 0.4 : 1 }]}>{r.icon}</Text>
+                  <Text style={[st.dayIcon, { opacity: isFuture && !isLegendary ? 0.55 : 1 }]}>{r.icon}</Text>
                 </View>
               );
             })}
@@ -214,7 +248,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
             <Text style={st.todayIcon}>{todayReward.icon}</Text>
             <View style={{ flex: 1 }}>
               <Text style={[st.todayTitle, { color: colors.text }]}>{t('celebrations.daily_today')}</Text>
-              <Text style={[st.todayDesc, { color: colors.textMid }]}>{todayReward.label}{rewardDay === 7 ? ' + mystery bonus!' : ''}</Text>
+              <Text style={[st.todayDesc, { color: colors.textMid }]}>{todayReward.label}</Text>
             </View>
           </View>
 
@@ -254,10 +288,12 @@ var st = StyleSheet.create({
   headerLabel: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 },
   headerTitle: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
   headerStreak: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 8, justifyContent: 'center' },
-  dayCell: { width: '13%', minWidth: 42, aspectRatio: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 3, padding: 4 },
-  dayNumber: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  dayIcon: { fontSize: 18 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 14, gap: 6, justifyContent: 'center' },
+  // 6 columns × 5 rows = 30 cells. ~14% width gives a tiny bit of slack
+  // for the gap so we don't wrap to a 7th column on narrow screens.
+  dayCell: { width: '14%', minWidth: 38, aspectRatio: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 2, padding: 2 },
+  dayNumber: { fontSize: 8, fontWeight: '800', letterSpacing: 0.3 },
+  dayIcon: { fontSize: 15 },
   todayBox: { marginHorizontal: 16, marginBottom: 16, padding: 14, borderRadius: 14, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   todayIcon: { fontSize: 28 },
   todayTitle: { fontSize: 15, fontWeight: '700' },
