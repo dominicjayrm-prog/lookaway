@@ -1545,7 +1545,21 @@
     "winback_14_body": "Tu límite diario se ha reiniciado. Ven a reclamarlo.",
     "weekly_challenge_title": "Los retos semanales acaban esta noche",
     "weekly_challenge_body": "Última oportunidad para hacerte con las gemas de esta semana.",
-    "maybe_later": "¡Quizá en otro momento!"
+    "maybe_later": "¡Quizá en otro momento!",
+    "onboarding_1_title": "Tu cerebro se está despertando 🧠",
+    "onboarding_1_body": "Un nivel rápido — empieza fuerte en el día 1.",
+    "onboarding_2_title": "Día 2 — mantén la chispa",
+    "onboarding_2_body": "Dos días seguidos forman el hábito.",
+    "onboarding_3_title": "Racha de 3 días al alcance",
+    "onboarding_3_body": "Llega al día 3 y desbloquea escudos de racha.",
+    "onboarding_5_title": "Casi eres un habitual",
+    "onboarding_5_body": "Día 5 — la mayoría se rinde aquí. Tú no.",
+    "onboarding_7_title": "Una semana entera entrenando",
+    "onboarding_7_body": "Día 7 — tu memoria está más afilada.",
+    "winback_7_gem_title": "Te guardamos {gems} gemas 🎁",
+    "winback_7_gem_body": "Ha pasado una semana. Ven a recogerlas.",
+    "winback_14_gem_title": "Aún tienes {gems} gemas esperando",
+    "winback_14_gem_body": "Dos semanas fuera. Toca para reclamarlas."
   },
   "review_prompt": {
     "title": "¿Te está gustando BLANKED?",
@@ -1871,5 +1885,13 @@
       "upload_failed_title": "Error al subir",
       "upload_failed_body": "No hemos podido sincronizar tu foto con la nube. Inténtalo de nuevo."
     }
+  },
+  "comeback_modal": {
+    "title": "¡Bienvenido de vuelta!",
+    "subtitle": "Te echamos de menos. Aquí tienes un regalito.",
+    "reward_label": "{gems} GEMAS",
+    "claim_button": "Reclamar",
+    "claim_button_aria": "Reclamar {gems} gemas",
+    "dismiss_aria": "Cerrar"
   }
 }

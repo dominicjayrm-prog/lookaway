@@ -1,9 +1,10 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState as useStateLocal } from 'react';
 import { Alert, AppState, AppStateStatus, Linking, Platform } from 'react-native';
 import { Stack, useRouter, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '@/src/providers/AuthProvider';
 import { supabase } from '@/src/lib/supabase';
 import { parseInviteUrl, storePendingInvite, processPendingInvite } from '@/src/utils/deepLinks';
@@ -18,8 +19,11 @@ import {
   scheduleWinBackReminders,
   cancelWinBackReminders,
   scheduleWeeklyChallengeReminder,
+  scheduleOnboardingPushes,
   syncTimezoneToProfile,
 } from '@/src/utils/notifications';
+import { shouldShowComebackReward } from '@/src/lib/comebackReward';
+import { ComebackRewardModal } from '@/src/components/ComebackRewardModal';
 import { ThemeProvider, useTheme } from '@/src/providers/ThemeProvider';
 import { MobileContainer } from '@/src/components/MobileContainer';
 import { useGameStore } from '@/src/store';
@@ -332,6 +336,22 @@ function CloudSyncLoader() {
     }).catch(() => {});
     // Cancel any pending win-back since the user just opened the app.
     cancelWinBackReminders();
+    // First-week onboarding pushes — denser cadence over days 1-7
+    // when habit formation is most fragile. Anchored to the user's
+    // first-app-open timestamp (persisted to AsyncStorage on first
+    // launch) so the schedule survives app restarts. Already-passed
+    // days are skipped inside the scheduler.
+    (async () => {
+      try {
+        const FIRST_OPEN_KEY = 'blanked_first_open_at';
+        let firstOpenedRaw = await AsyncStorage.getItem(FIRST_OPEN_KEY);
+        if (!firstOpenedRaw) {
+          firstOpenedRaw = new Date().toISOString();
+          await AsyncStorage.setItem(FIRST_OPEN_KEY, firstOpenedRaw);
+        }
+        scheduleOnboardingPushes(new Date(firstOpenedRaw));
+      } catch {}
+    })();
     // Update online status every 60 seconds (for 3-tier: online/recent/offline)
     const interval = setInterval(() => updateOnlineStatus(user.id), 60_000);
     return () => clearInterval(interval);
@@ -455,6 +475,25 @@ function StreakRewardToastMounter() {
   return <StreakRewardToast queue={queue} onDone={clear} />;
 }
 
+/** Mounts the comeback-reward modal on app launch when the player
+ *  qualifies (away 7+ days, last claim 14+ days ago, has at least one
+ *  prior play session). Fires the eligibility check ONCE per app
+ *  cold-start — not on every re-render. */
+function ComebackRewardMounter() {
+  const [visible, setVisible] = useStateLocal<boolean>(false);
+  const checked = useRef(false);
+
+  useEffect(() => {
+    if (checked.current) return;
+    checked.current = true;
+    shouldShowComebackReward().then((eligible) => {
+      if (eligible) setVisible(true);
+    }).catch(() => {});
+  }, [setVisible]);
+
+  return <ComebackRewardModal visible={visible} onClose={() => setVisible(false)} />;
+}
+
 function ThemedStack() {
   const { colors, isDark } = useTheme();
   return (
@@ -530,6 +569,11 @@ function RootLayout() {
               screen (level result, streak celebration, challenge result,
               etc.) without needing to be imported per-trigger. */}
           <ReviewPrompt />
+          {/* Comeback gem reward modal — fires on app open if the
+              user has been away 7+ days AND it's been 14+ days since
+              their last claim. Decision happens in
+              ComebackRewardMounter so this overlay file stays clean. */}
+          <ComebackRewardMounter />
           {/* Global offline takeover — renders null while online,
               full-screen Blink + CTA when NetInfo reports no
               connection. Mounted last so it overlays every screen. */}

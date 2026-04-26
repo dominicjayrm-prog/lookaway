@@ -1075,7 +1075,21 @@
     "winback_14_body": "Your daily limit reset. Come claim it.",
     "weekly_challenge_title": "Weekly challenges end tonight",
     "weekly_challenge_body": "Last chance to grab this week's gem rewards.",
-    "maybe_later": "Maybe another time!"
+    "maybe_later": "Maybe another time!",
+    "onboarding_1_title": "Your brain is waking up 🧠",
+    "onboarding_1_body": "Quick level — start strong on day 1.",
+    "onboarding_2_title": "Day 2 — keep the spark",
+    "onboarding_2_body": "Two days in a row builds the habit.",
+    "onboarding_3_title": "Day 3 streak in reach",
+    "onboarding_3_body": "Hit day 3 to unlock streak shields.",
+    "onboarding_5_title": "You're nearly a regular",
+    "onboarding_5_body": "Day 5 — most players quit by now. Not you.",
+    "onboarding_7_title": "A whole week of training",
+    "onboarding_7_body": "Day 7 — your memory has measurably sharpened.",
+    "winback_7_gem_title": "We saved you {gems} gems 🎁",
+    "winback_7_gem_body": "It's been a week. Come claim your gems.",
+    "winback_14_gem_title": "Still {gems} gems waiting for you",
+    "winback_14_gem_body": "Two weeks gone. Tap to grab them."
   },
   "review_prompt": {
     "title": "Enjoying BLANKED?",
@@ -1401,5 +1415,13 @@
       "upload_failed_title": "Upload failed",
       "upload_failed_body": "We couldn't sync your photo to the cloud. Please try again."
     }
+  },
+  "comeback_modal": {
+    "title": "Welcome back!",
+    "subtitle": "We missed you. Here's a little gift.",
+    "reward_label": "{gems} GEMS",
+    "claim_button": "Claim",
+    "claim_button_aria": "Claim {gems} gems",
+    "dismiss_aria": "Dismiss"
   }
 }
