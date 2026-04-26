@@ -287,6 +287,16 @@ export async function scheduleLivesFullNotification(
 
     if (currentLives >= maxLives) return;
 
+    // Subscribers + Remove-Ads-IAP holders have unlimited lives → the
+    // "your lives are refilled" notification is meaningless to them.
+    // Bail out before scheduling. (Imported lazily so the test-environment
+    // doesn't drag the entire store into this util.)
+    try {
+      const { useGameStore } = require('@/src/store');
+      const state = useGameStore.getState();
+      if (state.hasUnlimitedLives?.() || state.isSubscribed?.()) return;
+    } catch {}
+
     const livesNeeded = maxLives - currentLives;
     const secondsUntilFull = livesNeeded * regenMinutes * 60;
 
