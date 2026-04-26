@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Share, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Share, Platform, useWindowDimensions, InteractionManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -221,16 +221,24 @@ export function UnifiedJourneyScreen() {
   ]);
   // Expand the visible window after mount so the journey opens fast
   // but smooth-scrolls into the wider buffer right after.
+  //
+  // Using InteractionManager (not setTimeout) so the expansion waits
+  // until the tab navigator's transition + the ScrollView's initial
+  // contentOffset settle. The previous 60ms timeout would fire mid-
+  // transition on first journey-tab open and the resulting wave of
+  // ~60 newly-mounted nodes produced a visible bounce/glitch in the
+  // first few hundred ms. Subsequent tab switches were fine because
+  // the components were already mounted.
   useEffect(() => {
-    const handle = setTimeout(() => {
+    const handle = InteractionManager.runAfterInteractions(() => {
       setVisibleRange((prev) => {
         const lo = Math.max(1, unifiedPosition - VISIBLE_BUFFER);
         const hi = Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER);
         if (prev[0] === lo && prev[1] === hi) return prev;
         return [lo, hi];
       });
-    }, 60);
-    return () => clearTimeout(handle);
+    });
+    return () => handle.cancel();
   }, [unifiedPosition]);
 
   // CRITICAL: this callback MUST be declared BEFORE the

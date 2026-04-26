@@ -359,7 +359,6 @@ function PlayChip({ color }: { color: string }) {
     >
       <Text
         style={st.playChipText}
-        numberOfLines={1}
         allowFontScaling={false}
       >{t('journey.play_chip')}</Text>
     </Animated.View>
@@ -403,7 +402,7 @@ const st = StyleSheet.create({
   playChip: {
     position: 'absolute',
     bottom: -14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 999,
     alignItems: 'center',
@@ -414,12 +413,12 @@ const st = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    // Guarantee the chip is always wide enough for the localised
-    // text on one line — "JUGAR" in Spanish was clipping to "ju\ngar"
-    // on some phones because the chip hugged its text instead of
-    // reserving a min width. 56 is comfortable for any 5-char word
-    // at fontSize 10 + 1.2 letter-spacing.
-    minWidth: 56,
+    // Wide enough for "PLAY" / "JUGAR" with letterSpacing 1.2 + heavy
+    // weight to not clip. Previous 56 was juuust under the natural
+    // text width once letterSpacing was applied, so RN truncated to
+    // "PL…" because numberOfLines=1. Bumped to 76, padding nudged to
+    // 14, and the truncation fallback removed (chip auto-sizes anyway).
+    minWidth: 76,
   },
   playChipText: {
     color: '#FFFFFF',
