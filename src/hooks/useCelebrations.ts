@@ -69,27 +69,38 @@ export function useCelebrations() {
       }
     }, 100);
 
-    // Starter pack — show after completing World 1 of Classic (24hr window)
-    if (isLastLevelOfWorld && !isReplay && worldId && worldId <= 2) {
-      (async () => {
-        try {
-          const [purchased, offeredAt] = await Promise.all([
-            AsyncStorage.getItem('starter_pack_purchased'),
-            AsyncStorage.getItem('starter_pack_offered_at'),
-          ]);
-          if (purchased) return; // Already bought
-          if (offeredAt) {
-            // Check 24hr expiry
-            const elapsed = Date.now() - parseInt(offeredAt, 10);
-            if (elapsed > 24 * 60 * 60 * 1000) return; // Expired
-          }
-          // Show after world complete celebration dismisses (3s delay)
-          safeTimeout(() => {
-            setShowStarterPack(true);
-            if (!offeredAt) AsyncStorage.setItem('starter_pack_offered_at', String(Date.now()));
-          }, 3000);
-        } catch {}
-      })();
+    // Starter pack — primary trigger.
+    //
+    // Old behaviour fired after "World 1 complete", but worlds were
+    // unified into one continuous path so that anchor doesn't exist
+    // anymore. Level 25 is the closest equivalent: the player's
+    // cleared a meaningful chunk, hit their first real difficulty
+    // bumps, and is making real progression decisions (lives / gems /
+    // power-ups) — peak intent without fatigue.
+    //
+    // Fires once per device. Backed up by a second-chance trigger
+    // when the player hits 0 lives for the first time
+    // (see triggerFailCelebrations).
+    if (!isReplay) {
+      const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
+      if (totalCompleted >= 25) {
+        (async () => {
+          try {
+            const [purchased, offered] = await Promise.all([
+              AsyncStorage.getItem('starter_pack_purchased'),
+              AsyncStorage.getItem('starter_pack_offered_level25'),
+            ]);
+            if (purchased) return;
+            if (offered) return; // already shown the level-25 offer
+            safeTimeout(() => {
+              setShowStarterPack(true);
+              const now = String(Date.now());
+              AsyncStorage.setItem('starter_pack_offered_level25', now);
+              AsyncStorage.setItem('starter_pack_offered_at', now);
+            }, 3000);
+          } catch {}
+        })();
+      }
     }
 
     // Achievement check
@@ -124,6 +135,30 @@ export function useCelebrations() {
       useGameStore.getState().loseLife();
       const state = useGameStore.getState();
       scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
+
+      // Second-chance starter-pack trigger. The first time a player
+      // hits 0 lives is peak intent for the lives + power-ups bundle —
+      // they're frustrated and the offer reads as relief. Fires once
+      // per device max, gated separately from the level-25 trigger so
+      // a player who saw the level-25 offer but didn't buy still gets
+      // this one shot.
+      if (state.lives === 0) {
+        (async () => {
+          try {
+            const [purchased, offered] = await Promise.all([
+              AsyncStorage.getItem('starter_pack_purchased'),
+              AsyncStorage.getItem('starter_pack_offered_zero_lives'),
+            ]);
+            if (purchased || offered) return;
+            safeTimeout(() => {
+              setShowStarterPack(true);
+              const now = String(Date.now());
+              AsyncStorage.setItem('starter_pack_offered_zero_lives', now);
+              AsyncStorage.setItem('starter_pack_offered_at', now);
+            }, 1500);
+          } catch {}
+        })();
+      }
     }
 
   }, []);
