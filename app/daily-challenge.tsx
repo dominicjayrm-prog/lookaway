@@ -11,7 +11,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { DailyChallengeContainer } from '@/src/features/dailyChallenge/views/DailyChallengeContainer';
 import { hasPlayedToday } from '@/src/features/dailyChallenge/service';
@@ -20,13 +20,26 @@ import type { DailyChallengeResult } from '@/src/features/dailyChallenge/types';
 export default function DailyChallengeRoute() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [check, setCheck] = useState<{ played: boolean; result: DailyChallengeResult | null } | null>(null);
+  // `?force=1` skips the played-today check entirely so the dev
+  // "Reset (dev)" pill on the home card can re-enter playable state
+  // without depending on a Supabase delete (RLS silently no-ops
+  // delete-without-policy, so we can't reliably wipe the row from
+  // the client). The submit handler later just overwrites the row
+  // implicitly via the unique-key collision path — the local result
+  // still drives the result screen render so the player sees their
+  // freshly-attempted score, not the stale one.
+  const params = useLocalSearchParams<{ force?: string }>();
+  const force = params.force === '1';
+  const [check, setCheck] = useState<{ played: boolean; result: DailyChallengeResult | null } | null>(
+    force ? { played: false, result: null } : null,
+  );
 
   useEffect(() => {
+    if (force) return;
     let cancelled = false;
     hasPlayedToday().then((res) => { if (!cancelled) setCheck(res); });
     return () => { cancelled = true; };
-  }, []);
+  }, [force]);
 
   const handleClose = () => {
     if (router.canGoBack()) router.back();

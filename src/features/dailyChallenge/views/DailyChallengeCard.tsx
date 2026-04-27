@@ -134,37 +134,16 @@ export function DailyChallengeCard() {
 
   const handleOpen = () => router.push('/daily-challenge');
 
-  // Dev escape hatch: tap the visible "Reset (dev)" pill to wipe
-  // today's submission and replay. No confirm — it's a dev-only
-  // affordance, friction-free is the point. We flip the card state
-  // optimistically the moment the tap lands so the player sees the
-  // playable state instantly, then fire-and-forget the Supabase
-  // delete. If the delete somehow fails the next minute-tick will
-  // re-fetch and put the card back into played-state, which is
-  // self-correcting.
+  // Dev escape hatch: navigate straight into the daily-challenge
+  // route with `?force=1`, which skips the played-today check on
+  // the route side. Doesn't depend on Supabase row deletion (RLS
+  // silently no-ops delete-without-policy, so a client-side delete
+  // can't be relied on here). Fire the row delete in the background
+  // anyway — if a future RLS policy is added it'll start working
+  // automatically; today it's a harmless no-op.
   const handleResetLongPress = () => {
-    // Optimistic flip — show "not_played" instantly so the user has
-    // immediate feedback that the tap registered.
-    setState({
-      kind: 'not_played',
-      mode: getModeDisplayName(todayMode),
-      resetsInMinutes: minutesUntilUtcMidnight(),
-    });
-    // Then bump the local lastPlayDate so streak-alert logic doesn't
-    // fire spuriously while we wait for the row to actually delete.
-    // The actual streak count stays untouched (this is a replay, not
-    // a streak break).
-    (async () => {
-      const { ok } = await resetTodaysChallenge();
-      // Trigger a fresh hasPlayedToday() pass so if the delete failed
-      // we re-render the played state. If it succeeded, the fresh
-      // fetch just confirms what we already optimistically showed.
-      setTickKey((k) => k + 1);
-      if (!ok) {
-        // eslint-disable-next-line no-console
-        console.warn('[DailyChallengeCard] resetTodaysChallenge returned !ok');
-      }
-    })();
+    resetTodaysChallenge().catch(() => {});
+    router.push('/daily-challenge?force=1');
   };
 
   if (state.kind === 'loading') {
