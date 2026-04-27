@@ -252,29 +252,48 @@ export function UnifiedJourneyScreen() {
   // Derived on the UI thread: y coord of the current level node.
   const currentLevelY = PATH_TOP_PADDING + (UNIFIED_LADDER.length - unifiedPosition) * ROW_HEIGHT;
 
-  // First-mount auto-scroll. On native, the ScrollView's
-  // `contentOffset` prop sets the starting position before the first
-  // commit so this useEffect is redundant. On react-native-web,
-  // `contentOffset` on Animated.ScrollView from reanimated 4 isn't
-  // honoured — the ScrollView opens at scrollY=0, and combined with
-  // the virtualised visible range (which only renders levels near
-  // the player's unifiedPosition) the viewport ended up looking at
-  // a section of the path with NO rendered nodes. Result: the
-  // journey tab appeared as a totally empty purple wash.
-  // The setTimeout is to let the ScrollView lay out its children
-  // before we ask it to scroll; without the defer, web-side scrollTo
-  // can fire before the content is measured and silently no-op.
+  // First-mount auto-scroll. On native the ScrollView's
+  // `contentOffset` prop pre-positions before the first commit so
+  // the rest of this block is a no-op. On react-native-web that
+  // prop is ignored: the ScrollView opens at scrollY=0, virtualised
+  // rendering keeps level nodes near the player's unifiedPosition
+  // (so far below the visible viewport at y=0) and the journey tab
+  // shows as a blank purple wash. Opening browser DevTools fixed it
+  // because the viewport resize forced a re-measure that finally
+  // let scrollTo land — that "works when console is open" giveaway
+  // pointed straight at content-measurement timing.
+  //
+  // Hooking `onContentSizeChange` is the reliable trigger: it fires
+  // exactly when the inner content reports its real laid-out height,
+  // so by the time we call scrollTo there's actually somewhere to
+  // scroll TO. Falling back to a one-shot useEffect on top so even
+  // if `onContentSizeChange` doesn't fire promptly on some web
+  // engine, the player still gets repositioned.
   const didInitialScroll = useRef(false);
-  useEffect(() => {
+  const performInitialScroll = useCallback((contentHeight: number) => {
     if (didInitialScroll.current) return;
-    if (!screenHeight) return;
+    if (!screenHeight || contentHeight <= 0) return;
+    const target = Math.max(0, Math.min(contentHeight - screenHeight, currentLevelY - screenHeight * 0.4));
+    if (target <= 0) return;
     didInitialScroll.current = true;
-    const target = Math.max(0, currentLevelY - screenHeight * 0.4);
-    const id = setTimeout(() => {
+    requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ y: target, animated: false });
-    }, Platform.OS === 'web' ? 80 : 0);
-    return () => clearTimeout(id);
+    });
   }, [currentLevelY, screenHeight]);
+  const handleContentSizeChange = useCallback((_w: number, h: number) => {
+    performInitialScroll(h);
+  }, [performInitialScroll]);
+  // Web safety net: even if onContentSizeChange is throttled or
+  // delayed, fire a fallback after a few hundred ms using the
+  // computed pathHeight (which we already know analytically since
+  // every row is a fixed ROW_HEIGHT).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const id = setTimeout(() => {
+      performInitialScroll(PATH_TOP_PADDING + UNIFIED_LADDER.length * ROW_HEIGHT + 40);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [performInitialScroll]);
 
   // JS-thread handler for jump-direction changes. Keep it separate from
   // the visible-range handler so a nudge in one doesn't stomp the
@@ -580,6 +599,7 @@ export function UnifiedJourneyScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[st.scrollContent, { backgroundColor: JOURNEY_PALETTE.bg }]}
           onScroll={scrollHandler}
+          onContentSizeChange={handleContentSizeChange}
           scrollEventThrottle={16}
           // Pre-position the scroll on the current level BEFORE first
           // render commits — eliminates the visible 'jump' that the
