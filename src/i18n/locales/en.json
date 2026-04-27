@@ -1162,7 +1162,8 @@
       "what_changed": "What Changed",
       "what_changed_subtitle": "Memorise the grid. Spot the changes.",
       "names_and_faces": "Names & Faces",
-      "the_witness": "The Witness"
+      "the_witness": "The Witness",
+      "the_witness_subtitle": "Read the scene. Notice everything."
     },
     "phone_number": {
       "memorise_instruction": "Memorise this number",
@@ -1219,6 +1220,28 @@
       "tutorial_dismiss": "Got it",
       "tutorial_dismiss_aria": "Got it, start the challenge",
       "friend_fallback": "Friend {n}"
+    },
+    "the_witness": {
+      "read_caption": "Read the scene at your own pace",
+      "read_continue": "I've finished reading",
+      "read_continue_aria": "I've finished reading, continue to the questions",
+      "read_progress_label": "Suggested reading time",
+      "questions_progress": "Question {current} of {total}",
+      "submit": "Submit",
+      "submit_aria": "Submit your answer",
+      "answer_aria": "Answer {letter}: {text}",
+      "reveal_caption": "Here's what happened",
+      "reveal_correct": "Correct",
+      "reveal_wrong": "Not quite",
+      "tutorial_title": "The Witness",
+      "tutorial_body": "Read the short scene at your own pace. Then answer four questions about what you noticed.",
+      "tutorial_step_read": "READ",
+      "tutorial_step_answer": "ANSWER",
+      "tutorial_example_scene": "It's a quiet morning at the corner café. The barista in a navy apron arranges pastries on the counter.",
+      "tutorial_example_question": "What colour was the apron?",
+      "tutorial_example_correct": "Navy",
+      "tutorial_dismiss": "Got it",
+      "tutorial_dismiss_aria": "Got it, start the challenge"
     },
     "notifications": {
       "morning_1_title": "Your Daily Challenge is ready ✨",

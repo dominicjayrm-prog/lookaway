@@ -62,6 +62,8 @@ interface Props {
 
 import type { WhatChangedConfig } from '../modes/whatChanged/logic';
 import type { NamesAndFacesConfig } from '../modes/namesAndFaces/logic';
+import type { WitnessConfig } from '../modes/witness/logic';
+import { activeWitnessLocale } from '../modes/witness/logic';
 import { AvatarFrame } from '@/src/components/AvatarFrame';
 import { getFrameById } from '@/src/data/cosmetics';
 export type ModeVisual =
@@ -91,6 +93,15 @@ export type ModeVisual =
        *  be undefined if they somehow submitted with a missing pair
        *  (shouldn't happen — submit gates on allPaired). */
       pairedNameByCharIdx: readonly (string | undefined)[];
+    }
+  | {
+      kind: 'the_witness';
+      /** Full puzzle config so the share card can render a small
+       *  story-snippet preview (the first sentence of the scene) plus
+       *  per-question correctness chips. */
+      config: WitnessConfig;
+      /** Per-question correctness in display order. */
+      correctness: readonly boolean[];
     }
   | { kind: 'fallback'; emojiBlocks: string };
 
@@ -304,6 +315,61 @@ function ModeVisualBlock({ visual }: { visual: ModeVisual }) {
       </View>
     );
   }
+  if (visual.kind === 'the_witness') {
+    // Render a "novel-cover" style snippet of the scene's first
+    // sentence (the most evocative line) in italic serif, then a
+    // row of 4 question chips below. Each chip shows the first ~5
+    // words of its question with a ✓/✕ badge keyed to per-question
+    // correctness. Reads like a book jacket review at a glance.
+    const locale = activeWitnessLocale();
+    const sceneText = visual.config.scene[locale];
+    // First sentence of the scene = up to the first full stop. If
+    // the prose is short enough that no stop is found we fall back
+    // to the entire scene (won't happen with v1 templates but keeps
+    // the share card from breaking on a future short template).
+    const firstSentence = (() => {
+      const i = sceneText.indexOf('.');
+      return i === -1 ? sceneText : sceneText.slice(0, i + 1);
+    })();
+    return (
+      <View style={s.tWitnessWrap}>
+        <View style={s.tWitnessSnippetCard}>
+          <Text style={s.tWitnessSnippet} numberOfLines={3}>
+            {firstSentence}
+          </Text>
+        </View>
+        <View style={s.tWitnessChipRow}>
+          {visual.config.questions.map((q, i) => {
+            const correct = visual.correctness[i];
+            const ringColor = correct ? '#00B894' : '#FF6B6B';
+            // Truncate the question to its leading words so 4 chips
+            // fit comfortably across the 1080px card width.
+            const text = q.text[locale];
+            const trimmed = text.length > 28 ? text.slice(0, 28) + '…' : text;
+            return (
+              <View
+                key={i}
+                style={[
+                  s.tWitnessChip,
+                  {
+                    borderColor: ringColor,
+                    backgroundColor: ringColor + '22',
+                  },
+                ]}
+              >
+                <View style={[s.tWitnessChipBadge, { backgroundColor: ringColor }]}>
+                  <Text style={s.tWitnessChipBadgeText}>{correct ? '✓' : '✕'}</Text>
+                </View>
+                <Text style={s.tWitnessChipText} numberOfLines={2}>
+                  {trimmed}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
   // Fallback: just render the emoji blocks string for future modes
   // that haven't defined a custom visual yet.
   return <Text style={s.emojiFallback}>{visual.emojiBlocks}</Text>;
@@ -430,6 +496,47 @@ const s = StyleSheet.create({
     color: 'rgba(255, 212, 90, 0.85)',
     maxWidth: 170, textAlign: 'center',
     letterSpacing: 0.3,
+  },
+  // The Witness share card. A "novel-cover" style snippet of the
+  // scene's opening sentence sits in an italic serif card up top,
+  // with 4 per-question correctness chips beneath it. Designed to
+  // feel like a book-jacket pull quote rather than another emoji
+  // grid — fitting for the reading mode.
+  tWitnessWrap: { gap: 22 },
+  tWitnessSnippetCard: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.22)', borderWidth: 1.5,
+    borderRadius: 22,
+    paddingHorizontal: 28, paddingVertical: 26,
+  },
+  tWitnessSnippet: {
+    fontSize: 30, lineHeight: 42,
+    color: '#FFFFFF', fontWeight: '500',
+    fontStyle: 'italic',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia, serif' }),
+    letterSpacing: 0.2,
+  },
+  tWitnessChipRow: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: 12,
+  },
+  tWitnessChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    width: '48%',
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 16, borderWidth: 2,
+  },
+  tWitnessChipBadge: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tWitnessChipBadgeText: {
+    color: '#FFFFFF', fontSize: 18, fontWeight: '900',
+  },
+  tWitnessChipText: {
+    fontSize: 18, lineHeight: 22, fontWeight: '700',
+    color: '#FFFFFF', flex: 1,
   },
   bottomChips: {
     flexDirection: 'row', gap: 14,
