@@ -1643,6 +1643,31 @@
       "backspace_aria": "Borrar",
       "digit_aria": "Dígito {n}"
     },
+    "what_changed": {
+      "memorise_instruction": "Memoriza esta cuadrícula",
+      "memorise_aria": "Memoriza la cuadrícula: {count} elementos",
+      "recall_instruction": "Toca qué cambió",
+      "reveal_instruction": "¿Cómo te fue?",
+      "tapped_count": "{tapped} de {total} tocados",
+      "submit": "Enviar",
+      "submit_aria": "Enviar tus respuestas",
+      "tutorial_title": "¿Qué cambió?",
+      "tutorial_body": "Memoriza la cuadrícula. Volverá con una o más celdas cambiadas. Toca las que se vean distintas.",
+      "tutorial_before": "ANTES",
+      "tutorial_after": "DESPUÉS",
+      "tutorial_dismiss": "Entendido",
+      "tutorial_dismiss_aria": "Entendido, empezar el reto",
+      "category": {
+        "animals": "Animales",
+        "food": "Comida",
+        "plants": "Plantas",
+        "weather": "Tiempo",
+        "objects": "Objetos",
+        "transport": "Transporte",
+        "sports": "Deportes",
+        "music": "Música"
+      }
+    },
     "notifications": {
       "morning_1_title": "Tu reto diario te espera ✨",
       "morning_1_body": "Un puzzle pequeño. Dos minutos para tu mente más afilada.",

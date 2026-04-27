@@ -18,14 +18,18 @@ import type { DailyChallengeModeId } from './types';
 import { utcDayOfWeek } from './seededRandom';
 import { t } from '@/src/i18n';
 
+// Phase 3 rotation: Phone Number + What Changed alternate so the
+// player never gets the same mode two days running. Sunday stays
+// on Phone Number for now; Names & Faces / The Witness will slot
+// into the gaps as Phases 4+5 ship.
 const ROTATION: Record<number, DailyChallengeModeId> = {
-  0: 'phone_number', // Sunday
-  1: 'phone_number', // Monday
-  2: 'phone_number', // Tuesday
-  3: 'phone_number', // Wednesday
-  4: 'phone_number', // Thursday
-  5: 'phone_number', // Friday
-  6: 'phone_number', // Saturday
+  0: 'phone_number',  // Sunday
+  1: 'phone_number',  // Monday
+  2: 'what_changed',  // Tuesday
+  3: 'phone_number',  // Wednesday
+  4: 'what_changed',  // Thursday
+  5: 'phone_number',  // Friday
+  6: 'what_changed',  // Saturday
 };
 
 export function getModeForDate(date: Date = new Date()): DailyChallengeModeId {

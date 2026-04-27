@@ -1173,6 +1173,31 @@
       "backspace_aria": "Backspace",
       "digit_aria": "Digit {n}"
     },
+    "what_changed": {
+      "memorise_instruction": "Memorise this grid",
+      "memorise_aria": "Memorise grid: {count} items",
+      "recall_instruction": "Tap what changed",
+      "reveal_instruction": "How did you do?",
+      "tapped_count": "{tapped} of {total} tapped",
+      "submit": "Submit",
+      "submit_aria": "Submit your guesses",
+      "tutorial_title": "What Changed?",
+      "tutorial_body": "Memorise the grid. Then it'll come back with one or more cells changed. Tap the ones that look different.",
+      "tutorial_before": "BEFORE",
+      "tutorial_after": "AFTER",
+      "tutorial_dismiss": "Got it",
+      "tutorial_dismiss_aria": "Got it, start the challenge",
+      "category": {
+        "animals": "Animals",
+        "food": "Food",
+        "plants": "Plants",
+        "weather": "Weather",
+        "objects": "Objects",
+        "transport": "Transport",
+        "sports": "Sports",
+        "music": "Music"
+      }
+    },
     "notifications": {
       "morning_1_title": "Your Daily Challenge is ready ✨",
       "morning_1_body": "A small puzzle awaits. Two minutes for your sharper self.",

@@ -20,8 +20,11 @@ import { getModeDisplayName } from '../modeRotation';
 import { formatHumanDate } from '../formatDate';
 
 const MODE_EMOJI: Record<DailyChallengeModeId, string> = {
+  // Per Phase 3 spec: 👁️ (eye, for visual observation) is What
+  // Changed's mode-emoji prefix in the share text. Phone Number
+  // keeps 📱; future modes will fill in their own.
   phone_number: '📱',
-  what_changed: '🔍',
+  what_changed: '👁️',
   names_and_faces: '🧑‍🤝‍🧑',
   the_witness: '🕵️',
 };
