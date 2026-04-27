@@ -22,7 +22,7 @@ import { t } from '@/src/i18n';
 // is done so the rotation returns to Phase 5 spec (Mon = phone_number).
 const ROTATION: Record<number, DailyChallengeModeId> = {
   0: 'phone_number',     // Sunday
-  1: 'names_and_faces',  // Monday — TEMP override (was phone_number) for testing
+  1: 'what_changed',     // Monday — TEMP override (was phone_number) for testing
   2: 'names_and_faces',  // Tuesday — Names & Faces (easy)
   3: 'what_changed',     // Wednesday
   4: 'the_witness',      // Thursday — The Witness (reading mode)
