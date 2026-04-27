@@ -238,13 +238,13 @@ export default function NotificationSettingsScreen() {
           </Pressable>
         )}
 
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>Daily Challenge</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('daily_challenge.settings.section')}</Text>
         <Card style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.emojiIcon}>{'\u2600\uFE0F'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Morning reveal</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>One gentle ping at 8am with today\u2019s challenge.</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('daily_challenge.settings.morning_label')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('daily_challenge.settings.morning_help')}</Text>
             </View>
             <Switch
               value={prefs.daily_challenge_morning !== false}
@@ -259,8 +259,8 @@ export default function NotificationSettingsScreen() {
           <View style={styles.row}>
             <Text style={styles.emojiIcon}>{'\uD83D\uDD25'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>Evening streak nudge</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>6pm reminder if your streak is at risk.</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('daily_challenge.settings.evening_label')}</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('daily_challenge.settings.evening_help')}</Text>
             </View>
             <Switch
               value={prefs.daily_challenge_evening !== false}

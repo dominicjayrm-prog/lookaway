@@ -26,6 +26,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { Share } from 'react-native';
 import { log } from '@/src/lib/logger';
+import { t } from '@/src/i18n';
 import { buildShareCardText } from './ShareCardGenerator';
 import type { DailyChallengeModeId } from '../types';
 
@@ -89,7 +90,7 @@ export async function captureAndShareCard(
 
     await Sharing.shareAsync(uri, {
       mimeType: 'image/png',
-      dialogTitle: 'Share your Daily Challenge',
+      dialogTitle: t('daily_challenge.share_text.dialog_title'),
       // UTI for iOS share sheet so target apps recognise it as a
       // public.png image rather than a generic file.
       UTI: 'public.png',

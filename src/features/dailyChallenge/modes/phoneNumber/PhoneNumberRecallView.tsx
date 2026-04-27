@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, StyleSheet, Animated as RNAnimated, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import { PhoneNumberKeypad } from './PhoneNumberKeypad';
 import { scorePhoneNumberAttempt, phoneNumberEmojiBlocks, type PhoneNumberConfig } from './logic';
 
@@ -90,7 +91,7 @@ export function PhoneNumberRecallView({ config, onComplete }: Props) {
   return (
     <View style={s.root}>
       <Text style={[s.instruction, { color: colors.textMid }]}>
-        {phase === 'recall' ? 'Type the digits in order' : 'How did you do?'}
+        {phase === 'recall' ? t('daily_challenge.phone_number.recall_instruction') : t('daily_challenge.phone_number.reveal_instruction')}
       </Text>
       <View style={s.slots}>
         {config.digits.map((d, i) => {

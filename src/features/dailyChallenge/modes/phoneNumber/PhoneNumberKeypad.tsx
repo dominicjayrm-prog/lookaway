@@ -11,6 +11,7 @@ import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 
 interface Props {
   onDigit: (digit: number) => void;
@@ -50,7 +51,7 @@ export function PhoneNumberKeypad({ onDigit, onBackspace, disabled }: Props) {
   }, [disabled, onBackspace]);
 
   return (
-    <View style={s.keypad} accessibilityLabel="Numeric keypad">
+    <View style={s.keypad} accessibilityLabel={t('daily_challenge.phone_number.keypad_aria')}>
       {ROWS.map((row, ri) => (
         <View key={ri} style={s.row}>
           {row.map((cell, ci) => {
@@ -69,7 +70,7 @@ export function PhoneNumberKeypad({ onDigit, onBackspace, disabled }: Props) {
                     disabled && { opacity: 0.4 },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Backspace"
+                  accessibilityLabel={t('daily_challenge.phone_number.backspace_aria')}
                 >
                   <Ionicons name="backspace-outline" size={24} color={colors.textMid} />
                 </Pressable>
@@ -88,7 +89,7 @@ export function PhoneNumberKeypad({ onDigit, onBackspace, disabled }: Props) {
                   disabled && { opacity: 0.4 },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={`Digit ${cell}`}
+                accessibilityLabel={t('daily_challenge.phone_number.digit_aria', { n: cell })}
               >
                 <Text style={[s.keyLabel, { color: colors.text }]}>{cell}</Text>
               </Pressable>

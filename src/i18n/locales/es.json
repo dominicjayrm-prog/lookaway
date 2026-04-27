@@ -1569,6 +1569,137 @@
     "dismiss": "Quizá más tarde",
     "dismiss_aria": "Quizá más tarde"
   },
+  "daily_challenge": {
+    "card": {
+      "title": "Reto diario",
+      "loading": "Comprobando el estado de hoy...",
+      "done_prefix": "Reto de hoy",
+      "done_check": "Hecho",
+      "score_time": "Puntuación: {score} · {time}s",
+      "today_eyebrow": "HOY",
+      "streak_alert_eyebrow": "NO PIERDAS LA RACHA",
+      "subtitle_resets": "{mode} · se reinicia en {time}",
+      "streak_alert_subtitle": "🔥 No pierdas tu racha de {count} días",
+      "open_aria": "Abrir el reto diario de hoy, {mode}, se reinicia en {time}",
+      "view_done_aria": "Ver el resultado del reto de hoy",
+      "countdown_minutes": "{m} min",
+      "countdown_hours": "{h} h {m} min"
+    },
+    "reveal": {
+      "today": "HOY",
+      "begin": "Empezar",
+      "begin_aria": "Empezar el reto diario"
+    },
+    "container": {
+      "saving": "Guardando tu resultado...",
+      "close_aria": "Cerrar el reto diario"
+    },
+    "result": {
+      "eyebrow": "RETO DIARIO",
+      "headline_perfect": "Memoria perfecta.",
+      "headline_sharp": "Afilado.",
+      "headline_solid": "Sólido.",
+      "headline_attempt": "Buen intento.",
+      "sub_perfect": "Memoria de acero.",
+      "sub_sharp": "Te quedaste con casi todo.",
+      "sub_solid": "Algunos dígitos se te escaparon, pero el grueso estaba ahí.",
+      "sub_attempt": "Mañana lo bordamos.",
+      "streak_text": "Racha de {count} días",
+      "streak_milestone_suffix": " · ¡hito!",
+      "already_played": "Ya jugaste el reto de hoy. Vuelve mañana para uno nuevo.",
+      "share_button": "Compartir resultado",
+      "share_button_preparing": "Preparando imagen...",
+      "share_aria": "Compartir resultado",
+      "back_button": "Volver al inicio",
+      "back_aria": "Volver al inicio",
+      "share_error_title": "No se pudo compartir",
+      "share_error_body": "Inténtalo de nuevo en un momento."
+    },
+    "share_card": {
+      "subtitle_eyebrow": "RETO DIARIO",
+      "footer": "blanked.app"
+    },
+    "share_text": {
+      "header": "Blanked Diario, {date}",
+      "score_line": "Puntuación: {score}/100 · {time}",
+      "streak_line": "🔥 Racha de {count} días",
+      "play_line": "Juega el tuyo: {url}",
+      "dialog_title": "Comparte tu reto diario"
+    },
+    "modes": {
+      "phone_number": "Número de teléfono",
+      "phone_number_subtitle": "Memoriza los dígitos y luego tecléalos.",
+      "what_changed": "¿Qué cambió?",
+      "what_changed_subtitle": "Memoriza la cuadrícula. Detecta los cambios.",
+      "names_and_faces": "Nombres y caras",
+      "the_witness": "El testigo"
+    },
+    "phone_number": {
+      "memorise_instruction": "Memoriza este número",
+      "look_away": "Mira hacia otro lado",
+      "recall_instruction": "Teclea los dígitos en orden",
+      "reveal_instruction": "¿Cómo te fue?",
+      "keypad_aria": "Teclado numérico",
+      "backspace_aria": "Borrar",
+      "digit_aria": "Dígito {n}"
+    },
+    "what_changed": {
+      "memorise_instruction": "Memoriza esta cuadrícula",
+      "memorise_aria": "Memoriza la cuadrícula: {count} elementos",
+      "recall_instruction": "Toca qué cambió",
+      "reveal_instruction": "¿Cómo te fue?",
+      "tapped_count": "{tapped} de {total} tocados",
+      "submit": "Enviar",
+      "submit_aria": "Enviar tus respuestas",
+      "tutorial_title": "¿Qué cambió?",
+      "tutorial_body": "Memoriza la cuadrícula. Volverá con una o más celdas cambiadas. Toca las que se vean distintas.",
+      "tutorial_before": "ANTES",
+      "tutorial_after": "DESPUÉS",
+      "tutorial_dismiss": "Entendido",
+      "tutorial_dismiss_aria": "Entendido, empezar el reto",
+      "category": {
+        "animals": "Animales",
+        "food": "Comida",
+        "plants": "Plantas",
+        "weather": "Tiempo",
+        "objects": "Objetos",
+        "transport": "Transporte",
+        "sports": "Deportes",
+        "music": "Música"
+      }
+    },
+    "notifications": {
+      "morning_1_title": "Tu reto diario te espera ✨",
+      "morning_1_body": "Un puzzle pequeño. Dos minutos para tu mente más afilada.",
+      "morning_2_title": "Buenos días. El reto de hoy te espera.",
+      "morning_2_body": "Una nueva memoria recién hecha.",
+      "morning_3_title": "Una nueva memoria te espera ☕",
+      "morning_3_body": "El reto de hoy está listo cuando tú lo estés.",
+      "morning_4_title": "El diario de hoy está recién salido del horno 🥐",
+      "morning_4_body": "Ábrelo cuando puedas.",
+      "morning_5_title": "Hora del estiramiento mental.",
+      "morning_5_body": "Solo unos minutos.",
+      "morning_6_title": "Cinco minutos para tu mente más afilada.",
+      "morning_6_body": "El reto de hoy está activo.",
+      "morning_7_title": "El reto de hoy está activo",
+      "morning_7_body": "Ábrelo cuando tengas un momento.",
+      "evening_low_title": "Tu racha de {count} días te espera",
+      "evening_low_body": "Un reto para mantenerla viva.",
+      "evening_mid_title": "🔥 Racha de {count} días",
+      "evening_mid_body": "No la pierdas esta noche.",
+      "evening_high_title": "🔥 {count} días imparables",
+      "evening_high_body": "Mantén la racha viva. Dos minutos.",
+      "evening_legend_title": "🔥 Racha de {count} días",
+      "evening_legend_body": "Has llegado lejos. Un reto más por hoy."
+    },
+    "settings": {
+      "section": "Reto diario",
+      "morning_label": "Aviso de la mañana",
+      "morning_help": "Un aviso suave a las 8h con el reto de hoy.",
+      "evening_label": "Recordatorio de tarde",
+      "evening_help": "Aviso a las 18h si tu racha está en riesgo."
+    }
+  },
   "paywall": {
     "restore": "Restaurar",
     "header_sub": "Entrena tu memoria sin límites",

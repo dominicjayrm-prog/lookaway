@@ -12,6 +12,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated as RNAnimated, Platform } from 'react-native';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 
 interface Props {
   digits: readonly number[];
@@ -58,11 +59,11 @@ export function PhoneNumberMemoriseView({ digits, viewSeconds, onElapsed }: Prop
     };
   }, [cardOpacity, digitsOpacity, viewSeconds, onElapsed]);
 
-  const a11yLabel = `Memorise these digits: ${digits.join(', ')}`;
+  const a11yLabel = t('daily_challenge.phone_number.memorise_instruction') + ': ' + digits.join(', ');
 
   return (
     <View style={s.root}>
-      <Text style={[s.instruction, { color: colors.textMid }]}>Memorise this number</Text>
+      <Text style={[s.instruction, { color: colors.textMid }]}>{t('daily_challenge.phone_number.memorise_instruction')}</Text>
       <RNAnimated.View
         style={[
           s.paper,
@@ -78,7 +79,7 @@ export function PhoneNumberMemoriseView({ digits, viewSeconds, onElapsed }: Prop
       </RNAnimated.View>
       <View style={[s.timerPill, { backgroundColor: colors.accentSoft }]}>
         <Text style={[s.timerText, { color: colors.accent }]}>
-          {phase === 'show' ? `${secondsLeft.toFixed(1)}s` : 'Look away'}
+          {phase === 'show' ? `${secondsLeft.toFixed(1)}s` : t('daily_challenge.phone_number.look_away')}
         </Text>
       </View>
     </View>

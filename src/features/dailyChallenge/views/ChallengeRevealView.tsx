@@ -15,6 +15,7 @@ import {
   View, Text, Pressable, StyleSheet, Animated as RNAnimated, Dimensions, Platform,
 } from 'react-native';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { t } from '@/src/i18n';
 import type { ChallengeRevealConfig } from '../types';
 
 const { width: SW } = Dimensions.get('window');
@@ -26,7 +27,11 @@ interface Props {
 }
 
 export function ChallengeRevealView({ reveal, onBegin }: Props) {
-  const eyebrowChars = useMemo(() => 'TODAY'.split('').map((ch, i) => ({ ch, idx: i })), []);
+  // The eyebrow word is i18n-driven so the Spanish locale shows
+  // "HOY" (3 chars) instead of "TODAY" (5 chars). The character-by-
+  // character stagger animation reads the word's length, so the
+  // animation auto-adjusts.
+  const eyebrowChars = useMemo(() => t('daily_challenge.reveal.today').split('').map((ch, i) => ({ ch, idx: i })), []);
   const [eyebrowShown, setEyebrowShown] = useState(0);
   const titleOpacity = useRef(new RNAnimated.Value(0)).current;
   const titleY = useRef(new RNAnimated.Value(12)).current;
@@ -110,9 +115,9 @@ export function ChallengeRevealView({ reveal, onBegin }: Props) {
             pressed && { opacity: 0.92, transform: [{ scale: 0.97 }] },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Begin daily challenge"
+          accessibilityLabel={t('daily_challenge.reveal.begin_aria')}
         >
-          <Text style={s.beginText}>Begin</Text>
+          <Text style={s.beginText}>{t('daily_challenge.reveal.begin')}</Text>
         </Pressable>
       </RNAnimated.View>
     </View>

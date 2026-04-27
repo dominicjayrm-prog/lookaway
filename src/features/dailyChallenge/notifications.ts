@@ -28,51 +28,51 @@
  */
 import { Platform } from 'react-native';
 import { log } from '@/src/lib/logger';
+import { t } from '@/src/i18n';
 import { createSeededRng, dateToSeed, todayUtcIso } from './seededRandom';
 
 const SCHEDULE_DAYS = 7;
 const MORNING_HOUR = 8;
 const EVENING_HOUR = 18;
 
-const MORNING_VARIANTS = [
-  { title: 'Your Daily Challenge is ready ✨', body: 'A small puzzle awaits. Two minutes for your sharper self.' },
-  { title: "Good morning. Today's challenge awaits.", body: "A new memory is fresh out the gate." },
-  { title: 'A new memory awaits ☕', body: "Today's daily is ready when you are." },
-  { title: "Today's Daily is fresh out of the oven 🥐", body: "Open whenever you're ready." },
-  { title: 'Time for your daily mental stretch.', body: 'A few minutes is all it takes.' },
-  { title: 'Five minutes for your sharper self.', body: "Today's challenge is live." },
-  { title: "Today's challenge is live", body: 'Open whenever you have a moment.' },
-];
+// 7 morning notification slots, each with title + body keyed under
+// daily_challenge.notifications. Same slot = same daily for every
+// player worldwide (deterministic via the date seed) so the
+// experience stays predictable across locales — the player always
+// gets the SAME message for the day, just translated to theirs.
+const MORNING_SLOT_KEYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-function morningVariantFor(date: Date) {
-  // Same date = same variant for every player worldwide. Stays
-  // predictable + makes screenshots reproducible for support.
+function morningVariantFor(date: Date): { title: string; body: string } {
   const rng = createSeededRng(dateToSeed(date) ^ 0xA1B2C3D4);
-  return rng.pick(MORNING_VARIANTS);
+  const slot = rng.pick(MORNING_SLOT_KEYS);
+  return {
+    title: t(`daily_challenge.notifications.morning_${slot}_title`),
+    body: t(`daily_challenge.notifications.morning_${slot}_body`),
+  };
 }
 
 function eveningCopyFor(streakCount: number): { title: string; body: string } {
   if (streakCount >= 100) {
     return {
-      title: `🔥 ${streakCount}-day streak`,
-      body: "You've come this far. One challenge to go.",
+      title: t('daily_challenge.notifications.evening_legend_title', { count: streakCount }),
+      body: t('daily_challenge.notifications.evening_legend_body'),
     };
   }
   if (streakCount >= 30) {
     return {
-      title: `🔥 ${streakCount} days strong`,
-      body: 'Keep your streak alive. Two minutes.',
+      title: t('daily_challenge.notifications.evening_high_title', { count: streakCount }),
+      body: t('daily_challenge.notifications.evening_high_body'),
     };
   }
   if (streakCount >= 7) {
     return {
-      title: `🔥 ${streakCount}-day streak`,
-      body: "Don't lose it tonight.",
+      title: t('daily_challenge.notifications.evening_mid_title', { count: streakCount }),
+      body: t('daily_challenge.notifications.evening_mid_body'),
     };
   }
   return {
-    title: `Your ${streakCount}-day streak is waiting`,
-    body: 'One challenge to keep it alive.',
+    title: t('daily_challenge.notifications.evening_low_title', { count: streakCount }),
+    body: t('daily_challenge.notifications.evening_low_body'),
   };
 }
 

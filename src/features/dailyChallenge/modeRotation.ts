@@ -16,27 +16,46 @@
  */
 import type { DailyChallengeModeId } from './types';
 import { utcDayOfWeek } from './seededRandom';
+import { t } from '@/src/i18n';
 
+// Phase 3 rotation: Phone Number + What Changed alternate so the
+// player never gets the same mode two days running. Sunday stays
+// on Phone Number for now; Names & Faces / The Witness will slot
+// into the gaps as Phases 4+5 ship.
 const ROTATION: Record<number, DailyChallengeModeId> = {
-  0: 'phone_number', // Sunday
-  1: 'phone_number', // Monday
-  2: 'phone_number', // Tuesday
-  3: 'phone_number', // Wednesday
-  4: 'phone_number', // Thursday
-  5: 'phone_number', // Friday
-  6: 'phone_number', // Saturday
+  0: 'phone_number',  // Sunday
+  1: 'phone_number',  // Monday
+  2: 'what_changed',  // Tuesday
+  3: 'phone_number',  // Wednesday
+  4: 'what_changed',  // Thursday
+  5: 'phone_number',  // Friday
+  6: 'what_changed',  // Saturday
 };
 
 export function getModeForDate(date: Date = new Date()): DailyChallengeModeId {
   return ROTATION[utcDayOfWeek(date)] ?? 'phone_number';
 }
 
-/** Display names live alongside the rotation so the home card +
- *  reveal screen can show them without each mode importing i18n
- *  separately. Localised at the call site via t(). */
-export const MODE_DISPLAY_NAMES: Record<DailyChallengeModeId, string> = {
-  phone_number: 'Phone Number',
-  what_changed: 'What Changed',
-  names_and_faces: 'Names & Faces',
-  the_witness: 'The Witness',
-};
+/** Display name for a mode, resolved against the current i18n
+ *  locale. Modes get their own keys under daily_challenge.modes.*
+ *  so "Phone Number" reads as "Número de teléfono" in Spanish, etc.
+ *
+ *  Function instead of a frozen constant so each call re-reads
+ *  the active locale — toggling language at runtime updates the
+ *  card / result screen / reveal subtitle on the next render. */
+export function getModeDisplayName(mode: DailyChallengeModeId): string {
+  return t(`daily_challenge.modes.${mode}`);
+}
+
+/** Localised tagline shown on the reveal screen under the mode
+ *  title ("Memorise the digits..." / "Memorise the grid..."). */
+export function getModeRevealSubtitle(mode: DailyChallengeModeId): string {
+  // Subtitles live under their own keys so a mode without one can
+  // fall back to an empty string without polluting the modes table.
+  const key = `daily_challenge.modes.${mode}_subtitle`;
+  const value = t(key);
+  // i18n-js returns the key string when the lookup misses — guard
+  // against that so a missing subtitle key doesn't render the raw
+  // dotted path.
+  return value === key ? '' : value;
+}

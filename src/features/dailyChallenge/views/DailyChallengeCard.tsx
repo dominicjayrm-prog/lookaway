@@ -18,11 +18,12 @@ import { View, Text, Pressable, StyleSheet, Animated as RNAnimated } from 'react
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { t } from '@/src/i18n';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { hasPlayedToday } from '../service';
 import { todayUtcIso } from '../seededRandom';
-import { getModeForDate, MODE_DISPLAY_NAMES } from '../modeRotation';
+import { getModeForDate, getModeDisplayName } from '../modeRotation';
 import type { DailyChallengeResult } from '../types';
 
 type CardState =
@@ -41,8 +42,8 @@ function minutesUntilUtcMidnight(now: Date = new Date()): number {
 function formatCountdown(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h <= 0) return `${m}m`;
-  return `${h}h ${m}m`;
+  if (h <= 0) return t('daily_challenge.card.countdown_minutes', { m });
+  return t('daily_challenge.card.countdown_hours', { h, m });
 }
 
 export function DailyChallengeCard() {
@@ -92,14 +93,14 @@ export function DailyChallengeCard() {
         ) {
           setState({
             kind: 'streak_alert',
-            mode: MODE_DISPLAY_NAMES[todayMode],
+            mode: getModeDisplayName(todayMode),
             resetsInMinutes: minutes,
             streakCount,
           });
         } else {
           setState({
             kind: 'not_played',
-            mode: MODE_DISPLAY_NAMES[todayMode],
+            mode: getModeDisplayName(todayMode),
             resetsInMinutes: minutes,
           });
         }
@@ -136,8 +137,8 @@ export function DailyChallengeCard() {
   if (state.kind === 'loading') {
     return (
       <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[s.title, { color: colors.textMid }]}>Daily Challenge</Text>
-        <Text style={[s.subtitle, { color: colors.textLight }]}>Checking today's status...</Text>
+        <Text style={[s.title, { color: colors.textMid }]}>{t('daily_challenge.card.title')}</Text>
+        <Text style={[s.subtitle, { color: colors.textLight }]}>{t('daily_challenge.card.loading')}</Text>
       </View>
     );
   }
@@ -152,15 +153,15 @@ export function DailyChallengeCard() {
           pressed && { opacity: 0.92 },
         ]}
         accessibilityRole="button"
-        accessibilityLabel="View today's daily challenge result"
+        accessibilityLabel={t('daily_challenge.card.view_done_aria')}
       >
         <View style={s.row}>
           <View style={{ flex: 1 }}>
             <Text style={[s.title, { color: colors.text }]}>
-              Today's Challenge — Done <Text style={{ color: colors.correct }}>✓</Text>
+              {t('daily_challenge.card.done_prefix')} {t('daily_challenge.card.done_check')} <Text style={{ color: colors.correct }}>✓</Text>
             </Text>
             <Text style={[s.subtitle, { color: colors.textMid }]}>
-              Score: {state.result.score} · {state.result.timeSeconds.toFixed(1)}s
+              {t('daily_challenge.card.score_time', { score: state.result.score, time: state.result.timeSeconds.toFixed(1) })}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
@@ -181,7 +182,7 @@ export function DailyChallengeCard() {
         pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`Open today's daily challenge, ${state.mode}, resets in ${formatCountdown(state.resetsInMinutes)}`}
+      accessibilityLabel={t('daily_challenge.card.open_aria', { mode: state.mode, time: formatCountdown(state.resetsInMinutes) })}
     >
       <LinearGradient
         colors={isAlert ? ['#FF6B6B', '#E84545'] : ['#6C5CE7', '#8F7EEB']}
@@ -202,13 +203,13 @@ export function DailyChallengeCard() {
       <View style={s.activeRow}>
         <View style={{ flex: 1 }}>
           <Text style={s.activeEyebrow}>
-            {isAlert ? "DON'T BREAK THE STREAK" : 'TODAY'}
+            {isAlert ? t('daily_challenge.card.streak_alert_eyebrow') : t('daily_challenge.card.today_eyebrow')}
           </Text>
-          <Text style={s.activeTitle}>Daily Challenge</Text>
+          <Text style={s.activeTitle}>{t('daily_challenge.card.title')}</Text>
           <Text style={s.activeSubtitle}>
             {isAlert
-              ? `🔥 Don't break your ${state.streakCount}-day streak`
-              : `${state.mode} · resets in ${formatCountdown(state.resetsInMinutes)}`}
+              ? t('daily_challenge.card.streak_alert_subtitle', { count: state.streakCount })
+              : t('daily_challenge.card.subtitle_resets', { mode: state.mode, time: formatCountdown(state.resetsInMinutes) })}
           </Text>
         </View>
         <View style={s.activeChevron}>

@@ -26,8 +26,10 @@ import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t } from '@/src/i18n';
 import type { DailyChallengeModeId } from '../types';
-import { MODE_DISPLAY_NAMES } from '../modeRotation';
+import { getModeDisplayName } from '../modeRotation';
+import { formatLongDate } from '../formatDate';
 
 export const SHARE_CARD_SIZE = 1080;
 
@@ -43,8 +45,21 @@ interface Props {
   modeVisual: ModeVisual;
 }
 
+import type { WhatChangedConfig } from '../modes/whatChanged/logic';
 export type ModeVisual =
   | { kind: 'phone_number'; digits: readonly number[]; correctness: readonly boolean[] }
+  | {
+      kind: 'what_changed';
+      /** Full puzzle config so we can render the modified grid in
+       *  miniature on the share card. */
+      config: WhatChangedConfig;
+      /** Cells the player tapped that DID change (correct). */
+      correctIndexes: readonly number[];
+      /** Cells the player tapped that didn't change (wrong). */
+      incorrectIndexes: readonly number[];
+      /** Cells that changed but the player missed. */
+      missedIndexes: readonly number[];
+    }
   | { kind: 'fallback'; emojiBlocks: string };
 
 /** forwardRef so callers can captureRef(this, ...) via view-shot. */
@@ -74,7 +89,9 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
         <Circle cx={SHARE_CARD_SIZE * 0.18} cy={SHARE_CARD_SIZE * 0.92} r={260} fill="url(#glow)" />
       </Svg>
 
-      {/* Top: Blanked wordmark + date eyebrow. */}
+      {/* Top: Blanked wordmark + date eyebrow. Brand stays untouched
+          across locales (proper noun); date routes through the
+          locale-aware Intl formatter. */}
       <View style={s.topRow}>
         <View style={s.brandRow}>
           <View style={s.brandDot} />
@@ -84,8 +101,8 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
       </View>
 
       {/* Mode label */}
-      <Text style={s.modeLabel}>DAILY CHALLENGE</Text>
-      <Text style={s.modeName}>{MODE_DISPLAY_NAMES[mode]}</Text>
+      <Text style={s.modeLabel}>{t('daily_challenge.share_card.subtitle_eyebrow')}</Text>
+      <Text style={s.modeName}>{getModeDisplayName(mode)}</Text>
 
       {/* Hero score number, big and proud. */}
       <View style={s.scoreBlock}>
@@ -141,17 +158,64 @@ function ModeVisualBlock({ visual }: { visual: ModeVisual }) {
       </View>
     );
   }
+  if (visual.kind === 'what_changed') {
+    // Render a mini grid of the modified puzzle. Cells tapped
+    // correctly get a purple-on-emoji halo; tapped wrong cells get
+    // a red ring; missed changes get a gold dashed ring. Cells the
+    // player didn't touch and didn't change render plain. Reads at
+    // a glance + uses shape (ring style) on top of colour for
+    // colour-blind safety.
+    const correctSet = new Set(visual.correctIndexes);
+    const incorrectSet = new Set(visual.incorrectIndexes);
+    const missedSet = new Set(visual.missedIndexes);
+    const rows = Array.from({ length: visual.config.rows }, (_, r) => r);
+    return (
+      <View style={s.wcGridWrap}>
+        {rows.map((r) => (
+          <View key={r} style={s.wcGridRow}>
+            {Array.from({ length: visual.config.cols }, (_, c) => {
+              const idx = r * visual.config.cols + c;
+              const emoji = visual.config.modified[idx];
+              let borderColor = 'rgba(255,255,255,0.18)';
+              let borderWidth = 2;
+              let borderStyle: 'solid' | 'dashed' = 'solid';
+              let bg = 'rgba(255,255,255,0.05)';
+              if (correctSet.has(idx)) {
+                borderColor = '#FFFFFF';
+                bg = 'rgba(255,255,255,0.32)';
+              } else if (incorrectSet.has(idx)) {
+                borderColor = '#FF6B6B';
+                bg = 'rgba(255,107,107,0.32)';
+              } else if (missedSet.has(idx)) {
+                borderColor = '#FFD45A';
+                borderStyle = 'dashed';
+                bg = 'rgba(255,212,90,0.18)';
+              }
+              return (
+                <View
+                  key={c}
+                  style={[
+                    s.wcCell,
+                    { borderColor, borderWidth, borderStyle, backgroundColor: bg },
+                  ]}
+                >
+                  {emoji ? <Text style={s.wcCellEmoji}>{emoji}</Text> : null}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  }
   // Fallback: just render the emoji blocks string for future modes
   // that haven't defined a custom visual yet.
   return <Text style={s.emojiFallback}>{visual.emojiBlocks}</Text>;
 }
 
-function formatLongDate(yyyymmdd: string): string {
-  const [y, m, d] = yyyymmdd.split('-').map(Number);
-  if (!y || !m || !d) return yyyymmdd;
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${months[m - 1]} ${d}, ${y}`;
-}
+// formatLongDate moved to ../formatDate.ts so it can be shared
+// with ShareCardGenerator (text share) and use Intl for proper
+// locale-aware month names.
 
 const s = StyleSheet.create({
   card: {
@@ -209,6 +273,18 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   emojiFallback: { fontSize: 64, color: '#FFFFFF', letterSpacing: 4 },
+  // What Changed mini-grid for the share card. Sized to fit
+  // alongside the score block at 1080px wide; each cell is ~110px
+  // square with 14px gap so a 5x4 grid (the hardest day) lays out
+  // at ~580x460 — fits within the share card's width with breathing
+  // room. The 3x3 / 4x4 days render smaller naturally.
+  wcGridWrap: { gap: 14 },
+  wcGridRow: { flexDirection: 'row', gap: 14 },
+  wcCell: {
+    width: 110, height: 110, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  wcCellEmoji: { fontSize: 56, lineHeight: 70 },
   bottomChips: {
     flexDirection: 'row', gap: 14,
     marginTop: 'auto',
