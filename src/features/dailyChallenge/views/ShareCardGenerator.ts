@@ -14,20 +14,16 @@
  *   🔥 47 day streak
  *   Play yours: <App Store link>
  */
+import { t } from '@/src/i18n';
 import type { DailyChallengeModeId } from '../types';
+import { getModeDisplayName } from '../modeRotation';
+import { formatHumanDate } from '../formatDate';
 
 const MODE_EMOJI: Record<DailyChallengeModeId, string> = {
   phone_number: '📱',
   what_changed: '🔍',
   names_and_faces: '🧑‍🤝‍🧑',
   the_witness: '🕵️',
-};
-
-const MODE_LABEL: Record<DailyChallengeModeId, string> = {
-  phone_number: 'Phone Number',
-  what_changed: 'What Changed',
-  names_and_faces: 'Names & Faces',
-  the_witness: 'The Witness',
 };
 
 // Apple/Google Play share-link gets stamped into builds; for now
@@ -46,28 +42,17 @@ export interface ShareCardArgs {
 }
 
 export function buildShareCardText(args: ShareCardArgs): string {
-  const dateLabel = formatShortDate(args.challengeDate);
+  const dateLabel = formatHumanDate(args.challengeDate);
   const lines: string[] = [];
-  lines.push(`Blanked Daily — ${dateLabel}`);
-  lines.push(`${MODE_EMOJI[args.mode]} ${MODE_LABEL[args.mode]}`);
-  lines.push(`Score: ${args.score}/100 · ${formatTime(args.timeSeconds)}`);
+  lines.push(t('daily_challenge.share_text.header', { date: dateLabel }));
+  lines.push(`${MODE_EMOJI[args.mode]} ${getModeDisplayName(args.mode)}`);
+  lines.push(t('daily_challenge.share_text.score_line', { score: args.score, time: formatTime(args.timeSeconds) }));
   if (args.shareCardEmojiBlocks) lines.push(args.shareCardEmojiBlocks);
   if (args.streakCount >= 2) {
-    lines.push(`🔥 ${args.streakCount} day streak`);
+    lines.push(t('daily_challenge.share_text.streak_line', { count: args.streakCount }));
   }
-  lines.push(`Play yours: ${PLAY_URL}`);
+  lines.push(t('daily_challenge.share_text.play_line', { url: PLAY_URL }));
   return lines.join('\n');
-}
-
-function formatShortDate(yyyymmdd: string): string {
-  const [y, m, d] = yyyymmdd.split('-').map(Number);
-  if (!y || !m || !d) return yyyymmdd;
-  // Use Date with year/month/day in UTC, format with month name +
-  // day. Skip Intl formatter on web where locale formatting can
-  // sometimes print the wrong month for borderline timezones.
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
 function formatTime(seconds: number): string {

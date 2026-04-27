@@ -19,6 +19,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { t } from '@/src/i18n';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { ChallengeRevealView } from './ChallengeRevealView';
@@ -123,7 +124,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
             hitSlop={12}
             style={({ pressed }) => [s.closeBtn, pressed && { opacity: 0.6 }]}
             accessibilityRole="button"
-            accessibilityLabel="Close daily challenge"
+            accessibilityLabel={t('daily_challenge.container.close_aria')}
           >
             <Ionicons name="close" size={24} color={colors.textMid} />
           </Pressable>
@@ -152,7 +153,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         )}
         {phase === 'submitting' && (
           <View style={s.submitting}>
-            <Text style={[s.submittingText, { color: colors.textMid }]}>Saving your result...</Text>
+            <Text style={[s.submittingText, { color: colors.textMid }]}>{t('daily_challenge.container.saving')}</Text>
           </View>
         )}
         {phase === 'result' && finalResult && (

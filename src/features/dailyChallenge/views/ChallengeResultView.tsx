@@ -18,10 +18,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AnimatedBlink, type BlinkExpression } from '@/src/components/AnimatedBlink';
+import { t } from '@/src/i18n';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import type { DailyChallengeModeId } from '../types';
-import { MODE_DISPLAY_NAMES } from '../modeRotation';
+import { getModeDisplayName } from '../modeRotation';
+import { formatHumanDate } from '../formatDate';
 import { ShareCardImage, SHARE_CARD_SIZE, type ModeVisual } from './ShareCardImage';
 import { captureAndShareCard } from './captureAndShare';
 
@@ -51,10 +53,10 @@ function blinkForScore(score: number): BlinkExpression {
 }
 
 function copyForScore(score: number): { headline: string; sub: string } {
-  if (score >= 90) return { headline: 'Perfect recall.', sub: 'Memory like a steel trap.' };
-  if (score >= 80) return { headline: 'Sharp.', sub: 'You held nearly all of it.' };
-  if (score >= 50) return { headline: 'Solid.', sub: 'A few digits slipped, but the core was there.' };
-  return { headline: 'Good attempt.', sub: "We'll get a stronger one tomorrow." };
+  if (score >= 90) return { headline: t('daily_challenge.result.headline_perfect'), sub: t('daily_challenge.result.sub_perfect') };
+  if (score >= 80) return { headline: t('daily_challenge.result.headline_sharp'), sub: t('daily_challenge.result.sub_sharp') };
+  if (score >= 50) return { headline: t('daily_challenge.result.headline_solid'), sub: t('daily_challenge.result.sub_solid') };
+  return { headline: t('daily_challenge.result.headline_attempt'), sub: t('daily_challenge.result.sub_attempt') };
 }
 
 export function ChallengeResultView({
@@ -97,7 +99,7 @@ export function ChallengeResultView({
         mode, challengeDate, score, timeSeconds, shareCardEmojiBlocks, streakCount,
       });
       if (outcome === 'error' || outcome === 'unavailable') {
-        Alert.alert('Could not share', 'Try again in a moment.');
+        Alert.alert(t('daily_challenge.result.share_error_title'), t('daily_challenge.result.share_error_body'));
       }
     } finally {
       setSharing(false);
@@ -110,12 +112,12 @@ export function ChallengeResultView({
   return (
     <RNAnimated.View style={[s.root, { backgroundColor: colors.bg, opacity: fadeIn }]}>
       <Text style={[s.eyebrow, { color: colors.textMid }]}>
-        DAILY CHALLENGE — {dateLabel}
+        {t('daily_challenge.result.eyebrow')} — {dateLabel}
       </Text>
 
       <View style={s.heroBlock}>
         <AnimatedBlink expression={blinkForScore(score)} size={108} entrance="spring" />
-        <Text style={[s.modeName, { color: colors.text }]}>{MODE_DISPLAY_NAMES[mode]}</Text>
+        <Text style={[s.modeName, { color: colors.text }]}>{getModeDisplayName(mode)}</Text>
         <Text style={[s.headline, { color: colors.text }]}>{headline.headline}</Text>
         <Text style={[s.sub, { color: colors.textMid }]}>{headline.sub}</Text>
       </View>
@@ -136,14 +138,15 @@ export function ChallengeResultView({
         >
           <Text style={s.streakIcon}>🔥</Text>
           <Text style={[s.streakText, { color: colors.wrong }]}>
-            {streakCount}-day streak{milestoneJustHit ? ' · milestone!' : ''}
+            {t('daily_challenge.result.streak_text', { count: streakCount })}
+            {milestoneJustHit ? t('daily_challenge.result.streak_milestone_suffix') : ''}
           </Text>
         </View>
       )}
 
       {alreadyPlayed && (
         <Text style={[s.alreadyNote, { color: colors.textMid }]}>
-          You already played today's challenge. Come back tomorrow for a new one.
+          {t('daily_challenge.result.already_played')}
         </Text>
       )}
 
@@ -157,18 +160,18 @@ export function ChallengeResultView({
             sharing && { opacity: 0.6 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Share result"
+          accessibilityLabel={t('daily_challenge.result.share_aria')}
         >
           <Ionicons name="share-outline" size={18} color="#FFFFFF" />
-          <Text style={s.primaryBtnText}>{sharing ? 'Preparing image...' : 'Share result'}</Text>
+          <Text style={s.primaryBtnText}>{sharing ? t('daily_challenge.result.share_button_preparing') : t('daily_challenge.result.share_button')}</Text>
         </Pressable>
         <Pressable
           onPress={onClose}
           style={({ pressed }) => [s.secondaryBtn, pressed && { opacity: 0.7 }]}
           accessibilityRole="button"
-          accessibilityLabel="Back to home"
+          accessibilityLabel={t('daily_challenge.result.back_aria')}
         >
-          <Text style={[s.secondaryBtnText, { color: colors.accent }]}>Back to home</Text>
+          <Text style={[s.secondaryBtnText, { color: colors.accent }]}>{t('daily_challenge.result.back_button')}</Text>
         </Pressable>
       </View>
 
@@ -190,13 +193,6 @@ export function ChallengeResultView({
       </View>
     </RNAnimated.View>
   );
-}
-
-function formatHumanDate(yyyymmdd: string): string {
-  const [y, m, d] = yyyymmdd.split('-').map(Number);
-  if (!y || !m || !d) return yyyymmdd;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[m - 1]} ${d}`;
 }
 
 const s = StyleSheet.create({

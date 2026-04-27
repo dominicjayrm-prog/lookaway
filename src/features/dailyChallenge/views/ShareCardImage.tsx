@@ -26,8 +26,10 @@ import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import { t } from '@/src/i18n';
 import type { DailyChallengeModeId } from '../types';
-import { MODE_DISPLAY_NAMES } from '../modeRotation';
+import { getModeDisplayName } from '../modeRotation';
+import { formatLongDate } from '../formatDate';
 
 export const SHARE_CARD_SIZE = 1080;
 
@@ -74,7 +76,9 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
         <Circle cx={SHARE_CARD_SIZE * 0.18} cy={SHARE_CARD_SIZE * 0.92} r={260} fill="url(#glow)" />
       </Svg>
 
-      {/* Top: Blanked wordmark + date eyebrow. */}
+      {/* Top: Blanked wordmark + date eyebrow. Brand stays untouched
+          across locales (proper noun); date routes through the
+          locale-aware Intl formatter. */}
       <View style={s.topRow}>
         <View style={s.brandRow}>
           <View style={s.brandDot} />
@@ -84,8 +88,8 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
       </View>
 
       {/* Mode label */}
-      <Text style={s.modeLabel}>DAILY CHALLENGE</Text>
-      <Text style={s.modeName}>{MODE_DISPLAY_NAMES[mode]}</Text>
+      <Text style={s.modeLabel}>{t('daily_challenge.share_card.subtitle_eyebrow')}</Text>
+      <Text style={s.modeName}>{getModeDisplayName(mode)}</Text>
 
       {/* Hero score number, big and proud. */}
       <View style={s.scoreBlock}>
@@ -146,12 +150,9 @@ function ModeVisualBlock({ visual }: { visual: ModeVisual }) {
   return <Text style={s.emojiFallback}>{visual.emojiBlocks}</Text>;
 }
 
-function formatLongDate(yyyymmdd: string): string {
-  const [y, m, d] = yyyymmdd.split('-').map(Number);
-  if (!y || !m || !d) return yyyymmdd;
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  return `${months[m - 1]} ${d}, ${y}`;
-}
+// formatLongDate moved to ../formatDate.ts so it can be shared
+// with ShareCardGenerator (text share) and use Intl for proper
+// locale-aware month names.
 
 const s = StyleSheet.create({
   card: {

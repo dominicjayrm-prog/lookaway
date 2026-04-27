@@ -16,6 +16,7 @@
  *   - Score = round(correct / total * 100)
  */
 import { createSeededRng, dateToSeed, todayUtcIso, utcDayOfWeek } from '../../seededRandom';
+import { getModeDisplayName, getModeRevealSubtitle } from '../../modeRotation';
 import type { DailyChallengeInstance } from '../../types';
 
 export interface PhoneNumberConfig {
@@ -82,8 +83,10 @@ export function buildPhoneNumberInstance(date: Date = new Date()): DailyChalleng
     challengeDate: todayUtcIso(date),
     config: generatePhoneNumberConfig(date),
     reveal: {
-      title: 'Phone Number',
-      subtitle: 'Memorise the digits, then key them back in',
+      // Resolved against the active i18n locale at call time so the
+      // reveal animation reads the player's chosen language.
+      title: getModeDisplayName('phone_number'),
+      subtitle: getModeRevealSubtitle('phone_number'),
       blinkExpression: 'memorise',
     },
   };

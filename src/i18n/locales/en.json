@@ -1099,6 +1099,112 @@
     "dismiss": "Maybe later",
     "dismiss_aria": "Maybe later"
   },
+  "daily_challenge": {
+    "card": {
+      "title": "Daily Challenge",
+      "loading": "Checking today's status...",
+      "done_prefix": "Today's Challenge",
+      "done_check": "Done",
+      "score_time": "Score: {score} · {time}s",
+      "today_eyebrow": "TODAY",
+      "streak_alert_eyebrow": "DON'T BREAK THE STREAK",
+      "subtitle_resets": "{mode} · resets in {time}",
+      "streak_alert_subtitle": "🔥 Don't break your {count}-day streak",
+      "open_aria": "Open today's daily challenge, {mode}, resets in {time}",
+      "view_done_aria": "View today's daily challenge result",
+      "countdown_minutes": "{m}m",
+      "countdown_hours": "{h}h {m}m"
+    },
+    "reveal": {
+      "today": "TODAY",
+      "begin": "Begin",
+      "begin_aria": "Begin daily challenge"
+    },
+    "container": {
+      "saving": "Saving your result...",
+      "close_aria": "Close daily challenge"
+    },
+    "result": {
+      "eyebrow": "DAILY CHALLENGE",
+      "headline_perfect": "Perfect recall.",
+      "headline_sharp": "Sharp.",
+      "headline_solid": "Solid.",
+      "headline_attempt": "Good attempt.",
+      "sub_perfect": "Memory like a steel trap.",
+      "sub_sharp": "You held nearly all of it.",
+      "sub_solid": "A few digits slipped, but the core was there.",
+      "sub_attempt": "We'll get a stronger one tomorrow.",
+      "streak_text": "{count}-day streak",
+      "streak_milestone_suffix": " · milestone!",
+      "already_played": "You already played today's challenge. Come back tomorrow for a new one.",
+      "share_button": "Share result",
+      "share_button_preparing": "Preparing image...",
+      "share_aria": "Share result",
+      "back_button": "Back to home",
+      "back_aria": "Back to home",
+      "share_error_title": "Could not share",
+      "share_error_body": "Try again in a moment."
+    },
+    "share_card": {
+      "subtitle_eyebrow": "DAILY CHALLENGE",
+      "footer": "blanked.app"
+    },
+    "share_text": {
+      "header": "Blanked Daily — {date}",
+      "score_line": "Score: {score}/100 · {time}",
+      "streak_line": "🔥 {count} day streak",
+      "play_line": "Play yours: {url}",
+      "dialog_title": "Share your Daily Challenge"
+    },
+    "modes": {
+      "phone_number": "Phone Number",
+      "phone_number_subtitle": "Memorise the digits, then key them back in",
+      "what_changed": "What Changed",
+      "what_changed_subtitle": "Memorise the grid. Spot the changes.",
+      "names_and_faces": "Names & Faces",
+      "the_witness": "The Witness"
+    },
+    "phone_number": {
+      "memorise_instruction": "Memorise this number",
+      "look_away": "Look away",
+      "recall_instruction": "Type the digits in order",
+      "reveal_instruction": "How did you do?",
+      "keypad_aria": "Numeric keypad",
+      "backspace_aria": "Backspace",
+      "digit_aria": "Digit {n}"
+    },
+    "notifications": {
+      "morning_1_title": "Your Daily Challenge is ready ✨",
+      "morning_1_body": "A small puzzle awaits. Two minutes for your sharper self.",
+      "morning_2_title": "Good morning. Today's challenge awaits.",
+      "morning_2_body": "A new memory is fresh out the gate.",
+      "morning_3_title": "A new memory awaits ☕",
+      "morning_3_body": "Today's daily is ready when you are.",
+      "morning_4_title": "Today's Daily is fresh out of the oven 🥐",
+      "morning_4_body": "Open whenever you're ready.",
+      "morning_5_title": "Time for your daily mental stretch.",
+      "morning_5_body": "A few minutes is all it takes.",
+      "morning_6_title": "Five minutes for your sharper self.",
+      "morning_6_body": "Today's challenge is live.",
+      "morning_7_title": "Today's challenge is live",
+      "morning_7_body": "Open whenever you have a moment.",
+      "evening_low_title": "Your {count}-day streak is waiting",
+      "evening_low_body": "One challenge to keep it alive.",
+      "evening_mid_title": "🔥 {count}-day streak",
+      "evening_mid_body": "Don't lose it tonight.",
+      "evening_high_title": "🔥 {count} days strong",
+      "evening_high_body": "Keep your streak alive. Two minutes.",
+      "evening_legend_title": "🔥 {count}-day streak",
+      "evening_legend_body": "You've come this far. One challenge to go."
+    },
+    "settings": {
+      "section": "Daily Challenge",
+      "morning_label": "Morning reveal",
+      "morning_help": "One gentle ping at 8am with today's challenge.",
+      "evening_label": "Evening streak nudge",
+      "evening_help": "6pm reminder if your streak is at risk."
+    }
+  },
   "paywall": {
     "restore": "Restore",
     "header_sub": "Train your memory without limits",
