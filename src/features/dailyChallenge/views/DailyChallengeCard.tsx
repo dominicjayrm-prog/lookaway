@@ -175,30 +175,45 @@ export function DailyChallengeCard() {
 
   if (state.kind === 'played') {
     return (
-      <Pressable
-        onPress={handleOpen}
-        onLongPress={handleResetLongPress}
-        delayLongPress={700}
-        style={({ pressed }) => [
-          s.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
-          pressed && { opacity: 0.92 },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={t('daily_challenge.card.view_done_aria')}
-      >
-        <View style={s.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.title, { color: colors.text }]}>
-              {t('daily_challenge.card.done_prefix')} {t('daily_challenge.card.done_check')} <Text style={{ color: colors.correct }}>✓</Text>
-            </Text>
-            <Text style={[s.subtitle, { color: colors.textMid }]}>
-              {t('daily_challenge.card.score_time', { score: state.result.score, time: state.result.timeSeconds.toFixed(1) })}
-            </Text>
+      <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Pressable
+          onPress={handleOpen}
+          onLongPress={handleResetLongPress}
+          delayLongPress={700}
+          style={({ pressed }) => [pressed && { opacity: 0.92 }]}
+          accessibilityRole="button"
+          accessibilityLabel={t('daily_challenge.card.view_done_aria')}
+        >
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.title, { color: colors.text }]}>
+                {t('daily_challenge.card.done_prefix')} {t('daily_challenge.card.done_check')} <Text style={{ color: colors.correct }}>✓</Text>
+              </Text>
+              <Text style={[s.subtitle, { color: colors.textMid }]}>
+                {t('daily_challenge.card.score_time', { score: state.result.score, time: state.result.timeSeconds.toFixed(1) })}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
-        </View>
-      </Pressable>
+        </Pressable>
+        {/* Dev-only reset button. Visible so testers can replay
+            without discovering the hidden long-press gesture. Remove
+            this whole Pressable + the import of resetTodaysChallenge
+            before shipping. */}
+        <Pressable
+          onPress={handleResetLongPress}
+          style={({ pressed }) => [
+            s.devResetBtn,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Reset today's challenge for testing"
+        >
+          <Ionicons name="refresh" size={13} color={colors.textMid} />
+          <Text style={[s.devResetText, { color: colors.textMid }]}>Reset (dev)</Text>
+        </Pressable>
+      </View>
     );
   }
 
@@ -289,5 +304,15 @@ const s = StyleSheet.create({
     position: 'absolute', right: 12, top: '50%', marginTop: -42,
     width: 84, height: 84, borderRadius: 42,
     backgroundColor: '#FFFFFF',
+  },
+  devResetBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 999, borderWidth: 1,
+  },
+  devResetText: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 0.4,
   },
 });
