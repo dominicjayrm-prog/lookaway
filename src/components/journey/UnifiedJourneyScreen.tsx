@@ -252,6 +252,30 @@ export function UnifiedJourneyScreen() {
   // Derived on the UI thread: y coord of the current level node.
   const currentLevelY = PATH_TOP_PADDING + (UNIFIED_LADDER.length - unifiedPosition) * ROW_HEIGHT;
 
+  // First-mount auto-scroll. On native, the ScrollView's
+  // `contentOffset` prop sets the starting position before the first
+  // commit so this useEffect is redundant. On react-native-web,
+  // `contentOffset` on Animated.ScrollView from reanimated 4 isn't
+  // honoured — the ScrollView opens at scrollY=0, and combined with
+  // the virtualised visible range (which only renders levels near
+  // the player's unifiedPosition) the viewport ended up looking at
+  // a section of the path with NO rendered nodes. Result: the
+  // journey tab appeared as a totally empty purple wash.
+  // The setTimeout is to let the ScrollView lay out its children
+  // before we ask it to scroll; without the defer, web-side scrollTo
+  // can fire before the content is measured and silently no-op.
+  const didInitialScroll = useRef(false);
+  useEffect(() => {
+    if (didInitialScroll.current) return;
+    if (!screenHeight) return;
+    didInitialScroll.current = true;
+    const target = Math.max(0, currentLevelY - screenHeight * 0.4);
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: target, animated: false });
+    }, Platform.OS === 'web' ? 80 : 0);
+    return () => clearTimeout(id);
+  }, [currentLevelY, screenHeight]);
+
   // JS-thread handler for jump-direction changes. Keep it separate from
   // the visible-range handler so a nudge in one doesn't stomp the
   // other; React batches the setStates.
