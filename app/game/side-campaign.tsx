@@ -26,10 +26,17 @@ import { applyPlusGemMultiplier, type PowerUpId } from '@/src/utils/scoring';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'failed' | 'error';
 
-function getStarsForScore(pct: number): number {
-  if (pct >= 90) return 3;
-  if (pct >= 70) return 2;
-  if (pct >= 50) return 1;
+/** Star award thresholds. Mirrors Classic mode (`requiredScore=60`,
+ *  `TWO_STAR_THRESHOLD=80`, `parScore=100`) so a 4/5 in any mode reads
+ *  as 2 stars consistently. The percentage passed in is the
+ *  CORRECTNESS percentage (rounds answered correctly / total rounds),
+ *  NOT the speed-weighted raw-score percentage. Speed-weighted points
+ *  still drive the displayed "{x}%" score and gem rewards downstream;
+ *  they just don't penalise stars any more. */
+function getStarsForScore(correctnessPct: number): number {
+  if (correctnessPct >= 100) return 3;
+  if (correctnessPct >= 80) return 2;
+  if (correctnessPct >= 60) return 1;
   return 0;
 }
 
@@ -236,7 +243,13 @@ function SideCampaignScreen() {
   }, [phase, currentShape, shapeIdx, currentRound, shapeScores, canvasSize, srSecondChanceArmed]);
 
   // ─── COMPLETION HANDLER (must be before nextRound which references it) ───
-  const finishLevel = useCallback(async (rawScore: number) => {
+  // `correctRounds` is the count of rounds the player got right
+  // regardless of speed (binary modes) or completed cleanly (partial-
+  // credit modes). Stars are derived from this so a fast-but-wrong
+  // run can't out-score a slow-but-correct one. `rawScore` still
+  // drives the displayed "{x}%" pill so speed-based points stay
+  // visible to the player.
+  const finishLevel = useCallback(async (rawScore: number, correctRounds: number) => {
     // Calculate actual max score dynamically from modeData (not hardcoded getMaxScore)
     const totalRounds = modeData?.rounds?.length ?? 1;
     let maxScore: number;
@@ -256,7 +269,12 @@ function SideCampaignScreen() {
       maxScore = 100; // fallback
     }
     const pct = Math.min(100, Math.round((rawScore / Math.max(1, maxScore)) * 100));
-    const earnedStars = getStarsForScore(pct);
+    // Stars come from correctness, NOT raw score. A 4/5 correct run
+    // is 80% correctness regardless of how speedy each tap was.
+    const correctnessPct = totalRounds > 0
+      ? Math.round((correctRounds / totalRounds) * 100)
+      : 0;
+    const earnedStars = getStarsForScore(correctnessPct);
     setTotalScore(rawScore);
     setScorePct(pct);
     setStarsState(earnedStars);
@@ -269,7 +287,7 @@ function SideCampaignScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId && levelId && pct >= 50) {
+      if (userId && levelId && earnedStars > 0) {
         // Only save progress when player passes — failed attempts don't count
         const { data: existing } = await supabase
           .from('side_campaign_progress')
@@ -310,7 +328,9 @@ function SideCampaignScreen() {
       useGameStore.getState().advanceUnifiedPosition(levelId);
     }
 
-    if (pct >= 50) {
+    // Pass / fail on stars rather than raw points so a 4/5 correct
+    // run with slow taps (low raw %) doesn't get marked as a fail.
+    if (earnedStars > 0) {
       setPhase('complete');
       // Log to recent activity feed so the home screen surfaces it
       const modeName = CHALLENGE_MODES[mode as keyof typeof CHALLENGE_MODES]?.name ?? mode;
@@ -328,14 +348,24 @@ function SideCampaignScreen() {
     } else {
       setRoundScores(prev => {
         const total = prev.reduce((a, b) => a + b, 0);
-        finishLevel(total);
+        // This branch is only used by the inline Speed Recall flow
+        // (not the embedded Game components), where each round score
+        // is the per-round raw points. Treat a round as "correct"
+        // when it cleared 60% of the per-round max, matching the
+        // SpeedRecallGame component's threshold so star awards stay
+        // consistent across both code paths.
+        const shapesPerRound = modeData?.rounds?.[0]?.shapes?.length ?? 5;
+        const perRoundMax = shapesPerRound * 100;
+        const threshold = Math.round(perRoundMax * 0.6);
+        const correctRounds = prev.filter((s) => s >= threshold).length;
+        finishLevel(total, correctRounds);
         return prev;
       });
     }
   }, [roundIdx, modeData, startRound, finishLevel]);
 
-  const handleModeComplete = useCallback((rawScore: number) => {
-    finishLevel(rawScore);
+  const handleModeComplete = useCallback((rawScore: number, correctRounds: number) => {
+    finishLevel(rawScore, correctRounds);
   }, [finishLevel]);
 
   // ─── Navigate to next level ───

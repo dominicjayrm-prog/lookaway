@@ -25,7 +25,14 @@ type Phase = 'sceneA' | 'blank' | 'sceneB' | 'feedback';
 
 interface Props {
   modeData: any;
-  onComplete: (totalScore: number) => void;
+  /** `totalScore` is the speed-weighted points sum used for display.
+   *  `correctRounds` is the count of rounds the player actually got
+   *  right regardless of speed, used downstream to award stars on
+   *  correctness alone (matching Classic mode). Without this split,
+   *  fast-but-wrong + slow-but-right players ended up with the same
+   *  star count, which is what the "4 of 5 right scored 1 star" bug
+   *  was tracking. */
+  onComplete: (totalScore: number, correctRounds: number) => void;
   modeColor: string;
   /**
    * Multiplier applied to Scene A viewing time. Solo defaults to
@@ -243,8 +250,13 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
       if (roundIdx + 1 < totalRounds) {
         setRoundIdx(prev => prev + 1);
       } else {
-        const total = [...roundScores, score].reduce((a, b) => a + b, 0);
-        onComplete(total);
+        const finalScores = [...roundScores, score];
+        const total = finalScores.reduce((a, b) => a + b, 0);
+        // Snap Match awards 10-100 for a correct tap (with a speed
+        // penalty) and 0 for a wrong tap, so any positive score means
+        // the player got that round right.
+        const correctRounds = finalScores.filter((s) => s > 0).length;
+        onComplete(total, correctRounds);
       }
     }, 1500);
   }, [phase, round, responseStartTime, roundIdx, totalRounds, roundScores, onComplete]);

@@ -24,7 +24,11 @@ type Phase = 'showing' | 'pause' | 'recall' | 'wrong' | 'round_done';
 
 interface Props {
   modeData: any;
-  onComplete: (totalScore: number) => void;
+  /** See SnapMatchGame for the rationale. `correctRounds` counts only
+   *  the rounds the player completed in full; partial sequences (got
+   *  some right then made a wrong tap) don't qualify, matching the
+   *  Classic-mode "did you get the answer right" semantics. */
+  onComplete: (totalScore: number, correctRounds: number) => void;
   modeColor: string;
   /** Keeps parent external round header in sync with internal state. */
   onRoundChange?: (roundIdx: number) => void;
@@ -158,9 +162,15 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
     if (roundIdx + 1 < totalRounds) {
       setRoundIdx(prev => prev + 1);
     } else {
-      onComplete(roundScores.reduce((a, b) => a + b, 0));
+      // A round is "correct" only when the player tapped every shape
+      // in the right order. The full-clear bonus (`shapes.length * 20
+      // + 50`) is what distinguishes a perfect round from a partial
+      // run, so we use it as the threshold.
+      const fullClearMin = shapes.length * 20 + 50;
+      const correctRounds = roundScores.filter((s) => s >= fullClearMin).length;
+      onComplete(roundScores.reduce((a, b) => a + b, 0), correctRounds);
     }
-  }, [roundIdx, totalRounds, roundScores, onComplete]);
+  }, [roundIdx, totalRounds, roundScores, shapes.length, onComplete]);
 
   if (!round) return null;
 

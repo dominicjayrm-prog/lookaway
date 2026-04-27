@@ -34,7 +34,13 @@ type Phase = 'viewing' | 'recall' | 'feedback' | 'round_done';
 
 interface Props {
   modeData: any;
-  onComplete: (totalScore: number) => void;
+  /** See SnapMatchGame for the rationale. Speed Recall awards
+   *  per-shape proximity points (0-100), so a "correct round" can't
+   *  be a single boolean. We treat a round as correct when the user
+   *  hit ~60% of the maximum possible (decent recall on most shapes),
+   *  which keeps stars tied to performance without punishing one
+   *  fumbled tap. */
+  onComplete: (totalScore: number, correctRounds: number) => void;
   modeColor: string;
   /**
    * Multiplier applied to the shape-viewing window. Solo gameplay
@@ -224,9 +230,18 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
     if (roundIdx + 1 < totalRounds) {
       setRoundIdx(prev => prev + 1);
     } else {
-      onComplete(roundScores.reduce((a, b) => a + b, 0));
+      // Speed Recall has variable shape counts per round, so the
+      // per-round max is `shapes.length * 100`. We don't have access
+      // to the historical per-round shape counts here, so use the
+      // current round's count as the divisor (rounds tend to share
+      // shape counts in a given mode definition). 60% of the max
+      // counts as a "correct round".
+      const perRoundMax = (shapes?.length ?? 5) * 100;
+      const threshold = Math.round(perRoundMax * 0.6);
+      const correctRounds = roundScores.filter((s) => s >= threshold).length;
+      onComplete(roundScores.reduce((a, b) => a + b, 0), correctRounds);
     }
-  }, [roundIdx, totalRounds, roundScores, onComplete]);
+  }, [roundIdx, totalRounds, roundScores, shapes, onComplete]);
 
   if (!round) return null;
 
