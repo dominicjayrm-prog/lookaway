@@ -1668,6 +1668,28 @@
         "music": "Música"
       }
     },
+    "names_and_faces": {
+      "memorise_instruction": "Conoce a los amigos de hoy",
+      "memorise_aria": "Memoriza a {count} amigos y sus nombres",
+      "mingle_caption": "Se están mezclando...",
+      "recall_instruction": "Empareja cada nombre con su cara",
+      "reveal_instruction": "¿Cómo te fue?",
+      "paired_count": "{paired} de {total} emparejados",
+      "submit": "Enviar",
+      "submit_aria": "Enviar tus parejas",
+      "select_blink_aria": "Selecciona a {name}, ahora mismo {state}",
+      "select_blink_state_unselected": "sin seleccionar",
+      "select_blink_state_selected": "seleccionado",
+      "select_blink_state_paired": "emparejado con {name}",
+      "name_chip_aria": "Empareja a {name} con el amigo seleccionado",
+      "tutorial_title": "Los amigos de Blink",
+      "tutorial_body": "Memoriza a cada amigo con su nombre. Se van a mezclar, y luego tendrás que emparejar cada nombre con su cara.",
+      "tutorial_step_memorise": "MEMORIZA",
+      "tutorial_step_recall": "EMPAREJA",
+      "tutorial_dismiss": "Entendido",
+      "tutorial_dismiss_aria": "Entendido, empezar el reto",
+      "friend_fallback": "Amigo/a {n}"
+    },
     "notifications": {
       "morning_1_title": "Tu reto diario te espera ✨",
       "morning_1_body": "Un puzzle pequeño. Dos minutos para tu mente más afilada.",
