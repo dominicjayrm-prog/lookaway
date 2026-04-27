@@ -829,17 +829,43 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (lastPlayDate === today) return; // Already played today
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const continuing = lastPlayDate === yesterday;
+
+      // SAFETY NET: do NOT silently nuke a non-zero streak to 1 when
+      // a multi-day gap is detected mid-play. The streak-recovery
+      // modal in the root layout handles those gaps explicitly (gems,
+      // shield, or let-reset). If we land here with a gap and a live
+      // streak it means recovery hasn't run yet (the modal fires on
+      // app launch + foreground; this branch can fire if the player
+      // somehow plays a level before the check resolves, e.g. cloud
+      // sync still in flight). Bailing without changing state means:
+      //   - streakCount stays at its real value
+      //   - lastPlayDate stays in the past so the next app launch's
+      //     gap detection still sees the missed days and the recovery
+      //     modal can fire
+      //   - the player isn't penalised for a sync race
+      // Pre-fix: this branch reset newStreak to 1 and overwrote
+      // lastPlayDate with today, silently destroying multi-day
+      // streaks and hiding the gap from the recovery flow forever.
+      if (!continuing && streakCount > 0 && lastPlayDate !== null) {
+        log.warn('streak', 'gap detected during incrementStreak; deferring to recovery flow', {
+          streakCount, lastPlayDate, today,
+        });
+        return;
+      }
+
+      // Brand-new player (streak === 0 or never played) starting today.
       const newStreak = continuing ? streakCount + 1 : 1;
       // Detect a BROKEN streak (prev run was ≥1 and gap > 1 day). The
       // player's rebuilding from scratch so every milestone row goes back
       // to unclaimed — re-climbing earns the rewards a second time.
+      // (After the safety net above, this branch only runs when
+      // streakCount === 0 so resetAllStreakRewards is a no-op in
+      // practice; left in for defensive symmetry with the previous
+      // semantics.)
       if (!continuing && streakCount > 0) {
         if (_authUserId) {
           resetAllStreakRewards(_authUserId);
         }
-        // Local mirror of claimed days — clear so the home card's "next
-        // reward" teaser and the rewards-screen timeline don't think
-        // Day 3/7/… are already claimed until cloud catches up.
         set({ streakMilestonesClaimed: [] });
       }
       set({
