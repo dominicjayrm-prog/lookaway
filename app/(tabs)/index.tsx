@@ -84,41 +84,47 @@ function ActivityIcon({ type, color }: { type: string; color: string }) {
   }
 }
 
+// `event.data` is typed as `Record<string, unknown>` because activity
+// events are persisted as JSON; narrow with these helpers at use sites
+// so the t() interpolation params get the string|number they expect.
+function num(v: unknown, fallback = 0): number { return typeof v === 'number' ? v : fallback; }
+function str(v: unknown, fallback = ''): string { return typeof v === 'string' ? v : fallback; }
+
 function getActivityDisplay(event: ActivityEvent): { iconColor: string; iconBg: string; main: string; sub: string } {
   const d = event.data;
   const time = getTimeAgo(event.timestamp);
   switch (event.type) {
     case 'level_complete': {
-      const title = (d.title as string) || t('home.activity.level_complete_title_default', { number: d.levelNumber });
-      const stars = d.stars as number;
+      const title = str(d.title) || t('home.activity.level_complete_title_default', { number: num(d.levelNumber) });
+      const stars = num(d.stars);
       return {
         iconColor: '#D4A012', iconBg: 'rgba(212,160,18,0.1)',
         main: t('home.activity.level_complete_main', { title }),
         sub: stars === 1
-          ? t('home.activity.level_complete_sub_one', { world: d.worldId, time })
-          : t('home.activity.level_complete_sub_many', { world: d.worldId, stars, time }),
+          ? t('home.activity.level_complete_sub_one', { world: num(d.worldId), time })
+          : t('home.activity.level_complete_sub_many', { world: num(d.worldId), stars, time }),
       };
     }
     case 'world_complete': {
-      const wid = typeof d.worldId === 'number' ? d.worldId : 0;
+      const wid = num(d.worldId);
       const key = WORLD_NAME_KEYS[wid - 1];
-      const localisedWorldName = key ? t(key) : (d.worldName as string) ?? '';
+      const localisedWorldName = key ? t(key) : str(d.worldName);
       return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.world_complete_main', { name: localisedWorldName }), sub: t('home.activity.world_complete_sub', { time }) };
     }
-    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: t('home.activity.streak_milestone_main', { days: d.days }), sub: t('home.activity.streak_milestone_sub', { gems: d.gems, time }) };
-    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.challenge_won_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
-    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: t('home.activity.challenge_lost_main', { opponent: d.opponent }), sub: t('home.activity.challenge_score', { mine: d.myScore, theirs: d.theirScore, time }) };
-    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: t('home.activity.friend_added_main', { username: d.username }), sub: t('home.activity.friend_added_sub', { time }) };
-    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.star_improved_main', { number: d.levelNumber }), sub: t('home.activity.star_improved_sub', { old: d.oldStars, new: d.newStars, time }) };
+    case 'streak_milestone': return { iconColor: '#FF9500', iconBg: 'rgba(255,149,0,0.1)', main: t('home.activity.streak_milestone_main', { days: num(d.days) }), sub: t('home.activity.streak_milestone_sub', { gems: num(d.gems), time }) };
+    case 'challenge_won': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.challenge_won_main', { opponent: str(d.opponent) }), sub: t('home.activity.challenge_score', { mine: num(d.myScore), theirs: num(d.theirScore), time }) };
+    case 'challenge_lost': return { iconColor: '#FF6B6B', iconBg: 'rgba(255,107,107,0.1)', main: t('home.activity.challenge_lost_main', { opponent: str(d.opponent) }), sub: t('home.activity.challenge_score', { mine: num(d.myScore), theirs: num(d.theirScore), time }) };
+    case 'friend_added': return { iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)', main: t('home.activity.friend_added_main', { username: str(d.username) }), sub: t('home.activity.friend_added_sub', { time }) };
+    case 'star_improved': return { iconColor: '#00B894', iconBg: 'rgba(0,184,148,0.1)', main: t('home.activity.star_improved_main', { number: num(d.levelNumber) }), sub: t('home.activity.star_improved_sub', { old: num(d.oldStars), new: num(d.newStars), time }) };
     case 'powerup_bought': return { iconColor: '#6C5CE7', iconBg: 'rgba(108,92,231,0.1)', main: t('home.activity.powerup_bought_main'), sub: t('home.activity.powerup_bought_sub', { time }) };
     case 'mode_complete': {
-      const modeName = (d.modeName as string) ?? t('home.activity.mode_fallback');
+      const modeName = str(d.modeName) || t('home.activity.mode_fallback');
       const hasPct = typeof d.scorePct === 'number';
       return {
         iconColor: '#0984E3', iconBg: 'rgba(9,132,227,0.1)',
         main: t('home.activity.mode_complete_main', { name: modeName }),
         sub: hasPct
-          ? t('home.activity.mode_complete_sub', { pct: d.scorePct, time })
+          ? t('home.activity.mode_complete_sub', { pct: num(d.scorePct), time })
           : t('home.activity.mode_complete_sub_no_score', { time }),
       };
     }

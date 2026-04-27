@@ -23,6 +23,7 @@ import Svg, { Polygon } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import { ALL_POWERUPS, iconForPowerUp } from '@/src/data/powerUps';
+import type { PowerUpInventory } from '@/src/store/gameStore';
 import { spacing } from '@/src/theme/spacing';
 
 function BoltIcon({ size = 18, color = '#6C5CE7' }: { size?: number; color?: string }) {
@@ -52,7 +53,7 @@ export function ModePowerUpBar({ mode, used, onUse, onBuyOut, disabled }: Props)
 
   if (disabled || modePowerUps.length === 0) return null;
 
-  const anyOwned = modePowerUps.some(p => (powerUps[p.id] ?? 0) > 0 || used[p.id]);
+  const anyOwned = modePowerUps.some(p => (powerUps[p.id as keyof PowerUpInventory] ?? 0) > 0 || used[p.id]);
 
   // Empty state: player doesn't own anything for this mode.
   if (!anyOwned) {
@@ -68,7 +69,7 @@ export function ModePowerUpBar({ mode, used, onUse, onBuyOut, disabled }: Props)
   return (
     <View style={styles.row}>
       {modePowerUps.map((def) => {
-        const count = powerUps[def.id] ?? 0;
+        const count = powerUps[def.id as keyof PowerUpInventory] ?? 0;
         const isUsed = !!used[def.id];
         const available = count > 0 && !isUsed;
 

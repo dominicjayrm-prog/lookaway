@@ -67,7 +67,7 @@ const STEPS = [
 export default function MastermindIntroScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
-  const t = isDark ? DARK : LIGHT;
+  const c = isDark ? DARK : LIGHT;
   const { user } = useAuth();
 
   // ── Phased entrance animations ──
@@ -99,7 +99,7 @@ export default function MastermindIntroScreen() {
   };
 
   return (
-    <SafeAreaView style={[st.safe, { backgroundColor: t.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[st.safe, { backgroundColor: c.bg }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={st.scroll}
         showsVerticalScrollIndicator={false}
@@ -114,13 +114,13 @@ export default function MastermindIntroScreen() {
           </View>
 
           {/* Gold glow behind Blink */}
-          <View style={[st.glowCircle, { backgroundColor: t.glowColor }]} />
+          <View style={[st.glowCircle, { backgroundColor: c.glowColor }]} />
           <AnimatedBlink expression="mastermind_boss" size={110} entrance="spring" entranceDelay={100} />
         </RNAnimated.View>
 
         <RNAnimated.View style={{ opacity: titleAnim, transform: [{ translateY: titleAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] }}>
-          <Text style={[st.title, { color: t.text }]}>{t('world_map.mastermind_title')}</Text>
-          <Text style={[st.subtitle, { color: t.textMid }]}>
+          <Text style={[st.title, { color: c.text}]}>{t('world_map.mastermind_title')}</Text>
+          <Text style={[st.subtitle, { color: c.textMid }]}>
             The final challenge. Are you ready?
           </Text>
         </RNAnimated.View>
@@ -131,8 +131,8 @@ export default function MastermindIntroScreen() {
           transform: [{ translateY: contentAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
         }]}>
           {/* Message card */}
-          <View style={[st.messageCard, { backgroundColor: t.cardBg, borderColor: t.cardBorder }]}>
-            <Text style={[st.messageText, { color: t.textMid }]}>
+          <View style={[st.messageCard, { backgroundColor: c.cardBg, borderColor: c.cardBorder }]}>
+            <Text style={[st.messageText, { color: c.textMid }]}>
               You&apos;ve conquered 5 worlds. But Mastermind plays by different rules, scenes change across multiple stages. Remember{' '}
               <Text style={{ fontWeight: '700', color: GOLD }}>when</Text> you saw it, not just what.
             </Text>
@@ -140,13 +140,13 @@ export default function MastermindIntroScreen() {
 
           {/* 3 numbered steps */}
           {STEPS.map((step, i) => (
-            <View key={i} style={[st.stepRow, { backgroundColor: t.stepBg }]}>
+            <View key={i} style={[st.stepRow, { backgroundColor: c.stepBg }]}>
               <View style={st.stepNumber}>
                 <Text style={st.stepNumberText}>{i + 1}</Text>
               </View>
               <View style={st.stepContent}>
-                <Text style={[st.stepTitle, { color: t.text }]}>{step.title}</Text>
-                <Text style={[st.stepDesc, { color: t.textMid }]}>{step.desc}</Text>
+                <Text style={[st.stepTitle, { color: c.text}]}>{step.title}</Text>
+                <Text style={[st.stepDesc, { color: c.textMid }]}>{step.desc}</Text>
               </View>
             </View>
           ))}
@@ -161,17 +161,17 @@ export default function MastermindIntroScreen() {
           <View style={st.statsRow}>
             <View style={st.statItem}>
               <Text style={[st.statNumber, { color: GOLD }]}>40</Text>
-              <Text style={[st.statLabel, { color: t.textLight }]}>levels</Text>
+              <Text style={[st.statLabel, { color: c.textLight }]}>levels</Text>
             </View>
-            <View style={[st.statDivider, { backgroundColor: t.cardBorder }]} />
+            <View style={[st.statDivider, { backgroundColor: c.cardBorder }]} />
             <View style={st.statItem}>
               <Text style={[st.statNumber, { color: GOLD }]}>3</Text>
-              <Text style={[st.statLabel, { color: t.textLight }]}>stages</Text>
+              <Text style={[st.statLabel, { color: c.textLight }]}>stages</Text>
             </View>
-            <View style={[st.statDivider, { backgroundColor: t.cardBorder }]} />
+            <View style={[st.statDivider, { backgroundColor: c.cardBorder }]} />
             <View style={st.statItem}>
               <Text style={[st.statNumber, { color: GOLD }]}>{'\u221E'}</Text>
-              <Text style={[st.statLabel, { color: t.textLight }]}>brain power</Text>
+              <Text style={[st.statLabel, { color: c.textLight }]}>brain power</Text>
             </View>
           </View>
 

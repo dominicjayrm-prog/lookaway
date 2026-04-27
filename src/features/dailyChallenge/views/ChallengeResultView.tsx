@@ -26,6 +26,7 @@ import { getModeDisplayName } from '../modeRotation';
 import { formatHumanDate } from '../formatDate';
 import { ShareCardImage, SHARE_CARD_SIZE, type ModeVisual } from './ShareCardImage';
 import { captureAndShareCard } from './captureAndShare';
+import { sounds } from '@/src/lib/sounds';
 
 interface Props {
   mode: DailyChallengeModeId;
@@ -79,6 +80,12 @@ export function ChallengeResultView({
 
   useEffect(() => {
     RNAnimated.timing(fadeIn, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+    // Capstone audio — celebration for fresh strong scores, gentler
+    // levelComplete otherwise. Skipped on alreadyPlayed re-views so
+    // the player isn't re-celebrated for opening their old result.
+    if (!alreadyPlayed) {
+      sounds.play(score >= 80 ? 'celebration' : 'levelComplete');
+    }
     // Count-up animation, ease-out cubic, ~1.1s.
     const start = Date.now();
     const dur = 1100;
@@ -89,7 +96,9 @@ export function ChallengeResultView({
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }, [fadeIn, score]);
+    // Include alreadyPlayed in deps so a re-mount that flips fresh →
+    // re-view doesn't accidentally fire the celebration capstone again.
+  }, [fadeIn, score, alreadyPlayed]);
 
   const handleShare = async () => {
     if (sharing) return;

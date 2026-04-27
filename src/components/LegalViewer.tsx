@@ -56,7 +56,6 @@ export function LegalViewer({ url, title }: LegalViewerProps) {
         {Platform.OS === 'web' ? (
           // Plain iframe on web — react-native-webview is native-only.
           // Stretch to fill the remaining vertical space below the header.
-          // @ts-expect-error — iframe is a DOM element on RN-web
           <iframe
             src={url}
             title={title}

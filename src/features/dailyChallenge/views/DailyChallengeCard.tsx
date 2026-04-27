@@ -51,6 +51,7 @@ export function DailyChallengeCard() {
   const router = useRouter();
   const streakCount = useGameStore((s) => s.streakCount);
   const lastPlayDate = useGameStore((s) => s.lastPlayDate);
+  const lastDailyPlayedDate = useGameStore((s) => s.lastDailyPlayedDate);
   const userId = useGameStore((s) => s._authUserId);
 
   const [state, setState] = useState<CardState>({ kind: 'loading' });
@@ -69,10 +70,30 @@ export function DailyChallengeCard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Optimistic done-state from the local cache. If the player
+      // submitted today, lastDailyPlayedDate === todayIso and we
+      // can short-circuit straight to the played render without
+      // waiting for Supabase. Prevents the "card flips back to
+      // active when I switch tabs" regression where a transient
+      // Supabase read returns played=false even though the row
+      // exists. Cloud is still queried below to populate the
+      // score/time fields and act as the cross-device authority.
+      if (lastDailyPlayedDate === todayIso) {
+        setState((prev) => prev.kind === 'played'
+          ? prev
+          : { kind: 'played', result: { mode: todayMode, score: 0, timeSeconds: 0, shareCardEmojiBlocks: '', challengeDate: todayIso } },
+        );
+      }
       const { played, result } = await hasPlayedToday();
       if (cancelled) return;
       if (played && result) {
         setState({ kind: 'played', result });
+      } else if (lastDailyPlayedDate === todayIso) {
+        // Cloud read returned played:false but the local cache says
+        // we played today — almost certainly a transient session/RLS
+        // hiccup. Keep the played state we already optimistically set
+        // above. The next minute-tick will retry.
+        return;
       } else {
         // Streak-alert state requires:
         //   - user has a 2+ day streak
@@ -107,7 +128,7 @@ export function DailyChallengeCard() {
       }
     })();
     return () => { cancelled = true; };
-  }, [userId, streakCount, lastPlayDate, todayMode, todayIso, tickKey]);
+  }, [userId, streakCount, lastPlayDate, lastDailyPlayedDate, todayMode, todayIso, tickKey]);
 
   // Minute-tick. Drives both the countdown text + the UTC midnight
   // state flip from "played" back to "not played" without needing
@@ -149,7 +170,16 @@ export function DailyChallengeCard() {
         onPress={handleOpen}
         style={({ pressed }) => [
           s.card,
-          { backgroundColor: colors.card, borderColor: colors.border },
+          s.cardCompleted,
+          {
+            backgroundColor: colors.card,
+            // Gold ring around the completed card — earned look that
+            // visually signals "this is done" without leaning on the
+            // checkmark alone. Slightly soft gold so it sits on the
+            // off-white background without screaming.
+            borderColor: colors.gold,
+            shadowColor: colors.gold,
+          },
           pressed && { opacity: 0.92 },
         ]}
         accessibilityRole="button"
@@ -225,6 +255,16 @@ const s = StyleSheet.create({
     borderRadius: 16, borderWidth: 1, padding: 16,
     shadowColor: '#000', shadowOpacity: 0.04, shadowOffset: { width: 0, height: 2 }, shadowRadius: 10,
     elevation: 1,
+  },
+  // Gold ring + soft gold shadow when the daily is done. Slightly
+  // bumped border weight (1.5) so the ring reads even on small
+  // screens without being heavy-handed.
+  cardCompleted: {
+    borderWidth: 1.5,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   cardActive: {
     borderRadius: 16, padding: 18, overflow: 'hidden',

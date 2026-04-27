@@ -604,11 +604,15 @@ const s = StyleSheet.create({
   welcomeMetaText: { fontSize: 12, fontWeight: '600' },
 
   primaryBtn: {
-    width: '100%', maxWidth: 320, paddingVertical: 16, borderRadius: 14,
+    // Add horizontal padding so text doesn't touch the rounded edges
+    // of the gradient pill — without it, longer locale strings like
+    // "Unlock Full Profile" sat flush with the button's right curve
+    // on iOS and read as clipped.
+    width: '100%', maxWidth: 320, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
     shadowColor: ACCENT, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 4 }, shadowRadius: 14, elevation: 5,
   },
-  primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
 
   // Round
   roundRoot: { flex: 1, paddingHorizontal: 20, paddingTop: 8 },

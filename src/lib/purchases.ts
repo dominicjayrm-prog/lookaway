@@ -154,8 +154,14 @@ export async function purchaseSubscription(
       log.warn('purchases', `no ${plan} package in current offering`);
       return { result: 'error', isActive: false, periodType: 'unknown' };
     }
-    const { customerInfo } = await withTimeout(Purchases.purchasePackage(pkg), PURCHASE_TIMEOUT_MS, 'purchasePackage');
-    const plusEnt = customerInfo.entitlements?.active?.['plus'];
+    // Purchases.purchasePackage's typings come back as `unknown` here
+    // because the SDK is loaded via an opaque getPurchases() proxy that
+    // hides the real types. Cast just enough to read the entitlement
+    // path we actually use; the runtime shape is locked by RevenueCat.
+    const purchaseResult = await withTimeout(Purchases.purchasePackage(pkg), PURCHASE_TIMEOUT_MS, 'purchasePackage') as {
+      customerInfo: { entitlements?: { active?: Record<string, { periodType?: string } | undefined> } };
+    };
+    const plusEnt = purchaseResult.customerInfo.entitlements?.active?.['plus'];
     const isActive = !!plusEnt;
     const periodType = normalisePeriodType(plusEnt?.periodType);
     log.breadcrumb('purchases', 'subscription purchased', { plan, isActive, periodType });

@@ -101,10 +101,13 @@ class SoundManager {
     } catch {}
 
     try {
+      // expo-audio's AudioMode no longer accepts shouldDuckAndroid;
+      // ducking is handled automatically when other apps request
+      // focus. We keep the call for the silent-mode + background
+      // prefs that are still honoured.
       await setAudioModeAsync({
         playsInSilentMode: false,
         shouldPlayInBackground: false,
-        shouldDuckAndroid: true,
       });
     } catch {}
 

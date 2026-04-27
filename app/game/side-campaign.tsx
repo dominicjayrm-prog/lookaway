@@ -127,7 +127,7 @@ function SideCampaignScreen() {
 
   const handleSrUsePowerUp = useCallback((id: string) => {
     if (srUsedPowerUps[id]) return;
-    if ((powerUpCounts[id] ?? 0) <= 0) { setSrBuyPopupId(id as PowerUpId); return; }
+    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setSrBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setSrUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
