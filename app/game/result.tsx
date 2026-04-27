@@ -297,15 +297,18 @@ function ResultScreen() {
   }, [processed, level, passed, stars, score, recordLevelComplete, addStars, incrementStreak, addGems, levelProgress, celeb, worldId, levelNum, isLastLevelOfWorld]);
 
   // ── Navigation handlers ──
+  // Single navigation events only. The previous `dismissAll() +
+  // replace()` pattern fired two transitions in the same JS tick,
+  // which on iOS produced a "spring glitch" as the pop animation
+  // overlapped with the new screen's enter animation. A single
+  // `replace` swaps `/game/result` for the destination cleanly using
+  // the result screen's own fade animation. Stack cleanup is implicit
+  // because result was itself reached via a replace from /game/[levelId],
+  // so the stack is just [/(tabs), /game/result] when these fire.
   const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
-  const handleNextWorld = () => { resetGame(); router.dismissAll(); router.push(`/world/${nextWorldId}`); };
-  // Back to Map now returns to the unified Journey tab rather than the
-  // legacy Classic world map. The old flow pushed `/world/{worldId}`
-  // onto the stack, which meant pressing back from the world map
-  // unwound all the way to the level Ready screen — confusing. Jumping
-  // to the tabs with replace guarantees a clean exit.
-  const handleBackToMap = () => { resetGame(); router.dismissAll(); router.replace('/(tabs)/journey'); };
-  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else { router.dismissAll(); router.replace('/(tabs)/journey'); } };
+  const handleNextWorld = () => { resetGame(); if (nextWorldId) router.replace(`/world/${nextWorldId}`); };
+  const handleBackToMap = () => { resetGame(); router.replace('/(tabs)/journey'); };
+  const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else router.replace('/(tabs)/journey'); };
 
   let gemText: string | null = null;
   if (passed && gemsEarned > 0) {

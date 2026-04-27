@@ -77,11 +77,18 @@ const LEADERBOARD_COLUMNS =
   'id, username, avatar_color, total_stars, highest_world, unified_position, avatar_url, equipped_frame, equipped_expression';
 
 // ── Global leaderboard ───────────────────────────────────────────────
+// `total_stars > 0` filter keeps the global board clean: brand-new
+// accounts (test devices, churned signups, cancelled trials) all sit
+// at 0 stars and were diluting the board with rows nobody wants to
+// see. Ranking still feels honest because the user only enters the
+// board the moment they earn their first star, which mirrors how
+// every competitive game works.
 export async function getGlobalLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from('profiles')
     .select(LEADERBOARD_COLUMNS)
     .not('username', 'is', null)
+    .gt('total_stars', 0)
     .order('total_stars', { ascending: false })
     .limit(limit);
 
@@ -145,6 +152,11 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
 }
 
 // ── My rank on global leaderboard ────────────────────────────────────
+// Mirrors the same `total_stars > 0` filter as `getGlobalLeaderboard`
+// so the rank count matches what the user sees on screen. Without
+// this, a user with 5 stars could be told "rank 1247" while the
+// visible board only has ~200 ranked entries because the count
+// included thousands of 0-star ghost accounts.
 export async function getMyGlobalRank(userId: string): Promise<number | null> {
   const { data: me } = await supabase
     .from('profiles')
@@ -153,6 +165,9 @@ export async function getMyGlobalRank(userId: string): Promise<number | null> {
     .single();
 
   if (!me) return null;
+  // Users with 0 stars aren't on the board at all (they haven't
+  // earned an entry yet), so we don't compute a rank for them.
+  if ((me.total_stars ?? 0) <= 0) return null;
 
   const { count, error } = await supabase
     .from('profiles')
