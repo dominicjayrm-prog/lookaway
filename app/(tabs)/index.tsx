@@ -361,6 +361,13 @@ function PlayTab() {
   // flow vs other entry points (out-of-lives, stats space, shop).
   // Only post-signup dismissals chain to the discount paywall.
   const postSignupPaywallActive = useRef(false);
+  // Defers the spotlight tutorial until the post-signup paywall flow
+  // (regular paywall + optional discount paywall) has finished. The
+  // tutorial would otherwise fire 800ms after auth and stack on top of
+  // the paywall card, which produced the "1 OF 5 - Start here" tooltip
+  // floating over the Subscribe button. Default true (existing users
+  // never queued a paywall, so the tour fires immediately).
+  const [postSignupPaywallDone, setPostSignupPaywallDone] = useState(true);
 
   // Post-signup paywall: onboarding dropped a flag for us to surface
   // the paywall the first time the user lands on home with an active
@@ -375,6 +382,9 @@ function PlayTab() {
         const flag = await AsyncStorage.getItem('blanked_show_paywall_after_signup');
         if (cancelled || flag !== 'true') return;
         await AsyncStorage.removeItem('blanked_show_paywall_after_signup');
+        // Block the tutorial trigger while the paywall flow is live.
+        // Cleared in every paywall-closed code path below.
+        setPostSignupPaywallDone(false);
         // Tiny delay so home renders before the paywall animates over
         // it. Without this the paywall covers the home tab before any
         // greeting has a chance to show, which is jarring.
@@ -425,6 +435,14 @@ function PlayTab() {
       }
       if (cancelled) return;
       if (!seen) {
+        // Defer the tour until the post-signup paywall flow has run
+        // its course. New users came here from the blurred-profile
+        // CTA, which means a paywall is queued; firing the spotlight
+        // overlay 800ms after auth would land it on top of the
+        // SubscriptionPaywall ("1 OF 5 - Start here" floating over
+        // the Subscribe button). The post-signup flag re-enables this
+        // gate via setPostSignupPaywallDone(true) on every exit path.
+        if (!postSignupPaywallDone) return;
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
         return;
       }
@@ -446,7 +464,11 @@ function PlayTab() {
       }, 2500);
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+    // postSignupPaywallDone is a dependency because the effect's
+    // tutorial branch reads it and bails when paywalls are still up.
+    // Re-running once the flag flips lets the tour show after the
+    // user dismisses / subscribes.
+  }, [user?.id, postSignupPaywallDone]);
 
   useEffect(() => {
     if (!showTutorial) return;
@@ -731,16 +753,28 @@ function PlayTab() {
           // Post-signup flow chains to the discount paywall once per
           // device. Other entry points (out-of-lives, stats space)
           // just close.
-          if (!postSignupPaywallActive.current) return;
+          if (!postSignupPaywallActive.current) {
+            // Non-post-signup paywall closing has no effect on the
+            // tutorial gate. Existing users never set the flag in the
+            // first place; setting it again is a harmless no-op.
+            setPostSignupPaywallDone(true);
+            return;
+          }
           postSignupPaywallActive.current = false;
           let alreadySeen = false;
           try {
             alreadySeen = (await AsyncStorage.getItem('blanked_discount_paywall_seen')) === 'true';
           } catch {}
-          if (alreadySeen) return;
+          if (alreadySeen) {
+            // No discount paywall to chain to. Paywall flow ends here,
+            // unblock the tutorial.
+            setPostSignupPaywallDone(true);
+            return;
+          }
           try { await AsyncStorage.setItem('blanked_discount_paywall_seen', 'true'); } catch {}
           // Defer briefly so the regular paywall's dismiss animation
-          // completes before the discount paywall slides in.
+          // completes before the discount paywall slides in. Tutorial
+          // stays gated until that paywall closes too.
           setTimeout(() => setShowDiscountPaywall(true), 280);
         }}
         onSubscribe={async (plan: 'monthly' | 'yearly') => {
@@ -749,6 +783,10 @@ function PlayTab() {
           // Route through the real StoreKit purchase so the home-tab
           // entry path matches shop.tsx / stats-space.tsx.
           const { result, periodType } = await purchaseSubscription(plan);
+          // Either way the paywall is closed: success unlocks Plus,
+          // cancel/error returns to home. Either way the tutorial
+          // should be allowed to fire afterwards.
+          setPostSignupPaywallDone(true);
           if (result !== 'success') return;
           const store = useGameStore.getState();
           store.activatePlus(periodType);
@@ -763,13 +801,17 @@ function PlayTab() {
       />
       <DiscountPaywall
         visible={showDiscountPaywall}
-        onDismiss={() => setShowDiscountPaywall(false)}
+        onDismiss={() => { setShowDiscountPaywall(false); setPostSignupPaywallDone(true); }}
         onSubscribe={async () => {
           setShowDiscountPaywall(false);
           // Discount offer only ever applies to the monthly plan.
           // RevenueCat applies the configured intro offer at purchase
           // time when the Apple ID is eligible.
           const { result, periodType } = await purchaseSubscription('monthly');
+          // Paywall flow ends here regardless of purchase outcome.
+          // Releases the tutorial gate so the spotlight tour fires
+          // next render cycle.
+          setPostSignupPaywallDone(true);
           if (result !== 'success') return;
           const store = useGameStore.getState();
           store.activatePlus(periodType);
