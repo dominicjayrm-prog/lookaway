@@ -1147,7 +1147,7 @@
     },
     "share_card": {
       "subtitle_eyebrow": "DAILY CHALLENGE",
-      "footer": "blanked.app"
+      "footer": "playblanked.com"
     },
     "share_text": {
       "header": "Blanked Daily — {date}",
@@ -1197,6 +1197,28 @@
         "sports": "Sports",
         "music": "Music"
       }
+    },
+    "names_and_faces": {
+      "memorise_instruction": "Meet today's friends",
+      "memorise_aria": "Memorise {count} friends and their names",
+      "mingle_caption": "They're mingling...",
+      "recall_instruction": "Match each name to its face",
+      "reveal_instruction": "How did you do?",
+      "paired_count": "{paired} of {total} paired",
+      "submit": "Submit",
+      "submit_aria": "Submit your matches",
+      "select_blink_aria": "Select {name}, currently {state}",
+      "select_blink_state_unselected": "unselected",
+      "select_blink_state_selected": "selected",
+      "select_blink_state_paired": "paired with {name}",
+      "name_chip_aria": "Pair {name} with the selected friend",
+      "tutorial_title": "Meet Blink's Friends",
+      "tutorial_body": "Memorise each friend with their name. They'll mingle around, then you'll match each name back to its face.",
+      "tutorial_step_memorise": "MEMORISE",
+      "tutorial_step_recall": "MATCH",
+      "tutorial_dismiss": "Got it",
+      "tutorial_dismiss_aria": "Got it, start the challenge",
+      "friend_fallback": "Friend {n}"
     },
     "notifications": {
       "morning_1_title": "Your Daily Challenge is ready ✨",

@@ -29,10 +29,10 @@ const MODE_EMOJI: Record<DailyChallengeModeId, string> = {
   the_witness: '🕵️',
 };
 
-// Apple/Google Play share-link gets stamped into builds; for now
-// keep the marketing site URL since it deep-links the right store
-// listing per platform.
-const PLAY_URL = 'https://blanked.app';
+// Marketing site that deep-links to the App Store / Google Play
+// listing per platform. Was 'blanked.app' in v1; the canonical
+// marketing domain is playblanked.com.
+const PLAY_URL = 'https://playblanked.com';
 
 export interface ShareCardArgs {
   mode: DailyChallengeModeId;
