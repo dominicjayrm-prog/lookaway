@@ -22,7 +22,9 @@ type Phase = 'chaos' | 'question' | 'feedback';
 
 interface Props {
   modeData: any;
-  onComplete: (totalScore: number) => void;
+  /** See SnapMatchGame for the rationale. `correctRounds` lets the
+   *  parent award stars based on correctness instead of raw points. */
+  onComplete: (totalScore: number, correctRounds: number) => void;
   modeColor: string;
   /**
    * Multiplier applied to the chaos window. Solo = 1.0, challenge
@@ -183,7 +185,11 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
       if (roundIdx + 1 < totalRounds) {
         setRoundIdx(prev => prev + 1);
       } else {
-        onComplete([...roundScores, score].reduce((a, b) => a + b, 0));
+        const finalScores = [...roundScores, score];
+        // Round score is 100 for the right count, 0 for the wrong
+        // count, so 100s tally the correct rounds.
+        const correctRounds = finalScores.filter((s) => s >= 100).length;
+        onComplete(finalScores.reduce((a, b) => a + b, 0), correctRounds);
       }
     }, 1500);
   }, [phase, round, roundIdx, totalRounds, roundScores, onComplete]);

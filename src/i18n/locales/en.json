@@ -1138,7 +1138,7 @@
     "nothing_title": "Nothing to restore",
     "nothing_body": "No previous purchases were found for this Apple ID.",
     "discount": {
-      "title": "Wait — special offer",
+      "title": "Wait, special offer",
       "subtitle": "First month at half price",
       "expires_in": "Offer expires in {time}",
       "expired_pill": "Offer expired",
@@ -1369,6 +1369,7 @@
       "results": {
         "score_label": "YOUR MEMORY SCORE",
         "percentile": "Top {topPct}% of players",
+        "starting_point": "Your starting point",
         "brain_type_label": "BRAIN TYPE",
         "round_breakdown": "Round breakdown",
         "round_label": "Round {number}",
@@ -1385,7 +1386,7 @@
         },
         "detail_hunter": {
           "name": "Detail Hunter",
-          "tagline": "Colours, shapes, the small stuff — your eyes lock onto it."
+          "tagline": "Colours, shapes, the small stuff. Your eyes lock onto it."
         },
         "deep_memory": {
           "name": "Deep Memory",
@@ -1393,14 +1394,18 @@
         },
         "balanced_mind": {
           "name": "Balanced Mind",
-          "tagline": "Strong across the board — no glaring weakness, plenty to sharpen."
+          "tagline": "Solid across the board, with plenty of room to sharpen."
+        },
+        "untapped_potential": {
+          "name": "Untapped Potential",
+          "tagline": "Lots to gain here. The good news: memory is one of the most trainable things your brain does."
         }
       },
       "profile": {
         "title": "Your full brain profile",
         "sub": "Personalised for {brainType}",
         "strengths_title": "Your strengths",
-        "strengths_body": "Detailed analysis of where your memory shines — and how to lean into it.",
+        "strengths_body": "Detailed analysis of where your memory shines, and how to lean into it.",
         "weaknesses_title": "What to train",
         "weaknesses_body": "Honest breakdown of which categories tripped you up and why.",
         "training_title": "Your 7-day plan",
@@ -1408,7 +1413,7 @@
         "age_title": "Age comparison",
         "age_body": "How your memory compares to others in your age group, with full percentile data.",
         "unlock_title": "Unlock your full profile",
-        "unlock_sub": "Get personalised insights, your training plan, and 2× gems on every level — only with Blanked+.",
+        "unlock_sub": "Get personalised insights, your training plan, and 2× gems on every level. Only with Blanked+.",
         "unlock_cta": "Unlock Full Profile"
       }
     }

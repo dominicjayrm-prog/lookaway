@@ -204,7 +204,7 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
             {streak > 1 && <Text style={st.headerStreak}>{'\uD83D\uDD25'} {streak}-day login streak</Text>}
           </View>
 
-          {/* 30-day grid — 6 columns × 5 rows. Legendary days (7, 14, 30)
+          {/* 30-day grid: 6 columns by 5 rows. Legendary days (7, 14, 30)
               keep a gold ring + full opacity even when future, so the
               player can spot the milestone payouts at a glance. */}
           <View style={st.grid}>
@@ -213,31 +213,55 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
               var isPast = i + 1 < rewardDay;
               var isFuture = i + 1 > rewardDay;
               var isLegendary = r.type === 'legendary';
-              var ringColor = isLegendary
-                ? '#D4A012'
-                : isToday ? '#6C5CE7'
-                : isPast ? colors.correct + '30'
-                : colors.border;
+              // Visual hierarchy: today is the loudest cell on screen
+              // (purple ring + glow shadow + 100% opacity). Past
+              // legendaries keep a strong gold ring (just earned).
+              // Future legendaries get a thin low-alpha gold ring so
+              // they hint at the milestone without competing with
+              // today, which was the original "day 2 vs day 7/14/30
+              // looked equally highlighted" bug.
+              var ringColor: string;
+              var borderWidth: number;
+              if (isToday) { ringColor = '#6C5CE7'; borderWidth = 2.5; }
+              else if (isLegendary && isPast) { ringColor = '#D4A012'; borderWidth = 2; }
+              else if (isLegendary && isFuture) { ringColor = '#D4A012' + '55'; borderWidth = 1; }
+              else if (isPast) { ringColor = colors.correct + '30'; borderWidth = 1; }
+              else { ringColor = colors.border; borderWidth = 1; }
+              var bg: string;
+              if (isToday) bg = '#6C5CE7' + '18';
+              else if (isLegendary && isPast) bg = '#D4A012' + '20';
+              else if (isLegendary && isFuture) bg = '#D4A012' + '0E';
+              else if (isPast) bg = colors.correctSoft;
+              else bg = colors.surface;
               return (
                 <View key={i} style={[st.dayCell, {
-                  backgroundColor: isLegendary
-                    ? '#D4A012' + '18'
-                    : isToday ? '#6C5CE7' + '15'
-                    : isPast ? colors.correctSoft
-                    : colors.surface,
-                  borderWidth: isToday || isLegendary ? 2 : 1,
+                  backgroundColor: bg,
+                  borderWidth,
                   borderColor: ringColor,
-                  opacity: isFuture && !isLegendary ? 0.55 : 1,
+                  // Future-day muting: legendaries stay readable
+                  // (0.85) but don't outshine today; non-legendary
+                  // future days fade further into the grid.
+                  opacity: isToday ? 1 : isFuture ? (isLegendary ? 0.85 : 0.55) : 1,
+                  // Today lifts off the grid with a soft purple
+                  // shadow even before any motion is added.
+                  ...(isToday ? {
+                    shadowColor: '#6C5CE7',
+                    shadowOpacity: 0.35,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    elevation: 4,
+                  } : null),
                 }]}>
                   <Text style={[st.dayNumber, {
-                    color: isLegendary ? '#D4A012'
-                      : isToday ? '#6C5CE7'
+                    color: isToday ? '#6C5CE7'
+                      : isLegendary && isPast ? '#D4A012'
+                      : isLegendary && isFuture ? '#D4A012' + 'AA'
                       : isPast ? colors.correct
                       : colors.textMid,
                   }]}>
                     {isPast ? '\u2713' : `D${i + 1}`}
                   </Text>
-                  <Text style={[st.dayIcon, { opacity: isFuture && !isLegendary ? 0.55 : 1 }]}>{r.icon}</Text>
+                  <Text style={[st.dayIcon, { opacity: isFuture && !isLegendary ? 0.55 : isFuture && isLegendary ? 0.85 : 1 }]}>{r.icon}</Text>
                 </View>
               );
             })}

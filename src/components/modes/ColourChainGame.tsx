@@ -14,7 +14,9 @@ type TileState = 'hidden' | 'correct' | 'wrong' | 'revealed';
 
 interface Props {
   modeData: any;
-  onComplete: (totalScore: number) => void;
+  /** See SnapMatchGame for the rationale. `correctRounds` lets the
+   *  parent award stars based on correctness instead of raw points. */
+  onComplete: (totalScore: number, correctRounds: number) => void;
   modeColor: string;
   /**
    * Multiplier on the memorise phase. Solo = 1.0, challenge passes
@@ -155,7 +157,13 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
           setRecallIdx(prev => prev + 1);
           setPhase('recall');
         } else {
-          onComplete([...scores, 100].reduce((a, b) => a + b, 0));
+          {
+            const finalScores = [...scores, 100];
+            // Round score is 100 for full clear, 0 for any miss, so
+            // the count of 100s is the count of correct rounds.
+            const correctRounds = finalScores.filter((s) => s >= 100).length;
+            onComplete(finalScores.reduce((a, b) => a + b, 0), correctRounds);
+          }
         }
       }, 1200);
     } else {
@@ -176,7 +184,11 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
             setRecallIdx(prev => prev + 1);
             setPhase('recall');
           } else {
-            onComplete([...scores, 0].reduce((a, b) => a + b, 0));
+            {
+              const finalScores = [...scores, 0];
+              const correctRounds = finalScores.filter((s) => s >= 100).length;
+              onComplete(finalScores.reduce((a, b) => a + b, 0), correctRounds);
+            }
           }
         }, 1100);
         timerRef.current = inner;

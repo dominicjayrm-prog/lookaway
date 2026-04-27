@@ -149,7 +149,14 @@ function ChallengeModeScreen() {
     }
   }, [roundIdx, modeData, roundScores, dbChallengeId, userId, mode, action, friendId, routeToResult]);
 
-  const handleModeComplete = useCallback((rawScore: number) => {
+  // The mode game components now report `correctRounds` alongside
+  // `rawScore` so callers can grade on correctness instead of speed-
+  // weighted points. Friend Challenges currently keep their existing
+  // points-based scoring for the head-to-head comparison (changing
+  // that would break in-flight challenges that were created with the
+  // old scoring), so the value is accepted but unused here. Same-mode
+  // wiring keeps the type contract uniform across all caller sites.
+  const handleModeComplete = useCallback((rawScore: number, _correctRounds: number) => {
     const pct = getScorePercentage(mode ?? 'classic', rawScore);
     setTotalScore(rawScore); setPhase('complete');
     // Log to recent activity feed so the home screen surfaces it

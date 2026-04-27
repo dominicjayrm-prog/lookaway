@@ -20,18 +20,25 @@ export interface RoundResult {
 }
 
 export interface OnboardingScoreOutput {
-  /** 0–100 memory score for the headline number on the results screen. */
+  /** 0-100 memory score for the headline number on the results screen. */
   score: number;
-  /** Generous percentile — users always feel above-average if they
-   *  scored at all. e.g. score 80 → "Top 15%". */
-  percentileTopPct: number;
+  /** Generous percentile when applicable. Null when the score is so
+   *  low that "Top X%" copy would feel dishonest, in which case the
+   *  results screen falls back to "Your starting point" framing. */
+  percentileTopPct: number | null;
   /** Headline brain-type archetype derived from which rounds the user
    *  nailed. Drives copy on the results + blurred-profile screens. */
   brainType: BrainType;
 }
 
 export interface BrainType {
-  id: 'quick_recall' | 'pattern_spotter' | 'detail_hunter' | 'deep_memory' | 'balanced_mind';
+  id:
+    | 'quick_recall'
+    | 'pattern_spotter'
+    | 'detail_hunter'
+    | 'deep_memory'
+    | 'balanced_mind'
+    | 'untapped_potential';
   /** Localisation key for the displayed name (without the i18n.t() call). */
   nameKey: string;
   /** Localisation key for the one-line tagline shown under the name. */
@@ -64,6 +71,15 @@ const BRAIN_TYPES: Record<BrainType['id'], BrainType> = {
     nameKey: 'onboarding.test.brain_type.balanced_mind.name',
     taglineKey: 'onboarding.test.brain_type.balanced_mind.tagline',
   },
+  // Honest but not crushing: when correctCount === 0 we shouldn't
+  // tell them they're "balanced" with "no glaring weakness". This
+  // archetype acknowledges they got every round wrong while framing
+  // it as "lots to gain by training" rather than "you're terrible".
+  untapped_potential: {
+    id: 'untapped_potential',
+    nameKey: 'onboarding.test.brain_type.untapped_potential.name',
+    taglineKey: 'onboarding.test.brain_type.untapped_potential.tagline',
+  },
 };
 
 /** Compute the headline 0–100 memory score from 3 round results.
@@ -89,16 +105,22 @@ export function computeOnboardingScore(rounds: RoundResult[]): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-/** Generous percentile lookup. Always favours the user — ego-feeding
- *  copy converts better than clinical accuracy. */
-export function getPercentileTop(score: number): number {
+/** Generous percentile lookup. Skews favourable on real scores so the
+ *  copy reads like a flattering finish, while ultra-low scores fall
+ *  through to a value the results screen renders as "starting point"
+ *  copy instead of a misleading "Top X% of players" pill (see
+ *  `percentileTopPct === null` branch on the results screen). */
+export function getPercentileTop(score: number): number | null {
   if (score >= 90) return 5;
   if (score >= 80) return 12;
   if (score >= 70) return 22;
   if (score >= 55) return 35;
   if (score >= 40) return 48;
   if (score >= 25) return 60;
-  return 72;
+  // Below 25 the user got effectively nothing right. Returning null
+  // tells the results screen to show "Your starting point" pill copy
+  // rather than a flattering top-percentile claim.
+  return null;
 }
 
 /** Map round-by-round performance to a flattering brain-type archetype.
@@ -106,21 +128,25 @@ export function getPercentileTop(score: number): number {
  *  later-round success for "Deep Memory", and falls through to
  *  "Balanced Mind" when nothing else stands out. */
 export function deriveBrainType(rounds: RoundResult[]): BrainType {
-  if (rounds.length < 3) return BRAIN_TYPES.balanced_mind;
+  if (rounds.length < 3) return BRAIN_TYPES.untapped_potential;
   const [r1, r2, r3] = rounds;
   const correctCount = rounds.filter((r) => r.correct).length;
   const avgReaction = rounds.reduce((s, r) => s + r.reactionMs, 0) / rounds.length;
 
-  // Got the hardest one (round 3) — Deep Memory beats everything else.
+  // Got everything wrong: don't pretend they're "balanced". Honest
+  // archetype that frames the score as room to grow. Caught FIRST so
+  // it can never fall through to balanced_mind.
+  if (correctCount === 0) return BRAIN_TYPES.untapped_potential;
+  // Got the hardest one (round 3): Deep Memory beats everything else.
   if (r3.correct) return BRAIN_TYPES.deep_memory;
-  // Both first two correct, fast reactions → Quick Recall.
+  // Both first two correct, fast reactions: Quick Recall.
   if (r1.correct && r2.correct && avgReaction < 4000) return BRAIN_TYPES.quick_recall;
-  // Got the position-based round (r2) but nothing else specific → Pattern Spotter.
+  // Got the position-based round (r2) but nothing else specific: Pattern Spotter.
   if (r2.correct && !r1.correct) return BRAIN_TYPES.pattern_spotter;
-  // Got round 1 (colour detail) but missed position → Detail Hunter.
+  // Got round 1 (colour detail) but missed position: Detail Hunter.
   if (r1.correct && !r2.correct) return BRAIN_TYPES.detail_hunter;
-  // Mid-tier or full-miss profiles fall through to Balanced Mind.
-  if (correctCount >= 2) return BRAIN_TYPES.balanced_mind;
+  // Mid-tier (1 of 3 correct, fell into none of the above): treat as
+  // balanced rather than untapped.
   return BRAIN_TYPES.balanced_mind;
 }
 
