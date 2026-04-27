@@ -38,14 +38,12 @@ import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { typography } from '@/src/theme/typography';
 import { spacing } from '@/src/theme/spacing';
+import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/service';
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   loadNotificationPreferences,
   saveNotificationPreferences,
   loadDailyReminderTime,
-  saveDailyReminderTime,
-  scheduleDailyReminder,
-  cancelDailyReminder,
   registerPushToken,
   hasNotificationPermission,
   type NotificationPreferenceKey,
@@ -175,27 +173,14 @@ export default function NotificationSettingsScreen() {
     if (user?.id) saveNotificationPreferences(user.id, updated);
   }, [prefs, user?.id]);
 
-  const handleToggleDaily = useCallback(async (value: boolean) => {
-    setDailyReminderEnabled(value);
-    handleTogglePref('daily_reminder', value);
-    if (value) {
-      const serialised = serialiseHM(reminderHour, reminderMinute);
-      await scheduleDailyReminder(serialised);
-      if (user?.id) saveDailyReminderTime(user.id, serialised);
-    } else {
-      await cancelDailyReminder();
-      if (user?.id) saveDailyReminderTime(user.id, null);
-    }
-  }, [reminderHour, reminderMinute, handleTogglePref, user?.id]);
-
-  const handlePickTime = useCallback(async (hour: number, minute: number) => {
-    setReminderHour(hour);
-    setReminderMinute(minute);
-    setShowPicker(false);
-    const serialised = serialiseHM(hour, minute);
-    await scheduleDailyReminder(serialised);
-    if (user?.id) saveDailyReminderTime(user.id, serialised);
-  }, [user?.id]);
+  // Legacy handlers (handleToggleDaily / handlePickTime) lived
+  // here when the daily reminder was a generic "play your daily"
+  // ping with a user-chosen time. The Daily Challenge feature
+  // replaced them with two fixed-time toggles (8am morning / 6pm
+  // evening), wired inline in the new section above. The
+  // dailyReminderEnabled / reminderHour / reminderMinute state
+  // is left mounted for now so any leftover JSX references compile
+  // cleanly; they are no longer surfaced in the UI.
 
   const handleEnablePermission = useCallback(async () => {
     if (!user?.id) return;
@@ -253,73 +238,46 @@ export default function NotificationSettingsScreen() {
           </Pressable>
         )}
 
-        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>{t('notif_settings.daily_section')}</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMid }]}>Daily Challenge</Text>
         <Card style={styles.card}>
           <View style={styles.row}>
-            <Text style={styles.emojiIcon}>{'\u23F0'}</Text>
+            <Text style={styles.emojiIcon}>{'\u2600\uFE0F'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('notif_settings.daily_play')}</Text>
-              <Text style={[styles.rowHelp, { color: colors.textLight }]}>{t('notif_settings.daily_help')}</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>Morning reveal</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>One gentle ping at 8am with today\u2019s challenge.</Text>
             </View>
             <Switch
-              value={dailyReminderEnabled}
-              onValueChange={handleToggleDaily}
+              value={prefs.daily_challenge_morning !== false}
+              onValueChange={(v) => {
+                handleTogglePref('daily_challenge_morning', v);
+                if (user?.id) refreshDailyChallengeSchedule(user.id);
+              }}
               trackColor={{ true: colors.accent, false: colors.surface }}
             />
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Pressable
-            onPress={() => dailyReminderEnabled && setShowPicker(true)}
-            style={[styles.row, !dailyReminderEnabled && { opacity: 0.4 }]}
-            accessibilityRole="button"
-            accessibilityLabel={`Change reminder time, currently ${formatTimeHM(reminderHour, reminderMinute)}`}
-          >
-            <Text style={styles.emojiIcon}>{'\uD83D\uDD52'}</Text>
+          <View style={styles.row}>
+            <Text style={styles.emojiIcon}>{'\uD83D\uDD25'}</Text>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: colors.text }]}>{t('notif_settings.remind_at')}</Text>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>Evening streak nudge</Text>
+              <Text style={[styles.rowHelp, { color: colors.textLight }]}>6pm reminder if your streak is at risk.</Text>
             </View>
-            <Text style={[styles.timeValue, { color: colors.accent }]}>{formatTimeHM(reminderHour, reminderMinute)}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </Pressable>
+            <Switch
+              value={prefs.daily_challenge_evening !== false}
+              onValueChange={(v) => {
+                handleTogglePref('daily_challenge_evening', v);
+                if (user?.id) refreshDailyChallengeSchedule(user.id);
+              }}
+              trackColor={{ true: colors.accent, false: colors.surface }}
+            />
+          </View>
         </Card>
 
-        {/* Preset time picker modal — fast + no native deps. */}
-        <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
-          <View style={styles.pickerBackdrop}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowPicker(false)} />
-            <View style={[styles.pickerCard, { backgroundColor: colors.card }]}>
-              <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('notif_settings.picker_title')}</Text>
-              <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                {TIME_PRESETS.map((t) => {
-                  const isSelected = t.hour === reminderHour && t.minute === reminderMinute;
-                  return (
-                    <Pressable
-                      key={`${t.hour}:${t.minute}`}
-                      onPress={() => handlePickTime(t.hour, t.minute)}
-                      style={[
-                        styles.pickerRow,
-                        { backgroundColor: isSelected ? colors.accent + '12' : 'transparent', borderColor: isSelected ? colors.accent : colors.border },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={formatTimeHM(t.hour, t.minute)}
-                    >
-                      <Text style={[styles.pickerTime, { color: isSelected ? colors.accent : colors.text }]}>
-                        {formatTimeHM(t.hour, t.minute)}
-                      </Text>
-                      {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.accent} />}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-              <Pressable
-                onPress={() => setShowPicker(false)}
-                style={[styles.pickerCloseBtn, { backgroundColor: colors.surface }]}
-              >
-                <Text style={[styles.pickerCloseText, { color: colors.textMid }]}>{t('notif_settings.picker_close')}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
+        {/* The legacy time-picker modal was removed when the daily
+            reminder migrated to the fixed-time Daily Challenge
+            morning + evening notifications. Kept this comment as a
+            breadcrumb so the next visitor knows where the picker
+            went without grep-archaeology. */}
 
         {SECTIONS.map((section) => (
           <React.Fragment key={section.title}>

@@ -12,7 +12,6 @@ import {
   registerPushToken,
   cancelLivesFullNotification,
   scheduleStreakReminder,
-  scheduleDailyReminder,
   cancelDailyReminder,
   loadDailyReminderTime,
   loadNotificationPreferences,
@@ -35,6 +34,7 @@ import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
 import { computeAppOpenOutcome, fetchCloudStreakCount, recoverWithShield, startRecoveryWindow } from '@/src/utils/streakRecovery';
+import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/service';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
@@ -334,19 +334,28 @@ function CloudSyncLoader() {
     //  - Daily reminder: fires at user-configured time each day
     //  - Weekly challenge: fires Sunday 7pm local (resets every week)
     //  - Win-back: 3/7/14 days of absence — cancelled on next foreground
+    // The legacy scheduleDailyReminder is gone — replaced by the
+    // Daily Challenge morning notification (8am local, fires only
+    // if today's challenge is uncompleted). Same effective intent
+    // (nudge the player to play once a day) but tied to a real
+    // feature instead of a generic "play something" ping. Lives
+    // in src/features/dailyChallenge/service.ts.
     Promise.all([
       loadNotificationPreferences(user.id),
+      // loadDailyReminderTime stays mounted because the legacy
+      // pref column still exists; we just don't act on it any more.
       loadDailyReminderTime(user.id),
-    ]).then(([prefs, time]) => {
-      if (prefs.daily_reminder !== false && time) {
-        scheduleDailyReminder(time);
-      } else {
-        cancelDailyReminder();
-      }
+    ]).then(([prefs]) => {
+      // Cancel any leftover legacy daily reminder from older builds
+      // so a user who upgrades doesn't end up with both pings firing.
+      cancelDailyReminder().catch(() => {});
       if (prefs.weekly_challenge !== false) {
         scheduleWeeklyChallengeReminder();
       }
     }).catch(() => {});
+    // Daily Challenge schedule: fires the next 7 days of mornings
+    // + (conditional) evenings using the freshly-loaded streak.
+    refreshDailyChallengeSchedule(user.id).catch(() => {});
     // Cancel any pending win-back since the user just opened the app.
     cancelWinBackReminders();
     // First-week onboarding pushes — denser cadence over days 1-7

@@ -16,6 +16,11 @@ import { log } from '@/src/lib/logger';
 import { useGameStore } from '@/src/store';
 import type { DailyChallengeModeId, DailyChallengeResult } from './types';
 import { todayUtcIso } from './seededRandom';
+import {
+  cancelTodaysDailyChallengeNotifications,
+  scheduleDailyChallengeNotifications,
+} from './notifications';
+import { loadNotificationPreferences } from '@/src/utils/notifications';
 
 export interface SubmitArgs {
   mode: DailyChallengeModeId;
@@ -80,6 +85,13 @@ export async function submitDailyChallenge(args: SubmitArgs): Promise<SubmitOutc
       log.warn('dailyChallenge', 'incrementStreak failed', { error: String(e) });
     }
 
+    // Cancel today's pending notifications so the player doesn't
+    // get nagged for something they've already done. Reschedule
+    // the next 7 days using the freshly-bumped streak so tomorrow's
+    // evening copy reflects the right number.
+    cancelTodaysDailyChallengeNotifications().catch(() => {});
+    refreshDailyChallengeSchedule(userId).catch(() => {});
+
     return { ok: true, result: localResult, alreadyPlayed: false };
   } catch (e) {
     log.error('dailyChallenge', 'submit threw', e, { mode: args.mode });
@@ -126,4 +138,24 @@ export async function hasPlayedToday(): Promise<{ played: boolean; result: Daily
   if (!userId) return { played: false, result: null };
   const result = await fetchResultForDate(userId, todayUtcIso());
   return { played: !!result, result };
+}
+
+/** Reschedule the next 7 days of daily challenge notifications
+ *  using the user's current preferences + streak + today's
+ *  played-status. Safe to call on app open, foreground, completion,
+ *  and after the user toggles a notification setting. */
+export async function refreshDailyChallengeSchedule(userId: string): Promise<void> {
+  try {
+    const prefs = await loadNotificationPreferences(userId);
+    const streakCount = useGameStore.getState().streakCount;
+    const playedToday = (await hasPlayedToday()).played;
+    await scheduleDailyChallengeNotifications({
+      enableMorning: prefs.daily_challenge_morning !== false,
+      enableEvening: prefs.daily_challenge_evening !== false,
+      streakCount,
+      playedToday,
+    });
+  } catch (e) {
+    log.warn('dailyChallenge', 'refreshDailyChallengeSchedule failed', { error: String(e), userId });
+  }
 }

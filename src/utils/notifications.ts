@@ -648,7 +648,11 @@ export async function scheduleWeeklyChallengeReminder(): Promise<void> {
 // ─── Notification Preferences ───────────────────────────────────────
 
 export const DEFAULT_NOTIFICATION_PREFERENCES = {
-  // Daily
+  // Daily Challenge (the feature, not the legacy daily_reminder)
+  daily_challenge_morning: true,   // 8am local "your daily is ready"
+  daily_challenge_evening: true,   // 6pm local "don't break your streak"
+  // Daily (legacy — superseded by daily_challenge_morning. Kept on
+  // existing rows so they don't break on read; no longer scheduled.)
   daily_reminder: true,            // Daily play reminder at user's chosen time
   // Streak
   streak_reminder: true,           // 8pm "your streak is at risk"
