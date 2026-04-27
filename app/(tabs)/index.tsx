@@ -9,6 +9,7 @@ import { TabTransition } from '@/src/components/TabTransition';
 import TutorialOverlay from '@/src/components/TutorialOverlay';
 import DailyLoginReward from '@/src/components/DailyLoginReward';
 import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
+import { DailyChallengeCard } from '@/src/features/dailyChallenge/views/DailyChallengeCard';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import {
   shouldShowFirstRunNotifPrompt,
@@ -657,6 +658,14 @@ function PlayTab() {
               </Text>
             )}
           </Pressable>
+        </View>
+
+        {/* Daily Challenge — sits between the stat row and Weekly
+            Challenges per spec 1.1. Self-fetches today's status; the
+            DailyChallengeCard component handles all three states
+            (not played / played / streak alert). */}
+        <View style={{ marginTop: 12 }}>
+          <DailyChallengeCard />
         </View>
 
         {/* Weekly Challenges */}

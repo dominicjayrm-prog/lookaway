@@ -688,6 +688,7 @@ function ThemedStack() {
         <Stack.Screen name="privacy" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="terms" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="stats-space" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="daily-challenge" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="settings" />
         <Stack.Screen name="settings/notifications" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/sounds" options={{ animation: 'slide_from_right' }} />
