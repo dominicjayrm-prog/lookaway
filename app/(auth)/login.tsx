@@ -134,12 +134,17 @@ function AuthScreen() {
         if (result.error) {
           setError(result.error);
         } else {
-          // With email confirmation OFF, user is already signed in.
-          // Save username to profiles.
-          const { data: session } = await supabase.auth.getSession();
-          if (session?.session?.user?.id && username.trim()) {
+          // Use the user id returned directly by signUp instead of a
+          // follow-up getSession() call. On web the auth-state listener
+          // that populates session storage fires async, so getSession
+          // could return null even though signUp succeeded; the upsert
+          // would then silently skip and leave profiles.username NULL,
+          // which made app/index.tsx redirect the user back to the
+          // /username picker even though they'd just chosen one.
+          const userId = result.userId;
+          if (userId && username.trim()) {
             const { error: upsertErr } = await supabase.from('profiles').upsert({
-              id: session.session.user.id,
+              id: userId,
               username: username.trim(),
               display_name: username.trim(),
             }, { onConflict: 'id' });
