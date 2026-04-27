@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 
 interface Props {
   onDigit: (digit: number) => void;
@@ -33,6 +34,7 @@ function tap() {
   if (!isWeb) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }
+  sounds.play('tap');
 }
 
 export function PhoneNumberKeypad({ onDigit, onBackspace, disabled }: Props) {

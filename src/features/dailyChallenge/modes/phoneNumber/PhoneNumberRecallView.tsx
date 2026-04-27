@@ -16,6 +16,7 @@ import { View, Text, StyleSheet, Animated as RNAnimated, Platform } from 'react-
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 import { PhoneNumberKeypad } from './PhoneNumberKeypad';
 import { scorePhoneNumberAttempt, phoneNumberEmojiBlocks, type PhoneNumberConfig } from './logic';
 
@@ -75,6 +76,7 @@ export function PhoneNumberRecallView({ config, onComplete }: Props) {
           isCorrect ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
         ).catch(() => {});
       }
+      sounds.play(isCorrect ? 'correct' : 'wrong');
       setRevealedUpTo((n) => n + 1);
     }, REVEAL_PER_DIGIT_MS);
     return () => clearTimeout(id);

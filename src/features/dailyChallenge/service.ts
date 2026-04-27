@@ -128,32 +128,6 @@ export async function fetchResultForDate(
   }
 }
 
-/** Dev-only escape hatch: deletes the current user's row for today
- *  from `daily_challenge_results` so they can replay. Used during
- *  testing of new modes; safe to ship because RLS scopes the delete
- *  to the calling user's own row. The home card surfaces this via a
- *  long-press on the "played" state. */
-export async function resetTodaysChallenge(): Promise<{ ok: boolean }> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return { ok: false };
-    const { error } = await supabase
-      .from('daily_challenge_results')
-      .delete()
-      .eq('user_id', userId)
-      .eq('challenge_date', todayUtcIso());
-    if (error) {
-      log.error('dailyChallenge', 'resetTodaysChallenge failed', error);
-      return { ok: false };
-    }
-    return { ok: true };
-  } catch (e) {
-    log.error('dailyChallenge', 'resetTodaysChallenge threw', e);
-    return { ok: false };
-  }
-}
-
 /** Returns true when the current authenticated user has already
  *  submitted today's challenge. Drives the home card's "played
  *  today" state. Cheap (single indexed lookup, RLS scopes to the

@@ -28,6 +28,7 @@ import { View, Text, Pressable, StyleSheet, Animated as RNAnimated, Platform } f
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 import { Grid } from './WhatChangedMemoriseView';
 import { scoreWhatChangedAttempt, whatChangedEmojiBlocks, type WhatChangedConfig } from './logic';
 
@@ -71,6 +72,7 @@ export function WhatChangedRecallView({ config, onComplete }: Props) {
       return [...prev, idx];
     });
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    sounds.play('tap');
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -97,7 +99,7 @@ export function WhatChangedRecallView({ config, onComplete }: Props) {
       return () => clearTimeout(finalize);
     }
     const id = setTimeout(() => {
-      // Haptic pulse keyed to the cell being revealed at this step.
+      // Haptic + audio pulse keyed to the cell being revealed at this step.
       if (revealStep < tapped.length) {
         const cellIdx = tapped[revealStep];
         const isCorrect = config.changedIndexes.includes(cellIdx);
@@ -106,6 +108,7 @@ export function WhatChangedRecallView({ config, onComplete }: Props) {
             isCorrect ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
           ).catch(() => {});
         }
+        sounds.play(isCorrect ? 'correct' : 'wrong');
       }
       setRevealStep((n) => n + 1);
     }, REVEAL_PER_CELL_MS);

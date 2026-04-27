@@ -36,6 +36,7 @@ import { AvatarFrame } from '@/src/components/AvatarFrame';
 import { getFrameById } from '@/src/data/cosmetics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 import {
   scoreNamesAndFacesAttempt,
   namesAndFacesEmojiBlocks,
@@ -102,6 +103,7 @@ export function NamesAndFacesRecallView({ config, onComplete }: Props) {
   const handleBlinkTap = useCallback((charIdx: number) => {
     if (phase !== 'recall') return;
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    sounds.play('tap');
     // Already paired → unpair (return name to chip row).
     if (pairings[charIdx]) {
       setPairings((prev) => {
@@ -125,6 +127,7 @@ export function NamesAndFacesRecallView({ config, onComplete }: Props) {
     if (phase !== 'recall') return;
     if (selectedCharIdx === null) return;
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    sounds.play('tap');
     setPairings((prev) => ({ ...prev, [selectedCharIdx]: name }));
     setSelectedCharIdx(null);
   }, [phase, selectedCharIdx]);
@@ -167,6 +170,7 @@ export function NamesAndFacesRecallView({ config, onComplete }: Props) {
           correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
         ).catch(() => {});
       }
+      sounds.play(correct ? 'correct' : 'wrong');
       setRevealStep((n) => n + 1);
     }, REVEAL_PER_PAIR_MS);
     return () => clearTimeout(id);

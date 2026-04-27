@@ -18,6 +18,7 @@ import { View, Text, Pressable, StyleSheet, Animated as RNAnimated, ScrollView, 
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 import { activeWitnessLocale, type WitnessConfig } from './logic';
 
 interface Props {
@@ -66,6 +67,7 @@ export function WitnessReadView({ config, onContinue }: Props) {
 
   const handleContinue = useCallback(() => {
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    sounds.play('whoosh');
     const elapsedSeconds = +((Date.now() - startedAt.current) / 1000).toFixed(2);
     onContinue(elapsedSeconds);
   }, [onContinue]);

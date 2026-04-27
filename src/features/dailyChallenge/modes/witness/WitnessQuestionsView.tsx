@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import { QuestionCard } from '@/src/components/QuestionCard';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { t } from '@/src/i18n';
+import { sounds } from '@/src/lib/sounds';
 import {
   scoreWitnessAttempt,
   witnessEmojiBlocks,
@@ -119,6 +120,7 @@ export function WitnessQuestionsView({ config, onComplete }: Props) {
           correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
         ).catch(() => {});
       }
+      sounds.play(correct ? 'correct' : 'wrong');
       setRevealStep((n) => n + 1);
     }, REVEAL_PER_QUESTION_MS);
     return () => clearTimeout(id);
