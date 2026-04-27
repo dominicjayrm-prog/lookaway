@@ -14,14 +14,14 @@
  * avoid the eye-grabbing churn the spec calls out).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated as RNAnimated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated as RNAnimated, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/src/i18n';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
-import { hasPlayedToday } from '../service';
+import { hasPlayedToday, resetTodaysChallenge } from '../service';
 import { todayUtcIso } from '../seededRandom';
 import { getModeForDate, getModeDisplayName } from '../modeRotation';
 import type { DailyChallengeResult } from '../types';
@@ -134,6 +134,36 @@ export function DailyChallengeCard() {
 
   const handleOpen = () => router.push('/daily-challenge');
 
+  // Dev escape hatch: long-press the "played" card to wipe today's
+  // submission and replay. Wraps in a confirm on native via Alert;
+  // on web we use the synchronous browser confirm because Alert.alert
+  // is a no-op on RNW. RLS scopes the delete to the current user.
+  const handleResetLongPress = () => {
+    const performReset = async () => {
+      const { ok } = await resetTodaysChallenge();
+      if (ok) {
+        // Force the played-status check to re-run.
+        setState({ kind: 'loading' });
+        setTickKey((k) => k + 1);
+      }
+    };
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (typeof window !== 'undefined' && window.confirm('Reset today\'s daily challenge so you can replay it?')) {
+        performReset();
+      }
+      return;
+    }
+    Alert.alert(
+      'Reset today\'s challenge?',
+      'This will delete your submission for today so you can play again. Dev only.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reset', style: 'destructive', onPress: () => { performReset(); } },
+      ],
+    );
+  };
+
   if (state.kind === 'loading') {
     return (
       <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -147,6 +177,8 @@ export function DailyChallengeCard() {
     return (
       <Pressable
         onPress={handleOpen}
+        onLongPress={handleResetLongPress}
+        delayLongPress={700}
         style={({ pressed }) => [
           s.card,
           { backgroundColor: colors.card, borderColor: colors.border },
