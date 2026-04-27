@@ -34,7 +34,7 @@ import { getEntitlementStatus } from '@/src/lib/purchases';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
-import { computeAppOpenOutcome, recoverWithShield, startRecoveryWindow } from '@/src/utils/streakRecovery';
+import { computeAppOpenOutcome, fetchCloudStreakCount, recoverWithShield, startRecoveryWindow } from '@/src/utils/streakRecovery';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
@@ -594,37 +594,58 @@ function StreakRecoveryMounter() {
     lastCheckedKey.current = checkKey;
     if (streakCount < 3) return;
 
-    const outcome = computeAppOpenOutcome({
-      userId: authUserId,
-      lastPlayDate,
-      streakCount,
-      streakShields,
-      recoveryWindowStart,
-    });
+    let cancelled = false;
+    (async () => {
+      // Cloud safety net: a stale-low local streak would otherwise be
+      // used as the recovery cost basis AND preserved as the post-
+      // recovery value, silently shrinking the player's streak by
+      // however many days the local value drifted under cloud. We saw
+      // this happen on a dev account: cloud held 103, local somehow
+      // ended at 100, recovery preserved 100 and the player lost 3
+      // days they never missed. Fetching cloud fresh + taking the max
+      // makes cloud win whenever it's higher.
+      const cloudStreak = await fetchCloudStreakCount(authUserId);
+      if (cancelled) return;
+      const authoritativeStreak = cloudStreak !== null
+        ? Math.max(streakCount, cloudStreak)
+        : streakCount;
 
-    if (outcome.kind === 'ok') return;
-    if (outcome.kind === 'shield_auto_used') {
-      // Silent save with a shield. No modal — only a store update.
-      recoverWithShield(authUserId, 0).then((ok) => {
-        if (ok) applyLocal(0, -1);
+      const outcome = computeAppOpenOutcome({
+        userId: authUserId,
+        lastPlayDate,
+        streakCount: authoritativeStreak,
+        streakShields,
+        recoveryWindowStart,
       });
-      return;
-    }
-    if (outcome.kind === 'reset') {
-      // 1-hour window expired before the player came back. Streak is
-      // gone permanently per the recovery contract.
-      resetLocal();
-      return;
-    }
-    // outcome.kind === 'modal' — show the choice + persist the
-    // recovery window if this is a fresh detection.
-    setModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
-    if (outcome.windowElapsedMs === 0) {
-      const iso = outcome.recoveryStart.toISOString();
-      startRecoveryWindow(authUserId, outcome.recoveryStart).then((ok) => {
-        if (ok) setRecoveryWindowStart(iso);
-      });
-    }
+
+      if (outcome.kind === 'ok') return;
+      if (outcome.kind === 'shield_auto_used') {
+        // Silent save with a shield. No modal, only a store update.
+        recoverWithShield(authUserId, 0).then((ok) => {
+          if (ok) applyLocal(0, -1);
+        });
+        return;
+      }
+      if (outcome.kind === 'reset') {
+        // 1-hour window expired before the player came back. Streak
+        // is gone permanently per the recovery contract.
+        resetLocal();
+        return;
+      }
+      // outcome.kind === 'modal' — show the choice + persist the
+      // recovery window if this is a fresh detection. The streak
+      // value handed to the modal is the authoritative one, so the
+      // displayed recovery cost AND the preserved-streak metadata
+      // both reflect the player's true high water mark.
+      setModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
+      if (outcome.windowElapsedMs === 0) {
+        const iso = outcome.recoveryStart.toISOString();
+        startRecoveryWindow(authUserId, outcome.recoveryStart).then((ok) => {
+          if (ok) setRecoveryWindowStart(iso);
+        });
+      }
+    })();
+    return () => { cancelled = true; };
   }, [ready, authUserId, lastPlayDate, streakCount, streakShields, recoveryWindowStart, applyLocal, resetLocal, setRecoveryWindowStart]);
 
   if (!modal) return null;
