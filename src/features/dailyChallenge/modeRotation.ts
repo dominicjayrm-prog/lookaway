@@ -13,16 +13,16 @@ import type { DailyChallengeModeId } from './types';
 import { utcDayOfWeek } from './seededRandom';
 import { t } from '@/src/i18n';
 
-// Phase 4 rotation. Names & Faces takes the Tue (easy) + Sat
-// (hard) slots — those days hit the highest signup-conversion
-// for the marketing-differentiator mode and Saturday's hard
-// difficulty matches the longer-session weekend pattern.
+// Phase 5 rotation. The Witness slots into Thursday — the mid-week
+// reading slot, where a contemplative break lands well between two
+// faster modes. Final mix: Phone Number 2, What Changed 2, Names &
+// Faces 2, The Witness 1. No mode plays two days in a row.
 const ROTATION: Record<number, DailyChallengeModeId> = {
   0: 'phone_number',     // Sunday
   1: 'phone_number',     // Monday
   2: 'names_and_faces',  // Tuesday — Names & Faces (easy)
   3: 'what_changed',     // Wednesday
-  4: 'phone_number',     // Thursday
+  4: 'the_witness',      // Thursday — The Witness (reading mode)
   5: 'what_changed',     // Friday
   6: 'names_and_faces',  // Saturday — Names & Faces (hard)
 };

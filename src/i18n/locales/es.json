@@ -1632,7 +1632,8 @@
       "what_changed": "¿Qué cambió?",
       "what_changed_subtitle": "Memoriza la cuadrícula. Detecta los cambios.",
       "names_and_faces": "Nombres y caras",
-      "the_witness": "El testigo"
+      "the_witness": "El testigo",
+      "the_witness_subtitle": "Lee la escena. Fíjate en todo."
     },
     "phone_number": {
       "memorise_instruction": "Memoriza este número",
@@ -1689,6 +1690,28 @@
       "tutorial_dismiss": "Entendido",
       "tutorial_dismiss_aria": "Entendido, empezar el reto",
       "friend_fallback": "Amigo/a {n}"
+    },
+    "the_witness": {
+      "read_caption": "Lee la escena a tu propio ritmo",
+      "read_continue": "He terminado de leer",
+      "read_continue_aria": "He terminado de leer, continuar a las preguntas",
+      "read_progress_label": "Tiempo de lectura sugerido",
+      "questions_progress": "Pregunta {current} de {total}",
+      "submit": "Enviar",
+      "submit_aria": "Enviar tu respuesta",
+      "answer_aria": "Respuesta {letter}: {text}",
+      "reveal_caption": "Esto es lo que pasó",
+      "reveal_correct": "Correcto",
+      "reveal_wrong": "Casi",
+      "tutorial_title": "El testigo",
+      "tutorial_body": "Lee la escena breve a tu propio ritmo. Después responde a cuatro preguntas sobre lo que recuerdes.",
+      "tutorial_step_read": "LEE",
+      "tutorial_step_answer": "RESPONDE",
+      "tutorial_example_scene": "Es una mañana tranquila en el café de la esquina. El barista, con un delantal azul marino, coloca pasteles sobre el mostrador.",
+      "tutorial_example_question": "¿De qué color era el delantal?",
+      "tutorial_example_correct": "Azul marino",
+      "tutorial_dismiss": "Entendido",
+      "tutorial_dismiss_aria": "Entendido, empezar el reto"
     },
     "notifications": {
       "morning_1_title": "Tu reto diario te espera ✨",

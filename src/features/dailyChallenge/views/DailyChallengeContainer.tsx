@@ -36,6 +36,10 @@ import { NamesAndFacesMingle } from '../modes/namesAndFaces/NamesAndFacesMingle'
 import { NamesAndFacesRecallView } from '../modes/namesAndFaces/NamesAndFacesRecallView';
 import { NamesAndFacesTutorialView } from '../modes/namesAndFaces/NamesAndFacesTutorialView';
 import { buildNamesAndFacesInstance, type NamesAndFacesConfig } from '../modes/namesAndFaces/logic';
+import { WitnessReadView } from '../modes/witness/WitnessReadView';
+import { WitnessQuestionsView } from '../modes/witness/WitnessQuestionsView';
+import { WitnessTutorialView } from '../modes/witness/WitnessTutorialView';
+import { buildWitnessInstance, type WitnessConfig } from '../modes/witness/logic';
 import { getModeForDate } from '../modeRotation';
 import { submitDailyChallenge } from '../service';
 import type { DailyChallengeInstance, DailyChallengeModeId } from '../types';
@@ -46,8 +50,14 @@ import type { DailyChallengeInstance, DailyChallengeModeId } from '../types';
 // don't use it.
 type Phase = 'reveal' | 'tutorial' | 'memorise' | 'mingle' | 'recall' | 'result' | 'submitting';
 
-const WHAT_CHANGED_TUTORIAL_KEY = 'blanked_dc_what_changed_tutorial_seen';
-const NAMES_AND_FACES_TUTORIAL_KEY = 'blanked_dc_names_and_faces_tutorial_seen';
+// Per-mode tutorial flags. The probe + the persistence path share
+// this map so adding a mode's tutorial means one entry here, not
+// touching three call sites.
+const TUTORIAL_KEY_BY_MODE: Partial<Record<DailyChallengeModeId, string>> = {
+  what_changed: 'blanked_dc_what_changed_tutorial_seen',
+  names_and_faces: 'blanked_dc_names_and_faces_tutorial_seen',
+  the_witness: 'blanked_dc_the_witness_tutorial_seen',
+};
 
 /** Builds the instance for whichever mode plays today. Switches on
  *  the rotation table — adding modes in the future means adding a
@@ -59,6 +69,7 @@ function buildInstanceForToday(): DailyChallengeInstance<unknown> {
   const mode = getModeForDate();
   if (mode === 'what_changed') return buildWhatChangedInstance() as DailyChallengeInstance<unknown>;
   if (mode === 'names_and_faces') return buildNamesAndFacesInstance() as DailyChallengeInstance<unknown>;
+  if (mode === 'the_witness') return buildWitnessInstance() as DailyChallengeInstance<unknown>;
   return buildPhoneNumberInstance() as DailyChallengeInstance<unknown>;
 }
 
@@ -97,12 +108,8 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   useEffect(() => {
     // Each mode has its own tutorial flag — the player should see
     // each new mode's tutorial once even if they've already seen
-    // others. The flag map dispatches by today's mode.
-    const tutorialKeyByMode: Partial<Record<DailyChallengeModeId, string>> = {
-      what_changed: WHAT_CHANGED_TUTORIAL_KEY,
-      names_and_faces: NAMES_AND_FACES_TUTORIAL_KEY,
-    };
-    const key = tutorialKeyByMode[instance.mode];
+    // others.
+    const key = TUTORIAL_KEY_BY_MODE[instance.mode];
     if (!key) return;
     let cancelled = false;
     (async () => {
@@ -146,6 +153,13 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         pairedNameByCharIdx: (string | undefined)[];
       }
     | {
+        kind: 'the_witness';
+        score: number;
+        timeSeconds: number;
+        emojiBlocks: string;
+        correctness: boolean[];
+      }
+    | {
         kind: 'fallback';
         score: number;
         timeSeconds: number;
@@ -159,7 +173,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   } : null);
 
   const handleBegin = useCallback(() => {
-    const hasTutorial = instance.mode === 'what_changed' || instance.mode === 'names_and_faces';
+    const hasTutorial = TUTORIAL_KEY_BY_MODE[instance.mode] !== undefined;
     if (hasTutorial && shouldShowTutorial) {
       setPhase('tutorial');
     } else {
@@ -170,14 +184,14 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
     // Persist the seen flag for whichever mode's tutorial we just
     // showed. If the write fails the tutorial would re-show on the
     // next play of this mode, which is annoying but not broken.
-    const key = instance.mode === 'names_and_faces'
-      ? NAMES_AND_FACES_TUTORIAL_KEY
-      : WHAT_CHANGED_TUTORIAL_KEY;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      AsyncStorage.setItem(key, 'true').catch(() => {});
-    } catch {}
+    const key = TUTORIAL_KEY_BY_MODE[instance.mode];
+    if (key) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        AsyncStorage.setItem(key, 'true').catch(() => {});
+      } catch {}
+    }
     setPhase('memorise');
   }, [instance.mode]);
   // Names & Faces interleaves a 'mingle' phase between memorise and
@@ -262,6 +276,39 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
     setPhase('result');
   }, [instance]);
 
+  const handleWitnessComplete = useCallback(async (result: {
+    score: number; timeSeconds: number;
+    correctness: boolean[];
+    emojiBlocks: string;
+  }) => {
+    setPhase('submitting');
+    await submitDailyChallenge({
+      mode: instance.mode,
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      shareCardEmojiBlocks: result.emojiBlocks,
+      challengeDate: instance.challengeDate,
+    });
+    setFinalResult({
+      kind: 'the_witness',
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      emojiBlocks: result.emojiBlocks,
+      correctness: result.correctness,
+    });
+    setPhase('result');
+  }, [instance]);
+
+  // Bridges the read view's onContinue to the recall phase. The
+  // Witness has no separate "look away" phase between read and
+  // questions — we go straight to the questions view, which itself
+  // tracks elapsed time from its own mount. The read view's
+  // elapsedSeconds is dropped intentionally; tiebreakers run off
+  // the questions phase, not the read phase.
+  const handleWitnessReadDone = useCallback((_elapsedSeconds: number) => {
+    setPhase('recall');
+  }, []);
+
   // Mid-memorise background pause spec edge case. iOS will pause
   // setTimeout naturally when backgrounded, so when we come back
   // the timer effectively "pauses". We don't do anything special
@@ -281,6 +328,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   const phoneConfig = instance.mode === 'phone_number' ? (instance.config as PhoneNumberConfig) : null;
   const whatChangedConfig = instance.mode === 'what_changed' ? (instance.config as WhatChangedConfig) : null;
   const namesAndFacesConfig = instance.mode === 'names_and_faces' ? (instance.config as NamesAndFacesConfig) : null;
+  const witnessConfig = instance.mode === 'the_witness' ? (instance.config as WitnessConfig) : null;
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -314,6 +362,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         {phase === 'tutorial' && namesAndFacesConfig && (
           <NamesAndFacesTutorialView onDismiss={handleTutorialDismiss} />
         )}
+        {phase === 'tutorial' && witnessConfig && (
+          <WitnessTutorialView onDismiss={handleTutorialDismiss} />
+        )}
         {phase === 'memorise' && phoneConfig && (
           <PhoneNumberMemoriseView
             digits={phoneConfig.digits}
@@ -327,6 +378,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         {phase === 'memorise' && namesAndFacesConfig && (
           <NamesAndFacesMemoriseView config={namesAndFacesConfig} onElapsed={handleMemoriseDone} />
         )}
+        {phase === 'memorise' && witnessConfig && (
+          <WitnessReadView config={witnessConfig} onContinue={handleWitnessReadDone} />
+        )}
         {phase === 'mingle' && namesAndFacesConfig && (
           <NamesAndFacesMingle config={namesAndFacesConfig} onComplete={handleMingleDone} />
         )}
@@ -338,6 +392,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         )}
         {phase === 'recall' && namesAndFacesConfig && (
           <NamesAndFacesRecallView config={namesAndFacesConfig} onComplete={handleNamesAndFacesComplete} />
+        )}
+        {phase === 'recall' && witnessConfig && (
+          <WitnessQuestionsView config={witnessConfig} onComplete={handleWitnessComplete} />
         )}
         {phase === 'submitting' && (
           <View style={s.submitting}>
@@ -378,6 +435,13 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
                   config: namesAndFacesConfig,
                   correctness: finalResult.correctness,
                   pairedNameByCharIdx: finalResult.pairedNameByCharIdx,
+                };
+              }
+              if (finalResult.kind === 'the_witness' && witnessConfig) {
+                return {
+                  kind: 'the_witness',
+                  config: witnessConfig,
+                  correctness: finalResult.correctness,
                 };
               }
               return { kind: 'fallback', emojiBlocks: finalResult.emojiBlocks };

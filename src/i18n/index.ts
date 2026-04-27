@@ -100,6 +100,15 @@ export function applyLanguage(preference: LanguagePreference): ResolvedLanguage 
   return resolved;
 }
 
+/** Read the active i18n locale, clamped to one of the supported set.
+ *  i18n-js exposes `.locale` as a public property but as `string`,
+ *  which is too loose for callers that fan out behaviour by locale.
+ *  This returns a narrow union — anything we haven't translated falls
+ *  through to English. */
+export function getCurrentLocale(): ResolvedLanguage {
+  return i18n.locale === 'es' ? 'es' : 'en';
+}
+
 /** Render a key. Thin wrapper so components never touch `i18n-js`
  *  directly — if we swap libraries (or roll our own) this is the
  *  single migration point.
