@@ -280,13 +280,19 @@ export function UnifiedJourneyScreen() {
       scrollRef.current?.scrollTo({ y: target, animated: false });
     });
   }, [currentLevelY, screenHeight]);
+  // onContentSizeChange + post-mount scrollTo were causing a brief
+  // visible scroll bump on iOS native the first time the journey
+  // tab opened — `contentOffset` had already pre-positioned the
+  // scroll before first commit, but the follow-up scrollTo (even
+  // animated:false) sometimes produced a one-frame visible jump as
+  // the native ScrollView re-applied the offset after layout
+  // settled. On native we now trust contentOffset alone; the
+  // post-mount path stays as a web-only safety net (where
+  // contentOffset is silently ignored by react-native-web).
   const handleContentSizeChange = useCallback((_w: number, h: number) => {
+    if (Platform.OS !== 'web') return;
     performInitialScroll(h);
   }, [performInitialScroll]);
-  // Web safety net: even if onContentSizeChange is throttled or
-  // delayed, fire a fallback after a few hundred ms using the
-  // computed pathHeight (which we already know analytically since
-  // every row is a fixed ROW_HEIGHT).
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const id = setTimeout(() => {

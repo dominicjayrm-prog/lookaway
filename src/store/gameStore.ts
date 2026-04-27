@@ -201,6 +201,12 @@ interface SavedState {
   localUpdatedAt?: number;
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
+  /** UTC YYYY-MM-DD of the last day the user submitted a Daily
+   *  Challenge result. Persisted locally so the home card can keep
+   *  showing the "done" state even when the Supabase row check is
+   *  briefly unavailable (transient session refresh, network blip).
+   *  Cleared automatically when a new UTC day starts. */
+  lastDailyPlayedDate?: string | null;
   /** ISO timestamp of the last time the user was credited their monthly
    *  100 Blanked+ gems. null = never granted. Synced via profiles so
    *  the 30-day cooldown is honoured across devices. */
@@ -313,6 +319,7 @@ function saveState(state: GameStore) {
       username: state.username, avatarUrl: state.avatarUrl,
       subscriptionStatus: state.subscriptionStatus,
       streakMilestonesClaimed: state.streakMilestonesClaimed, lastPlayDate: state.lastPlayDate,
+      lastDailyPlayedDate: state.lastDailyPlayedDate,
       lastPlusGemGrantAt: state.lastPlusGemGrantAt,
       lastReviewPromptedAt: state.lastReviewPromptedAt,
       reviewPromptOutcome: state.reviewPromptOutcome,
@@ -416,6 +423,8 @@ export interface GameStore {
    *  Supabase — Postgres maintains its own `updated_at` via trigger. */
   localUpdatedAt: number;
   streakMilestonesClaimed: number[]; lastPlayDate: string | null;
+  lastDailyPlayedDate: string | null;
+  setLastDailyPlayedDate: (iso: string | null) => void;
   /** ISO timestamp of the most recent 300-gem Blanked+ grant. Null
    *  = never granted. 30 days must elapse before the next grant. */
   lastPlusGemGrantAt: string | null;
@@ -678,6 +687,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     subscriptionPeriodType: 'unknown',
     localUpdatedAt: saved.localUpdatedAt ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
+    lastDailyPlayedDate: saved.lastDailyPlayedDate ?? null,
     lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
     lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
     reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
@@ -882,6 +892,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       // and the recovery modal path, where we have enough context (days
       // missed, window state) to decide what to do.
       set({ streakCount: 0, lastPlayDate: null, recoveryWindowStart: null });
+      setTimeout(() => saveState(get()), 0);
+    },
+    setLastDailyPlayedDate: (iso) => {
+      // Persist locally so the home card's "done today" badge survives
+      // a transient Supabase blip (network, session refresh, RLS read
+      // race) when the player revisits the home tab. The Supabase
+      // daily_challenge_results row stays the source of truth for
+      // cross-device sync; this is a same-day client cache.
+      set({ lastDailyPlayedDate: iso });
       setTimeout(() => saveState(get()), 0);
     },
     pushStreakRewards: (rewards) => {
@@ -1208,6 +1227,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           localUpdatedAt: saved.localUpdatedAt ?? 0,
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
+          lastDailyPlayedDate: saved.lastDailyPlayedDate ?? null,
           lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
           lastReviewPromptedAt: saved.lastReviewPromptedAt ?? null,
           reviewPromptOutcome: saved.reviewPromptOutcome ?? null,
@@ -1287,6 +1307,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         streakShields: 0,
         streakMilestonesClaimed: [],
         lastPlayDate: null,
+        lastDailyPlayedDate: null,
         lastPlusGemGrantAt: null,
         lastReviewPromptedAt: null,
         reviewPromptOutcome: null,
@@ -1433,6 +1454,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         powerUps: { ...DEFAULT_POWERUPS },
         streakMilestonesClaimed: [],
         lastPlayDate: null,
+        lastDailyPlayedDate: null,
         lastPlusGemGrantAt: null,
         lastReviewPromptedAt: null,
         reviewPromptOutcome: null,

@@ -402,8 +402,15 @@ const st = StyleSheet.create({
   },
   playChip: {
     position: 'absolute',
+    // Pin the chip to a horizontal centre line so it can grow
+    // outward instead of being capped by the parent Pressable's
+    // shrink-wrapped width (which is just the node circle's size).
+    // alignSelf:center on absolute children doesn't centre in RN, so
+    // we use left/right:0 + alignSelf:center which collapses the box
+    // back to its content while keeping it horizontally centred.
     bottom: -14,
-    paddingHorizontal: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 999,
     alignItems: 'center',
@@ -414,18 +421,16 @@ const st = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    // Guarantee the chip is always wide enough for the localised
-    // text on one line — "JUGAR" in Spanish was clipping to "ju\ngar"
-    // on some phones because the chip hugged its text instead of
-    // reserving a min width. 56 is comfortable for any 5-char word
-    // at fontSize 10 + 1.2 letter-spacing.
-    minWidth: 56,
+    // Comfortable floor for both "PLAY" and "JUGAR" at fontSize 10 +
+    // letterSpacing 1.0. The previous 56 was tight enough that the
+    // English "PLAY" was clipping to "P L…" on some devices.
+    minWidth: 72,
   },
   playChipText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.2,
+    letterSpacing: 1.0,
     textAlign: 'center',
     includeFontPadding: false,
   },

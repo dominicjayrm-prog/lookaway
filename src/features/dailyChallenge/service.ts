@@ -67,6 +67,11 @@ export async function submitDailyChallenge(args: SubmitArgs): Promise<SubmitOutc
       // their original score rather than blowing up.
       const code = (error as { code?: string }).code;
       if (code === '23505') {
+        // Already played today — stamp the local cache so the home
+        // card stays in done-state even if a later read fails.
+        try {
+          useGameStore.getState().setLastDailyPlayedDate(challengeDate);
+        } catch {}
         const existing = await fetchResultForDate(userId, challengeDate);
         if (existing) {
           return { ok: true, result: existing, alreadyPlayed: true };
@@ -83,6 +88,15 @@ export async function submitDailyChallenge(args: SubmitArgs): Promise<SubmitOutc
       useGameStore.getState().incrementStreak();
     } catch (e) {
       log.warn('dailyChallenge', 'incrementStreak failed', { error: String(e) });
+    }
+    // Stamp the local "daily played today" cache so the home card
+    // can keep the done-state visible even when a follow-up Supabase
+    // round-trip briefly returns no row (transient session refresh
+    // or RLS read race after a tab swap).
+    try {
+      useGameStore.getState().setLastDailyPlayedDate(challengeDate);
+    } catch (e) {
+      log.warn('dailyChallenge', 'setLastDailyPlayedDate failed', { error: String(e) });
     }
 
     // Cancel today's pending notifications so the player doesn't
@@ -136,7 +150,16 @@ export async function hasPlayedToday(): Promise<{ played: boolean; result: Daily
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) return { played: false, result: null };
-  const result = await fetchResultForDate(userId, todayUtcIso());
+  const today = todayUtcIso();
+  const result = await fetchResultForDate(userId, today);
+  if (result) {
+    // Refresh the local cache whenever the cloud confirms played.
+    // This keeps cross-device installs in sync and seeds the cache
+    // for users who submitted before the field existed.
+    try {
+      useGameStore.getState().setLastDailyPlayedDate(today);
+    } catch {}
+  }
   return { played: !!result, result };
 }
 
