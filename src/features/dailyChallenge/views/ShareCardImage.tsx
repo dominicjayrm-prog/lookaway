@@ -14,7 +14,9 @@
  *   - Mode-specific visual block (Phone Number: digit pills with
  *     correct/wrong colouring instead of emoji squares)
  *   - Time + streak chips
- *   - blanked.app footer
+ *   - playblanked.com footer
+ *   - Blink mascot whose expression scales with the player's
+ *     score (wink for strong, thinking for mid, sad for weak)
  *
  * The card is rendered off-screen (positioned absolute, opacity 0.001
  * to avoid the "flashes onto screen" effect during capture) so the
@@ -26,12 +28,25 @@ import React, { forwardRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Circle, Rect } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Blink, type BlinkExpression } from '@/src/components/Blink';
 import { t } from '@/src/i18n';
 import type { DailyChallengeModeId } from '../types';
 import { getModeDisplayName } from '../modeRotation';
 import { formatLongDate } from '../formatDate';
 
 export const SHARE_CARD_SIZE = 1080;
+
+/** Pick the Blink expression rendered on the share card based on
+ *  how the player did. Per the user's brief: a winky / happy Blink
+ *  for strong scores, a soft sad Blink for weak ones, with a
+ *  neutral middle so a 50-79 doesn't feel either celebratory or
+ *  punishing. The Blink SVGs scale cleanly because the share card
+ *  is captured at native 1080px resolution. */
+function blinkForScore(score: number): BlinkExpression {
+  if (score >= 80) return 'wink';
+  if (score >= 50) return 'thinking';
+  return 'sad';
+}
 
 interface Props {
   mode: DailyChallengeModeId;
@@ -104,10 +119,20 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
       <Text style={s.modeLabel}>{t('daily_challenge.share_card.subtitle_eyebrow')}</Text>
       <Text style={s.modeName}>{getModeDisplayName(mode)}</Text>
 
-      {/* Hero score number, big and proud. */}
+      {/* Hero score number, big and proud — sized to dominate the
+          card. Blink sits to the right inside a soft white-ring
+          glass frame; expression scales with the player's score
+          (wink / thinking / sad) so the mascot reflects how the
+          challenge actually went. SVG scales cleanly at the share
+          card's 1080px capture resolution. */}
       <View style={s.scoreBlock}>
-        <Text style={s.scoreNumber}>{score}</Text>
-        <Text style={s.scoreOf}>/100</Text>
+        <View style={s.scoreNumberWrap}>
+          <Text style={s.scoreNumber}>{score}</Text>
+          <Text style={s.scoreOf}>/100</Text>
+        </View>
+        <View style={s.blinkRing}>
+          <Blink expression={blinkForScore(score)} size={210} />
+        </View>
       </View>
 
       {/* Mode-specific visual */}
@@ -129,7 +154,7 @@ export const ShareCardImage = forwardRef<View, Props>(function ShareCardImage(
         )}
       </View>
 
-      <Text style={s.footer}>blanked.app</Text>
+      <Text style={s.footer}>{t('daily_challenge.share_card.footer')}</Text>
     </View>
   );
 });
@@ -250,16 +275,35 @@ const s = StyleSheet.create({
     letterSpacing: -1.2, marginTop: 8,
   },
   scoreBlock: {
-    flexDirection: 'row', alignItems: 'flex-end', marginTop: 60, gap: 8,
+    flexDirection: 'row', alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 60, gap: 8,
   },
+  // Wraps the score number + /100 so the row can space-between it
+  // against the Blink ring on the right without breaking either
+  // child's internal alignment.
+  scoreNumberWrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   scoreNumber: {
-    fontSize: 240, fontWeight: '900', color: '#FFFFFF',
-    letterSpacing: -8, lineHeight: 240,
+    fontSize: 220, fontWeight: '900', color: '#FFFFFF',
+    letterSpacing: -8, lineHeight: 220,
     fontVariant: ['tabular-nums'],
   },
   scoreOf: {
-    fontSize: 56, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
-    paddingBottom: 28,
+    fontSize: 52, fontWeight: '700', color: 'rgba(255,255,255,0.55)',
+    paddingBottom: 24,
+  },
+  // Glassy ring around Blink. Soft white outer border + frosted
+  // translucent interior + faint outer glow lift the mascot off
+  // the gradient background. Bottom-aligned with the score number
+  // so the visual weight balances along the card's centre line.
+  blinkRing: {
+    width: 260, height: 260, borderRadius: 130,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 4, borderColor: 'rgba(255,255,255,0.32)',
+    marginBottom: 8,
+    shadowColor: '#FFFFFF', shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 0 }, shadowRadius: 24,
   },
   visualWrap: { marginTop: 30 },
   digitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
