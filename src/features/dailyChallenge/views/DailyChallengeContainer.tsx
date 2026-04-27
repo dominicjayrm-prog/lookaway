@@ -31,13 +31,23 @@ import { WhatChangedMemoriseView } from '../modes/whatChanged/WhatChangedMemoris
 import { WhatChangedRecallView } from '../modes/whatChanged/WhatChangedRecallView';
 import { WhatChangedTutorialView } from '../modes/whatChanged/WhatChangedTutorialView';
 import { buildWhatChangedInstance, type WhatChangedConfig } from '../modes/whatChanged/logic';
+import { NamesAndFacesMemoriseView } from '../modes/namesAndFaces/NamesAndFacesMemoriseView';
+import { NamesAndFacesMingle } from '../modes/namesAndFaces/NamesAndFacesMingle';
+import { NamesAndFacesRecallView } from '../modes/namesAndFaces/NamesAndFacesRecallView';
+import { NamesAndFacesTutorialView } from '../modes/namesAndFaces/NamesAndFacesTutorialView';
+import { buildNamesAndFacesInstance, type NamesAndFacesConfig } from '../modes/namesAndFaces/logic';
 import { getModeForDate } from '../modeRotation';
 import { submitDailyChallenge } from '../service';
 import type { DailyChallengeInstance, DailyChallengeModeId } from '../types';
 
-type Phase = 'reveal' | 'tutorial' | 'memorise' | 'recall' | 'result' | 'submitting';
+// 'mingle' is the names_and_faces-specific transition phase
+// between memorise and recall — Blinks animate from their
+// memorise positions to their recall positions. Other modes
+// don't use it.
+type Phase = 'reveal' | 'tutorial' | 'memorise' | 'mingle' | 'recall' | 'result' | 'submitting';
 
 const WHAT_CHANGED_TUTORIAL_KEY = 'blanked_dc_what_changed_tutorial_seen';
+const NAMES_AND_FACES_TUTORIAL_KEY = 'blanked_dc_names_and_faces_tutorial_seen';
 
 /** Builds the instance for whichever mode plays today. Switches on
  *  the rotation table — adding modes in the future means adding a
@@ -48,6 +58,7 @@ const WHAT_CHANGED_TUTORIAL_KEY = 'blanked_dc_what_changed_tutorial_seen';
 function buildInstanceForToday(): DailyChallengeInstance<unknown> {
   const mode = getModeForDate();
   if (mode === 'what_changed') return buildWhatChangedInstance() as DailyChallengeInstance<unknown>;
+  if (mode === 'names_and_faces') return buildNamesAndFacesInstance() as DailyChallengeInstance<unknown>;
   return buildPhoneNumberInstance() as DailyChallengeInstance<unknown>;
 }
 
@@ -84,13 +95,21 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   // seamless.
   const [shouldShowTutorial, setShouldShowTutorial] = useState(false);
   useEffect(() => {
-    if (instance.mode !== 'what_changed') return;
+    // Each mode has its own tutorial flag — the player should see
+    // each new mode's tutorial once even if they've already seen
+    // others. The flag map dispatches by today's mode.
+    const tutorialKeyByMode: Partial<Record<DailyChallengeModeId, string>> = {
+      what_changed: WHAT_CHANGED_TUTORIAL_KEY,
+      names_and_faces: NAMES_AND_FACES_TUTORIAL_KEY,
+    };
+    const key = tutorialKeyByMode[instance.mode];
+    if (!key) return;
     let cancelled = false;
     (async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        const seen = await AsyncStorage.getItem(WHAT_CHANGED_TUTORIAL_KEY);
+        const seen = await AsyncStorage.getItem(key);
         if (!cancelled) setShouldShowTutorial(seen !== 'true');
       } catch {}
     })();
@@ -119,6 +138,14 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         missedIndexes: number[];
       }
     | {
+        kind: 'names_and_faces';
+        score: number;
+        timeSeconds: number;
+        emojiBlocks: string;
+        correctness: boolean[];
+        pairedNameByCharIdx: (string | undefined)[];
+      }
+    | {
         kind: 'fallback';
         score: number;
         timeSeconds: number;
@@ -132,24 +159,38 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   } : null);
 
   const handleBegin = useCallback(() => {
-    if (instance.mode === 'what_changed' && shouldShowTutorial) {
+    const hasTutorial = instance.mode === 'what_changed' || instance.mode === 'names_and_faces';
+    if (hasTutorial && shouldShowTutorial) {
       setPhase('tutorial');
     } else {
       setPhase('memorise');
     }
   }, [instance.mode, shouldShowTutorial]);
   const handleTutorialDismiss = useCallback(() => {
-    // Persist the seen flag and advance. If the write fails the
-    // tutorial would re-show next time the user plays What Changed,
-    // which is annoying but not broken.
+    // Persist the seen flag for whichever mode's tutorial we just
+    // showed. If the write fails the tutorial would re-show on the
+    // next play of this mode, which is annoying but not broken.
+    const key = instance.mode === 'names_and_faces'
+      ? NAMES_AND_FACES_TUTORIAL_KEY
+      : WHAT_CHANGED_TUTORIAL_KEY;
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      AsyncStorage.setItem(WHAT_CHANGED_TUTORIAL_KEY, 'true').catch(() => {});
+      AsyncStorage.setItem(key, 'true').catch(() => {});
     } catch {}
     setPhase('memorise');
-  }, []);
-  const handleMemoriseDone = useCallback(() => setPhase('recall'), []);
+  }, [instance.mode]);
+  // Names & Faces interleaves a 'mingle' phase between memorise and
+  // recall so the Blinks physically rearrange while names are
+  // hidden. Other modes go memorise -> recall directly.
+  const handleMemoriseDone = useCallback(() => {
+    if (instance.mode === 'names_and_faces') {
+      setPhase('mingle');
+    } else {
+      setPhase('recall');
+    }
+  }, [instance.mode]);
+  const handleMingleDone = useCallback(() => setPhase('recall'), []);
 
   const handlePhoneNumberComplete = useCallback(async (result: {
     score: number; timeSeconds: number; correctness: boolean[]; emojiBlocks: string;
@@ -197,6 +238,30 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
     setPhase('result');
   }, [instance]);
 
+  const handleNamesAndFacesComplete = useCallback(async (result: {
+    score: number; timeSeconds: number;
+    correctness: boolean[]; pairedNameByCharIdx: (string | undefined)[];
+    emojiBlocks: string;
+  }) => {
+    setPhase('submitting');
+    await submitDailyChallenge({
+      mode: instance.mode,
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      shareCardEmojiBlocks: result.emojiBlocks,
+      challengeDate: instance.challengeDate,
+    });
+    setFinalResult({
+      kind: 'names_and_faces',
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      emojiBlocks: result.emojiBlocks,
+      correctness: result.correctness,
+      pairedNameByCharIdx: result.pairedNameByCharIdx,
+    });
+    setPhase('result');
+  }, [instance]);
+
   // Mid-memorise background pause spec edge case. iOS will pause
   // setTimeout naturally when backgrounded, so when we come back
   // the timer effectively "pauses". We don't do anything special
@@ -215,6 +280,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   // discriminator.
   const phoneConfig = instance.mode === 'phone_number' ? (instance.config as PhoneNumberConfig) : null;
   const whatChangedConfig = instance.mode === 'what_changed' ? (instance.config as WhatChangedConfig) : null;
+  const namesAndFacesConfig = instance.mode === 'names_and_faces' ? (instance.config as NamesAndFacesConfig) : null;
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -245,6 +311,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         {phase === 'tutorial' && whatChangedConfig && (
           <WhatChangedTutorialView onDismiss={handleTutorialDismiss} />
         )}
+        {phase === 'tutorial' && namesAndFacesConfig && (
+          <NamesAndFacesTutorialView onDismiss={handleTutorialDismiss} />
+        )}
         {phase === 'memorise' && phoneConfig && (
           <PhoneNumberMemoriseView
             digits={phoneConfig.digits}
@@ -255,11 +324,20 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         {phase === 'memorise' && whatChangedConfig && (
           <WhatChangedMemoriseView config={whatChangedConfig} onElapsed={handleMemoriseDone} />
         )}
+        {phase === 'memorise' && namesAndFacesConfig && (
+          <NamesAndFacesMemoriseView config={namesAndFacesConfig} onElapsed={handleMemoriseDone} />
+        )}
+        {phase === 'mingle' && namesAndFacesConfig && (
+          <NamesAndFacesMingle config={namesAndFacesConfig} onComplete={handleMingleDone} />
+        )}
         {phase === 'recall' && phoneConfig && (
           <PhoneNumberRecallView config={phoneConfig} onComplete={handlePhoneNumberComplete} />
         )}
         {phase === 'recall' && whatChangedConfig && (
           <WhatChangedRecallView config={whatChangedConfig} onComplete={handleWhatChangedComplete} />
+        )}
+        {phase === 'recall' && namesAndFacesConfig && (
+          <NamesAndFacesRecallView config={namesAndFacesConfig} onComplete={handleNamesAndFacesComplete} />
         )}
         {phase === 'submitting' && (
           <View style={s.submitting}>
@@ -292,6 +370,14 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
                   correctIndexes: finalResult.correctIndexes,
                   incorrectIndexes: finalResult.incorrectIndexes,
                   missedIndexes: finalResult.missedIndexes,
+                };
+              }
+              if (finalResult.kind === 'names_and_faces' && namesAndFacesConfig) {
+                return {
+                  kind: 'names_and_faces',
+                  config: namesAndFacesConfig,
+                  correctness: finalResult.correctness,
+                  pairedNameByCharIdx: finalResult.pairedNameByCharIdx,
                 };
               }
               return { kind: 'fallback', emojiBlocks: finalResult.emojiBlocks };

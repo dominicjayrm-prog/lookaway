@@ -61,6 +61,9 @@ interface Props {
 }
 
 import type { WhatChangedConfig } from '../modes/whatChanged/logic';
+import type { NamesAndFacesConfig } from '../modes/namesAndFaces/logic';
+import { AvatarFrame } from '@/src/components/AvatarFrame';
+import { getFrameById } from '@/src/data/cosmetics';
 export type ModeVisual =
   | { kind: 'phone_number'; digits: readonly number[]; correctness: readonly boolean[] }
   | {
@@ -74,6 +77,20 @@ export type ModeVisual =
       incorrectIndexes: readonly number[];
       /** Cells that changed but the player missed. */
       missedIndexes: readonly number[];
+    }
+  | {
+      kind: 'names_and_faces';
+      /** Full puzzle config — characters in memorise order, used so
+       *  the share card renders the SAME Blinks the player saw with
+       *  their assigned frame rings + names underneath. */
+      config: NamesAndFacesConfig;
+      /** Per-character (memorise order) correctness — true if the
+       *  player paired the correct name to that face. */
+      correctness: readonly boolean[];
+      /** Per-character (memorise order) name the player paired. May
+       *  be undefined if they somehow submitted with a missing pair
+       *  (shouldn't happen — submit gates on allPaired). */
+      pairedNameByCharIdx: readonly (string | undefined)[];
     }
   | { kind: 'fallback'; emojiBlocks: string };
 
@@ -233,6 +250,60 @@ function ModeVisualBlock({ visual }: { visual: ModeVisual }) {
       </View>
     );
   }
+  if (visual.kind === 'names_and_faces') {
+    // Render the same Blinks the player saw, in memorise order, each
+    // inside its assigned frame ring with the player's paired name
+    // underneath. Correct pairings get a green ring + ✓ badge, wrong
+    // ones get a coral ring + ✕ + the actual correct name in muted
+    // gold (matching the in-app reveal). Mini portraits sit small
+    // enough that even the 6-character hard day fits on a single row.
+    // Portrait size scales with character count so 6 portraits fit
+    // across the share card's content width (~928px after padding)
+    // without squeezing — easy day uses larger portraits, hard day
+    // shrinks them slightly. The Blink + frame nests inside.
+    const wrapSize = visual.config.numCharacters >= 5 ? 130 : 170;
+    const blinkSize = wrapSize - 28;
+    return (
+      <View style={s.nfRow}>
+        {visual.config.characters.map((char, i) => {
+          const correct = visual.correctness[i];
+          const paired = visual.pairedNameByCharIdx[i];
+          const expected = char.name;
+          const frame = getFrameById(char.frame.id) ?? null;
+          const ringColor = correct ? '#00B894' : '#FF6B6B';
+          return (
+            <View key={i} style={s.nfCell}>
+              <View
+                style={[
+                  s.nfPortraitWrap,
+                  {
+                    width: wrapSize, height: wrapSize,
+                    borderColor: ringColor,
+                    backgroundColor: ringColor + '22',
+                  },
+                ]}
+              >
+                <AvatarFrame frame={frame} size={blinkSize}>
+                  <Blink expression={char.expression} size={blinkSize} />
+                </AvatarFrame>
+                <View style={[s.nfBadge, { backgroundColor: ringColor }]}>
+                  <Text style={s.nfBadgeText}>{correct ? '✓' : '✕'}</Text>
+                </View>
+              </View>
+              <Text style={s.nfNameLabel} numberOfLines={1}>
+                {paired ?? '—'}
+              </Text>
+              {!correct && (
+                <Text style={s.nfCorrectName} numberOfLines={1}>
+                  {expected}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
   // Fallback: just render the emoji blocks string for future modes
   // that haven't defined a custom visual yet.
   return <Text style={s.emojiFallback}>{visual.emojiBlocks}</Text>;
@@ -329,6 +400,37 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   wcCellEmoji: { fontSize: 56, lineHeight: 70 },
+  // Names & Faces share-card row. The portraits sit on coloured
+  // tinted backgrounds (green for correct, coral for wrong) with a
+  // ✓/✕ badge in the top-right of each portrait + the player's
+  // paired name underneath. The actual correct name fades in below
+  // wrong answers in muted gold. Sized so 6 characters fit across
+  // the 1080px card (visual cap is 6 — the hard-day budget).
+  nfRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 18 },
+  nfCell: { alignItems: 'center', gap: 8 },
+  nfPortraitWrap: {
+    borderRadius: 999, borderWidth: 5,
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  nfBadge: {
+    position: 'absolute', top: -4, right: -4,
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: '#FFFFFF',
+  },
+  nfBadgeText: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
+  nfNameLabel: {
+    fontSize: 24, fontWeight: '800',
+    color: '#FFFFFF',
+    maxWidth: 170, textAlign: 'center',
+  },
+  nfCorrectName: {
+    fontSize: 18, fontWeight: '700',
+    color: 'rgba(255, 212, 90, 0.85)',
+    maxWidth: 170, textAlign: 'center',
+    letterSpacing: 0.3,
+  },
   bottomChips: {
     flexDirection: 'row', gap: 14,
     marginTop: 'auto',
