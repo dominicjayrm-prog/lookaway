@@ -17,6 +17,15 @@ import { DailyChallengeContainer } from '@/src/features/dailyChallenge/views/Dai
 import { hasPlayedToday } from '@/src/features/dailyChallenge/service';
 import type { DailyChallengeResult } from '@/src/features/dailyChallenge/types';
 
+// TEMPORARY (QA): in dev builds, force a fresh play every visit so
+// the developer can re-test Phase 4 without manually wiping their
+// daily_challenge_results row. The submit will silently no-op on
+// the unique-violation if a row already exists (so streak won't
+// double-bump). Also clears the Names & Faces tutorial flag so
+// the one-time tutorial replays. Strip this whole block before
+// shipping production.
+const DEV_REPLAY_BYPASS = __DEV__;
+
 export default function DailyChallengeRoute() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -24,7 +33,19 @@ export default function DailyChallengeRoute() {
 
   useEffect(() => {
     let cancelled = false;
-    hasPlayedToday().then((res) => { if (!cancelled) setCheck(res); });
+    (async () => {
+      if (DEV_REPLAY_BYPASS) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          await AsyncStorage.removeItem('blanked_dc_names_and_faces_tutorial_seen');
+        } catch {}
+        if (!cancelled) setCheck({ played: false, result: null });
+        return;
+      }
+      const res = await hasPlayedToday();
+      if (!cancelled) setCheck(res);
+    })();
     return () => { cancelled = true; };
   }, []);
 

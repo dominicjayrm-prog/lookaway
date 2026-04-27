@@ -17,9 +17,14 @@ import { t } from '@/src/i18n';
 // (hard) slots — those days hit the highest signup-conversion
 // for the marketing-differentiator mode and Saturday's hard
 // difficulty matches the longer-session weekend pattern.
+//
+// TEMPORARY (QA): Monday is overridden from phone_number ->
+// names_and_faces so the developer can play-test Phase 4 today
+// instead of waiting for Tuesday. Revert this Monday entry to
+// 'phone_number' before shipping production.
 const ROTATION: Record<number, DailyChallengeModeId> = {
   0: 'phone_number',     // Sunday
-  1: 'phone_number',     // Monday
+  1: 'names_and_faces',  // Monday — TEMP QA OVERRIDE, revert to phone_number before prod
   2: 'names_and_faces',  // Tuesday — Names & Faces (easy)
   3: 'what_changed',     // Wednesday
   4: 'phone_number',     // Thursday
