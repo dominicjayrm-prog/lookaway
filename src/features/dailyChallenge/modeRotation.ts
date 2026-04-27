@@ -22,9 +22,14 @@ import { t } from '@/src/i18n';
 // player never gets the same mode two days running. Sunday stays
 // on Phone Number for now; Names & Faces / The Witness will slot
 // into the gaps as Phases 4+5 ship.
+//
+// TEMPORARY (QA): Monday is overridden from phone_number ->
+// what_changed so the developer can play-test the new mode on
+// release day instead of waiting for Tuesday. Revert this Monday
+// entry to 'phone_number' before shipping production.
 const ROTATION: Record<number, DailyChallengeModeId> = {
   0: 'phone_number',  // Sunday
-  1: 'phone_number',  // Monday
+  1: 'what_changed',  // Monday — TEMP QA OVERRIDE, revert to phone_number before prod
   2: 'what_changed',  // Tuesday
   3: 'phone_number',  // Wednesday
   4: 'what_changed',  // Thursday
