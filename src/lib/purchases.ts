@@ -19,6 +19,7 @@
 import { Platform } from 'react-native';
 import { log } from '@/src/lib/logger';
 import { GEM_PACK_REWARDS, IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
+import { logPurchase as logMetaPurchase, logSubscribe as logMetaSubscribe } from '@/src/lib/metaSdk';
 
 const API_KEY = 'appl_CeUhcxEuMRVyailKleVtsYzPJDd';
 
@@ -116,8 +117,20 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
       log.warn('purchases', 'product not found', { productId });
       return 'error';
     }
-    await withTimeout(Purchases.purchaseStoreProduct(products[0]), PURCHASE_TIMEOUT_MS, 'purchaseStoreProduct');
+    const product = products[0];
+    await withTimeout(Purchases.purchaseStoreProduct(product), PURCHASE_TIMEOUT_MS, 'purchaseStoreProduct');
     log.breadcrumb('purchases', 'product purchased', { productId });
+    // Fire Meta's purchase event with the actual price + currency
+    // RevenueCat saw — gives the ad algo accurate revenue signal per
+    // region. Wrapped in its own try/catch so a Meta SDK blip can't
+    // make the purchase appear failed to the caller.
+    try {
+      const price = typeof product.price === 'number' ? product.price : Number(product.price);
+      const currency = product.currencyCode || 'USD';
+      if (price > 0) logMetaPurchase(price, currency, productId);
+    } catch (e) {
+      log.warn('purchases', 'meta logPurchase post-purchase failed (non-fatal)', { error: String(e) });
+    }
     return 'success';
   } catch (e: any) {
     if (e.userCancelled) {
@@ -159,6 +172,21 @@ export async function purchaseSubscription(
     const isActive = !!plusEnt;
     const periodType = normalisePeriodType(plusEnt?.periodType);
     log.breadcrumb('purchases', 'subscription purchased', { plan, isActive, periodType });
+    // Fire Meta's Subscribe event (only on actual paid period — we
+    // intentionally skip free trials so the ad algo doesn't optimise
+    // toward trial-and-cancel users). Wrapped so a Meta SDK blip
+    // can't make the subscription appear failed.
+    try {
+      if (isActive && periodType === 'normal') {
+        const price = pkg.product?.price;
+        const currency = pkg.product?.currencyCode || 'USD';
+        if (typeof price === 'number' && price > 0) {
+          logMetaSubscribe(plan, price, currency);
+        }
+      }
+    } catch (e) {
+      log.warn('purchases', 'meta logSubscribe post-purchase failed (non-fatal)', { error: String(e) });
+    }
     return { result: 'success', isActive, periodType };
   } catch (e: any) {
     if (e.userCancelled) {

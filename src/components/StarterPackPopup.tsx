@@ -14,6 +14,7 @@ import Svg, { Path, Circle, Rect, Line, Polygon } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { getProductPrices } from '@/src/lib/purchases';
 import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
+import { logAddToCart } from '@/src/lib/metaSdk';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -122,6 +123,13 @@ function StarterPackPopup({ visible, onDismiss, onPurchase }: Props) {
         if (p) setPriceLabel(p);
       })
       .catch(() => {});
+    // Upper-funnel signal — Meta uses add-to-cart paired with the
+    // Purchase event to learn which audiences convert from offer-
+    // viewed to actual buyers. Fires every time the popup is shown,
+    // not just once, so a player who declines and is re-offered
+    // counts twice (which is what we want — repeat exposure is its
+    // own signal).
+    logAddToCart(IAP_PRODUCT_IDS.STARTER_PACK);
   }, [visible]);
 
   useEffect(() => {

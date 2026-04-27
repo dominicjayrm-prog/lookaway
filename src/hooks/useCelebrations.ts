@@ -12,6 +12,12 @@ import { useAuth } from '@/src/providers/AuthProvider';
 import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { scheduleLivesFullNotification } from '@/src/utils/notifications';
 import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { logLevelAchieved } from '@/src/lib/metaSdk';
+
+/** Levels that fire `fb_mobile_level_achieved` to Meta. Picked
+ *  carefully because Meta caps SKAdNetwork priority events — these
+ *  two cover engagement (5) and high-intent (25). */
+const META_LEVEL_MILESTONES = [5, 25] as const;
 
 interface CelebrationState {
   celebration: { days: number; gems: number; title: string; color: string } | null;
@@ -83,6 +89,17 @@ export function useCelebrations() {
     // (see triggerFailCelebrations).
     if (!isReplay) {
       const totalCompleted = Object.keys(useGameStore.getState().levelProgress).length;
+      // Meta level-achieved milestones — fired exactly once per level,
+      // gated by AsyncStorage so re-completes don't double-fire and
+      // skew the algo's signal.
+      if ((META_LEVEL_MILESTONES as readonly number[]).includes(totalCompleted)) {
+        const key = `meta_level_${totalCompleted}_fired`;
+        AsyncStorage.getItem(key).then(fired => {
+          if (fired) return;
+          logLevelAchieved(totalCompleted);
+          AsyncStorage.setItem(key, String(Date.now()));
+        }).catch(() => {});
+      }
       if (totalCompleted >= 25) {
         (async () => {
           try {

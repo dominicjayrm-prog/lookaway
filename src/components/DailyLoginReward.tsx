@@ -19,6 +19,7 @@ import {
 } from '@/src/utils/dailyLoginRewards';
 import { getCosmeticById, type Cosmetic } from '@/src/data/cosmetics';
 import { CosmeticCelebration } from '@/src/components/CosmeticCelebration';
+import { logRetentionMilestone } from '@/src/lib/metaSdk';
 
 var { width: SW } = Dimensions.get('window');
 
@@ -87,6 +88,13 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
     claimLoginReward(advanceLoginReward(loginReward));
     setClaimed(true);
     setClaimedReward(reward);
+
+    // Retention milestones to Meta. Only fire on the exact threshold
+    // claim (7 / 14 / 30) so we don't double-count daily logins after
+    // the streak passes the bar.
+    if (check.streak === 7 || check.streak === 14 || check.streak === 30) {
+      logRetentionMilestone(check.streak);
+    }
 
     // Apply reward — discriminated union handles each type explicitly
     let unlockedCosmetic: Cosmetic | null = null;

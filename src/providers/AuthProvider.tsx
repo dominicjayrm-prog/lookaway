@@ -6,6 +6,24 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { initPurchases, identifyUser, logOutPurchases } from '@/src/lib/purchases';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logCompleteRegistration } from '@/src/lib/metaSdk';
+
+/** Fire the Meta `complete_registration` event exactly once per
+ *  device. SIGNED_IN fires on every launch with an existing session,
+ *  so without this gate we'd over-report registrations and the Meta
+ *  algo would optimise toward a meaningless event volume. */
+const META_REG_FIRED_KEY = 'blanked_meta_registration_fired';
+async function maybeLogRegistration(method: 'apple' | 'google' | 'guest') {
+  try {
+    const fired = await AsyncStorage.getItem(META_REG_FIRED_KEY);
+    if (fired) return;
+    logCompleteRegistration(method);
+    await AsyncStorage.setItem(META_REG_FIRED_KEY, String(Date.now()));
+  } catch {
+    // Best-effort — analytics blip should never block sign-in.
+  }
+}
 
 /** Key we use to hand Apple's suggested display name across the
  *  router boundary between the login screen and the username picker.
@@ -149,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { display_name: displayName || email.split('@')[0] },
       },
     });
+    if (!error) maybeLogRegistration('guest');
     return { error: error?.message ?? null };
   };
 
@@ -249,6 +268,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           message: error?.message ?? 'Could not sign in. Try again.',
         };
       }
+
+      maybeLogRegistration('apple');
 
       // First-time-only suggestion stash. Apple only returns fullName on
       // the very first authorisation of the app against this Apple ID,

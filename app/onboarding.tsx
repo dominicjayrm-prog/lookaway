@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
+import { logTutorialCompletion } from '@/src/lib/metaSdk';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import type { BlinkExpression } from '@/src/components/AnimatedBlink';
 import { t } from '@/src/i18n';
@@ -657,6 +658,7 @@ export default function OnboardingFlow() {
   const onPlay = useCallback(() => {
     try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
     track(EVENTS.ONBOARDING_COMPLETED);
+    logTutorialCompletion();
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 

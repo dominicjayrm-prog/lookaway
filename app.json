@@ -104,6 +104,19 @@
         }
       ],
       [
+        "react-native-fbsdk-next",
+        {
+          "appID": "957304896996915",
+          "clientToken": "ef2f568b72578c81cd7f955684a3b18d",
+          "displayName": "Blanked",
+          "scheme": "fb957304896996915",
+          "advertiserIDCollectionEnabled": true,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true,
+          "iosUserTrackingPermission": "Your data will be used to deliver personalised ads and measure ad performance across apps you use."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {

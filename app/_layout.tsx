@@ -35,6 +35,7 @@ import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
+import { initMetaSdk } from '@/src/lib/metaSdk';
 import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 import { OfflineScreen } from '@/src/components/OfflineScreen';
@@ -71,7 +72,16 @@ function SoundLoader() {
  *  ad request, otherwise reviewers reject for "tracking without
  *  consent". Idempotent — only runs once per app session. */
 function AdsInitialiser() {
-  useEffect(() => { initAdsAndTracking(); }, []);
+  useEffect(() => {
+    // Order matters: AdMob's init runs the ATT prompt. Once that
+    // resolves we kick off the Meta SDK so it picks up the resolved
+    // tracking status (granted / denied) on its very first event.
+    // Both are individually idempotent — safe to chain.
+    (async () => {
+      await initAdsAndTracking();
+      await initMetaSdk();
+    })();
+  }, []);
   return null;
 }
 
