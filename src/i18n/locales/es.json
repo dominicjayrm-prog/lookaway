@@ -1608,7 +1608,7 @@
     "nothing_title": "Nada que restaurar",
     "nothing_body": "No se han encontrado compras anteriores en este ID de Apple.",
     "discount": {
-      "title": "Espera — oferta especial",
+      "title": "Espera, oferta especial",
       "subtitle": "Primer mes a mitad de precio",
       "expires_in": "La oferta expira en {time}",
       "expired_pill": "Oferta expirada",
@@ -1839,6 +1839,7 @@
       "results": {
         "score_label": "TU PUNTUACIÓN DE MEMORIA",
         "percentile": "Top {topPct}% de jugadores",
+        "starting_point": "Tu punto de partida",
         "brain_type_label": "TIPO DE CEREBRO",
         "round_breakdown": "Resumen por ronda",
         "round_label": "Ronda {number}",
@@ -1855,7 +1856,7 @@
         },
         "detail_hunter": {
           "name": "Cazador de Detalles",
-          "tagline": "Colores, formas, lo pequeño — tus ojos lo capturan todo."
+          "tagline": "Colores, formas, lo pequeño. Tus ojos lo capturan todo."
         },
         "deep_memory": {
           "name": "Memoria Profunda",
@@ -1863,14 +1864,18 @@
         },
         "balanced_mind": {
           "name": "Mente Equilibrada",
-          "tagline": "Fuerte en todo — sin debilidad clara, con margen para afinar."
+          "tagline": "Sólida en todo, con bastante margen para afinar."
+        },
+        "untapped_potential": {
+          "name": "Potencial sin Explorar",
+          "tagline": "Hay mucho que ganar. Lo bueno: la memoria es de lo más entrenable que hace tu cerebro."
         }
       },
       "profile": {
         "title": "Tu perfil cerebral completo",
         "sub": "Personalizado para {brainType}",
         "strengths_title": "Tus puntos fuertes",
-        "strengths_body": "Análisis detallado de dónde brilla tu memoria — y cómo aprovecharlo.",
+        "strengths_body": "Análisis detallado de dónde brilla tu memoria, y cómo aprovecharlo.",
         "weaknesses_title": "Qué entrenar",
         "weaknesses_body": "Desglose honesto de qué categorías te costaron y por qué.",
         "training_title": "Tu plan de 7 días",
@@ -1878,7 +1883,7 @@
         "age_title": "Comparación por edad",
         "age_body": "Cómo tu memoria se compara con otros de tu edad, con todos los datos de percentil.",
         "unlock_title": "Desbloquea tu perfil completo",
-        "unlock_sub": "Consigue análisis personalizados, tu plan de entrenamiento y 2× gemas en cada nivel — solo con Blanked+.",
+        "unlock_sub": "Consigue análisis personalizados, tu plan de entrenamiento y 2× gemas en cada nivel. Solo con Blanked+.",
         "unlock_cta": "Desbloquear perfil completo"
       }
     }

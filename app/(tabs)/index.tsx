@@ -21,6 +21,7 @@ import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
+import DiscountPaywall from '@/src/components/DiscountPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 
@@ -352,6 +353,41 @@ function PlayTab() {
   }, [toast]);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  // The discount paywall is the second-chance offer surfaced when the
+  // user dismisses the regular paywall during the post-signup flow.
+  // It only fires once per device (via blanked_discount_paywall_seen).
+  const [showDiscountPaywall, setShowDiscountPaywall] = useState(false);
+  // True when the currently-visible paywall came from the post-signup
+  // flow vs other entry points (out-of-lives, stats space, shop).
+  // Only post-signup dismissals chain to the discount paywall.
+  const postSignupPaywallActive = useRef(false);
+
+  // Post-signup paywall: onboarding dropped a flag for us to surface
+  // the paywall the first time the user lands on home with an active
+  // session. Anonymous purchases would otherwise leak entitlements
+  // onto a device id with no recovery path; running it here means the
+  // purchase is always attached to a real user account.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const flag = await AsyncStorage.getItem('blanked_show_paywall_after_signup');
+        if (cancelled || flag !== 'true') return;
+        await AsyncStorage.removeItem('blanked_show_paywall_after_signup');
+        // Tiny delay so home renders before the paywall animates over
+        // it. Without this the paywall covers the home tab before any
+        // greeting has a chance to show, which is jarring.
+        setTimeout(() => {
+          if (!cancelled) {
+            postSignupPaywallActive.current = true;
+            setShowPaywall(true);
+          }
+        }, 600);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -688,24 +724,62 @@ function PlayTab() {
         onGoToShop={() => { setShowOutOfLives(false); router.push('/(tabs)/shop'); }}
         onGoToBlankedPlus={() => { setShowOutOfLives(false); setShowPaywall(true); }}
       />
-      <SubscriptionPaywall visible={showPaywall} onDismiss={() => setShowPaywall(false)} onSubscribe={async (plan: 'monthly' | 'yearly') => {
-        setShowPaywall(false);
-        // Route through the real StoreKit purchase so the home-tab
-        // entry path matches shop.tsx / stats-space.tsx. Previously
-        // this just flipped subscriptionStatus locally without
-        // charging the user — a dev stub that accidentally shipped.
-        const { result, periodType } = await purchaseSubscription(plan);
-        if (result !== 'success') return;
-        const store = useGameStore.getState();
-        store.activatePlus(periodType);
-        store.unlockCosmetic('frame_premium_gold');
-        store.unlockCosmetic('expr_premium');
-        store.unlockCosmetic('banner_premium_gold');
-        if (periodType !== 'trial' && periodType !== 'intro') {
+      <SubscriptionPaywall
+        visible={showPaywall}
+        onDismiss={async () => {
+          setShowPaywall(false);
+          // Post-signup flow chains to the discount paywall once per
+          // device. Other entry points (out-of-lives, stats space)
+          // just close.
+          if (!postSignupPaywallActive.current) return;
+          postSignupPaywallActive.current = false;
+          let alreadySeen = false;
+          try {
+            alreadySeen = (await AsyncStorage.getItem('blanked_discount_paywall_seen')) === 'true';
+          } catch {}
+          if (alreadySeen) return;
+          try { await AsyncStorage.setItem('blanked_discount_paywall_seen', 'true'); } catch {}
+          // Defer briefly so the regular paywall's dismiss animation
+          // completes before the discount paywall slides in.
+          setTimeout(() => setShowDiscountPaywall(true), 280);
+        }}
+        onSubscribe={async (plan: 'monthly' | 'yearly') => {
+          setShowPaywall(false);
+          postSignupPaywallActive.current = false;
+          // Route through the real StoreKit purchase so the home-tab
+          // entry path matches shop.tsx / stats-space.tsx.
+          const { result, periodType } = await purchaseSubscription(plan);
+          if (result !== 'success') return;
+          const store = useGameStore.getState();
+          store.activatePlus(periodType);
+          store.unlockCosmetic('frame_premium_gold');
+          store.unlockCosmetic('expr_premium');
+          store.unlockCosmetic('banner_premium_gold');
+          // Store-level guard skips during trial / intro period, so
+          // calling unconditionally is safe.
           store.maybeGrantMonthlyPlusGems();
-        }
-        setShowPremiumCelebration(true);
-      }} />
+          setShowPremiumCelebration(true);
+        }}
+      />
+      <DiscountPaywall
+        visible={showDiscountPaywall}
+        onDismiss={() => setShowDiscountPaywall(false)}
+        onSubscribe={async () => {
+          setShowDiscountPaywall(false);
+          // Discount offer only ever applies to the monthly plan.
+          // RevenueCat applies the configured intro offer at purchase
+          // time when the Apple ID is eligible.
+          const { result, periodType } = await purchaseSubscription('monthly');
+          if (result !== 'success') return;
+          const store = useGameStore.getState();
+          store.activatePlus(periodType);
+          store.unlockCosmetic('frame_premium_gold');
+          store.unlockCosmetic('expr_premium');
+          store.unlockCosmetic('banner_premium_gold');
+          store.maybeGrantMonthlyPlusGems();
+          setShowPremiumCelebration(true);
+        }}
+      />
       <TutorialOverlay visible={showTutorial && tutorialSpots.length === 5} spotlights={tutorialSpots} onComplete={completeTutorial} />
       <PremiumCelebration visible={showPremiumCelebration} onDismiss={() => setShowPremiumCelebration(false)} />
 

@@ -27,8 +27,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { OptionButton } from '@/src/components/OptionButton';
-import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
-import DiscountPaywall from '@/src/components/DiscountPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { ONBOARDING_ROUNDS } from '@/src/data/onboardingTestScenes';
@@ -37,22 +35,26 @@ import {
   type RoundResult,
   type BrainType,
 } from '@/src/utils/onboardingScore';
-import { purchaseSubscription } from '@/src/lib/purchases';
-import { useGameStore } from '@/src/store';
 import { t } from '@/src/i18n';
 
 const ACCENT = '#6C5CE7';
 const ONBOARDED_KEY = 'blanked_onboarded';
-const DISCOUNT_SEEN_KEY = 'blanked_discount_paywall_seen';
+// Read by app/(tabs)/index.tsx on first home render after signup. When
+// true, the home tab pops the SubscriptionPaywall (and on dismiss, the
+// DiscountPaywall) before clearing the flag. This shifts the paywall
+// out of the pre-auth flow so purchases attach to a real account.
+const POST_SIGNUP_PAYWALL_KEY = 'blanked_show_paywall_after_signup';
 
-type Phase =
-  | 'welcome'
-  | 'round'
-  | 'analysing'
-  | 'results'
-  | 'profile'
-  | 'paywall'
-  | 'discount';
+// Paywall is shown AFTER signup, not during onboarding. Anonymous
+// purchases technically work via RevenueCat (anon device id later
+// merged into the auth user via `Purchases.logIn`), but the timing
+// is fragile: if a user pays and closes the app before signing up,
+// the entitlement lives on a device id with no recovery path. The
+// safer pattern (used by Headspace / Calm / Duolingo Plus) is auth
+// first, paywall after. The onboarding test still drives conversion
+// via the blurred-profile hook, but the actual purchase happens on
+// home after the user has an account to attach it to.
+type Phase = 'welcome' | 'round' | 'analysing' | 'results' | 'profile';
 
 interface OnboardingState {
   phase: Phase;
@@ -64,9 +66,7 @@ type Action =
   | { type: 'start' }
   | { type: 'recordRound'; result: RoundResult }
   | { type: 'analysisDone' }
-  | { type: 'showProfile' }
-  | { type: 'showPaywall' }
-  | { type: 'showDiscount' };
+  | { type: 'showProfile' };
 
 function reducer(state: OnboardingState, action: Action): OnboardingState {
   switch (action.type) {
@@ -86,10 +86,6 @@ function reducer(state: OnboardingState, action: Action): OnboardingState {
       return { ...state, phase: 'results' };
     case 'showProfile':
       return { ...state, phase: 'profile' };
-    case 'showPaywall':
-      return { ...state, phase: 'paywall' };
-    case 'showDiscount':
-      return { ...state, phase: 'discount' };
     default:
       return state;
   }
@@ -111,70 +107,33 @@ export default function Onboarding() {
     results: [],
   });
 
-  // Once the user has seen the test (regardless of subscribe outcome),
-  // mark the device as onboarded and route to login. Pre-creating this
-  // helper avoids the routing logic being duplicated across every exit
-  // tap (subscribe, dismiss, dismiss-from-discount).
-  const exitToLogin = useCallback(async () => {
+  // Tapping "Unlock Full Profile" sets a flag that the home tab picks
+  // up after signup, so the SubscriptionPaywall fires once the user has
+  // a real account. This path is also used as the regular exit, since
+  // the test must be completed before reaching the rest of the app.
+  const exitToSignup = useCallback(async (queuePaywall: boolean) => {
     try {
       await getStorage().setItem(ONBOARDED_KEY, 'true');
+      if (queuePaywall) {
+        await getStorage().setItem(POST_SIGNUP_PAYWALL_KEY, 'true');
+      }
     } catch {}
-    // Web fallback so the index.tsx redirect picks up the flag without
-    // a full reload — matches the previous onboarding's behaviour.
+    // Web fallback so app/index.tsx's redirect picks up the flag
+    // without a full reload, matching the previous onboarding's
+    // behaviour for the existing onboarded key.
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(ONBOARDED_KEY, 'true');
+        if (queuePaywall) localStorage.setItem(POST_SIGNUP_PAYWALL_KEY, 'true');
       }
     } catch {}
-    track(EVENTS.ONBOARDING_COMPLETED);
+    track(EVENTS.ONBOARDING_COMPLETED, { queuedPaywall: queuePaywall });
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
   const output = state.phase === 'results' || state.phase === 'profile'
     ? buildOnboardingScoreOutput(state.results)
     : null;
-
-  // Subscribe handler — used by both the regular paywall and the
-  // discount paywall. Returns purchase outcome to the caller so each
-  // paywall can decide what to do on cancel/error vs. success.
-  const handleSubscribe = useCallback(async (plan: 'monthly' | 'yearly') => {
-    const { result, periodType, isActive } = await purchaseSubscription(plan);
-    if (result === 'success' && isActive) {
-      const store = useGameStore.getState();
-      store.activatePlus(periodType);
-      store.unlockCosmetic('frame_premium_gold');
-      store.unlockCosmetic('expr_premium');
-      store.unlockCosmetic('banner_premium_gold');
-      // Fires monthly grant immediately if eligible; the store-level
-      // guard skips during trial / intro period.
-      store.maybeGrantMonthlyPlusGems();
-      track(EVENTS.SUBSCRIPTION_PURCHASED, { plan, periodType, source: 'onboarding' });
-      exitToLogin();
-    }
-  }, [exitToLogin]);
-
-  // Show the discount paywall after the user dismisses the regular
-  // one — but only ONCE per device. After that, dismissing the regular
-  // paywall just exits to login.
-  const handlePaywallDismiss = useCallback(async () => {
-    let alreadySeen = false;
-    try {
-      const flag = await getStorage().getItem(DISCOUNT_SEEN_KEY);
-      alreadySeen = flag === 'true';
-    } catch {}
-    if (alreadySeen) {
-      exitToLogin();
-      return;
-    }
-    try {
-      await getStorage().setItem(DISCOUNT_SEEN_KEY, 'true');
-    } catch {}
-    dispatch({ type: 'showDiscount' });
-  }, [exitToLogin]);
-
-  const handleDiscountSubscribe = useCallback(() => {
-    handleSubscribe('monthly');
-  }, [handleSubscribe]);
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
@@ -201,19 +160,9 @@ export default function Onboarding() {
       {state.phase === 'profile' && output && (
         <BlurredProfile
           brainType={output.brainType}
-          onUnlock={() => dispatch({ type: 'showPaywall' })}
+          onUnlock={() => exitToSignup(true)}
         />
       )}
-      <SubscriptionPaywall
-        visible={state.phase === 'paywall'}
-        onDismiss={handlePaywallDismiss}
-        onSubscribe={handleSubscribe}
-      />
-      <DiscountPaywall
-        visible={state.phase === 'discount'}
-        onDismiss={exitToLogin}
-        onSubscribe={handleDiscountSubscribe}
-      />
     </View>
   );
 }
@@ -337,7 +286,15 @@ function TestRound({
       {phase === 'memorise' && (
         <View style={s.sceneWrap}>
           <Text style={[s.bigInstruction, { color: colors.text }]}>{t('onboarding.test.memorise')}</Text>
-          <SceneRenderer objects={round.scene.objects} visible viewTime={round.viewTime} />
+          {/* SceneRenderer's Card uses `width: 100%` + `aspectRatio: 1`,
+              so it needs a parent that constrains its width. The flex
+              column with alignItems-center upstream lets children pick
+              their own width, which collapsed the Card to 0px. Giving
+              this wrapper an explicit width (capped on tablets) makes
+              the canvas show up reliably across phone + tablet sizes. */}
+          <View style={s.sceneCanvasWrap}>
+            <SceneRenderer objects={round.scene.objects} visible viewTime={round.viewTime} />
+          </View>
           <View style={[s.timerPill, { backgroundColor: ACCENT + '22' }]}>
             <Text style={[s.timerText, { color: ACCENT }]}>{secondsLeft.toFixed(1)}s</Text>
           </View>
@@ -382,10 +339,25 @@ const ANALYSE_STEPS = [
   'onboarding.test.analysing.step_3',
 ] as const;
 
+// Eye-movement cycle for the analysing Blink. Drives `lookOffset`
+// through a sequence so the character feels alive (scanning, thinking)
+// rather than frozen. Slow enough to read as a deliberate "I'm
+// processing" expression, not a twitch.
+const LOOK_PATH: { x: number; y: number }[] = [
+  { x: 0, y: 0 },
+  { x: -0.6, y: 0.3 },
+  { x: 0.6, y: 0.3 },
+  { x: 0, y: -0.4 },
+  { x: -0.5, y: -0.2 },
+  { x: 0.5, y: -0.2 },
+  { x: 0, y: 0 },
+];
+
 function Analysing({ onDone }: { onDone: () => void }) {
   const { colors } = useTheme();
   const fill = useRef(new RNAnimated.Value(0)).current;
   const [stepDone, setStepDone] = useState(0);
+  const [lookIdx, setLookIdx] = useState(0);
 
   useEffect(() => {
     RNAnimated.timing(fill, {
@@ -397,14 +369,22 @@ function Analysing({ onDone }: { onDone: () => void }) {
     const t2 = setTimeout(() => setStepDone(2), 1500);
     const t3 = setTimeout(() => setStepDone(3), 2300);
     const done = setTimeout(onDone, 2800);
-    return () => { [t1, t2, t3, done].forEach(clearTimeout); };
+    // Cycle the eye position every 380ms while the loader runs.
+    // Stops on cleanup (unmount + done callback).
+    const lookId = setInterval(() => {
+      setLookIdx((i) => (i + 1) % LOOK_PATH.length);
+    }, 380);
+    return () => {
+      [t1, t2, t3, done].forEach(clearTimeout);
+      clearInterval(lookId);
+    };
   }, [fill, onDone]);
 
   const widthInterp = fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <View style={s.centered}>
-      <AnimatedBlink expression="memorise" size={92} entrance="fade" />
+      <AnimatedBlink expression="memorise" size={92} entrance="fade" lookOffset={LOOK_PATH[lookIdx]} />
       <Text style={[s.analyseTitle, { color: colors.text }]}>{t('onboarding.test.analysing.title')}</Text>
 
       <View style={[s.fillTrack, { backgroundColor: colors.border }]}>
@@ -464,9 +444,11 @@ function Results({
         <Text style={[s.resultsLabel, { color: colors.textMid }]}>{t('onboarding.test.results.score_label')}</Text>
         <Text style={[s.resultsScore, { color: colors.text }]}>{displayScore}<Text style={[s.resultsScoreOf, { color: colors.textMid }]}>/100</Text></Text>
         <View style={[s.resultsPercentilePill, { backgroundColor: ACCENT + '14' }]}>
-          <Ionicons name="trending-up" size={14} color={ACCENT} />
+          <Ionicons name={output.percentileTopPct === null ? 'rocket-outline' : 'trending-up'} size={14} color={ACCENT} />
           <Text style={[s.resultsPercentileText, { color: ACCENT }]}>
-            {t('onboarding.test.results.percentile', { topPct: output.percentileTopPct })}
+            {output.percentileTopPct === null
+              ? t('onboarding.test.results.starting_point')
+              : t('onboarding.test.results.percentile', { topPct: output.percentileTopPct })}
           </Text>
         </View>
 
@@ -635,7 +617,8 @@ const s = StyleSheet.create({
   roundDots: { flexDirection: 'row', gap: 6 },
   roundDot: { width: 7, height: 7, borderRadius: 4 },
 
-  sceneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
+  sceneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18, paddingHorizontal: 12 },
+  sceneCanvasWrap: { width: '100%', maxWidth: 360 },
   bigInstruction: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
   timerPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
   timerText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.4 },

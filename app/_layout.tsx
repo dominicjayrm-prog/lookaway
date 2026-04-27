@@ -513,8 +513,14 @@ function ComebackRewardMounter() {
   const authUserId = useGameStore((s) => s._authUserId);
   const checking = useRef(false);
 
-  // Treat guests as 'hydrated' since they have no cloud state to wait for.
-  const ready = cloudHydrated || !authUserId;
+  // Only run for SIGNED-IN players whose cloud state has hydrated.
+  // Previously guests were treated as 'ready' too, which meant the
+  // modal could pop on the login / onboarding screens for users who
+  // had played in a prior session (lastPlayDate cached locally) but
+  // weren't currently authenticated. The reward only makes sense
+  // post-login: the gem grant goes to the active account, and the
+  // visual is jarring when stacked on top of a login form.
+  const ready = !!authUserId && cloudHydrated;
 
   const runCheck = useCallback(() => {
     if (checking.current || visible) return;
