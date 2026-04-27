@@ -697,7 +697,7 @@ function PlayTab() {
         const { result, periodType } = await purchaseSubscription(plan);
         if (result !== 'success') return;
         const store = useGameStore.getState();
-        store.activatePlus();
+        store.activatePlus(periodType);
         store.unlockCosmetic('frame_premium_gold');
         store.unlockCosmetic('expr_premium');
         store.unlockCosmetic('banner_premium_gold');

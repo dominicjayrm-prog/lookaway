@@ -2,16 +2,13 @@
  * Blanked+ Subscription Paywall — Full-screen modal.
  * Stacked plan cards, shimmer CTA, staggered animations.
  *
- * v1 intentionally ships WITHOUT a free trial. Apple rejected build
- * 21 under guideline 2.1(b) because the paywall advertised a 3-day
- * free trial while StoreKit offered no intro offer (no Introductory
- * Offer was configured in App Store Connect for the yearly product,
- * so the purchase sheet charged the full price immediately). Rather
- * than configure the offer, the simpler fix was to drop the trial
- * advertising entirely — the paywall now matches exactly what
- * StoreKit will present. If the trial is reintroduced later, the
- * `isTrialEligible` helper + periodType-aware gem grant are still
- * in place as a safety net.
+ * Yearly plan ships with a 3-day free trial intro offer (configured
+ * in App Store Connect + RevenueCat). Monthly plan has no trial.
+ * The trial badge is only rendered when StoreKit confirms the user
+ * is eligible (`isTrialEligible(productId)`), so an ineligible
+ * reviewer doesn't see "3 days free" while StoreKit refuses to
+ * grant it. The previously-rejected build 21 had the badge
+ * unconditionally — the eligibility check is the safeguard.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -25,7 +22,8 @@ import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { restorePurchases, getSubscriptionOfferings, formatCurrency, type SubscriptionPrice } from '@/src/lib/purchases';
+import { restorePurchases, getSubscriptionOfferings, formatCurrency, isTrialEligible, type SubscriptionPrice } from '@/src/lib/purchases';
+import { IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { useGameStore } from '@/src/store';
 import { t } from '@/src/i18n';
@@ -153,7 +151,13 @@ function NoAdsSvg() {
 // ── Benefits data ─────────────────────────────────────────────────────
 // Benefits resolve t() at render time — each row's title + desc
 // re-read on locale flip without a remount.
+//
+// "2× gems on every level" leads the list because it's the strongest
+// always-on benefit a subscriber feels — every single level reward
+// doubles, not once-per-month or once-per-day. Visible value beats
+// hidden value at the moment of conversion.
 const BENEFIT_KEYS = [
+  { Icon: GemSvg, color: '#D4A012', titleKey: 'paywall.benefits.double_gems_title', descKey: 'paywall.benefits.double_gems_desc' },
   { Icon: HeartSvg, color: '#FF6B6B', titleKey: 'paywall.benefits.lives_title', descKey: 'paywall.benefits.lives_desc' },
   { Icon: GemSvg, color: ACCENT, titleKey: 'paywall.benefits.gems_title', descKey: 'paywall.benefits.gems_desc' },
   { Icon: StarSvg, color: '#D4A012', titleKey: 'paywall.benefits.powerup_title', descKey: 'paywall.benefits.powerup_desc' },
@@ -225,6 +229,12 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   // GBP values until these resolve so the modal never blanks out.
   const [monthlyPkg, setMonthlyPkg] = useState<SubscriptionPrice | null>(null);
   const [annualPkg, setAnnualPkg] = useState<SubscriptionPrice | null>(null);
+  // Trial eligibility for the yearly plan, queried from StoreKit via
+  // RevenueCat. Only true when the Apple ID has not previously
+  // redeemed an intro offer on this product. Drives the "3 days free"
+  // badge — we never advertise a trial to a user who can't claim one,
+  // which is what got build 21 rejected.
+  const [yearlyTrialEligible, setYearlyTrialEligible] = useState(false);
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
@@ -233,6 +243,9 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
       setMonthlyPkg(monthly);
       setAnnualPkg(annual);
     });
+    isTrialEligible(IAP_PRODUCT_IDS.PLUS_YEARLY).then((eligible) => {
+      if (!cancelled) setYearlyTrialEligible(eligible);
+    });
     return () => { cancelled = true; };
   }, [visible]);
 
@@ -240,16 +253,16 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   // fetch hasn't resolved yet — the App Store will show the real local
   // price when StoreKit actually charges, and this fallback only
   // flashes briefly on the first paywall open.
-  const monthlyPriceString = monthlyPkg?.priceString ?? '£2.99';
-  const annualPriceString = annualPkg?.priceString ?? '£19.99';
-  // Monthly-equivalent of the annual plan (e.g. £19.99/12 = £1.66).
+  const monthlyPriceString = monthlyPkg?.priceString ?? '£5.99';
+  const annualPriceString = annualPkg?.priceString ?? '£29.99';
+  // Monthly-equivalent of the annual plan (e.g. £29.99/12 = £2.50).
   // Computed from the annual plan's numeric price + currency code so
   // it always uses the same currency as the displayed annual price.
   const annualMonthlyEq = annualPkg
     ? formatCurrency(annualPkg.price / 12, annualPkg.currencyCode)
-    : '£1.66';
+    : '£2.50';
   // Savings vs 12 × monthly. Shown on the yearly plan card's header.
-  // Example: monthly £2.99 × 12 = £35.88, annual £19.99 → saves £15.89.
+  // Example: monthly £5.99 × 12 = £71.88, annual £29.99 → saves £41.89.
   // If either price is missing we fall back to a plain "Yearly" label
   // so the badge doesn't claim a made-up discount.
   const annualSavings = (monthlyPkg && annualPkg && monthlyPkg.currencyCode === annualPkg.currencyCode)
@@ -298,19 +311,17 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
       // Sync EVERY entitlement that came back. Previously the
       // noAds branch surfaced the toast but didn't flip
       // adsRemoved on the store, so the user kept seeing ads.
-      if (status.plus) store.activatePlus();
+      if (status.plus) store.activatePlus(status.periodType);
       if (status.noAds) store.setAdsRemoved();
 
       if (status.plus) {
         // Re-entering a subscription (restore on a new device,
         // after reinstall, etc.): if it's been >30 days since the
         // last grant the cooldown check will credit the next
-        // month's 300 gems. Skipped during trial / intro — the
-        // next foreground-cycle check will pick it up once the
-        // subscription converts to a paid period.
-        if (status.periodType !== 'trial' && status.periodType !== 'intro') {
-          store.maybeGrantMonthlyPlusGems();
-        }
+        // month's 100 gems. The store-level guard skips during
+        // trial / intro — the next foreground-cycle check will
+        // pick it up once the subscription converts to paid.
+        store.maybeGrantMonthlyPlusGems();
         handleDismiss();
         Alert.alert(t('settings.purchases.restored_title'), t('settings.purchases.restored_plus'));
       } else if (status.noAds) {
@@ -334,7 +345,14 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   if (!visible) return null;
 
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] });
-  const ctaText = plan === 'yearly' ? t('paywall.cta_yearly', { price: annualPriceString }) : t('paywall.cta_monthly', { price: monthlyPriceString });
+  // CTA text adapts to trial eligibility: "Start free trial" when the
+  // user qualifies on the yearly plan, regular "Subscribe" otherwise.
+  // The renewal disclosure below the CTA carries the actual price + cadence.
+  const ctaText = plan === 'yearly'
+    ? (yearlyTrialEligible
+        ? t('paywall.cta_yearly_trial', { price: annualPriceString })
+        : t('paywall.cta_yearly', { price: annualPriceString }))
+    : t('paywall.cta_monthly', { price: monthlyPriceString });
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
@@ -389,6 +407,9 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
                   <View style={st.bestValueBadge}><Text style={st.bestValueText} numberOfLines={1}>{t('paywall.plans.best_value')}</Text></View>
                 </View>
                 <Text style={[st.planSub, { color: palette.planSubInactive }, plan === "yearly" && { color: palette.planSubActive }]}>{t('paywall.plans.yearly_sub', { price: annualMonthlyEq })}</Text>
+                {yearlyTrialEligible && (
+                  <Text style={[st.trialBadge, { color: '#00B894' }]}>{t('paywall.plans.yearly_trial_badge')}</Text>
+                )}
               </View>
               <Text style={[st.planPrice, { color: palette.planPriceInactive }, plan === 'yearly' && { color: palette.planPriceActive }]}>{annualPriceString}<Text style={st.planPricePer}>{t('paywall.plans.yearly_price_suffix')}</Text></Text>
             </Pressable>
@@ -423,9 +444,16 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
 
           {/* Auto-renewal disclosure — required by Apple guideline 3.1.2.
               Must be near the purchase CTA and clearly state: length of
-              subscription, price per period, auto-renewal, how to cancel. */}
+              subscription, price per period, auto-renewal, how to cancel.
+              When a free trial is on offer, the disclosure must also
+              state the trial duration + that the subscription auto-
+              renews at full price after the trial ends. */}
           <Text style={[st.renewalDisclosure, { color: palette.legalMuted }]}>
-            {plan === 'yearly' ? t('paywall.renewal_yearly', { price: annualPriceString }) : t('paywall.renewal_monthly', { price: monthlyPriceString })}
+            {plan === 'yearly'
+              ? (yearlyTrialEligible
+                  ? t('paywall.renewal_yearly_trial', { price: annualPriceString })
+                  : t('paywall.renewal_yearly', { price: annualPriceString }))
+              : t('paywall.renewal_monthly', { price: monthlyPriceString })}
           </Text>
 
           {/* Legal — functional links that route to the in-app WebView
@@ -504,6 +532,7 @@ const st = StyleSheet.create({
   planPricePer: { fontSize: 11, fontWeight: '500' },
   bestValueBadge: { backgroundColor: '#FF6B6B', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 6 },
   bestValueText: { fontSize: 8, fontWeight: '800', color: '#FFF', letterSpacing: 0.8 },
+  trialBadge: { fontSize: 11, fontWeight: '700', marginTop: 2 },
 
   // CTA
   shimmerBtn: {

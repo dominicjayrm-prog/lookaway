@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Level, GameState } from '@/src/types/game';
-import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, type PowerUpId } from '@/src/utils/scoring';
+import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, applyPlusGemMultiplier, type PowerUpId } from '@/src/utils/scoring';
+import type { PeriodType } from '@/src/lib/purchases';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
@@ -201,7 +202,7 @@ interface SavedState {
   streakMilestonesClaimed?: number[];
   lastPlayDate?: string | null;
   /** ISO timestamp of the last time the user was credited their monthly
-   *  300 Blanked+ gems. null = never granted. Synced via profiles so
+   *  100 Blanked+ gems. null = never granted. Synced via profiles so
    *  the 30-day cooldown is honoured across devices. */
   lastPlusGemGrantAt?: string | null;
   /** ISO timestamp of the last time our Stage A "Rate BLANKED" modal
@@ -400,6 +401,15 @@ export interface GameStore {
   username: string | null;
   avatarUrl: string | null;
   subscriptionStatus: SubscriptionStatus;
+  /** Period type of the active Blanked+ entitlement, refreshed from
+   *  RevenueCat on launch / foreground / purchase / restore. Used by
+   *  `maybeGrantMonthlyPlusGems` to skip the monthly gem credit while
+   *  the user is in a free-trial or discounted intro period — they
+   *  haven't paid yet, so granting gems would let someone trial-and-
+   *  cancel for free gems. Reset to 'unknown' when the subscription
+   *  goes inactive. NOT persisted to Supabase — always re-derived from
+   *  StoreKit / RevenueCat at runtime. */
+  subscriptionPeriodType: PeriodType;
   /** Last time `saveState` ran in ms since epoch. Compared against the
    *  cloud's `updated_at` in loadFromCloud to decide which side wins
    *  for scalar fields (gems, equipped_*, etc). Not persisted to
@@ -527,7 +537,11 @@ export interface GameStore {
   getPowerUpCount: (id: string) => number;
 
   // Level completion with economy
-  recordLevelComplete: (id: string, stars: number, pct: number) => number; // returns gems earned
+  /** Returns `{ earned, doubled }`. `earned` is the actual gem amount
+   *  added to the player's balance (after the Blanked+ 2× multiplier,
+   *  if applicable). `doubled` is true when the multiplier kicked in,
+   *  so result screens can render a "2×" badge next to the reward. */
+  recordLevelComplete: (id: string, stars: number, pct: number) => { earned: number; doubled: boolean };
 
   // Unified Brain Journey
   /** Advance the unified ladder position if the just-completed level
@@ -559,13 +573,23 @@ export interface GameStore {
    *  source of truth — `loadFromCloud` rewrites the local value on every
    *  sign-in and foreground resume. */
   isSubscribed: () => boolean;
-  /** Paywall success path: flip local status to active, push to cloud. */
-  activatePlus: () => void;
-  /** Credit the monthly Blanked+ 300-gem grant IF the user is an
+  /** Paywall success path: flip local status to active, push to cloud.
+   *  Optionally records the entitlement's `periodType` so the monthly
+   *  gem grant can skip while the user is in a free trial / intro
+   *  period. Pass the periodType from `purchaseSubscription`'s return
+   *  value or `restorePurchases`'s status. */
+  activatePlus: (periodType?: PeriodType) => void;
+  /** Refresh `subscriptionPeriodType` from RevenueCat. Called on app
+   *  launch / foreground after `loadFromCloud` so the period reflects
+   *  what StoreKit currently reports — important when a free trial
+   *  has just converted to a paid period. */
+  setSubscriptionPeriodType: (periodType: PeriodType) => void;
+  /** Credit the monthly Blanked+ 100-gem grant IF the user is an
    *  active subscriber AND their last grant was more than ~30 days
-   *  ago (or they've never been granted). Safe to call liberally —
-   *  on app foreground, after purchase, after restore. Returns the
-   *  number of gems granted (0 if skipped). */
+   *  ago (or they've never been granted) AND they are NOT in a free
+   *  trial / intro period. Safe to call liberally — on app foreground,
+   *  after purchase, after restore. Returns the number of gems granted
+   *  (0 if skipped). */
   maybeGrantMonthlyPlusGems: () => number;
   /** Flip the Stage A modal visibility. Used by the modal itself to
    *  close and by dev-only overrides to force-show it. Does NOT write
@@ -649,6 +673,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     username: saved.username ?? null,
     avatarUrl: saved.avatarUrl ?? null,
     subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
+    // Always start as 'unknown' — repopulated by RevenueCat on launch
+    // before the first monthly-gem grant check runs.
+    subscriptionPeriodType: 'unknown',
     localUpdatedAt: saved.localUpdatedAt ?? 0,
     lastPlayDate: saved.lastPlayDate ?? null,
     lastPlusGemGrantAt: saved.lastPlusGemGrantAt ?? null,
@@ -913,17 +940,25 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     // Level completion with replay economy
     recordLevelComplete: (levelId, stars, scorePercent) => {
-      if (!levelId) return 0;
+      if (!levelId) return { earned: 0, doubled: false };
       const clampedStars = Math.max(0, Math.min(3, stars));
       const clampedScore = Math.max(0, Math.min(100, scorePercent));
       const existing = get().levelProgress[levelId];
-      let gemsEarned = 0;
+      let baseGems = 0;
 
       if (existing) {
-        gemsEarned = calculateReplayReward(existing.stars, clampedStars);
+        baseGems = calculateReplayReward(existing.stars, clampedStars);
       } else {
-        gemsEarned = GEM_REWARDS[clampedStars as 0 | 1 | 2 | 3] ?? 0;
+        baseGems = GEM_REWARDS[clampedStars as 0 | 1 | 2 | 3] ?? 0;
       }
+
+      // Blanked+ 2× multiplier — applied at the source so every level
+      // gem award (classic, mastermind, snap match, side campaign) goes
+      // through the same path. The replay-improvement reward is
+      // doubled too: a 1→3 star jump used to hand 2 gems, now hands 4
+      // for subscribers.
+      const isPlus = get().subscriptionStatus === 'active';
+      const { gems: gemsEarned, doubled } = applyPlusGemMultiplier(baseGems, isPlus);
 
       set((s) => ({
         gems: s.gems + gemsEarned,
@@ -947,9 +982,9 @@ export const useGameStore = create<GameStore>((set, get) => {
 
       // Log to economy tracker
       if (gemsEarned > 0) {
-        logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars: clampedStars, scorePercent: clampedScore, replay: !!existing });
+        logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars: clampedStars, scorePercent: clampedScore, replay: !!existing, plusDoubled: doubled });
       }
-      return gemsEarned;
+      return { earned: gemsEarned, doubled };
     },
 
     advanceUnifiedPosition: (completedLevelId) => {
@@ -1002,8 +1037,10 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ avatarUrl: url });
       setTimeout(() => saveState(get()), 0);
     },
-    activatePlus: () => {
-      set({ subscriptionStatus: 'active' });
+    activatePlus: (periodType) => {
+      const patch: Partial<GameStore> = { subscriptionStatus: 'active' };
+      if (periodType !== undefined) patch.subscriptionPeriodType = periodType;
+      set(patch as GameStore);
       setTimeout(() => saveState(get()), 0);
       // Push immediately rather than waiting for the 2s debounce so a
       // subsequent foreground resume / loadFromCloud can't race the sync
@@ -1012,15 +1049,31 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'activate plus sync failed', e, { uid }));
     },
 
+    setSubscriptionPeriodType: (periodType) => {
+      if (get().subscriptionPeriodType === periodType) return;
+      set({ subscriptionPeriodType: periodType });
+      // periodType is runtime-derived from RevenueCat — don't persist
+      // it to Supabase. We do save locally so a quick reload picks it
+      // up before the next StoreKit refresh resolves.
+      setTimeout(() => saveState(get()), 0);
+    },
+
     maybeGrantMonthlyPlusGems: () => {
       const state = get();
       // Not subscribed? Nothing to grant.
       if (state.subscriptionStatus !== 'active') return 0;
+      // Skip during free trial / discounted intro period — the user
+      // hasn't paid yet. Granting the monthly gems here would let
+      // someone trial-and-cancel for free gems repeatedly, and
+      // matches Apple's recommended pattern of withholding paid
+      // benefits during introductory periods.
+      const period = state.subscriptionPeriodType;
+      if (period === 'trial' || period === 'intro') return 0;
       // 30 days expressed in ms — the same cadence Apple uses to
       // roll monthly subscriptions. Yearly subscribers get grants
-      // every 30 days too, so the "£19.99/year" plan still rewards
-      // 12 x 300 gems = 3,600 gems across the year. This matches
-      // the paywall copy "300 gems every month".
+      // every 30 days too, so the yearly plan still rewards
+      // 12 × 100 = 1,200 gems across the year. This matches the
+      // paywall copy "100 gems every month".
       const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
       const nowMs = Date.now();
       const lastAt = state.lastPlusGemGrantAt ? Date.parse(state.lastPlusGemGrantAt) : 0;
@@ -1030,14 +1083,14 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Atomic-ish: bump gems + timestamp together so a crash between
       // the two can't leave us double-granting on the next open.
       set({
-        gems: state.gems + 300,
+        gems: state.gems + 100,
         lastPlusGemGrantAt: new Date(nowMs).toISOString(),
       });
       setTimeout(() => saveState(get()), 0);
       const uid = get()._authUserId;
       if (uid) saveProgressToSupabase(uid, get()).catch((e) => log.error('sync', 'plus gem grant sync failed', e, { uid }));
       log.breadcrumb('purchases', 'monthly plus gems granted', { lastAt: state.lastPlusGemGrantAt });
-      return 300;
+      return 100;
     },
 
     setReviewPromptVisible: (v: boolean) => {
@@ -1126,6 +1179,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           username: saved.username ?? null,
           avatarUrl: saved.avatarUrl ?? null,
           subscriptionStatus: saved.subscriptionStatus ?? 'inactive',
+          subscriptionPeriodType: 'unknown',
           localUpdatedAt: saved.localUpdatedAt ?? 0,
           streakMilestonesClaimed: saved.streakMilestonesClaimed ?? [],
           lastPlayDate: saved.lastPlayDate ?? null,
@@ -1241,6 +1295,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         // Subscription — cloud will re-hydrate if the new user is
         // actually on an active plan via RevenueCat.
         subscriptionStatus: 'inactive',
+        subscriptionPeriodType: 'unknown',
         // Daily login reward
         loginReward: { ...INITIAL_LOGIN_REWARD_STATE },
         // In-flight gameplay state — reset so a level started under
@@ -1269,6 +1324,7 @@ export const useGameStore = create<GameStore>((set, get) => {
       const cleaned = ownedCosmetics.filter(id => !SUBSCRIBER_COSMETIC_IDS.includes(id));
       set({
         subscriptionStatus: 'inactive',
+        subscriptionPeriodType: 'unknown',
         ownedCosmetics: cleaned,
         equippedFrame: SUBSCRIBER_COSMETIC_IDS.includes(equippedFrame) ? 'frame_blink_normal' : equippedFrame,
         equippedBanner: SUBSCRIBER_COSMETIC_IDS.includes(equippedBanner) ? 'banner_none' : equippedBanner,
@@ -1361,6 +1417,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         username: null,
         avatarUrl: null,
         subscriptionStatus: 'inactive' as SubscriptionStatus,
+        subscriptionPeriodType: 'unknown' as PeriodType,
         unifiedPosition: 1,
         currentWorldTheme: 'emerald_grove' as WorldTheme,
         lastPlayedMode: null,
@@ -1482,6 +1539,11 @@ export const useGameStore = create<GameStore>((set, get) => {
         levelProgress: mergedProgress,
         completedScores: mergedScores,
         subscriptionStatus: cloudSubStatus,
+        // periodType is RC-derived, not synced. If cloud says inactive we
+        // can confidently reset to 'unknown'; otherwise leave whatever was
+        // last refreshed locally — _layout will re-fetch from RC shortly
+        // after this returns and overwrite via setSubscriptionPeriodType.
+        ...(cloudIsActive ? {} : { subscriptionPeriodType: 'unknown' as PeriodType }),
         ownedCosmetics: mergedCosmetics,
         equippedFrame: resolveEquipped(pickScalar(safeLocal.equippedFrame, cloud.equippedFrame), 'frame_blink_normal'),
         equippedBanner: resolveEquipped(pickScalar(safeLocal.equippedBanner, cloud.equippedBanner), 'banner_none'),

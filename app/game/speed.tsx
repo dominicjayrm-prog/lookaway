@@ -17,7 +17,7 @@ import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import PowerUpFlash from '@/src/components/PowerUpFlash';
 import { useClassicPowerUps } from '@/src/hooks/useClassicPowerUps';
 import { useGameStore } from '@/src/store';
-import { getStarsForScore, GEM_REWARDS } from '@/src/utils/scoring';
+import { getStarsForScore, GEM_REWARDS, applyPlusGemMultiplier } from '@/src/utils/scoring';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { generateSpeedChallenge } from '@/src/utils/speedChallenge';
 import { getTodayDateString } from '@/src/utils/dateHelpers';
@@ -114,10 +114,12 @@ function SpeedGameScreen() {
   useEffect(() => {
     if (gameState === 'COMPLETE') {
       const stars = getStarsForScore(score, speedLevel);
-      const gems = GEM_REWARDS[stars];
+      const baseGems = GEM_REWARDS[stars];
+      const isPlus = useGameStore.getState().subscriptionStatus === 'active';
+      const { gems, doubled } = applyPlusGemMultiplier(baseGems, isPlus);
       addGems(gems);
       const uid = useGameStore.getState()._authUserId;
-      if (uid && gems > 0) logEconomyEvent(uid, ECONOMY_EVENTS.GEM_EARN_DAILY, gems, { mode: 'speed', stars, score });
+      if (uid && gems > 0) logEconomyEvent(uid, ECONOMY_EVENTS.GEM_EARN_DAILY, gems, { mode: 'speed', stars, score, plusDoubled: doubled });
       addStars(stars);
       incrementStreak();
       if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

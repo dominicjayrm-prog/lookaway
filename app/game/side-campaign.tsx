@@ -22,7 +22,7 @@ import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
 import { sounds } from '@/src/lib/sounds';
-import type { PowerUpId } from '@/src/utils/scoring';
+import { applyPlusGemMultiplier, type PowerUpId } from '@/src/utils/scoring';
 
 type Phase = 'loading' | 'ready' | 'show' | 'recall' | 'feedback' | 'round_done' | 'complete' | 'failed' | 'error';
 
@@ -54,6 +54,7 @@ function SideCampaignScreen() {
   const [scorePct, setScorePct] = useState(0);
   const [stars, setStarsState] = useState(0);
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [gemsDoubled, setGemsDoubled] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
   // Speed recall inline state
@@ -261,8 +262,10 @@ function SideCampaignScreen() {
     setStarsState(earnedStars);
 
     // Gem rewards — same as Classic: 1/2/3 gems for 1/2/3 stars
-    // On replay, only earn the difference if improved
-    let gems = 0;
+    // On replay, only earn the difference if improved.
+    // Blanked+ subscribers get the 2× multiplier applied at the end so
+    // both first-clear and improvement gems get doubled consistently.
+    let baseGems = 0;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
@@ -277,9 +280,9 @@ function SideCampaignScreen() {
 
         const previousStars = existing?.stars ?? 0;
         if (earnedStars > previousStars) {
-          gems = earnedStars - previousStars;
+          baseGems = earnedStars - previousStars;
         } else if (previousStars === 0 && earnedStars > 0) {
-          gems = earnedStars;
+          baseGems = earnedStars;
         }
 
         await supabase.from('side_campaign_progress').upsert({
@@ -294,7 +297,10 @@ function SideCampaignScreen() {
       log.error('side-campaign', 'save progress failed', e);
     }
 
+    const isPlus = useGameStore.getState().subscriptionStatus === 'active';
+    const { gems, doubled } = applyPlusGemMultiplier(baseGems, isPlus);
     setGemsEarned(gems);
+    setGemsDoubled(doubled);
     if (gems > 0) addGems(gems);
     if (earnedStars > 0) addStars(earnedStars);
     // Advance the unified ladder if the player just cleared the level
@@ -526,7 +532,14 @@ function SideCampaignScreen() {
             ))}
           </View>
           {gemsEarned > 0 && (
-            <Text style={[s.gemsText, { color: colors.gold }]}>+{gemsEarned} gems</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[s.gemsText, { color: colors.gold }]}>+{gemsEarned} gems</Text>
+              {gemsDoubled && (
+                <View style={{ backgroundColor: colors.gold, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 }}>
+                  <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.4 }}>{t('result.plus_doubled_badge')}</Text>
+                </View>
+              )}
+            </View>
           )}
           <View style={s.buttonRow}>
             <Pressable style={[s.btn, s.btnSecondary, { borderColor: mColor }]} onPress={() => router.replace('/(tabs)/journey')}>
