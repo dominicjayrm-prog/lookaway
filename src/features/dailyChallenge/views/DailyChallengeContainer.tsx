@@ -59,10 +59,16 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
     score: number;
     timeSeconds: number;
     emojiBlocks: string;
+    /** Per-digit correctness for the beautiful share card's digit
+     *  pills. Empty array when the player is reviewing a previous
+     *  day's result via Supabase (we don't persist correctness, so
+     *  the share card falls back to a generic emoji-blocks view). */
+    correctness: boolean[];
   } | null>(initialResult ? {
     score: initialResult.score,
     timeSeconds: initialResult.timeSeconds,
     emojiBlocks: '',
+    correctness: [],
   } : null);
 
   const handleBegin = useCallback(() => setPhase('memorise'), []);
@@ -79,28 +85,19 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
       shareCardEmojiBlocks: result.emojiBlocks,
       challengeDate: instance.challengeDate,
     });
-    if (outcome.ok) {
-      // Whether we successfully submitted or hit the duplicate
-      // (already played today) path, we surface the local play's
-      // result on this screen. The duplicate case wouldn't normally
-      // fire because the home card guards against re-entry, but we
-      // handle it for robustness.
-      setFinalResult({
-        score: result.score,
-        timeSeconds: result.timeSeconds,
-        emojiBlocks: result.emojiBlocks,
-      });
-    } else {
-      // Submit failed (network/no-session). Show the result anyway
-      // so the player gets feedback; future foreground sync will
-      // pick the row up if they re-enter while still authed today.
-      setFinalResult({
-        score: result.score,
-        timeSeconds: result.timeSeconds,
-        emojiBlocks: result.emojiBlocks,
-      });
-    }
+    // Whether we successfully submitted, hit the duplicate path, or
+    // failed (network), we surface the local play's result so the
+    // player gets feedback. Future foreground sync will reconcile
+    // the row if the network case eventually succeeds.
+    setFinalResult({
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      emojiBlocks: result.emojiBlocks,
+      correctness: result.correctness,
+    });
     setPhase('result');
+    // Suppress unused-variable lint without changing behaviour.
+    void outcome;
   }, [instance]);
 
   // Mid-memorise background pause spec edge case. iOS will pause
@@ -165,6 +162,19 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
             score={finalResult.score}
             timeSeconds={finalResult.timeSeconds}
             shareCardEmojiBlocks={finalResult.emojiBlocks}
+            modeVisual={
+              // For Phone Number we have rich correctness data from
+              // the gameplay; for an alreadyPlayed re-view (or any
+              // future mode that doesn't expose correctness) fall
+              // back to the generic emoji-blocks visual.
+              instance.mode === 'phone_number' && finalResult.correctness.length > 0
+                ? {
+                    kind: 'phone_number',
+                    digits: phoneConfig.digits,
+                    correctness: finalResult.correctness,
+                  }
+                : { kind: 'fallback', emojiBlocks: finalResult.emojiBlocks }
+            }
             alreadyPlayed={alreadyPlayed}
             onClose={onClose}
           />

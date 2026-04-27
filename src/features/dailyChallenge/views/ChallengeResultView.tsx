@@ -14,16 +14,16 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, Animated as RNAnimated, Platform, Share, Alert,
+  View, Text, Pressable, StyleSheet, Animated as RNAnimated, Platform, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AnimatedBlink, type BlinkExpression } from '@/src/components/AnimatedBlink';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useGameStore } from '@/src/store';
 import type { DailyChallengeModeId } from '../types';
 import { MODE_DISPLAY_NAMES } from '../modeRotation';
-import { buildShareCardText } from './ShareCardGenerator';
+import { ShareCardImage, SHARE_CARD_SIZE, type ModeVisual } from './ShareCardImage';
+import { captureAndShareCard } from './captureAndShare';
 
 interface Props {
   mode: DailyChallengeModeId;
@@ -31,8 +31,12 @@ interface Props {
   score: number;
   timeSeconds: number;
   shareCardEmojiBlocks: string;
+  /** Mode-specific visual data for the beautiful share card. Phone
+   *  Number passes digit + correctness arrays so the share card can
+   *  render coloured pills. */
+  modeVisual: ModeVisual;
   /** True when the player came back to a previously-completed
-   *  daily — disables the "share with current streak" line and
+   *  daily. Disables the "share with current streak" line and
    *  surfaces "Already played today" instead of celebration. */
   alreadyPlayed?: boolean;
   onClose: () => void;
@@ -54,13 +58,17 @@ function copyForScore(score: number): { headline: string; sub: string } {
 }
 
 export function ChallengeResultView({
-  mode, challengeDate, score, timeSeconds, shareCardEmojiBlocks, alreadyPlayed, onClose,
+  mode, challengeDate, score, timeSeconds, shareCardEmojiBlocks, modeVisual, alreadyPlayed, onClose,
 }: Props) {
   const { colors } = useTheme();
-  const router = useRouter();
   const streakCount = useGameStore((s) => s.streakCount);
   const fadeIn = useRef(new RNAnimated.Value(0)).current;
   const [displayScore, setDisplayScore] = useState(0);
+  const [sharing, setSharing] = useState(false);
+  // Off-screen card view ref. captureAndShareCard rasterises the
+  // node referenced here at 1080x1080 then hands the PNG to the OS
+  // share sheet (or the Web Share API on supported browsers).
+  const shareCardRef = useRef<View>(null);
 
   // Brief milestone flag — true if the player JUST hit a 7/30/100/
   // 365 day streak with this submission. Drives a subtle pulse on
@@ -82,14 +90,17 @@ export function ChallengeResultView({
   }, [fadeIn, score]);
 
   const handleShare = async () => {
-    const message = buildShareCardText({
-      mode, challengeDate, score, timeSeconds, shareCardEmojiBlocks,
-      streakCount,
-    });
+    if (sharing) return;
+    setSharing(true);
     try {
-      await Share.share({ message });
-    } catch (e) {
-      Alert.alert('Could not share', 'Try again in a moment.');
+      const outcome = await captureAndShareCard(shareCardRef, {
+        mode, challengeDate, score, timeSeconds, shareCardEmojiBlocks, streakCount,
+      });
+      if (outcome === 'error' || outcome === 'unavailable') {
+        Alert.alert('Could not share', 'Try again in a moment.');
+      }
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -139,15 +150,17 @@ export function ChallengeResultView({
       <View style={s.buttons}>
         <Pressable
           onPress={handleShare}
+          disabled={sharing}
           style={({ pressed }) => [
             s.primaryBtn, { backgroundColor: colors.accent },
             pressed && { opacity: 0.92, transform: [{ scale: 0.97 }] },
+            sharing && { opacity: 0.6 },
           ]}
           accessibilityRole="button"
           accessibilityLabel="Share result"
         >
           <Ionicons name="share-outline" size={18} color="#FFFFFF" />
-          <Text style={s.primaryBtnText}>Share result</Text>
+          <Text style={s.primaryBtnText}>{sharing ? 'Preparing image...' : 'Share result'}</Text>
         </Pressable>
         <Pressable
           onPress={onClose}
@@ -157,6 +170,23 @@ export function ChallengeResultView({
         >
           <Text style={[s.secondaryBtnText, { color: colors.accent }]}>Back to home</Text>
         </Pressable>
+      </View>
+
+      {/* Off-screen 1080x1080 share card. Positioned absolutely far
+          off-screen + opacity 0.001 so it never flashes for the
+          player but still renders into the layout tree (a true
+          0-opacity / display:none view doesn't paint, which would
+          break view-shot's capture). */}
+      <View pointerEvents="none" style={s.offscreenCard}>
+        <ShareCardImage
+          ref={shareCardRef}
+          mode={mode}
+          challengeDate={challengeDate}
+          score={score}
+          timeSeconds={timeSeconds}
+          streakCount={streakCount}
+          modeVisual={modeVisual}
+        />
       </View>
     </RNAnimated.View>
   );
@@ -201,4 +231,15 @@ const s = StyleSheet.create({
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   secondaryBtn: { paddingVertical: 12, alignItems: 'center' },
   secondaryBtnText: { fontSize: 14, fontWeight: '700' },
+  // Off-screen render of the share card. Positioned far enough out
+  // of the viewport that it can't appear even if a layout glitch
+  // tries to push it visible.
+  offscreenCard: {
+    position: 'absolute',
+    left: -99999,
+    top: -99999,
+    width: SHARE_CARD_SIZE,
+    height: SHARE_CARD_SIZE,
+    opacity: 0.001,
+  },
 });
