@@ -884,7 +884,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ streakCount: 0, lastPlayDate: null, recoveryWindowStart: null });
       setTimeout(() => saveState(get()), 0);
     },
-    streakRewardQueue: [],
     pushStreakRewards: (rewards) => {
       if (!rewards || rewards.length === 0) return;
       set((s) => ({ streakRewardQueue: [...s.streakRewardQueue, ...rewards] }));

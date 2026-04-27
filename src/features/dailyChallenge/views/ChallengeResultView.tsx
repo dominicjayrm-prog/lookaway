@@ -96,7 +96,9 @@ export function ChallengeResultView({
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }, [fadeIn, score]);
+    // Include alreadyPlayed in deps so a re-mount that flips fresh →
+    // re-view doesn't accidentally fire the celebration capstone again.
+  }, [fadeIn, score, alreadyPlayed]);
 
   const handleShare = async () => {
     if (sharing) return;

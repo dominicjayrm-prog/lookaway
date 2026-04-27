@@ -36,7 +36,6 @@ function TabLayout() {
     <>
     <OfflineBanner />
     <Tabs
-      sceneContainerStyle={{ backgroundColor: colors.bg }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
@@ -45,7 +44,8 @@ function TabLayout() {
         // was so faint users reported the icons as invisible.
         tabBarInactiveTintColor: colors.textMid,
         tabBarShowLabel: false,
-        contentStyle: { backgroundColor: colors.bg },
+        // Tabs has no scene/content style hook in this expo-router
+        // version; each screen's root view sets its own background.
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopWidth: 1,

@@ -882,7 +882,11 @@ function BlinkComponent({ expression = 'normal', size = 120, lookOffset }: Blink
         </RadialGradient>
       </Defs>
       {body}
-      {faces[expression]}
+      {/* If a future cosmetic or saved-state value sneaks in an
+          expression name we don't have a face for, fall back to the
+          neutral 'normal' face so the avatar stays whole rather than
+          rendering an empty body. */}
+      {faces[expression] ?? faces.normal}
     </Svg>
   );
 }

@@ -94,9 +94,18 @@ export function NamesAndFacesMingle({ config, onComplete }: Props) {
         useNativeDriver: true,
       }),
     ]));
-    RNAnimated.parallel(animations).start();
+    // Hold a reference to the parallel composition so we can stop it
+    // if the component unmounts mid-mingle (e.g. user closes the
+    // challenge with the X button). Without this, the timing tweens
+    // keep running on detached Animated.Values and the post-mingle
+    // setTimeout fires onComplete on an unmounted parent.
+    const sequence = RNAnimated.parallel(animations);
+    sequence.start();
     const done = setTimeout(onComplete, MINGLE_MS + 80);
-    return () => clearTimeout(done);
+    return () => {
+      clearTimeout(done);
+      sequence.stop();
+    };
   }, [transitions, onComplete]);
 
   return (
