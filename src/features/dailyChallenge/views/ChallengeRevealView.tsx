@@ -14,7 +14,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Animated as RNAnimated, Dimensions, Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import type { ChallengeRevealConfig } from '../types';
 
@@ -66,13 +65,15 @@ export function ChallengeRevealView({ reveal, onBegin }: Props) {
     return () => { eyebrowTimers.forEach(clearTimeout); [t1, t2, t3, t4].forEach(clearTimeout); };
   }, [eyebrowChars, titleOpacity, titleY, subtitleOpacity, blinkOpacity, beginOpacity, beginY]);
 
+  // Background was a deep purple gradient in v1, but Blink itself
+  // is purple so the mascot blended into the backdrop on screen.
+  // Switching to a warm cream (matches the home tab + onboarding
+  // palette) gives Blink real silhouette + lifts the typography
+  // contrast. Title + Begin button still carry the purple accent
+  // so the reveal still reads as a dedicated "today's challenge"
+  // moment rather than a plain content view.
   return (
-    <LinearGradient
-      colors={['#4A3BBF', '#6C5CE7', '#8F7EEB']}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
-      style={s.root}
-    >
+    <View style={[s.root, { backgroundColor: '#F7F6F3' }]}>
       <View style={s.eyebrowRow}>
         {eyebrowChars.map(({ ch, idx }) => (
           <Text
@@ -114,7 +115,7 @@ export function ChallengeRevealView({ reveal, onBegin }: Props) {
           <Text style={s.beginText}>Begin</Text>
         </Pressable>
       </RNAnimated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -127,21 +128,21 @@ const s = StyleSheet.create({
   eyebrowRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   eyebrow: {
     fontSize: 12, fontWeight: '900', letterSpacing: 4,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#6C5CE7',
   },
   title: {
-    fontSize: 36, fontWeight: '900', color: '#FFFFFF',
+    fontSize: 36, fontWeight: '900', color: '#1A1A18',
     marginTop: 6, textAlign: 'center', letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14, color: 'rgba(255,255,255,0.78)',
+    fontSize: 14, color: '#636E72',
     textAlign: 'center', marginTop: 8, maxWidth: 280, lineHeight: 20,
   },
   beginBtn: {
-    backgroundColor: '#FFFFFF', paddingHorizontal: 44, paddingVertical: 16,
+    backgroundColor: '#6C5CE7', paddingHorizontal: 44, paddingVertical: 16,
     borderRadius: 999,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14,
+    shadowColor: '#6C5CE7', shadowOpacity: 0.32, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14,
     elevation: 6,
   },
-  beginText: { color: '#4A3BBF', fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
+  beginText: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
 });
