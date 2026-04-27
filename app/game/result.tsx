@@ -44,7 +44,7 @@ function parseLevelId(id: string): { worldId: number; levelNum: number } | null 
 }
 
 // ── Sub-components ────────────────────────────────────────────────────
-function GemRewardAnimation({ text, colors }: { text: string; colors: Record<string, string> }) {
+function GemRewardAnimation({ text, doubled, colors }: { text: string; doubled?: boolean; colors: Record<string, string> }) {
   const scale = useRef(new RNAnimated.Value(0.8)).current;
   const opacity = useRef(new RNAnimated.Value(0)).current;
   useEffect(() => {
@@ -61,6 +61,11 @@ function GemRewardAnimation({ text, colors }: { text: string; colors: Record<str
       <View style={[st.gemRewardPill, { backgroundColor: colors.goldSoft }]}>
         <Text style={st.gemRewardIcon}>{GEM}</Text>
         <Text style={[st.gemRewardText, { color: colors.gold }]}>{text}</Text>
+        {doubled && (
+          <View style={[st.doubledBadge, { backgroundColor: colors.gold }]}>
+            <Text style={st.doubledBadgeText}>{t('result.plus_doubled_badge')}</Text>
+          </View>
+        )}
       </View>
     </RNAnimated.View>
   );
@@ -97,6 +102,7 @@ function ResultScreen() {
   const isPerfect = totalCount > 0 && correctCount === totalCount;
 
   const [gemsEarned, setGemsEarned] = useState(0);
+  const [gemsDoubled, setGemsDoubled] = useState(false);
   const [wasReplay, setWasReplay] = useState(false);
   const [improved, setImproved] = useState(false);
   const [processed, setProcessed] = useState(false);
@@ -136,8 +142,9 @@ function ResultScreen() {
       const didImprove = isReplay && stars > existing.stars;
       setWasReplay(isReplay);
       setImproved(didImprove);
-      const earned = recordLevelComplete(level.id, stars, score);
+      const { earned, doubled } = recordLevelComplete(level.id, stars, score);
       setGemsEarned(earned);
+      setGemsDoubled(doubled);
       // Advance the unified ladder cursor only when this IS the player's
       // current ladder position. Replays and Mode-Library side-plays are
       // recorded (stars still awarded) but don't jump the journey forward.
@@ -329,7 +336,7 @@ function ResultScreen() {
             <AnimatedScore value={score} style={[st.scoreText, { color: colors.text }]} />
             <Text style={[st.scoreLabel, { color: colors.textMid }]}>{t('result.correct_count', { correct: correctCount, total: totalCount })}</Text>
             <Text style={{ fontSize: 10, color: colors.textLight, marginTop: 4 }}>{t('result.star_threshold_hint')}</Text>
-            {gemText && <GemRewardAnimation text={gemText} colors={colors} />}
+            {gemText && <GemRewardAnimation text={gemText} doubled={gemsDoubled} colors={colors} />}
             {gemsEarned === 0 && wasReplay && !improved && <Text style={[st.noGemsText, { color: colors.textLight }]}>{t('result.already_completed')}</Text>}
             {isLastLevelOfWorld && (
               <View style={st.worldCompleteBanner}>
@@ -487,6 +494,8 @@ const st = StyleSheet.create({
   gemRewardPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
   gemRewardIcon: { fontSize: 20 },
   gemRewardText: { fontSize: 16, fontWeight: '700' },
+  doubledBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, marginLeft: 4 },
+  doubledBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   noGemsText: { fontSize: typography.sizes.sm, textAlign: 'center', maxWidth: 240 },
   worldCompleteBanner: { alignItems: 'center', marginTop: 4 },
   worldCompleteEmoji: { fontSize: 28 },

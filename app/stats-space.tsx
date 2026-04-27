@@ -326,13 +326,11 @@ export default function StatsSpaceScreen() {
       return;
     }
     const s = useGameStore.getState();
-    s.activatePlus();
+    s.activatePlus(periodType);
     s.unlockCosmetic('frame_premium_gold');
     s.unlockCosmetic('expr_premium');
     s.unlockCosmetic('banner_premium_gold');
-    if (periodType !== 'trial' && periodType !== 'intro') {
-      s.maybeGrantMonthlyPlusGems();
-    }
+    s.maybeGrantMonthlyPlusGems();
     // Fade the blur away so the real stats are revealed.
     RNAnimated.timing(blurOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
       setShowBlur(false);

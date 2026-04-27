@@ -11,6 +11,20 @@ export const GEM_REWARDS: Record<0 | 1 | 2 | 3, number> = {
   3: 3,
 };
 
+/** Blanked+ subscribers earn 2× gems on every level completion (any
+ *  game mode). Applied at every level-completion gem-award site so the
+ *  multiplier is consistent. The `doubled` flag is surfaced to result
+ *  screens so they can render a "2×" badge next to the reward. */
+export const PLUS_GEM_MULTIPLIER = 2;
+
+export function applyPlusGemMultiplier(
+  baseGems: number,
+  isSubscribed: boolean,
+): { gems: number; doubled: boolean } {
+  if (!isSubscribed || baseGems <= 0) return { gems: baseGems, doubled: false };
+  return { gems: baseGems * PLUS_GEM_MULTIPLIER, doubled: true };
+}
+
 export function getStarsForScore(
   score: number,
   level: Level,

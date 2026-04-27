@@ -30,6 +30,7 @@ import { useGameStore } from '@/src/store';
 import { updateOnlineStatus } from '@/src/utils/friends';
 import { expireOldChallenges } from '@/src/utils/challengeFlow';
 import { sounds } from '@/src/lib/sounds';
+import { getEntitlementStatus } from '@/src/lib/purchases';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
@@ -295,12 +296,22 @@ function CloudSyncLoader() {
     // app references the user internally). App Privacy nutrition label:
     // User ID, linked to user, not used for tracking.
     analyticsIdentify(user.id);
-    loadFromCloud(user.id).then(() => {
+    loadFromCloud(user.id).then(async () => {
+      // Refresh the live RevenueCat period type BEFORE the gem-grant
+      // check so we know whether the user is still in a free trial /
+      // discounted intro (no gems) or has converted to a paid period
+      // (gems eligible). Skipped silently on web / when RC is offline
+      // — periodType stays at whatever it was, and the grant action's
+      // own guards still apply.
+      try {
+        const status = await getEntitlementStatus();
+        useGameStore.getState().setSubscriptionPeriodType(status.periodType);
+      } catch {}
       // Cold-start check: if the user is an active Blanked+
       // subscriber and their last monthly gem grant is >30 days
-      // ago (or they've never been granted), credit the 300 gems.
-      // The cooldown check inside the action makes this a no-op
-      // most of the time — safe to call on every launch.
+      // ago (or they've never been granted), credit the 100 gems.
+      // The cooldown + trial-period checks inside the action make
+      // this a no-op most of the time — safe to call on every launch.
       useGameStore.getState().maybeGrantMonthlyPlusGems();
     }).catch(() => {});
     updateOnlineStatus(user.id);
@@ -363,14 +374,22 @@ function CloudSyncLoader() {
       if (appState.current.match(/inactive|background/) && next === 'active') {
         // Returning to foreground — pull latest cloud data + update online status
         if (user?.id) {
-          loadFromCloud(user.id).then(() => {
+          loadFromCloud(user.id).then(async () => {
+            // Mirror the cold-start flow: refresh periodType from
+            // RevenueCat before checking the monthly gem grant so
+            // a trial that just converted to paid mid-day picks up
+            // its first gem credit on the next foreground.
+            try {
+              const status = await getEntitlementStatus();
+              useGameStore.getState().setSubscriptionPeriodType(status.periodType);
+            } catch {}
             // After cloud sync settles, check if an active Blanked+
-            // subscriber is due their monthly 300-gem drop. This
+            // subscriber is due their monthly 100-gem drop. This
             // is the primary path for yearly subscribers: they pay
             // once for the year, but open the app across 12 months
             // and accrue the monthly gem drop on each 30-day
             // anniversary. Safe to call unconditionally — the
-            // 30-day cooldown check lives inside the action.
+            // 30-day cooldown + trial guard live inside the action.
             useGameStore.getState().maybeGrantMonthlyPlusGems();
           }).catch(() => {});
           updateOnlineStatus(user.id);

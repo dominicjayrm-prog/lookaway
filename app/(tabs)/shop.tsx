@@ -219,21 +219,16 @@ function ShopTab() {
     // Purchase succeeded — activate locally + sync to Supabase.
     track(EVENTS.SUBSCRIPTION_PURCHASED, { plan, periodType });
     const store = useGameStore.getState();
-    store.activatePlus();
+    store.activatePlus(periodType);
     store.unlockCosmetic('frame_premium_gold');
     store.unlockCosmetic('expr_premium');
     store.unlockCosmetic('banner_premium_gold');
-    // Credit the first monthly 300-gem grant immediately on a paid
+    // Credit the first monthly 100-gem grant immediately on a paid
     // signup. `maybeGrantMonthlyPlusGems` enforces the 30-day
-    // cooldown, so this is a no-op for an already-current user
-    // restoring a second time. We skip if periodType is 'trial' or
-    // 'intro' — the foreground check will credit once the
-    // subscription converts to a paid period. Left in as a safety
-    // net in case Apple later enables the intro offer via App
-    // Store Connect without a code change.
-    if (periodType !== 'trial' && periodType !== 'intro') {
-      store.maybeGrantMonthlyPlusGems();
-    }
+    // cooldown AND skips during free trial / discounted intro, so
+    // this is safe to call unconditionally — the store-level guard
+    // is the source of truth.
+    store.maybeGrantMonthlyPlusGems();
     setShowPremiumCelebration(true);
   };
 

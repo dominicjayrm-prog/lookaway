@@ -126,7 +126,7 @@ function SettingsScreen() {
               // Previously the noAds branch surfaced the alert but
               // didn't actually flip ads off in the store, so the
               // user would still see ads after restore.
-              if (status.plus) store.activatePlus();
+              if (status.plus) store.activatePlus(status.periodType);
               if (status.noAds) store.setAdsRemoved();
 
               if (status.plus) {
