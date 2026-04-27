@@ -14,7 +14,7 @@
  * avoid the eye-grabbing churn the spec calls out).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated as RNAnimated, Alert, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated as RNAnimated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -134,34 +134,37 @@ export function DailyChallengeCard() {
 
   const handleOpen = () => router.push('/daily-challenge');
 
-  // Dev escape hatch: long-press the "played" card to wipe today's
-  // submission and replay. Wraps in a confirm on native via Alert;
-  // on web we use the synchronous browser confirm because Alert.alert
-  // is a no-op on RNW. RLS scopes the delete to the current user.
+  // Dev escape hatch: tap the visible "Reset (dev)" pill to wipe
+  // today's submission and replay. No confirm — it's a dev-only
+  // affordance, friction-free is the point. We flip the card state
+  // optimistically the moment the tap lands so the player sees the
+  // playable state instantly, then fire-and-forget the Supabase
+  // delete. If the delete somehow fails the next minute-tick will
+  // re-fetch and put the card back into played-state, which is
+  // self-correcting.
   const handleResetLongPress = () => {
-    const performReset = async () => {
+    // Optimistic flip — show "not_played" instantly so the user has
+    // immediate feedback that the tap registered.
+    setState({
+      kind: 'not_played',
+      mode: getModeDisplayName(todayMode),
+      resetsInMinutes: minutesUntilUtcMidnight(),
+    });
+    // Then bump the local lastPlayDate so streak-alert logic doesn't
+    // fire spuriously while we wait for the row to actually delete.
+    // The actual streak count stays untouched (this is a replay, not
+    // a streak break).
+    (async () => {
       const { ok } = await resetTodaysChallenge();
-      if (ok) {
-        // Force the played-status check to re-run.
-        setState({ kind: 'loading' });
-        setTickKey((k) => k + 1);
+      // Trigger a fresh hasPlayedToday() pass so if the delete failed
+      // we re-render the played state. If it succeeded, the fresh
+      // fetch just confirms what we already optimistically showed.
+      setTickKey((k) => k + 1);
+      if (!ok) {
+        // eslint-disable-next-line no-console
+        console.warn('[DailyChallengeCard] resetTodaysChallenge returned !ok');
       }
-    };
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      if (typeof window !== 'undefined' && window.confirm('Reset today\'s daily challenge so you can replay it?')) {
-        performReset();
-      }
-      return;
-    }
-    Alert.alert(
-      'Reset today\'s challenge?',
-      'This will delete your submission for today so you can play again. Dev only.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => { performReset(); } },
-      ],
-    );
+    })();
   };
 
   if (state.kind === 'loading') {
