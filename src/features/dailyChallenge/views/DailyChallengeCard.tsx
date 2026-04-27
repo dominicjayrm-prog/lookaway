@@ -69,12 +69,7 @@ export function DailyChallengeCard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // TEMPORARY (QA): always show the not-played state so the
-      // developer can re-enter today's challenge for play-testing
-      // Phase 4. Strip this branch (restore the hasPlayedToday()
-      // call) before production.
-      const { played, result } = { played: false, result: null as DailyChallengeResult | null };
-      // const { played, result } = await hasPlayedToday();
+      const { played, result } = await hasPlayedToday();
       if (cancelled) return;
       if (played && result) {
         setState({ kind: 'played', result });
