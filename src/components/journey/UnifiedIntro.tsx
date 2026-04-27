@@ -36,6 +36,14 @@ interface Props {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Reanimated 4 entrance animations don't reliably propagate `opacity`
+// or `transform` updates on react-native-web. The journey intro was
+// rendering as a completely blank card because every shared value
+// started at 0 and the entrance animations never landed. On web we
+// skip the entrance choreography and start every value at its final
+// state so the card is visible immediately. Native still gets the
+// staggered slide-and-fade.
+const SKIP_ENTRANCE = Platform.OS === 'web';
 
 /** Three-card swipeable intro shown to brand-new accounts. Each card
  *  has staggered entrance animations — eyebrow, title, body, and content
@@ -138,17 +146,17 @@ function IntroCard1({
   active: boolean;
   blinkExpression: ReturnType<typeof useEquippedBlinkExpression>;
 }) {
-  const numberScale = useSharedValue(0.4);
-  const numberOpacity = useSharedValue(0);
-  const eyebrowY = useSharedValue(16);
-  const eyebrowOpacity = useSharedValue(0);
-  const titleY = useSharedValue(16);
-  const titleOpacity = useSharedValue(0);
-  const bodyOpacity = useSharedValue(0);
-  const blinkScale = useSharedValue(0);
+  const numberScale = useSharedValue(SKIP_ENTRANCE ? 1 : 0.4);
+  const numberOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const eyebrowY = useSharedValue(SKIP_ENTRANCE ? 0 : 16);
+  const eyebrowOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const titleY = useSharedValue(SKIP_ENTRANCE ? 0 : 16);
+  const titleOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const bodyOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const blinkScale = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || SKIP_ENTRANCE) return;
     blinkScale.value = withSpring(1, { damping: 10, stiffness: 150 });
     eyebrowOpacity.value = withDelay(120, withTiming(1, { duration: 400 }));
     eyebrowY.value = withDelay(120, withSpring(0, { damping: 14, stiffness: 180 }));
@@ -200,13 +208,13 @@ function IntroCard2({
   colors: ReturnType<typeof useTheme>['colors'];
   active: boolean;
 }) {
-  const headerY = useSharedValue(16);
-  const headerOpacity = useSharedValue(0);
-  const chipOpacities = CAMPAIGN_ORDER.map(() => useSharedValue(0));
-  const chipScales = CAMPAIGN_ORDER.map(() => useSharedValue(0.6));
+  const headerY = useSharedValue(SKIP_ENTRANCE ? 0 : 16);
+  const headerOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const chipOpacities = CAMPAIGN_ORDER.map(() => useSharedValue(SKIP_ENTRANCE ? 1 : 0));
+  const chipScales = CAMPAIGN_ORDER.map(() => useSharedValue(SKIP_ENTRANCE ? 1 : 0.6));
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || SKIP_ENTRANCE) return;
     headerOpacity.value = withTiming(1, { duration: 420 });
     headerY.value = withSpring(0, { damping: 14, stiffness: 180 });
     CAMPAIGN_ORDER.forEach((_, i) => {
@@ -258,13 +266,13 @@ function IntroCard3({
   colors: ReturnType<typeof useTheme>['colors'];
   active: boolean;
 }) {
-  const headerY = useSharedValue(16);
-  const headerOpacity = useSharedValue(0);
-  const rowOpacities = WORLD_THEME_ORDER.map(() => useSharedValue(0));
-  const rowX = WORLD_THEME_ORDER.map(() => useSharedValue(-30));
+  const headerY = useSharedValue(SKIP_ENTRANCE ? 0 : 16);
+  const headerOpacity = useSharedValue(SKIP_ENTRANCE ? 1 : 0);
+  const rowOpacities = WORLD_THEME_ORDER.map(() => useSharedValue(SKIP_ENTRANCE ? 1 : 0));
+  const rowX = WORLD_THEME_ORDER.map(() => useSharedValue(SKIP_ENTRANCE ? 0 : -30));
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || SKIP_ENTRANCE) return;
     headerOpacity.value = withTiming(1, { duration: 420 });
     headerY.value = withSpring(0, { damping: 14, stiffness: 180 });
     WORLD_THEME_ORDER.forEach((_, i) => {

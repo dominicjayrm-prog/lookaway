@@ -90,6 +90,33 @@ export async function clearRecoveryWindow(userId: string): Promise<void> {
   }
 }
 
+/** Fetch the cloud-authoritative streak_count for a user. Used by the
+ *  recovery flow as a safety net: if local state has somehow ended up
+ *  lower than cloud (cross-device race, corrupt save, dev fixtures
+ *  bumping cloud, etc.), recovery would otherwise charge based on the
+ *  lower stale local value AND preserve that lower value as the
+ *  post-recovery streak — visibly losing days that were never actually
+ *  missed. Taking the max of (local, cloud) before computing the
+ *  outcome makes the cloud value win whenever it's higher.
+ *
+ *  Returns null on any failure (network, missing row, etc.) so the
+ *  caller can fall back to the local value rather than blocking the
+ *  flow entirely. */
+export async function fetchCloudStreakCount(userId: string): Promise<number | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('streak_count')
+      .eq('id', userId)
+      .single();
+    if (error || !data) return null;
+    return data.streak_count ?? 0;
+  } catch (e) {
+    log.warn('streak', 'fetchCloudStreakCount failed', { error: String(e), userId });
+    return null;
+  }
+}
+
 /** Decide what should happen when the app opens, given the state read
  *  from the store + Supabase. The caller applies the outcome (show a
  *  modal, fire a toast, or nothing). */

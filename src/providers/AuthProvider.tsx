@@ -68,7 +68,15 @@ interface AuthContextType {
    *  updated (before the forced sign-out) so the user can log in
    *  normally on their next attempt. */
   clearPasswordRecovery: () => void;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null }>;
+  /** Returns `userId` alongside the standard `error`. Email signup
+   *  needs the new user's id IMMEDIATELY after the auth call to write
+   *  the chosen username into `profiles` — relying on
+   *  `supabase.auth.getSession()` was unreliable on web because the
+   *  auth-state listener that populates the local session storage
+   *  fires asynchronously, so a fast follow-up `getSession()` can
+   *  return null even after `signUp` resolved. The signup form upserts
+   *  using `userId` directly, dodging that race. */
+  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null; userId: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithApple: () => Promise<SocialSignInResult>;
   signOut: () => Promise<void>;
@@ -81,7 +89,7 @@ const AuthContext = createContext<AuthContextType>({
   passwordRecovery: false,
   markPasswordRecovery: () => {},
   clearPasswordRecovery: () => {},
-  signUp: async () => ({ error: null }),
+  signUp: async () => ({ error: null, userId: null }),
   signIn: async () => ({ error: null }),
   signInWithApple: async () => ({ ok: false, reason: 'unsupported', message: 'not initialised' }),
   signOut: async () => {},
@@ -142,14 +150,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearPasswordRecovery = () => setPasswordRecovery(false);
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        // `display_name` is consumed by the `handle_new_user` trigger
+        // to prefill `profiles.display_name`. Username is written
+        // separately by the signup form right after this resolves.
         data: { display_name: displayName || email.split('@')[0] },
       },
     });
-    return { error: error?.message ?? null };
+    // `data.user` is populated by Supabase synchronously when
+    // signup succeeds (email confirmation off in this app), even
+    // before the auth-state listener fires its SIGNED_IN event.
+    // Returning the id here lets the caller upsert `profiles.username`
+    // without relying on the session being available via getSession.
+    return { error: error?.message ?? null, userId: data?.user?.id ?? null };
   };
 
   const signIn = async (email: string, password: string) => {

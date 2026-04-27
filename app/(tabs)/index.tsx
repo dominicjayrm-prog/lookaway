@@ -9,6 +9,7 @@ import { TabTransition } from '@/src/components/TabTransition';
 import TutorialOverlay from '@/src/components/TutorialOverlay';
 import DailyLoginReward from '@/src/components/DailyLoginReward';
 import WeeklyChallengesCard from '@/src/components/WeeklyChallengesCard';
+import { DailyChallengeCard } from '@/src/features/dailyChallenge/views/DailyChallengeCard';
 import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import {
   shouldShowFirstRunNotifPrompt,
@@ -38,10 +39,7 @@ import { supabase } from '@/src/lib/supabase';
 import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
 import { t } from '@/src/i18n';
 import {
-  computeAppOpenOutcome,
   getDaysMissed,
-  recoverWithShield,
-  startRecoveryWindow,
   RECOVERY_WINDOW_MS,
 } from '@/src/utils/streakRecovery';
 import {
@@ -296,53 +294,14 @@ function PlayTab() {
 
   const recoveryDaysMissed = getDaysMissed(lastPlayDate);
 
-  // Re-run the outcome whenever any input changes (cloud sync can update
-  // streakCount / lastPlayDate / streakShields / recoveryWindowStart AFTER
-  // the first mount). Dedup via a key string so we don't fire twice for
-  // the same exact state.
-  const lastCheckedKey = useRef<string | null>(null);
-  useEffect(() => {
-    if (!user?.id) return;
-    const checkKey = `${user.id}|${lastPlayDate ?? '_'}|${streakCount}|${streakShields}|${recoveryWindowStart ?? '_'}`;
-    if (lastCheckedKey.current === checkKey) return;
-    lastCheckedKey.current = checkKey;
-    if (streakCount < 3) return; // Too-small streaks aren't protected
-    const outcome = computeAppOpenOutcome({
-      userId: user.id,
-      lastPlayDate,
-      streakCount,
-      streakShields,
-      recoveryWindowStart,
-    });
-
-    if (outcome.kind === 'ok') return;
-    if (outcome.kind === 'shield_auto_used') {
-      // Silent save — consume a shield, no modal
-      recoverWithShield(user.id, 0).then((ok) => {
-        if (!ok) return;
-        applyStreakRecoveryLocal(0, -1);
-        setToast({ title: `${'\uD83D\uDEE1\uFE0F'} Streak Shield used! Your streak is safe.`, tone: 'success' });
-      });
-      return;
-    }
-    if (outcome.kind === 'reset') {
-      resetStreakLocal();
-      return;
-    }
-    // outcome.kind === 'modal' → show the recovery modal + persist window if new
-    setRecoveryModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
-    if (outcome.windowElapsedMs === 0) {
-      // Persist server-side FIRST so a Supabase failure leaves both sides
-      // consistent (no window). Local state mirrors only after success.
-      const iso = outcome.recoveryStart.toISOString();
-      startRecoveryWindow(user.id, outcome.recoveryStart).then((ok) => {
-        // Only mirror to local if Supabase confirmed the write — keeps
-        // both sides in sync if the write fails (modal can re-trigger
-        // cleanly on the next app open).
-        if (ok) setRecoveryWindowStart(iso);
-      });
-    }
-  }, [user?.id, streakCount, streakShields, lastPlayDate, recoveryWindowStart, applyStreakRecoveryLocal, resetStreakLocal, setRecoveryWindowStart]);
+  // Auto streak-recovery check now lives in the root layout
+  // (StreakRecoveryMounter in app/_layout.tsx) so the popup fires
+  // regardless of which tab is mounted on app open. Previously this
+  // useEffect was the only entry point, so a player who reopened
+  // the app on the journey/friends/shop tab on iOS never saw the
+  // recovery modal and silently churned past the 1-hour window. The
+  // home tab keeps its MANUAL banner trigger below (tap the streak
+  // banner) but no longer races the root mounter on launch.
 
   // Simple toast state for the shield auto-used confirmation
   const [toast, setToast] = useState<{ title: string; tone: 'success' | 'info' } | null>(null);
@@ -699,6 +658,14 @@ function PlayTab() {
               </Text>
             )}
           </Pressable>
+        </View>
+
+        {/* Daily Challenge — sits between the stat row and Weekly
+            Challenges per spec 1.1. Self-fetches today's status; the
+            DailyChallengeCard component handles all three states
+            (not played / played / streak alert). */}
+        <View style={{ marginTop: 12 }}>
+          <DailyChallengeCard />
         </View>
 
         {/* Weekly Challenges */}

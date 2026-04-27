@@ -12,7 +12,6 @@ import {
   registerPushToken,
   cancelLivesFullNotification,
   scheduleStreakReminder,
-  scheduleDailyReminder,
   cancelDailyReminder,
   loadDailyReminderTime,
   loadNotificationPreferences,
@@ -33,6 +32,9 @@ import { sounds } from '@/src/lib/sounds';
 import { getEntitlementStatus } from '@/src/lib/purchases';
 import { seedStreakMilestonesIfMissing } from '@/src/utils/streakRewards';
 import { StreakRewardToast } from '@/src/components/StreakRewardToast';
+import { StreakRecoveryModal } from '@/src/components/StreakRecoveryModal';
+import { computeAppOpenOutcome, fetchCloudStreakCount, recoverWithShield, startRecoveryWindow } from '@/src/utils/streakRecovery';
+import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/service';
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
@@ -332,19 +334,28 @@ function CloudSyncLoader() {
     //  - Daily reminder: fires at user-configured time each day
     //  - Weekly challenge: fires Sunday 7pm local (resets every week)
     //  - Win-back: 3/7/14 days of absence — cancelled on next foreground
+    // The legacy scheduleDailyReminder is gone — replaced by the
+    // Daily Challenge morning notification (8am local, fires only
+    // if today's challenge is uncompleted). Same effective intent
+    // (nudge the player to play once a day) but tied to a real
+    // feature instead of a generic "play something" ping. Lives
+    // in src/features/dailyChallenge/service.ts.
     Promise.all([
       loadNotificationPreferences(user.id),
+      // loadDailyReminderTime stays mounted because the legacy
+      // pref column still exists; we just don't act on it any more.
       loadDailyReminderTime(user.id),
-    ]).then(([prefs, time]) => {
-      if (prefs.daily_reminder !== false && time) {
-        scheduleDailyReminder(time);
-      } else {
-        cancelDailyReminder();
-      }
+    ]).then(([prefs]) => {
+      // Cancel any leftover legacy daily reminder from older builds
+      // so a user who upgrades doesn't end up with both pings firing.
+      cancelDailyReminder().catch(() => {});
       if (prefs.weekly_challenge !== false) {
         scheduleWeeklyChallengeReminder();
       }
     }).catch(() => {});
+    // Daily Challenge schedule: fires the next 7 days of mornings
+    // + (conditional) evenings using the freshly-loaded streak.
+    refreshDailyChallengeSchedule(user.id).catch(() => {});
     // Cancel any pending win-back since the user just opened the app.
     cancelWinBackReminders();
     // First-week onboarding pushes — denser cadence over days 1-7
@@ -553,6 +564,110 @@ function ComebackRewardMounter() {
   return <ComebackRewardModal visible={visible} onClose={() => setVisible(false)} />;
 }
 
+/** Root-level streak recovery check. Was previously bolted to the
+ *  home tab's useEffect which only ran when the home tab was the
+ *  mounted screen. On iOS, if the user reopened the app while the
+ *  last-active tab was journey / friends / shop, the home effect
+ *  never ran, the recovery modal never showed, and a multi-day
+ *  streak could quietly slip past the 1-hour recovery window without
+ *  the player ever being warned (the "I had 103 days, no popup, lost
+ *  the streak" report).
+ *
+ *  Mounting at the root means the check fires on every authenticated
+ *  app launch + foreground regardless of which tab is in focus.
+ *  The home tab keeps its own MANUAL trigger (tap the streak banner)
+ *  separate from this auto path. */
+function StreakRecoveryMounter() {
+  const cloudHydrated = useGameStore((s) => s._cloudHydrated);
+  const authUserId = useGameStore((s) => s._authUserId);
+  const lastPlayDate = useGameStore((s) => s.lastPlayDate);
+  const streakCount = useGameStore((s) => s.streakCount);
+  const streakShields = useGameStore((s) => s.streakShields);
+  const recoveryWindowStart = useGameStore((s) => s.recoveryWindowStart);
+  const setRecoveryWindowStart = useGameStore((s) => s.setRecoveryWindowStart);
+  const applyLocal = useGameStore((s) => s.applyStreakRecoveryLocal);
+  const resetLocal = useGameStore((s) => s.resetStreakLocal);
+
+  const [modal, setModal] = useState<{ streak: number; daysMissed: number } | null>(null);
+  // Dedup so the same state snapshot doesn't re-fire the check
+  // across re-renders. Cloud sync naturally bumps the dependencies
+  // when fresh values land, which IS supposed to re-trigger.
+  const lastCheckedKey = useRef<string | null>(null);
+
+  const ready = !!authUserId && cloudHydrated;
+
+  useEffect(() => {
+    if (!ready || !authUserId) return;
+    const checkKey = `${authUserId}|${lastPlayDate ?? '_'}|${streakCount}|${streakShields}|${recoveryWindowStart ?? '_'}`;
+    if (lastCheckedKey.current === checkKey) return;
+    lastCheckedKey.current = checkKey;
+    if (streakCount < 3) return;
+
+    let cancelled = false;
+    (async () => {
+      // Cloud safety net: a stale-low local streak would otherwise be
+      // used as the recovery cost basis AND preserved as the post-
+      // recovery value, silently shrinking the player's streak by
+      // however many days the local value drifted under cloud. We saw
+      // this happen on a dev account: cloud held 103, local somehow
+      // ended at 100, recovery preserved 100 and the player lost 3
+      // days they never missed. Fetching cloud fresh + taking the max
+      // makes cloud win whenever it's higher.
+      const cloudStreak = await fetchCloudStreakCount(authUserId);
+      if (cancelled) return;
+      const authoritativeStreak = cloudStreak !== null
+        ? Math.max(streakCount, cloudStreak)
+        : streakCount;
+
+      const outcome = computeAppOpenOutcome({
+        userId: authUserId,
+        lastPlayDate,
+        streakCount: authoritativeStreak,
+        streakShields,
+        recoveryWindowStart,
+      });
+
+      if (outcome.kind === 'ok') return;
+      if (outcome.kind === 'shield_auto_used') {
+        // Silent save with a shield. No modal, only a store update.
+        recoverWithShield(authUserId, 0).then((ok) => {
+          if (ok) applyLocal(0, -1);
+        });
+        return;
+      }
+      if (outcome.kind === 'reset') {
+        // 1-hour window expired before the player came back. Streak
+        // is gone permanently per the recovery contract.
+        resetLocal();
+        return;
+      }
+      // outcome.kind === 'modal' — show the choice + persist the
+      // recovery window if this is a fresh detection. The streak
+      // value handed to the modal is the authoritative one, so the
+      // displayed recovery cost AND the preserved-streak metadata
+      // both reflect the player's true high water mark.
+      setModal({ streak: outcome.streak, daysMissed: outcome.daysMissed });
+      if (outcome.windowElapsedMs === 0) {
+        const iso = outcome.recoveryStart.toISOString();
+        startRecoveryWindow(authUserId, outcome.recoveryStart).then((ok) => {
+          if (ok) setRecoveryWindowStart(iso);
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ready, authUserId, lastPlayDate, streakCount, streakShields, recoveryWindowStart, applyLocal, resetLocal, setRecoveryWindowStart]);
+
+  if (!modal) return null;
+  return (
+    <StreakRecoveryModal
+      visible
+      streak={modal.streak}
+      daysMissed={modal.daysMissed}
+      onDismiss={() => setModal(null)}
+    />
+  );
+}
+
 function ThemedStack() {
   const { colors, isDark } = useTheme();
   return (
@@ -582,6 +697,7 @@ function ThemedStack() {
         <Stack.Screen name="privacy" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="terms" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="stats-space" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="daily-challenge" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="settings" />
         <Stack.Screen name="settings/notifications" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings/sounds" options={{ animation: 'slide_from_right' }} />
@@ -633,6 +749,11 @@ function RootLayout() {
               their last claim. Decision happens in
               ComebackRewardMounter so this overlay file stays clean. */}
           <ComebackRewardMounter />
+          {/* Streak recovery modal — fires on every authenticated
+              app launch + foreground when the player has missed
+              days. Lives at root so the popup shows regardless of
+              which tab the user reopens the app on. */}
+          <StreakRecoveryMounter />
           {/* Global offline takeover — renders null while online,
               full-screen Blink + CTA when NetInfo reports no
               connection. Mounted last so it overlays every screen. */}
