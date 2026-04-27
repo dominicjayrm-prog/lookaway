@@ -1,955 +1,707 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+/**
+ * BLANKED onboarding — 3-round memory test → results → paywall →
+ * (optional) discount paywall → login.
+ *
+ * Replaces the previous 6-screen swipe deck. The new flow gets the
+ * user playing within ~10 seconds: minimal welcome screen, then the
+ * test starts. Three classic-mode mini rounds with rising difficulty,
+ * a fake "analysing your memory" loader, then a results screen with
+ * their score / percentile / brain type. The detailed brain profile
+ * sits behind a frosted-glass overlay with an "Unlock Full Profile"
+ * CTA — that's the conversion hook.
+ *
+ * Persistence: the AsyncStorage key `blanked_onboarded` is set on
+ * exit (regardless of subscribe outcome) so the test only runs once
+ * per device install. Existing users with the key already set skip
+ * straight to login.
+ */
+import React, { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated as RNAnimated,
-  Dimensions,
-  FlatList,
-  Platform,
-  ViewStyle,
+  View, Text, StyleSheet, Pressable, Platform,
+  Animated as RNAnimated, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Circle, Polygon, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
+import { AnimatedBlink } from '@/src/components/AnimatedBlink';
+import { SceneRenderer } from '@/src/components/SceneRenderer';
+import { OptionButton } from '@/src/components/OptionButton';
+import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
+import DiscountPaywall from '@/src/components/DiscountPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
-import { AnimatedBlink } from '@/src/components/AnimatedBlink';
-import type { BlinkExpression } from '@/src/components/AnimatedBlink';
+import { ONBOARDING_ROUNDS } from '@/src/data/onboardingTestScenes';
+import {
+  buildOnboardingScoreOutput,
+  type RoundResult,
+  type BrainType,
+} from '@/src/utils/onboardingScore';
+import { purchaseSubscription } from '@/src/lib/purchases';
+import { useGameStore } from '@/src/store';
 import { t } from '@/src/i18n';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const ACCENT = '#6C5CE7';
+const ONBOARDED_KEY = 'blanked_onboarded';
+const DISCOUNT_SEEN_KEY = 'blanked_discount_paywall_seen';
 
-// Colours matching the mockup
-const C = {
-  bg: '#FAFAF7',
-  accent: '#6C5CE7',
-  accentL: '#A29BFE',
-  accentD: '#4A3BBF',
-  green: '#00B894',
-  coral: '#FF6B6B',
-  gold: '#D4A012',
-  blue: '#0984E3',
-  teal: '#00CEC9',
-  pink: '#FD79A8',
-  text: '#1A1A18',
-  textM: '#636E72',
-  textD: '#B2BEC3',
-};
+type Phase =
+  | 'welcome'
+  | 'round'
+  | 'analysing'
+  | 'results'
+  | 'profile'
+  | 'paywall'
+  | 'discount';
 
-// ─── ANIMATED COUNTER ──────────────────────────────────────
-function Counter({ target, duration = 1500, suffix = '', prefix = '', style, active = true }: { target: number; duration?: number; suffix?: string; prefix?: string; style?: any; active?: boolean }) {
-  const [val, setVal] = useState(0);
-  const hasRun = useRef(false);
-  useEffect(() => {
-    if (!active || hasRun.current) return;
-    hasRun.current = true;
-    const start = Date.now();
-    let raf: number;
-    const tick = () => {
-      const pct = Math.min(1, (Date.now() - start) / duration);
-      const eased = 1 - Math.pow(1 - pct, 3);
-      setVal(Math.round(target * eased));
-      if (pct < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration, active]);
-  return <Text style={style}>{prefix}{val}{suffix}</Text>;
+interface OnboardingState {
+  phase: Phase;
+  roundIndex: 0 | 1 | 2;
+  results: RoundResult[];
 }
 
-// ─── FADE-IN WRAPPER ───────────────────────────────────────
-function FadeIn({ delay = 0, children, style }: { delay?: number; children: React.ReactNode; style?: ViewStyle }) {
-  const opacity = useRef(new RNAnimated.Value(0)).current;
-  const translateY = useRef(new RNAnimated.Value(12)).current;
-  useEffect(() => {
-    opacity.setValue(0);
-    translateY.setValue(12);
-    const t = setTimeout(() => {
-      RNAnimated.parallel([
-        RNAnimated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-        RNAnimated.spring(translateY, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
-      ]).start();
-    }, delay);
-    return () => clearTimeout(t);
-  }, [delay, opacity, translateY]);
-  return <RNAnimated.View style={[{ opacity, transform: [{ translateY }] }, style]}>{children}</RNAnimated.View>;
-}
+type Action =
+  | { type: 'start' }
+  | { type: 'recordRound'; result: RoundResult }
+  | { type: 'analysisDone' }
+  | { type: 'showProfile' }
+  | { type: 'showPaywall' }
+  | { type: 'showDiscount' };
 
-// ─── SCALE-IN WRAPPER (for icons/stars) ────────────────────
-function ScaleIn({ delay = 0, children, active = true }: { delay?: number; children: React.ReactNode; active?: boolean }) {
-  const scale = useRef(new RNAnimated.Value(0)).current;
-  const hasRun = useRef(false);
-  useEffect(() => {
-    if (!active || hasRun.current) return;
-    hasRun.current = true;
-    const t = setTimeout(() => {
-      RNAnimated.spring(scale, { toValue: 1, tension: 180, friction: 8, useNativeDriver: true }).start();
-    }, delay);
-    return () => clearTimeout(t);
-  }, [delay, scale, active]);
-  return <RNAnimated.View style={{ transform: [{ scale }] }}>{children}</RNAnimated.View>;
-}
-
-// ═══ SCREEN 1: EMOTIONAL HOOK ═══════════════════════════════
-function Screen1({ isVisible }: { isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  // We only use floatAnim now — AnimatedBlink has its own breathing scale
-  // built in via the `breathing` prop. The previous setup wrapped it in
-  // an additional Animated.View with a redundant pulseAnim, which on iOS
-  // caused the native driver to rasterize the SVG at its 120px logical
-  // size and then scale it UP by ~1.10x (1.06 pulse × 1.04 breathing).
-  // That's where the "pixelated" look came from — bitmap upscaling.
-  // Now we do: one native-driver translateY (no scaling), and let the
-  // SVG render cleanly at a higher source size (160) so even the
-  // internal breathing scale doesn't exceed the rasterized resolution.
-  const floatAnim = useRef(new RNAnimated.Value(0)).current;
-  // Eye look-down: Blink glances down at the text after a pause
-  const [lookY, setLookY] = useState(0);
-  const lookRan = useRef(false);
-  useEffect(() => {
-    if (!isVisible || lookRan.current) return;
-    lookRan.current = true;
-    // Wait for text to fade in, then slowly look down
-    const delay = setTimeout(() => {
-      const start = Date.now();
-      const duration = 1200; // slow, natural eye movement
-      const tick = () => {
-        const t = Math.min(1, (Date.now() - start) / duration);
-        // Ease-in-out cubic for natural eye movement
-        const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        setLookY(eased * 0.8); // 0.8 = not fully down, just a glance
-        if (t < 1) requestAnimationFrame(tick);
+function reducer(state: OnboardingState, action: Action): OnboardingState {
+  switch (action.type) {
+    case 'start':
+      return { ...state, phase: 'round', roundIndex: 0, results: [] };
+    case 'recordRound': {
+      const nextResults = [...state.results, action.result];
+      const isLast = state.roundIndex === 2;
+      if (isLast) return { ...state, phase: 'analysing', results: nextResults };
+      return {
+        ...state,
+        results: nextResults,
+        roundIndex: (state.roundIndex + 1) as 0 | 1 | 2,
       };
-      requestAnimationFrame(tick);
-    }, 1500); // start after title fades in
-    return () => clearTimeout(delay);
-  }, [isVisible]);
-
-  useEffect(() => {
-    const floatLoop = () => {
-      RNAnimated.sequence([
-        RNAnimated.timing(floatAnim, { toValue: -5, duration: 1500, useNativeDriver: true }),
-        RNAnimated.timing(floatAnim, { toValue: 5, duration: 1500, useNativeDriver: true }),
-      ]).start(floatLoop);
-    };
-    floatLoop();
-  }, [floatAnim]);
-
-  return (
-    <View style={s.screenCenter}>
-      <FadeIn delay={200}>
-        <RNAnimated.View style={{ transform: [{ translateY: floatAnim }] }}>
-          <AnimatedBlink expression="normal" size={160} lookOffset={{ x: 0, y: lookY }} />
-        </RNAnimated.View>
-      </FadeIn>
-
-      <FadeIn delay={500}>
-        <Text style={[s.heroTitle, { color: tc.text }]}>{t('onboarding.screen1.title')}</Text>
-      </FadeIn>
-
-      <FadeIn delay={800}>
-        <Text style={[s.heroSub, { color: tc.textMid }]}>{t('onboarding.screen1.subtitle')}</Text>
-      </FadeIn>
-    </View>
-  );
-}
-
-// ═══ SCREEN 2: SCIENCE-BACKED BENEFITS ══════════════════════
-function Screen2({ isVisible }: { isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  const benefits = [
-    { stat: 23, label: t('onboarding.screen2.benefit_1_label'), desc: t('onboarding.screen2.benefit_1_desc'), color: C.blue },
-    { stat: 31, label: t('onboarding.screen2.benefit_2_label'), desc: t('onboarding.screen2.benefit_2_desc'), color: C.green },
-    { stat: 40, label: t('onboarding.screen2.benefit_3_label'), desc: t('onboarding.screen2.benefit_3_desc'), color: C.accent },
-  ];
-
-  return (
-    <View style={s.screenLeft}>
-      <FadeIn delay={200}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <AnimatedBlink expression="memorise" size={36} entrance="fade" />
-          <Text style={s.sectionLabel}>{t('onboarding.screen2.label')}</Text>
-        </View>
-        <Text style={[s.sectionTitle, { color: tc.text }]}>{t('onboarding.screen2.title')}</Text>
-      </FadeIn>
-
-      {benefits.map((b, i) => (
-        <FadeIn key={i} delay={400 + i * 200}>
-          <View style={[s.benefitRow, i < 2 && [s.benefitBorder, { borderBottomColor: tc.border }]]}>
-            <ScaleIn delay={500 + i * 200} active={isVisible}>
-              <View style={[s.benefitIcon, { backgroundColor: `${b.color}08` }]}>
-                {i === 0 && (
-                  <Svg width={22} height={22} viewBox="0 0 40 40">
-                    <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
-                    <Path d="M20,12 L20,20 L27,24" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" />
-                  </Svg>
-                )}
-                {i === 1 && (
-                  <Svg width={22} height={22} viewBox="0 0 40 40">
-                    <Circle cx={20} cy={20} r={14} fill="none" stroke={b.color} strokeWidth={2.5} />
-                    <Path d="M14,20 C14,20 18,28 26,14" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                  </Svg>
-                )}
-                {i === 2 && (
-                  <Svg width={22} height={22} viewBox="0 0 40 40">
-                    <Path d="M8,28 L16,16 L24,22 L32,10" fill="none" stroke={b.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-                    <Circle cx={32} cy={10} r={3} fill={b.color} />
-                  </Svg>
-                )}
-              </View>
-            </ScaleIn>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
-                <Counter target={b.stat} suffix="%" duration={1200 + i * 300} active={isVisible} style={{ fontSize: 22, fontWeight: '800', color: b.color }} />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: tc.text }}>{b.label}</Text>
-              </View>
-              <Text style={{ fontSize: 11, color: tc.textMid, lineHeight: 15 }}>{b.desc}</Text>
-            </View>
-          </View>
-        </FadeIn>
-      ))}
-    </View>
-  );
-}
-
-// ═══ SCREEN 3: THE COMMITMENT ═══════════════════════════════
-function Screen3({ isVisible }: { isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  // Week-day letters localise — Spanish uses L/M/X/J/V/S/D, not M/T/W/T/F/S/S.
-  const days = [
-    t('onboarding.screen3.day_1'),
-    t('onboarding.screen3.day_2'),
-    t('onboarding.screen3.day_3'),
-    t('onboarding.screen3.day_4'),
-    t('onboarding.screen3.day_5'),
-    t('onboarding.screen3.day_6'),
-    t('onboarding.screen3.day_7'),
-  ];
-  const [filledDays, setFilledDays] = useState(0);
-  const hasRunDays = useRef(false);
-  useEffect(() => {
-    if (!isVisible || hasRunDays.current) return;
-    hasRunDays.current = true;
-    const t = setInterval(() => setFilledDays(d => (d < 7 ? d + 1 : d)), 300);
-    return () => clearInterval(t);
-  }, [isVisible]);
-
-  const dayAnims = useRef(days.map(() => new RNAnimated.Value(0.9))).current;
-  useEffect(() => {
-    if (filledDays > 0 && filledDays <= 7) {
-      RNAnimated.spring(dayAnims[filledDays - 1], {
-        toValue: 1,
-        tension: 200,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
     }
-  }, [filledDays, dayAnims]);
-
-  return (
-    <View style={s.screenCenter}>
-      <FadeIn delay={200}>
-        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>{t('onboarding.screen3.title')}</Text>
-        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>{t('onboarding.screen3.subtitle')}</Text>
-      </FadeIn>
-
-      <FadeIn delay={500}>
-        <View style={[s.weekCard, { backgroundColor: tc.card }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <Text style={[s.weekLabel, { marginBottom: 0, color: tc.textLight }]}>{t('onboarding.screen3.first_week')}</Text>
-            <AnimatedBlink expression="streak" size={32} entrance="fade" />
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            {days.map((d, i) => {
-              const filled = i < filledDays;
-              return (
-                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
-                  <RNAnimated.View style={[
-                    s.dayCircle,
-                    {
-                      backgroundColor: filled ? `${C.coral}12` : tc.surface,
-                      borderColor: filled ? C.coral : 'transparent',
-                      transform: [{ scale: dayAnims[i] }],
-                    },
-                  ]}>
-                    {filled ? (
-                      <Svg width={16} height={16} viewBox="0 0 100 100">
-                        <Path
-                          d="M50,88 C20,65 5,50 5,32 C5,18 16,8 30,8 C38,8 45,12 50,20 C55,12 62,8 70,8 C84,8 95,18 95,32 C95,50 80,65 50,88Z"
-                          fill={C.coral}
-                        />
-                      </Svg>
-                    ) : (
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tc.textLight }} />
-                    )}
-                  </RNAnimated.View>
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: filled ? tc.text : tc.textLight }}>{d}</Text>
-                </View>
-              );
-            })}
-          </View>
-          {filledDays >= 7 && (
-            <ScaleIn delay={0} active={true}>
-              <View style={s.streakBanner}>
-                <Text style={s.streakText}>{t('onboarding.screen3.streak_complete')}</Text>
-              </View>
-            </ScaleIn>
-          )}
-        </View>
-      </FadeIn>
-
-      <FadeIn delay={900}>
-        <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
-          {[
-            { value: t('onboarding.screen3.stat_session_value'), label: t('onboarding.screen3.stat_session_label'), color: C.accent },
-            { value: t('onboarding.screen3.stat_week_value'), label: t('onboarding.screen3.stat_week_label'), color: C.blue },
-            { value: t('onboarding.screen3.stat_year_value'), label: t('onboarding.screen3.stat_year_label'), color: C.green },
-          ].map((stat, i) => (
-            <View key={i} style={[s.microStat, { backgroundColor: tc.card }]}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: stat.color }}>{stat.value}</Text>
-              <Text style={{ fontSize: 9, color: tc.textLight, marginTop: 2 }}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-      </FadeIn>
-    </View>
-  );
+    case 'analysisDone':
+      return { ...state, phase: 'results' };
+    case 'showProfile':
+      return { ...state, phase: 'profile' };
+    case 'showPaywall':
+      return { ...state, phase: 'paywall' };
+    case 'showDiscount':
+      return { ...state, phase: 'discount' };
+    default:
+      return state;
+  }
 }
 
-// ═══ SCREEN 4: HOW IT WORKS ═════════════════════════════════
-function Screen4({ isVisible }: { isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  const [step, setStep] = useState(0);
-  const hasRunSteps = useRef(false);
-  useEffect(() => {
-    if (!isVisible || hasRunSteps.current) return;
-    hasRunSteps.current = true;
-    const t = setInterval(() => setStep(prev => (prev + 1) % 3), 2000);
-    return () => clearInterval(t);
-  }, [isVisible]);
-
-  // Individual opacity for each step visual (crossfade)
-  const step0Opacity = useRef(new RNAnimated.Value(1)).current;
-  const step1Opacity = useRef(new RNAnimated.Value(0)).current;
-  const step2Opacity = useRef(new RNAnimated.Value(0)).current;
-  const stepOpacities = [step0Opacity, step1Opacity, step2Opacity];
-
-  useEffect(() => {
-    stepOpacities.forEach((anim, i) => {
-      RNAnimated.timing(anim, { toValue: i === step ? 1 : 0, duration: 300, useNativeDriver: true }).start();
-    });
-  }, [step]);
-
-  // Tight copy — descriptions must fit in 2 lines inside the step
-  // cards on an iPhone SE / Mini without overflowing into the
-  // pagination dots. Previously "The scene disappears completely"
-  // wrapped to 3 lines and spilled over the bottom bar.
-  const steps = [
-    { num: '1', title: t('onboarding.screen4.step_1_title'), desc: t('onboarding.screen4.step_1_desc') },
-    { num: '2', title: t('onboarding.screen4.step_2_title'), desc: t('onboarding.screen4.step_2_desc') },
-    { num: '3', title: t('onboarding.screen4.step_3_title'), desc: t('onboarding.screen4.step_3_desc') },
-  ];
-
-  return (
-    <View style={s.screenLeft}>
-      <FadeIn delay={200}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <AnimatedBlink expression={(['memorise', 'blank', 'correct'] as BlinkExpression[])[step]} size={40} />
-          <Text style={s.sectionLabel}>{t('onboarding.screen4.label')}</Text>
-        </View>
-        <Text style={[s.sectionTitle, { color: tc.text }]}>{t('onboarding.screen4.title')}</Text>
-      </FadeIn>
-
-      <FadeIn delay={400}>
-        <View style={{ marginBottom: 20, height: 140 }}>
-          {/* Step 0: Memorise shapes */}
-          <RNAnimated.View style={{ opacity: step0Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { backgroundColor: tc.card, height: 140 }]}>
-              <View style={{ position: 'absolute', left: 30, top: 22 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: C.coral }} />
-              </View>
-              <View style={{ position: 'absolute', right: 40, top: 24 }}>
-                <View style={{ width: 26, height: 26, borderRadius: 5, backgroundColor: C.blue }} />
-              </View>
-              <View style={{ position: 'absolute', left: '45%', top: 48 }}>
-                <Svg width={28} height={28} viewBox="0 0 100 100">
-                  <Polygon points="50,5 62,35 95,35 68,55 78,90 50,70 22,90 32,55 5,35 38,35" fill={C.accent} />
-                </Svg>
-              </View>
-              <View style={{ position: 'absolute', left: 44, bottom: 18 }}>
-                <Svg width={26} height={26} viewBox="0 0 100 100">
-                  <Polygon points="50,8 95,88 5,88" fill={C.green} />
-                </Svg>
-              </View>
-              <View style={{ position: 'absolute', right: 44, bottom: 22 }}>
-                <Svg width={24} height={24} viewBox="0 0 100 100">
-                  <Polygon points="50,5 95,50 50,95 5,50" fill={C.gold} />
-                </Svg>
-              </View>
-            </View>
-          </RNAnimated.View>
-          {/* Step 1: Gone! */}
-          <RNAnimated.View style={{ opacity: step1Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { height: 140, alignItems: 'center', justifyContent: 'center', backgroundColor: tc.card }]}>
-              <AnimatedBlink expression="blank" size={56} />
-              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{t('onboarding.screen4.gone')}</Text>
-            </View>
-          </RNAnimated.View>
-          {/* Step 2: Answer */}
-          <RNAnimated.View style={{ opacity: step2Opacity, position: 'absolute', width: '100%' }}>
-            <View style={[s.stepVisual, { height: 140, padding: 14, backgroundColor: tc.card }]}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: tc.text, marginBottom: 8 }}>{t('onboarding.screen4.sample_q')}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
-                {['4', '5', '6', '3'].map((v, i) => (
-                  <View key={i} style={[
-                    s.answerOption, { backgroundColor: tc.surface },
-                    i === 1 && { backgroundColor: `${C.green}12`, borderColor: C.green, borderWidth: 1.5 },
-                  ]}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: i === 1 ? C.green : tc.textLight }}>{v}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </RNAnimated.View>
-        </View>
-      </FadeIn>
-
-      <View style={{ flexDirection: 'row', gap: 8, width: '100%' }}>
-        {steps.map((st, i) => (
-          <FadeIn key={i} delay={500 + i * 100} style={{ flex: 1 }}>
-            <Pressable
-              onPress={() => setStep(i)}
-              style={[
-                s.stepCard,
-                {
-                  backgroundColor: i === step ? `${C.accent}0F` : tc.card,
-                  borderColor: i === step ? C.accent : tc.border,
-                },
-              ]}
-            >
-              <View style={[s.stepNum, { backgroundColor: i === step ? C.accent : tc.surface }]}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: i === step ? 'white' : tc.textLight }}>{st.num}</Text>
-              </View>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: i === step ? C.accent : tc.text, marginTop: 4 }} numberOfLines={1}>{st.title}</Text>
-              <Text style={{ fontSize: 11, color: tc.textLight, marginTop: 3, lineHeight: 14 }} numberOfLines={2}>{st.desc}</Text>
-            </Pressable>
-          </FadeIn>
-        ))}
-      </View>
-    </View>
-  );
+function getStorage() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('@react-native-async-storage/async-storage').default;
 }
 
-// ═══ SCREEN 5: SOCIAL PROOF ═════════════════════════════════
-function Screen5({ isVisible }: { isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  // Names stay in their native form across locales — "Sarah M." is
-  // a marketing proof point, not copy. Streak counts interpolate
-  // into a localised template because Spanish reads as "Racha de
-  // 42 días" rather than "42 day streak".
-  const testimonials = [
-    { name: 'Sarah M.', streak: t('onboarding.screen5.streak_days', { count: 42 }), text: t('onboarding.screen5.testimonial_1_text'), avatar: 'S', color: C.coral },
-    { name: 'James K.', streak: t('onboarding.screen5.streak_days', { count: 28 }), text: t('onboarding.screen5.testimonial_2_text'), avatar: 'J', color: C.blue },
-    { name: 'Maria L.', streak: t('onboarding.screen5.streak_days', { count: 67 }), text: t('onboarding.screen5.testimonial_3_text'), avatar: 'M', color: C.green },
-  ];
-
-  return (
-    <View style={s.screenLeft}>
-      <FadeIn delay={200}>
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', gap: 2, marginBottom: 8 }}>
-            {[1, 2, 3, 4].map(i => (
-              <ScaleIn key={i} delay={200 + i * 80} active={isVisible}>
-                <Svg width={18} height={18} viewBox="0 0 24 24">
-                  <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill={C.gold} />
-                </Svg>
-              </ScaleIn>
-            ))}
-            <ScaleIn delay={200 + 5 * 80} active={isVisible}>
-              <Svg width={18} height={18} viewBox="0 0 24 24">
-                <Defs>
-                  <SvgLinearGradient id="partialStar" x1="0" y1="0" x2="1" y2="0">
-                    <Stop offset="0.8" stopColor={C.gold} />
-                    <Stop offset="0.8" stopColor={`${C.gold}25`} />
-                  </SvgLinearGradient>
-                </Defs>
-                <Polygon points="12,2 15,8 22,9 17,14 18,21 12,17 6,21 7,14 2,9 9,8" fill="url(#partialStar)" />
-              </Svg>
-            </ScaleIn>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <AnimatedBlink expression="love" size={32} entrance="fade" />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: tc.textMid }}>{t('onboarding.screen5.rating')}</Text>
-          </View>
-        </View>
-      </FadeIn>
-
-      {testimonials.map((item, i) => (
-        <FadeIn key={i} delay={400 + i * 200}>
-          <View style={[s.testimonialCard, { backgroundColor: tc.card }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <ScaleIn delay={500 + i * 200} active={isVisible}>
-                <View style={[s.avatar, { backgroundColor: `${item.color}15` }]}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: item.color }}>{item.avatar}</Text>
-                </View>
-              </ScaleIn>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: tc.text }}>{item.name}</Text>
-                <Text style={{ fontSize: 9, color: item.color, fontWeight: '600' }}>{'🔥 '}{item.streak}</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 12, color: tc.textMid, lineHeight: 18 }}>{`\u201c${item.text}\u201d`}</Text>
-          </View>
-        </FadeIn>
-      ))}
-    </View>
-  );
-}
-
-// ═══ SCREEN 6: GET STARTED ══════════════════════════════════
-function Screen6({ onPlay, isVisible }: { onPlay: () => void; isVisible: boolean }) {
-  const { colors: tc } = useTheme();
-  // Shimmer sweep
-  const shimmerAnim = useRef(new RNAnimated.Value(-30)).current;
-  useEffect(() => {
-    const loop = () => {
-      shimmerAnim.setValue(-30);
-      RNAnimated.timing(shimmerAnim, { toValue: 120, duration: 2000, useNativeDriver: false }).start(loop);
-    };
-    loop();
-  }, [shimmerAnim]);
-
-  // Logo floating
-  const logoFloat = useRef(new RNAnimated.Value(0)).current;
-  useEffect(() => {
-    const loop = () => {
-      RNAnimated.sequence([
-        RNAnimated.timing(logoFloat, { toValue: -4, duration: 1200, useNativeDriver: true }),
-        RNAnimated.timing(logoFloat, { toValue: 4, duration: 1200, useNativeDriver: true }),
-      ]).start(loop);
-    };
-    loop();
-  }, [logoFloat]);
-
-  // Button press scale
-  const btnScale = useRef(new RNAnimated.Value(1)).current;
-  const onPressIn = () => RNAnimated.spring(btnScale, { toValue: 0.96, useNativeDriver: true, tension: 200, friction: 10 }).start();
-  const onPressOut = () => RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
-
-  return (
-    <View style={s.screenCenter}>
-      <FadeIn delay={200}>
-        <RNAnimated.View style={{ transform: [{ translateY: logoFloat }] }}>
-          <AnimatedBlink expression="celebrate" size={80} entrance="spring" entranceDelay={300} />
-        </RNAnimated.View>
-      </FadeIn>
-
-      <FadeIn delay={400}>
-        <Text style={[s.sectionTitle, { textAlign: 'center', color: tc.text }]}>{t('onboarding.screen6.title')}</Text>
-        <Text style={[s.heroSub, { marginBottom: 28, color: tc.textMid }]}>{t('onboarding.screen6.subtitle')}</Text>
-      </FadeIn>
-
-      <FadeIn delay={600}>
-        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 28 }}>
-          {[
-            { icon: '🎮', label: t('onboarding.screen6.feature_levels') },
-            { icon: '🧠', label: t('onboarding.screen6.feature_modes') },
-            { icon: '👥', label: t('onboarding.screen6.feature_friends') },
-          ].map((f, i) => (
-            <ScaleIn key={i} delay={700 + i * 100} active={isVisible}>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</Text>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: tc.textMid }}>{f.label}</Text>
-              </View>
-            </ScaleIn>
-          ))}
-        </View>
-      </FadeIn>
-
-      <FadeIn delay={800} style={{ width: '100%' }}>
-        <View>
-          <Pressable onPress={onPlay} onPressIn={onPressIn} onPressOut={onPressOut}>
-            <RNAnimated.View style={{ transform: [{ scale: btnScale }], borderRadius: 16, overflow: 'hidden' }}>
-              <LinearGradient
-                colors={[C.accent, C.accentD]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.ctaButton}
-              >
-                <RNAnimated.View
-                  style={[
-                    s.shimmer,
-                    {
-                      left: shimmerAnim.interpolate({
-                        inputRange: [-30, 120],
-                        outputRange: ['-30%', '120%'],
-                      }),
-                    },
-                  ]}
-                >
-                  <LinearGradient
-                    colors={['transparent', 'rgba(255,255,255,0.25)', 'transparent']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ flex: 1 }}
-                  />
-                </RNAnimated.View>
-                <Text style={s.ctaText}>{t('onboarding.screen6.cta')}</Text>
-              </LinearGradient>
-            </RNAnimated.View>
-          </Pressable>
-        </View>
-      </FadeIn>
-    </View>
-  );
-}
-
-// ═══ DOT INDICATORS ═════════════════════════════════════════
-function Dots({ total, current }: { total: number; current: number }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-      {Array.from({ length: total }, (_, i) => (
-        <View
-          key={i}
-          style={{
-            width: i === current ? 18 : 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: i === current ? C.accent : i < current ? C.accentL : C.textD,
-          }}
-        />
-      ))}
-    </View>
-  );
-}
-
-// ═══ MAIN ONBOARDING ════════════════════════════════════════
-const TOTAL_SCREENS = 6;
-
-export default function OnboardingFlow() {
+// ─── MAIN ───────────────────────────────────────────────────────────
+export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const flatListRef = useRef<FlatList>(null);
-  const [current, setCurrent] = useState(0);
-  const [visibleIndex, setVisibleIndex] = useState(0);
-  const isLast = current === TOTAL_SCREENS - 1;
+  const [state, dispatch] = useReducer(reducer, {
+    phase: 'welcome',
+    roundIndex: 0,
+    results: [],
+  });
 
-  const pageWidth = Platform.OS === 'web' ? Math.min(SCREEN_W, 430) : SCREEN_W;
-
-  // Visibility tracking for lazy animations
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0 && viewableItems[0].index != null) {
-      const idx = viewableItems[0].index;
-      setVisibleIndex(idx);
-      // Fires once per step the user actually looks at — this is the
-      // drop-off funnel ("90% see step 0, 60% see step 1, ..."). If
-      // a player swipes away without ever reaching the final step,
-      // the missing event tells us where they bailed.
-      track(EVENTS.ONBOARDING_STEP_VIEWED, { step: idx });
-    }
-  }).current;
-
-  const onPlay = useCallback(() => {
-    try { localStorage.setItem('blanked_onboarded', 'true'); } catch {}
+  // Once the user has seen the test (regardless of subscribe outcome),
+  // mark the device as onboarded and route to login. Pre-creating this
+  // helper avoids the routing logic being duplicated across every exit
+  // tap (subscribe, dismiss, dismiss-from-discount).
+  const exitToLogin = useCallback(async () => {
+    try {
+      await getStorage().setItem(ONBOARDED_KEY, 'true');
+    } catch {}
+    // Web fallback so the index.tsx redirect picks up the flag without
+    // a full reload — matches the previous onboarding's behaviour.
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(ONBOARDED_KEY, 'true');
+      }
+    } catch {}
     track(EVENTS.ONBOARDING_COMPLETED);
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
-  const goTo = useCallback((index: number) => {
-    flatListRef.current?.scrollToIndex({ index, animated: true });
-    setCurrent(index);
-  }, []);
+  const output = state.phase === 'results' || state.phase === 'profile'
+    ? buildOnboardingScoreOutput(state.results)
+    : null;
 
-  const onMomentumScrollEnd = useCallback((e: any) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-    setCurrent(idx);
-  }, [pageWidth]);
+  // Subscribe handler — used by both the regular paywall and the
+  // discount paywall. Returns purchase outcome to the caller so each
+  // paywall can decide what to do on cancel/error vs. success.
+  const handleSubscribe = useCallback(async (plan: 'monthly' | 'yearly') => {
+    const { result, periodType, isActive } = await purchaseSubscription(plan);
+    if (result === 'success' && isActive) {
+      const store = useGameStore.getState();
+      store.activatePlus(periodType);
+      store.unlockCosmetic('frame_premium_gold');
+      store.unlockCosmetic('expr_premium');
+      store.unlockCosmetic('banner_premium_gold');
+      // Fires monthly grant immediately if eligible; the store-level
+      // guard skips during trial / intro period.
+      store.maybeGrantMonthlyPlusGems();
+      track(EVENTS.SUBSCRIPTION_PURCHASED, { plan, periodType, source: 'onboarding' });
+      exitToLogin();
+    }
+  }, [exitToLogin]);
 
-  const listHeight = Dimensions.get('window').height;
+  // Show the discount paywall after the user dismisses the regular
+  // one — but only ONCE per device. After that, dismissing the regular
+  // paywall just exits to login.
+  const handlePaywallDismiss = useCallback(async () => {
+    let alreadySeen = false;
+    try {
+      const flag = await getStorage().getItem(DISCOUNT_SEEN_KEY);
+      alreadySeen = flag === 'true';
+    } catch {}
+    if (alreadySeen) {
+      exitToLogin();
+      return;
+    }
+    try {
+      await getStorage().setItem(DISCOUNT_SEEN_KEY, 'true');
+    } catch {}
+    dispatch({ type: 'showDiscount' });
+  }, [exitToLogin]);
 
-  const renderItem = useCallback(({ index }: { index: number }) => {
-    const vis = visibleIndex === index;
-    return (
-      <View style={{ width: pageWidth, height: listHeight }}>
-        {index === 0 && <Screen1 isVisible={vis} />}
-        {index === 1 && <Screen2 isVisible={vis} />}
-        {index === 2 && <Screen3 isVisible={vis} />}
-        {index === 3 && <Screen4 isVisible={vis} />}
-        {index === 4 && <Screen5 isVisible={vis} />}
-        {index === 5 && <Screen6 onPlay={onPlay} isVisible={vis} />}
-      </View>
-    );
-  }, [pageWidth, listHeight, onPlay, visibleIndex]);
-
-  const keyExtractor = useCallback((_: number, index: number) => String(index), []);
+  const handleDiscountSubscribe = useCallback(() => {
+    handleSubscribe('monthly');
+  }, [handleSubscribe]);
 
   return (
-    <View style={[s.container, { backgroundColor: colors.bg, maxWidth: Platform.OS === 'web' ? 430 : undefined, alignSelf: Platform.OS === 'web' ? 'center' : undefined, width: '100%' }]}>
-      {/* Skip button */}
-      {!isLast && (
-        <Pressable onPress={() => goTo(TOTAL_SCREENS - 1)} style={[s.skipBtn, { top: insets.top + 12 }]}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textLight }}>{t('onboarding.skip')}</Text>
-        </Pressable>
+    <View style={[s.root, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+      {state.phase === 'welcome' && (
+        <Welcome onStart={() => dispatch({ type: 'start' })} />
+      )}
+      {state.phase === 'round' && (
+        <TestRound
+          key={`round-${state.roundIndex}`}
+          roundIndex={state.roundIndex}
+          onComplete={(result) => dispatch({ type: 'recordRound', result })}
+        />
+      )}
+      {state.phase === 'analysing' && (
+        <Analysing onDone={() => dispatch({ type: 'analysisDone' })} />
+      )}
+      {state.phase === 'results' && output && (
+        <Results
+          output={output}
+          rounds={state.results}
+          onContinue={() => dispatch({ type: 'showProfile' })}
+        />
+      )}
+      {state.phase === 'profile' && output && (
+        <BlurredProfile
+          brainType={output.brainType}
+          onUnlock={() => dispatch({ type: 'showPaywall' })}
+        />
+      )}
+      <SubscriptionPaywall
+        visible={state.phase === 'paywall'}
+        onDismiss={handlePaywallDismiss}
+        onSubscribe={handleSubscribe}
+      />
+      <DiscountPaywall
+        visible={state.phase === 'discount'}
+        onDismiss={exitToLogin}
+        onSubscribe={handleDiscountSubscribe}
+      />
+    </View>
+  );
+}
+
+// ─── WELCOME ────────────────────────────────────────────────────────
+function Welcome({ onStart }: { onStart: () => void }) {
+  const { colors } = useTheme();
+  const fade = useRef(new RNAnimated.Value(0)).current;
+  const lift = useRef(new RNAnimated.Value(20)).current;
+  useEffect(() => {
+    RNAnimated.parallel([
+      RNAnimated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }),
+      RNAnimated.spring(lift, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
+    ]).start();
+  }, [fade, lift]);
+
+  return (
+    <RNAnimated.View
+      style={[s.centered, { opacity: fade, transform: [{ translateY: lift }] }]}
+    >
+      <View style={s.logoFrame}>
+        <AnimatedBlink expression="celebrate" size={120} entrance="spring" />
+      </View>
+      <Text style={[s.welcomeTitle, { color: colors.text }]}>{t('onboarding.test.welcome_title')}</Text>
+      <Text style={[s.welcomeSub, { color: colors.textMid }]}>{t('onboarding.test.welcome_subtitle')}</Text>
+      <View style={s.welcomeMeta}>
+        <Ionicons name="time-outline" size={16} color={colors.textMid} />
+        <Text style={[s.welcomeMetaText, { color: colors.textMid }]}>{t('onboarding.test.welcome_meta')}</Text>
+      </View>
+      <Pressable
+        onPress={onStart}
+        style={({ pressed }) => [
+          s.primaryBtn,
+          { backgroundColor: ACCENT },
+          pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+        ]}
+      >
+        <Text style={s.primaryBtnText}>{t('onboarding.test.welcome_cta')}</Text>
+      </Pressable>
+    </RNAnimated.View>
+  );
+}
+
+// ─── TEST ROUND ─────────────────────────────────────────────────────
+function TestRound({
+  roundIndex,
+  onComplete,
+}: {
+  roundIndex: 0 | 1 | 2;
+  onComplete: (result: RoundResult) => void;
+}) {
+  const { colors } = useTheme();
+  const round = ONBOARDING_ROUNDS[roundIndex];
+  // Three phases: memorise (scene visible) → blank ("Look away!") →
+  // question (4-option pick). Round count + difficulty hint are
+  // displayed across all three so the user always knows where they
+  // are in the test.
+  const [phase, setPhase] = useState<'memorise' | 'blank' | 'question'>('memorise');
+  const [selected, setSelected] = useState<number | null>(null);
+  const questionShownAt = useRef<number>(0);
+  const [secondsLeft, setSecondsLeft] = useState(round.viewTime);
+
+  // Auto-advance memorise → blank → question.
+  useEffect(() => {
+    if (phase !== 'memorise') return;
+    setSecondsLeft(round.viewTime);
+    const tickId = setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, +(s - 0.1).toFixed(1)));
+    }, 100);
+    const blankId = setTimeout(() => {
+      setPhase('blank');
+    }, round.viewTime * 1000);
+    return () => { clearInterval(tickId); clearTimeout(blankId); };
+  }, [phase, round.viewTime]);
+
+  useEffect(() => {
+    if (phase !== 'blank') return;
+    const id = setTimeout(() => {
+      setPhase('question');
+      questionShownAt.current = Date.now();
+    }, 600);
+    return () => clearTimeout(id);
+  }, [phase]);
+
+  const handleAnswer = useCallback((idx: number) => {
+    if (selected !== null) return;
+    setSelected(idx);
+    const reactionMs = Date.now() - questionShownAt.current;
+    const correct = idx === round.question.correctIndex;
+    // Brief reveal so the user sees right/wrong before we move on,
+    // then advance. 700ms matches the classic-mode feedback timing.
+    setTimeout(() => onComplete({ correct, reactionMs }), 800);
+  }, [selected, round.question.correctIndex, onComplete]);
+
+  const stateForOption = (idx: number): 'default' | 'selected' | 'correct' | 'wrong' | 'dimmed' => {
+    if (selected === null) return 'default';
+    if (idx === round.question.correctIndex) return 'correct';
+    if (idx === selected) return 'wrong';
+    return 'dimmed';
+  };
+
+  const progressLabel = t('onboarding.test.round_progress', { current: round.number, total: 3 });
+
+  return (
+    <View style={s.roundRoot}>
+      <View style={s.roundHeader}>
+        <Text style={[s.roundProgress, { color: colors.textMid }]}>{progressLabel}</Text>
+        <View style={s.roundDots}>
+          {[0, 1, 2].map((i) => (
+            <View
+              key={i}
+              style={[
+                s.roundDot,
+                { backgroundColor: i <= roundIndex ? ACCENT : colors.border },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+
+      {phase === 'memorise' && (
+        <View style={s.sceneWrap}>
+          <Text style={[s.bigInstruction, { color: colors.text }]}>{t('onboarding.test.memorise')}</Text>
+          <SceneRenderer objects={round.scene.objects} visible viewTime={round.viewTime} />
+          <View style={[s.timerPill, { backgroundColor: ACCENT + '22' }]}>
+            <Text style={[s.timerText, { color: ACCENT }]}>{secondsLeft.toFixed(1)}s</Text>
+          </View>
+        </View>
       )}
 
-      <FlatList
-        ref={flatListRef}
-        data={Array.from({ length: TOTAL_SCREENS }, (_, i) => i)}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        getItemLayout={(_, index) => ({ length: pageWidth, offset: pageWidth * index, index })}
-        scrollEventThrottle={16}
-        bounces={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-      />
+      {phase === 'blank' && (
+        <View style={s.blankWrap}>
+          <AnimatedBlink expression="blank" size={100} entrance="fade" />
+          <Text style={[s.bigInstruction, { color: colors.text, marginTop: 18 }]}>{t('onboarding.test.look_away')}</Text>
+        </View>
+      )}
 
-      {/* Bottom: dots + continue */}
-      {!isLast && (
-        <View style={[s.bottomBar, { paddingBottom: insets.bottom + 36 }]}>
-          <Dots total={TOTAL_SCREENS} current={current} />
-          <Pressable
-            onPress={() => goTo(current + 1)}
-            style={s.continueBtn}
-          >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: 'white' }}>
-              {current === 0 ? t('onboarding.next_first') : t('onboarding.next')}
-            </Text>
-          </Pressable>
+      {phase === 'question' && (
+        <View style={s.questionWrap}>
+          <Text style={[s.questionText, { color: colors.text }]}>{round.question.text}</Text>
+          <View style={s.optionsCol}>
+            {round.question.options.map((opt, i) => (
+              <OptionButton
+                key={i}
+                label={opt}
+                index={i}
+                state={stateForOption(i)}
+                onPress={() => handleAnswer(i)}
+                disabled={selected !== null}
+              />
+            ))}
+          </View>
         </View>
       )}
     </View>
   );
 }
 
-// ═══ STYLES ═════════════════════════════════════════════════
+// ─── ANALYSING ──────────────────────────────────────────────────────
+// Fake 2.7-second loader with a fill bar + three checkmarks animating
+// in. Pure conversion theatre — the score has already been computed,
+// but the moment of "the app is judging me" sets up the results screen.
+const ANALYSE_STEPS = [
+  'onboarding.test.analysing.step_1',
+  'onboarding.test.analysing.step_2',
+  'onboarding.test.analysing.step_3',
+] as const;
+
+function Analysing({ onDone }: { onDone: () => void }) {
+  const { colors } = useTheme();
+  const fill = useRef(new RNAnimated.Value(0)).current;
+  const [stepDone, setStepDone] = useState(0);
+
+  useEffect(() => {
+    RNAnimated.timing(fill, {
+      toValue: 1,
+      duration: 2700,
+      useNativeDriver: false,
+    }).start();
+    const t1 = setTimeout(() => setStepDone(1), 700);
+    const t2 = setTimeout(() => setStepDone(2), 1500);
+    const t3 = setTimeout(() => setStepDone(3), 2300);
+    const done = setTimeout(onDone, 2800);
+    return () => { [t1, t2, t3, done].forEach(clearTimeout); };
+  }, [fill, onDone]);
+
+  const widthInterp = fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <View style={s.centered}>
+      <AnimatedBlink expression="memorise" size={92} entrance="fade" />
+      <Text style={[s.analyseTitle, { color: colors.text }]}>{t('onboarding.test.analysing.title')}</Text>
+
+      <View style={[s.fillTrack, { backgroundColor: colors.border }]}>
+        <RNAnimated.View style={[s.fillBar, { width: widthInterp, backgroundColor: ACCENT }]} />
+      </View>
+
+      <View style={s.analyseSteps}>
+        {ANALYSE_STEPS.map((key, i) => {
+          const done = i < stepDone;
+          return (
+            <View key={key} style={s.analyseRow}>
+              <Ionicons
+                name={done ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={done ? '#00B894' : colors.textLight}
+              />
+              <Text style={[s.analyseRowText, { color: done ? colors.text : colors.textMid }]}>{t(key)}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── RESULTS ────────────────────────────────────────────────────────
+function Results({
+  output,
+  rounds,
+  onContinue,
+}: {
+  output: ReturnType<typeof buildOnboardingScoreOutput>;
+  rounds: RoundResult[];
+  onContinue: () => void;
+}) {
+  const { colors } = useTheme();
+  const scoreFade = useRef(new RNAnimated.Value(0)).current;
+  const [displayScore, setDisplayScore] = useState(0);
+
+  useEffect(() => {
+    RNAnimated.timing(scoreFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    // Count up the headline number for some weight on the reveal.
+    const start = Date.now();
+    const duration = 1100;
+    const tick = () => {
+      const pct = Math.min(1, (Date.now() - start) / duration);
+      const eased = 1 - Math.pow(1 - pct, 3);
+      setDisplayScore(Math.round(output.score * eased));
+      if (pct < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [scoreFade, output.score]);
+
+  return (
+    <ScrollView contentContainerStyle={s.resultsScroll} showsVerticalScrollIndicator={false}>
+      <RNAnimated.View style={{ opacity: scoreFade, alignItems: 'center' }}>
+        <Text style={[s.resultsLabel, { color: colors.textMid }]}>{t('onboarding.test.results.score_label')}</Text>
+        <Text style={[s.resultsScore, { color: colors.text }]}>{displayScore}<Text style={[s.resultsScoreOf, { color: colors.textMid }]}>/100</Text></Text>
+        <View style={[s.resultsPercentilePill, { backgroundColor: ACCENT + '14' }]}>
+          <Ionicons name="trending-up" size={14} color={ACCENT} />
+          <Text style={[s.resultsPercentileText, { color: ACCENT }]}>
+            {t('onboarding.test.results.percentile', { topPct: output.percentileTopPct })}
+          </Text>
+        </View>
+
+        <View style={[s.brainTypeCard, { borderColor: colors.border }]}>
+          <Text style={[s.brainTypeLabel, { color: colors.textMid }]}>{t('onboarding.test.results.brain_type_label')}</Text>
+          <Text style={[s.brainTypeName, { color: colors.text }]}>{t(output.brainType.nameKey)}</Text>
+          <Text style={[s.brainTypeTagline, { color: colors.textMid }]}>{t(output.brainType.taglineKey)}</Text>
+        </View>
+
+        <View style={s.roundBreakdown}>
+          <Text style={[s.roundBreakdownTitle, { color: colors.text }]}>{t('onboarding.test.results.round_breakdown')}</Text>
+          {rounds.map((r, i) => (
+            <View key={i} style={[s.breakdownRow, { borderColor: colors.border }]}>
+              <Text style={[s.breakdownRowText, { color: colors.text }]}>
+                {t('onboarding.test.results.round_label', { number: i + 1 })}
+              </Text>
+              <View style={s.breakdownRowRight}>
+                <Text style={[s.breakdownReact, { color: colors.textMid }]}>{(r.reactionMs / 1000).toFixed(1)}s</Text>
+                <Ionicons
+                  name={r.correct ? 'checkmark-circle' : 'close-circle'}
+                  size={20}
+                  color={r.correct ? '#00B894' : '#FF6B6B'}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <Pressable
+          onPress={onContinue}
+          style={({ pressed }) => [
+            s.primaryBtn,
+            { backgroundColor: ACCENT, marginTop: 28 },
+            pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+          ]}
+        >
+          <Text style={s.primaryBtnText}>{t('onboarding.test.results.cta')}</Text>
+        </Pressable>
+      </RNAnimated.View>
+    </ScrollView>
+  );
+}
+
+// ─── BLURRED PROFILE ────────────────────────────────────────────────
+// Four sections (strengths / weaknesses / training plan / age compare)
+// rendered with low opacity so they read like real content but are
+// unreadable. A frosted overlay sits on top with the lock icon and CTA.
+// We don't use expo-blur (not in deps) — opacity + scrambled-feel
+// content is more than enough to convey "locked".
+const PROFILE_SECTIONS = [
+  {
+    titleKey: 'onboarding.test.profile.strengths_title',
+    bodyKey: 'onboarding.test.profile.strengths_body',
+    icon: 'flash',
+    color: '#00B894',
+  },
+  {
+    titleKey: 'onboarding.test.profile.weaknesses_title',
+    bodyKey: 'onboarding.test.profile.weaknesses_body',
+    icon: 'alert-circle',
+    color: '#FF6B6B',
+  },
+  {
+    titleKey: 'onboarding.test.profile.training_title',
+    bodyKey: 'onboarding.test.profile.training_body',
+    icon: 'fitness',
+    color: '#0984E3',
+  },
+  {
+    titleKey: 'onboarding.test.profile.age_title',
+    bodyKey: 'onboarding.test.profile.age_body',
+    icon: 'people',
+    color: '#D4A012',
+  },
+] as const;
+
+function BlurredProfile({
+  brainType,
+  onUnlock,
+}: {
+  brainType: BrainType;
+  onUnlock: () => void;
+}) {
+  const { colors } = useTheme();
+  const fade = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    RNAnimated.timing(fade, { toValue: 1, duration: 450, useNativeDriver: true }).start();
+  }, [fade]);
+
+  return (
+    <RNAnimated.View style={[s.profileRoot, { opacity: fade }]}>
+      <ScrollView contentContainerStyle={s.profileScroll} showsVerticalScrollIndicator={false}>
+        <Text style={[s.profileTitle, { color: colors.text }]}>{t('onboarding.test.profile.title')}</Text>
+        <Text style={[s.profileSub, { color: colors.textMid }]}>
+          {t('onboarding.test.profile.sub', { brainType: t(brainType.nameKey) })}
+        </Text>
+
+        {/* The four sections — rendered, but visually obscured. */}
+        <View style={s.profileSections}>
+          {PROFILE_SECTIONS.map((section) => (
+            <View key={section.titleKey} style={[s.profileCard, { borderColor: colors.border }]}>
+              <View style={s.profileCardHeader}>
+                <Ionicons name={section.icon as any} size={18} color={section.color} />
+                <Text style={[s.profileCardTitle, { color: colors.text }]}>{t(section.titleKey)}</Text>
+              </View>
+              <Text style={[s.profileCardBody, { color: colors.textMid }]}>{t(section.bodyKey)}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Frosted overlay — semi-transparent matte that sits over the
+          sections. Combined with the low opacity on the content
+          itself, the user sees structure but can't read the details. */}
+      <View style={s.profileOverlay} pointerEvents="box-none">
+        <View style={s.profileOverlayInner}>
+          <View style={s.lockCircle}>
+            <Ionicons name="lock-closed" size={28} color="#FFF" />
+          </View>
+          <Text style={[s.unlockTitle, { color: colors.text }]}>{t('onboarding.test.profile.unlock_title')}</Text>
+          <Text style={[s.unlockSub, { color: colors.textMid }]}>{t('onboarding.test.profile.unlock_sub')}</Text>
+          <Pressable
+            onPress={onUnlock}
+            style={({ pressed }) => [
+              s.primaryBtn,
+              { backgroundColor: ACCENT, marginTop: 20 },
+              pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+            ]}
+          >
+            <LinearGradient
+              colors={['#6C5CE7', '#A29BFE']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <Text style={s.primaryBtnText}>{t('onboarding.test.profile.unlock_cta')}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </RNAnimated.View>
+  );
+}
+
+// ─── STYLES ────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: {
-    flex: 1,
+  root: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 14 },
+
+  logoFrame: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  welcomeTitle: { fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+  welcomeSub: { fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 320 },
+  welcomeMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
+  welcomeMetaText: { fontSize: 12, fontWeight: '600' },
+
+  primaryBtn: {
+    width: '100%', maxWidth: 320, paddingVertical: 16, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    shadowColor: ACCENT, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 4 }, shadowRadius: 14, elevation: 5,
   },
-  skipBtn: {
-    position: 'absolute',
-    right: 20,
-    zIndex: 10,
-    padding: 8,
+  primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+
+  // Round
+  roundRoot: { flex: 1, paddingHorizontal: 20, paddingTop: 8 },
+  roundHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  roundProgress: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase' },
+  roundDots: { flexDirection: 'row', gap: 6 },
+  roundDot: { width: 7, height: 7, borderRadius: 4 },
+
+  sceneWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
+  bigInstruction: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  timerPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
+  timerText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.4 },
+
+  blankWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  questionWrap: { flex: 1, paddingTop: 24, gap: 18 },
+  questionText: { fontSize: 22, fontWeight: '700', textAlign: 'center', paddingHorizontal: 12 },
+  optionsCol: { gap: 12, paddingHorizontal: 4, marginTop: 6 },
+
+  // Analysing
+  analyseTitle: { fontSize: 22, fontWeight: '800', marginTop: 18, marginBottom: 10, textAlign: 'center' },
+  fillTrack: { width: '100%', maxWidth: 280, height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+  fillBar: { height: '100%', borderRadius: 3 },
+  analyseSteps: { gap: 10, marginTop: 22, alignSelf: 'stretch', paddingHorizontal: 32 },
+  analyseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  analyseRowText: { fontSize: 14, fontWeight: '600' },
+
+  // Results
+  resultsScroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 60 },
+  resultsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  resultsScore: { fontSize: 80, fontWeight: '900', marginTop: 4 },
+  resultsScoreOf: { fontSize: 22, fontWeight: '700' },
+  resultsPercentilePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginTop: 4 },
+  resultsPercentileText: { fontSize: 13, fontWeight: '700' },
+
+  brainTypeCard: {
+    width: '100%', maxWidth: 360, marginTop: 22,
+    borderWidth: 1.5, borderRadius: 16, paddingVertical: 18, paddingHorizontal: 18,
+    alignItems: 'center', gap: 4,
   },
-  screenCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  brainTypeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  brainTypeName: { fontSize: 22, fontWeight: '800', marginTop: 2 },
+  brainTypeTagline: { fontSize: 13, textAlign: 'center', marginTop: 2, lineHeight: 19, maxWidth: 300 },
+
+  roundBreakdown: { width: '100%', maxWidth: 360, marginTop: 26 },
+  roundBreakdownTitle: { fontSize: 14, fontWeight: '700', marginBottom: 8 },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1 },
+  breakdownRowText: { fontSize: 14, fontWeight: '600' },
+  breakdownRowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  breakdownReact: { fontSize: 12, fontWeight: '600' },
+
+  // Profile
+  profileRoot: { flex: 1, position: 'relative' },
+  profileScroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 200, opacity: 0.35 },
+  profileTitle: { fontSize: 22, fontWeight: '800' },
+  profileSub: { fontSize: 14, marginTop: 4, marginBottom: 16 },
+  profileSections: { gap: 12 },
+  profileCard: { borderWidth: 1.5, borderRadius: 14, padding: 14, gap: 8 },
+  profileCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  profileCardTitle: { fontSize: 14, fontWeight: '700' },
+  profileCardBody: { fontSize: 13, lineHeight: 19 },
+
+  profileOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Platform.OS === 'web' ? 'rgba(247,246,243,0.78)' : 'rgba(247,246,243,0.86)',
+    alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 32,
-    overflow: 'hidden',
   },
-  screenLeft: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    // Removed `overflow: 'hidden'` — it was clipping the step cards at
-    // the bottom of screen 3 because the centered content column was
-    // taller than the container on smaller phones. Each screen is
-    // already clipped per-page by the horizontal FlatList paging, so
-    // we don't need additional overflow: hidden here.
-  },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 34,
-    textAlign: 'center',
-    marginTop: 32,
-    marginBottom: 12,
-  },
-  heroSub: {
-    fontSize: 15,
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: C.accent,
-    letterSpacing: 1.5,
+  profileOverlayInner: { alignItems: 'center', maxWidth: 360, gap: 6 },
+  lockCircle: {
+    width: 64, height: 64, borderRadius: 32, backgroundColor: ACCENT,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: ACCENT, shadowOpacity: 0.35, shadowOffset: { width: 0, height: 6 }, shadowRadius: 18, elevation: 8,
     marginBottom: 8,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    lineHeight: 29,
-    marginBottom: 24,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    gap: 14,
-    paddingVertical: 14,
-  },
-  benefitBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
-  },
-  benefitIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weekCard: {
-    borderRadius: 18,
-    padding: 18,
-    width: '100%',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  weekLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  dayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  streakBanner: {
-    marginTop: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: `${C.coral}08`,
-    alignItems: 'center',
-  },
-  streakText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.coral,
-  },
-  microStat: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  stepVisual: {
-    width: '100%',
-    height: 120,
-    borderRadius: 14,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  answerOption: {
-    width: '48%',
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  stepCard: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    // minHeight guarantees the card is tall enough to show the title
-    // + description text even when the parent container is constrained
-    // on smaller phones (iPhone SE etc.). Without this, flex: 1 inside
-    // a centered column with `overflow: hidden` could clip to ~30px.
-    minHeight: 96,
-  },
-  stepNum: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  testimonialCard: {
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: C.accent,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  ctaButton: {
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    shadowColor: C.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 60,
-    transform: [{ skewX: '-20deg' }],
-  },
-  ctaText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: 'white',
-    zIndex: 1,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    gap: 16,
-  },
-  continueBtn: {
-    backgroundColor: C.accent,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
+  unlockTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginTop: 4 },
+  unlockSub: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 320, marginTop: 4 },
 });

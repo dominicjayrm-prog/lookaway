@@ -626,7 +626,7 @@
     "sample_data": "SAMPLE DATA",
     "unlock_analytics_body": "Unlock Memory Analytics with Blanked+ and track your real brain performance over time.",
     "upgrade_cta": "Upgrade to Blanked+",
-    "upgrade_sub": "Includes unlimited lives, 300 gems/month, and more",
+    "upgrade_sub": "Includes unlimited lives, 2× gems on every level, and more",
     "welcome_plus": "Welcome to Blanked+! Your real stats are loading…"
   },
   "challenge": {
@@ -865,7 +865,7 @@
   "shop": {
     "title": "Shop",
     "plus_open_aria": "Open Blanked Plus subscription",
-    "plus_subtitle": "Unlimited lives, no ads, 300 gems/mo",
+    "plus_subtitle": "2× gems, unlimited lives, no ads",
     "starter_open_aria": "Open Starter Pack offer, 75 percent off",
     "starter_title": "Starter Pack",
     "starter_badge": "75% OFF",
@@ -1103,9 +1103,11 @@
     "restore": "Restore",
     "header_sub": "Train your memory without limits",
     "benefits": {
+      "double_gems_title": "2× gems on every level",
+      "double_gems_desc": "Earn double rewards in Classic, Snap Match, every mode",
       "lives_title": "Unlimited lives",
       "lives_desc": "Never wait to play again",
-      "gems_title": "300 gems every month",
+      "gems_title": "100 gems every month",
       "gems_desc": "Credited automatically on monthly or yearly plans",
       "powerup_title": "Free daily power-up",
       "powerup_desc": "Random boost every 24 hours",
@@ -1117,21 +1119,39 @@
       "yearly_save": "Yearly (Save {savings})",
       "best_value": "BEST VALUE",
       "yearly_sub": "{price}/month",
+      "yearly_trial_badge": "3 days free, then full price",
       "yearly_price_suffix": "/year",
       "monthly": "Monthly",
       "monthly_price_suffix": "/month"
     },
     "cta_yearly": "Subscribe - {price}/year",
+    "cta_yearly_trial": "Start 3-day free trial",
     "cta_monthly": "Subscribe - {price}/month",
     "cancel_anytime": "Cancel anytime in Settings",
     "renewal_yearly": "Subscription auto-renews at {price}/year unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.",
+    "renewal_yearly_trial": "Free for 3 days, then auto-renews at {price}/year unless cancelled at least 24 hours before the trial ends. Manage or cancel anytime in your Apple ID account settings.",
     "renewal_monthly": "Subscription auto-renews at {price}/month unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID account settings after purchase.",
     "terms": "Terms of Use",
     "privacy": "Privacy Policy",
     "restore_failed_title": "Could not restore",
     "restore_failed_body": "Please try again later or contact support.",
     "nothing_title": "Nothing to restore",
-    "nothing_body": "No previous purchases were found for this Apple ID."
+    "nothing_body": "No previous purchases were found for this Apple ID.",
+    "discount": {
+      "title": "Wait — special offer",
+      "subtitle": "First month at half price",
+      "expires_in": "Offer expires in {time}",
+      "expired_pill": "Offer expired",
+      "expired_title": "Offer expired",
+      "expired_body": "This special offer has now ended. The full price still applies.",
+      "first_month_label": "First month",
+      "intro_price": "£2.99",
+      "then_full_price": "Then {price}/month",
+      "cta": "Get first month for {price}",
+      "cta_expired": "Offer expired",
+      "disclosure": "Introductory price applies to the first billing period only. Subscription then auto-renews at {price}/month unless cancelled at least 24 hours before the end of the period. Manage or cancel anytime in your Apple ID account settings.",
+      "continue_free": "Continue for free"
+    }
   },
   "out_of_lives": {
     "title": "Out of lives!",
@@ -1151,6 +1171,7 @@
     "gem_earned_many": "+{count} gems",
     "gem_earned_one_improved": "+{count} gem (star improvement!)",
     "gem_earned_many_improved": "+{count} gems (star improvement!)",
+    "plus_doubled_badge": "2×",
     "already_completed": "Already completed, improve your stars to earn more gems!",
     "world_complete": "{world} Complete!",
     "world_unlocked": "{world} unlocked!",
@@ -1330,6 +1351,66 @@
       "feature_modes": "6 game modes",
       "feature_friends": "Challenge friends",
       "cta": "Play Now"
+    },
+    "test": {
+      "welcome_title": "Let's test your memory",
+      "welcome_subtitle": "3 quick rounds. Takes under a minute. We'll show you what your brain can do.",
+      "welcome_meta": "60 seconds · 3 rounds",
+      "welcome_cta": "Start memory test",
+      "round_progress": "Round {current} of {total}",
+      "memorise": "Memorise this",
+      "look_away": "Look away!",
+      "analysing": {
+        "title": "Analysing your memory...",
+        "step_1": "Reaction time analysed",
+        "step_2": "Pattern recognition scored",
+        "step_3": "Memory profile built"
+      },
+      "results": {
+        "score_label": "YOUR MEMORY SCORE",
+        "percentile": "Top {topPct}% of players",
+        "brain_type_label": "BRAIN TYPE",
+        "round_breakdown": "Round breakdown",
+        "round_label": "Round {number}",
+        "cta": "See full brain profile"
+      },
+      "brain_type": {
+        "quick_recall": {
+          "name": "Quick Recall",
+          "tagline": "You answer fast, you trust your gut, and your gut is right."
+        },
+        "pattern_spotter": {
+          "name": "Pattern Spotter",
+          "tagline": "Where things were matters more to you than what they were."
+        },
+        "detail_hunter": {
+          "name": "Detail Hunter",
+          "tagline": "Colours, shapes, the small stuff — your eyes lock onto it."
+        },
+        "deep_memory": {
+          "name": "Deep Memory",
+          "tagline": "Even the hard rounds don't shake you. You're in the rare crowd."
+        },
+        "balanced_mind": {
+          "name": "Balanced Mind",
+          "tagline": "Strong across the board — no glaring weakness, plenty to sharpen."
+        }
+      },
+      "profile": {
+        "title": "Your full brain profile",
+        "sub": "Personalised for {brainType}",
+        "strengths_title": "Your strengths",
+        "strengths_body": "Detailed analysis of where your memory shines — and how to lean into it.",
+        "weaknesses_title": "What to train",
+        "weaknesses_body": "Honest breakdown of which categories tripped you up and why.",
+        "training_title": "Your 7-day plan",
+        "training_body": "A bespoke training programme tuned to your brain type and round results.",
+        "age_title": "Age comparison",
+        "age_body": "How your memory compares to others in your age group, with full percentile data.",
+        "unlock_title": "Unlock your full profile",
+        "unlock_sub": "Get personalised insights, your training plan, and 2× gems on every level — only with Blanked+.",
+        "unlock_cta": "Unlock Full Profile"
+      }
     }
   },
   "profile": {
