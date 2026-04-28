@@ -282,7 +282,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
 
       {phase === 'feedback' && lastCorrect !== null && (
         <Text style={[s.feedbackText, { color: lastCorrect ? colors.correct : colors.wrong }]}>
-          {lastCorrect ? 'Correct! +100 pts' : 'Wrong!'}
+          {lastCorrect ? t('game.feedback_correct_with_pts', { pts: 100 }) : t('game.feedback_wrong')}
         </Text>
       )}
 

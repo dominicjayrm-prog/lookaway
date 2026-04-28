@@ -11,6 +11,7 @@
  * Supabase identity yet and the rounds must be deterministic across
  * every device.
  */
+import { t } from '@/src/i18n';
 import type { Scene, SceneObject, Question } from '@/src/types/game';
 
 export interface OnboardingRound {
@@ -33,14 +34,55 @@ const round1Objects: SceneObject[] = [
   { id: 'r1-c', type: 'square',   color: 'green',  x: 50, y: 70, size: 56 },
 ];
 
-const round1Question: Question = {
-  id: 'r1-q1',
-  text: 'What colour was the triangle?',
-  options: ['Blue', 'Red', 'Green', 'Yellow'],
-  correctIndex: 1,
-  category: 'color',
-  timeLimit: 12,
-};
+// Question text + options are resolved via getters so a language
+// switch flips the entire round on the next render without rebuilding
+// the data structure. Keeps the inline English literals as the source
+// of truth (and the en fallback) while letting es.json override.
+function makeQuestion(
+  id: string,
+  textKey: string,
+  optionKeys: readonly string[],
+  fallbackText: string,
+  fallbackOptions: readonly string[],
+  correctIndex: number,
+  category: Question['category'],
+  timeLimit: number,
+): Question {
+  const q = { id, correctIndex, category, timeLimit } as Question & { _t: string; _o: readonly string[] };
+  Object.defineProperty(q, 'text', {
+    get() {
+      const v = t(textKey);
+      return v === textKey ? fallbackText : v;
+    },
+    enumerable: true,
+  });
+  Object.defineProperty(q, 'options', {
+    get() {
+      return optionKeys.map((key, i) => {
+        const v = t(key);
+        return v === key ? fallbackOptions[i] : v;
+      });
+    },
+    enumerable: true,
+  });
+  return q;
+}
+
+const round1Question: Question = makeQuestion(
+  'r1-q1',
+  'onboarding.test.round_1_question',
+  [
+    'onboarding.test.round_1_option_1',
+    'onboarding.test.round_1_option_2',
+    'onboarding.test.round_1_option_3',
+    'onboarding.test.round_1_option_4',
+  ],
+  'What colour was the triangle?',
+  ['Blue', 'Red', 'Green', 'Yellow'],
+  1,
+  'color',
+  12,
+);
 
 // ─── Round 2 — Medium ────────────────────────────────────────────
 // 4 shapes, 3.5s view. Position-based question — harder because the
@@ -52,14 +94,21 @@ const round2Objects: SceneObject[] = [
   { id: 'r2-d', type: 'heart',   color: 'pink',   x: 75, y: 72, size: 54 },
 ];
 
-const round2Question: Question = {
-  id: 'r2-q1',
-  text: 'Which shape was in the top-left corner?',
-  options: ['Heart', 'Star', 'Circle', 'Square'],
-  correctIndex: 1,
-  category: 'position',
-  timeLimit: 12,
-};
+const round2Question: Question = makeQuestion(
+  'r2-q1',
+  'onboarding.test.round_2_question',
+  [
+    'onboarding.test.round_2_option_1',
+    'onboarding.test.round_2_option_2',
+    'onboarding.test.round_2_option_3',
+    'onboarding.test.round_2_option_4',
+  ],
+  'Which shape was in the top-left corner?',
+  ['Heart', 'Star', 'Circle', 'Square'],
+  1,
+  'position',
+  12,
+);
 
 // ─── Round 3 — Hard ──────────────────────────────────────────────
 // 5 shapes, 3s view. Counting + colour — combined detail question
@@ -74,14 +123,21 @@ const round3Objects: SceneObject[] = [
   { id: 'r3-e', type: 'triangle', color: 'orange', x: 72, y: 72, size: 52 },
 ];
 
-const round3Question: Question = {
-  id: 'r3-q1',
-  text: 'How many red circles were there?',
-  options: ['1', '2', '3', '4'],
-  correctIndex: 1,
-  category: 'count',
-  timeLimit: 12,
-};
+const round3Question: Question = makeQuestion(
+  'r3-q1',
+  'onboarding.test.round_3_question',
+  [
+    'onboarding.test.round_3_option_1',
+    'onboarding.test.round_3_option_2',
+    'onboarding.test.round_3_option_3',
+    'onboarding.test.round_3_option_4',
+  ],
+  'How many red circles were there?',
+  ['1', '2', '3', '4'],
+  1,
+  'count',
+  12,
+);
 
 // ─── Bundled rounds ──────────────────────────────────────────────
 function makeScene(id: string, viewTime: number, objects: SceneObject[], question: Question): Scene {

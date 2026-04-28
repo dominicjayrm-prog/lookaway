@@ -337,7 +337,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
       {phase === 'feedback' && lastResult && (
         <>
           <Text style={[s.phaseLabel, { color: lastResult.correct ? colors.correct : colors.wrong }]}>
-            {lastResult.correct ? `Correct! +${lastResult.score} pts` : 'Wrong!'}
+            {lastResult.correct ? t('game.feedback_correct_with_pts', { pts: lastResult.score }) : t('game.feedback_wrong')}
           </Text>
           {lastResult.correct && (
             <Text style={[s.responseTime, { color: colors.correct }]}>{(lastResult.time / 1000).toFixed(1)}s</Text>

@@ -200,8 +200,8 @@ function DailyLoginReward({ visible, onDismiss }: Props) {
           {/* Header */}
           <View style={[st.header, { backgroundColor: '#6C5CE7' }]}>
             <Text style={st.headerLabel}>{t('celebrations.daily_reward_label')}</Text>
-            <Text style={st.headerTitle}>Day {rewardDay} of {REWARD_CYCLE_DAYS}</Text>
-            {streak > 1 && <Text style={st.headerStreak}>{'\uD83D\uDD25'} {streak}-day login streak</Text>}
+            <Text style={st.headerTitle}>{t('game.day_x_of_y', { day: rewardDay, total: REWARD_CYCLE_DAYS })}</Text>
+            {streak > 1 && <Text style={st.headerStreak}>{'\uD83D\uDD25'} {t('celebrations.login_streak_n_day', { count: streak })}</Text>}
           </View>
 
           {/* 30-day grid: 6 columns by 5 rows. Legendary days (7, 14, 30)

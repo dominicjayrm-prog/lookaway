@@ -276,7 +276,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
 
       {/* Round done */}
       {phase === 'round_done' && (
-        <Text style={[s.phaseLabel, { color: modeColor }]}>Round {roundIdx + 1} Complete!</Text>
+        <Text style={[s.phaseLabel, { color: modeColor }]}>{t('game.round_complete', { n: roundIdx + 1 })}</Text>
       )}
 
       {/* Canvas */}
@@ -357,7 +357,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
         <View style={s.centered}>
           <Text style={[s.roundScore, { color: colors.text }]}>{lastRoundScore ?? 0}/{shapes.length * 100}</Text>
           <Pressable style={[s.btn, { backgroundColor: modeColor }]} onPress={nextRound}>
-            <Text style={s.btnText}>{roundIdx + 1 < totalRounds ? 'Next Round' : 'See Results'}</Text>
+            <Text style={s.btnText}>{roundIdx + 1 < totalRounds ? t('game.next_round') : t('game.see_results')}</Text>
           </Pressable>
         </View>
       )}
@@ -367,7 +367,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
         <Text style={[s.scoreText, {
           color: tapResult.score >= 80 ? colors.correct : tapResult.score >= 50 ? '#D4A012' : colors.wrong,
         }]}>
-          {tapResult.dist}% off — {tapResult.score} pts
+          {t('game.tap_result_summary', { dist: tapResult.dist, pts: tapResult.score })}
         </Text>
       )}
 

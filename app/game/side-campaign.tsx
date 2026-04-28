@@ -436,7 +436,7 @@ function SideCampaignScreen() {
         </Pressable>
         <View style={s.headerCenter}>
           <Text style={[s.headerTitle, { color: mColor }]}>{worldName}</Text>
-          <Text style={[s.headerSub, { color: colors.textMid }]}>Level {displayLevel}</Text>
+          <Text style={[s.headerSub, { color: colors.textMid }]}>{t('game.level_n', { n: displayLevel })}</Text>
         </View>
         <View style={{ width: 44 }} />
       </View>
@@ -447,7 +447,7 @@ function SideCampaignScreen() {
           <View style={[s.modeBadge, { backgroundColor: mColor + '15' }]}>
             <Text style={[s.modeBadgeText, { color: mColor }]}>{modeConfig?.name ?? mode}</Text>
           </View>
-          <Text style={[s.bigTitle, { color: colors.text }]}>Level {displayLevel}</Text>
+          <Text style={[s.bigTitle, { color: colors.text }]}>{t('game.level_n', { n: displayLevel })}</Text>
           <Text style={[s.subtitle, { color: colors.textMid }]}>{worldName}</Text>
           <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => {
             if (isExternalMode) setPhase('show');
@@ -545,10 +545,10 @@ function SideCampaignScreen() {
       {/* Round done (speed recall only) */}
       {phase === 'round_done' && !isExternalMode && (
         <View style={s.centered}>
-          <Text style={[s.roundDoneTitle, { color: mColor }]}>Round {roundIdx + 1} Complete!</Text>
+          <Text style={[s.roundDoneTitle, { color: mColor }]}>{t('game.round_complete', { n: roundIdx + 1 })}</Text>
           <Text style={[s.roundDoneScore, { color: colors.text }]}>{roundScores[roundScores.length - 1] ?? 0}/{(currentRound?.shapes?.length ?? 5) * 100}</Text>
           <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={nextRound}>
-            <Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? 'Next Round' : 'See Results'}</Text>
+            <Text style={s.btnText}>{roundIdx + 1 < (modeData?.rounds?.length ?? 5) ? t('game.next_round') : t('game.see_results')}</Text>
           </Pressable>
         </View>
       )}
@@ -624,10 +624,10 @@ function SideCampaignScreen() {
             <View style={[s.quitCard, { backgroundColor: colors.card }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[s.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
               </Text>
               <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); if (!isSubscribed) loseLife(); router.back(); }}>
-                <Text style={s.btnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
+                <Text style={s.btnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
               </Pressable>
               <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.btnText}>{t('challenge.keep_playing')}</Text>
