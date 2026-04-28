@@ -60,7 +60,6 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
   //  - cb_colour_filter: brief "highlight pulse" on all currently
   //    visible shapes so the player can re-count for ~1s.
   const usePowerUpStore = useGameStore((s) => s.usePowerUp);
-  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowMotionActive, setSlowMotionActive] = useState(false);
@@ -74,10 +73,13 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
   // by the paused duration so the remaining window keeps its budget.
   const [colourFilterActive, setColourFilterActive] = useState(false);
   const pauseEndsAtRef = useRef(0);
+  const colourFilterTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
-    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    // Live store read — selector-derived count lags one render after a
+    // buy; otherwise BuyPowerUpPopup's auto-use would re-open the popup.
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
@@ -87,9 +89,10 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
       // 2-second freeze starting NOW.
       pauseEndsAtRef.current = Date.now() + 2000;
       setColourFilterActive(true);
-      setTimeout(() => setColourFilterActive(false), 2000);
+      if (colourFilterTimeoutRef.current) clearTimeout(colourFilterTimeoutRef.current);
+      colourFilterTimeoutRef.current = setTimeout(() => setColourFilterActive(false), 2000);
     }
-  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+  }, [usedPowerUps, usePowerUpStore]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);
@@ -100,6 +103,7 @@ export default function CountingBlitzGame({ modeData, onComplete, modeColor, vie
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (colourFilterTimeoutRef.current) clearTimeout(colourFilterTimeoutRef.current);
     };
   }, []);
 

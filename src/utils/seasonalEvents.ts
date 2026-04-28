@@ -275,7 +275,11 @@ export async function claimEventReward(eventId: string, rewardId: string): Promi
 /** Get days remaining for an event */
 export function getDaysRemaining(event: SeasonalEvent): number {
   const now = new Date();
-  const end = new Date(event.endDate + 'T23:59:59');
+  // Parse as UTC so the countdown stays consistent with getActiveEvents
+  // (which compares against UTC "today"). Without the Z, this parsed as
+  // local time and could show "0 days" while getActiveEvents still
+  // listed the event as active on the same calendar moment.
+  const end = new Date(event.endDate + 'T23:59:59Z');
   return Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86400000));
 }
 

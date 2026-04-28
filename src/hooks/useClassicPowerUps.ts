@@ -50,7 +50,10 @@ export function useClassicPowerUps({
   slowTimeBonus = 3,
 }: UseClassicPowerUpsArgs) {
   const usePowerUp = useGameStore((s) => s.usePowerUp);
-  const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
+  // Power-up counts are read live from `useGameStore.getState()` inside
+  // each handler so we always see the latest value (incl. just-purchased
+  // counts from BuyPowerUpPopup). Selector-derived snapshots lag by one
+  // render after a buy and would re-trigger the popup.
 
   const [usedPowerUps, setUsedPowerUps] = useState<Record<PowerUpId, boolean>>({
     slowTime: false, peek: false, fiftyFifty: false, skip: false,
@@ -96,18 +99,21 @@ export function useClassicPowerUps({
 
   const handleSlowTime = useCallback(() => {
     if (usedPowerUps.slowTime) return;
-    if ((powerUps.slowTime ?? 0) <= 0) { setBuyPopupId('slowTime'); return; }
+    // Live store read — selector-derived `powerUps` lags by one render
+    // after a buy, so the auto-use from BuyPowerUpPopup would otherwise
+    // see the pre-purchase 0 and re-open the popup.
+    if (useGameStore.getState().getPowerUpCount('slowTime') <= 0) { setBuyPopupId('slowTime'); return; }
     usePowerUp('slowTime');
     setUsedPowerUps(p => ({ ...p, slowTime: true }));
     setTimerBonus(slowTimeBonus);
     setActivePowerUp('slowTime');
     sounds.play('powerUp');
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp, slowTimeBonus]);
+  }, [usedPowerUps.slowTime, usePowerUp, slowTimeBonus]);
 
   const handleQuestionPowerUp = useCallback((id: PowerUpId) => {
     if (usedPowerUps[id]) return;
-    if ((powerUps[id] ?? 0) <= 0) { setBuyPopupId(id); return; }
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id); return; }
 
     if (id === 'peek') {
       usePowerUp('peek');
@@ -133,7 +139,7 @@ export function useClassicPowerUps({
       sounds.play('powerUp');
       onSkip(currentQuestion.correctIndex);
     }
-  }, [usedPowerUps, powerUps, usePowerUp, currentQuestion, onSkip, peekMs]);
+  }, [usedPowerUps, usePowerUp, currentQuestion, onSkip, peekMs]);
 
   const handleBuyPopupPurchased = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);

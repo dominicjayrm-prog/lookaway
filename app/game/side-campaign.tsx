@@ -18,6 +18,8 @@ import SequenceGame from '@/src/components/modes/SequenceGame';
 import CountingBlitzGame from '@/src/components/modes/CountingBlitzGame';
 import ColourChainGame from '@/src/components/modes/ColourChainGame';
 import ShapeSvg from '@/src/components/ShapeSvg';
+import { StarRating } from '@/src/components/StarRating';
+import ThreeStarBurst from '@/src/components/ThreeStarBurst';
 import { ModePowerUpBar } from '@/src/components/ModePowerUpBar';
 import { BuyPowerUpPopup } from '@/src/components/BuyPowerUpPopup';
 import { QuitConfirmModal } from '@/src/components/QuitConfirmModal';
@@ -556,10 +558,9 @@ function SideCampaignScreen() {
         <View style={s.centered}>
           <Text style={[s.bigTitle, { color: mColor }]}>{t('challenge.level_complete')}</Text>
           <Text style={[s.bigScore, { color: colors.text }]}>{scorePct}%</Text>
-          <View style={s.starRow}>
-            {[1, 2, 3].map(i => (
-              <Text key={i} style={[s.star, { color: i <= stars ? colors.gold : colors.border }]}>{'\u2605'}</Text>
-            ))}
+          <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+            <StarRating stars={Math.max(0, Math.min(3, stars)) as 0 | 1 | 2 | 3} size={44} animate />
+            <ThreeStarBurst trigger={true} stars={stars} />
           </View>
           {gemsEarned > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -673,8 +674,6 @@ const s = StyleSheet.create({
   feedbackScore: { fontSize: 14, fontWeight: '800', textAlign: 'center' },
   roundDoneTitle: { fontSize: 22, fontWeight: '700' },
   roundDoneScore: { fontSize: 42, fontWeight: '900' },
-  starRow: { flexDirection: 'row', gap: 8 },
-  star: { fontSize: 36 },
   gemsText: { fontSize: 18, fontWeight: '700' },
   quitBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 30 },
   quitBackdropTouch: { ...StyleSheet.absoluteFillObject },

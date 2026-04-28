@@ -96,11 +96,13 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
         completed_at: new Date().toISOString(),
       }));
 
-      for (const row of rows) {
-        await supabase.from('user_progress').upsert(row, {
-          onConflict: 'user_id,level_id',
-        });
-      }
+      // Batch the upsert into a single round-trip — the previous
+      // sequential per-row loop fired one HTTP request per level, which
+      // for a deep player (200+ entries) meant 200+ awaits per save and
+      // partial-data loss on mid-save crashes.
+      await supabase.from('user_progress').upsert(rows, {
+        onConflict: 'user_id,level_id',
+      });
     }
   } catch (e) {
     log.error('sync', 'saveProgressToSupabase threw', e, { userId });

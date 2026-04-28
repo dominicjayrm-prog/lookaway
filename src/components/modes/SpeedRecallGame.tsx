@@ -78,7 +78,6 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
   // Resets per round, not per shape, so players can use one slow_time
   // per round. Ghost outline + second chance are one-shot per round too.
   const usePowerUpStore = useGameStore((s) => s.usePowerUp);
-  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowTimeBonus, setSlowTimeBonus] = useState(0); // ms of extra viewing time
@@ -87,7 +86,9 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
-    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    // Live store read — selector-derived count lags one render after a
+    // buy; otherwise BuyPowerUpPopup's auto-use would re-open the popup.
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
@@ -102,7 +103,7 @@ export default function SpeedRecallGame({ modeData, onComplete, modeColor, viewT
       // Arms a "free retry" for the next shape if tap is >30% off.
       setSecondChanceArmed(true);
     }
-  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+  }, [usedPowerUps, usePowerUpStore]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);
