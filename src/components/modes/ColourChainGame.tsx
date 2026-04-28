@@ -57,7 +57,6 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
   //  - cc_reveal_one: keep one random tile of the asked colour
   //    revealed during recall (shown as an anchor hint)
   const usePowerUpStore = useGameStore((s) => s.usePowerUp);
-  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowTimeBonus, setSlowTimeBonus] = useState(0); // seconds
@@ -65,7 +64,9 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
-    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    // Live store read — selector-derived count lags one render after a
+    // buy; otherwise BuyPowerUpPopup's auto-use would re-open the popup.
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
@@ -79,7 +80,7 @@ export default function ColourChainGame({ modeData, onComplete, modeColor, viewT
         setAnchorTileIdx(pick);
       }
     }
-  }, [usedPowerUps, powerUpCounts, usePowerUpStore, currentRound]);
+  }, [usedPowerUps, usePowerUpStore, currentRound]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);

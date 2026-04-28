@@ -56,7 +56,6 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
   //  - seq_safety_net: first wrong tap doesn't end the round; it's
   //    just ignored and the expected shape is still waiting.
   const usePowerUpStore = useGameStore((s) => s.usePowerUp);
-  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [replayShapeIdx, setReplayShapeIdx] = useState<number | null>(null);
@@ -66,7 +65,9 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
-    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    // Live store read — selector-derived count lags one render after a
+    // buy; otherwise BuyPowerUpPopup's auto-use would re-open the popup.
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
@@ -80,7 +81,7 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
     } else if (id === 'seq_safety_net') {
       setSafetyNetArmed(true);
     }
-  }, [usedPowerUps, powerUpCounts, usePowerUpStore, shapes]);
+  }, [usedPowerUps, usePowerUpStore, shapes]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);

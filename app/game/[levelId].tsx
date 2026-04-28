@@ -102,7 +102,6 @@ function GameScreen() {
 
   const loseLife = useGameStore((s) => s.loseLife);
   const usePowerUp = useGameStore((s) => s.usePowerUp);
-  const powerUps = useGameStore((s) => s.powerUps) ?? { slowTime: 0, peek: 0, fiftyFifty: 0, skip: 0 };
 
   // Fetch level data. W6 levels use hardcoded Mastermind data;
   // everything else fetches from Supabase.
@@ -192,18 +191,21 @@ function GameScreen() {
   // Power-up handlers
   const handleSlowTime = useCallback(() => {
     if (usedPowerUps.slowTime) return;
-    if (powerUps.slowTime <= 0) { setBuyPopupId('slowTime'); return; }
+    // Read live store value — `powerUps` from the selector lags by one
+    // render after a buy, so the auto-use right after BuyPowerUpPopup
+    // would otherwise see the pre-purchase 0 and re-open the popup.
+    if (useGameStore.getState().getPowerUpCount('slowTime') <= 0) { setBuyPopupId('slowTime'); return; }
     usePowerUp('slowTime');
     setUsedPowerUps(p => ({ ...p, slowTime: true }));
     setTimerBonus(3);
     setActivePowerUp('slowTime');
     sounds.play('powerUp');
     if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, [usedPowerUps.slowTime, powerUps.slowTime, usePowerUp]);
+  }, [usedPowerUps.slowTime, usePowerUp]);
 
   const handleQuestionPowerUp = useCallback((id: PowerUpId) => {
     if (usedPowerUps[id]) return;
-    if (powerUps[id] <= 0) { setBuyPopupId(id); return; }
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id); return; }
 
     if (id === 'peek') {
       usePowerUp('peek');
@@ -227,7 +229,7 @@ function GameScreen() {
       setUsedPowerUps(p => ({ ...p, skip: true }));
       handleSelectOption(currentQuestion.correctIndex);
     }
-  }, [usedPowerUps, powerUps, usePowerUp, currentQuestion, handleSelectOption]);
+  }, [usedPowerUps, usePowerUp, currentQuestion, handleSelectOption]);
 
   const handleBuyPopupPurchased = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);

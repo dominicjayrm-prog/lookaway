@@ -67,7 +67,6 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
 
   // ── Snap Match power-ups ──
   const usePowerUpStore = useGameStore((s) => s.usePowerUp);
-  const powerUpCounts = useGameStore((s) => s.powerUps) ?? {};
   const [usedPowerUps, setUsedPowerUps] = useState<Record<string, boolean>>({});
   const [buyPopupId, setBuyPopupId] = useState<PowerUpId | null>(null);
   const [slowFlashBonus, setSlowFlashBonus] = useState(0); // +ms to sceneA
@@ -89,7 +88,10 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
 
   const handleUsePowerUp = useCallback((id: string) => {
     if (usedPowerUps[id]) return;
-    if ((powerUpCounts[id as PowerUpId] ?? 0) <= 0) { setBuyPopupId(id as PowerUpId); return; }
+    // Live store read — the selector-derived count lags by one render
+    // after a buy, so the auto-use right after BuyPowerUpPopup would
+    // otherwise see the pre-purchase 0 and re-open the popup.
+    if (useGameStore.getState().getPowerUpCount(id) <= 0) { setBuyPopupId(id as PowerUpId); return; }
     usePowerUpStore(id as PowerUpId);
     setUsedPowerUps(p => ({ ...p, [id]: true }));
     sounds.play('powerUp');
@@ -99,7 +101,7 @@ export default function SnapMatchGame({ modeData, onComplete, modeColor, viewTim
       freezeBonusRef.current = 3000;
       setFreezeActive(true);
     }
-  }, [usedPowerUps, powerUpCounts, usePowerUpStore]);
+  }, [usedPowerUps, usePowerUpStore]);
 
   const handleBuyPopupBought = useCallback((id: PowerUpId) => {
     setBuyPopupId(null);
