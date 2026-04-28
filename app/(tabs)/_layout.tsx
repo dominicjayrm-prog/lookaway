@@ -72,6 +72,15 @@ function TabLayout() {
             }}
             options={{
               title: t(tab.titleKey),
+              // Eagerly mount the journey tab on app boot. The default
+              // `lazy: true` defers mounting until the tab is first
+              // focused, so on first tap the user sees the previous
+              // tab's content for a frame while the 380-node journey
+              // scene + its Reanimated worklets initialise — that's the
+              // 'split-second buggy thingy'. Pre-mounting trades ~100ms
+              // of extra cold-start work (invisible behind the splash)
+              // for a clean instant journey-tab open.
+              lazy: tab.name !== 'journey',
               tabBarBadge: badge,
               tabBarBadgeStyle: {
                 backgroundColor: colors.wrong,
