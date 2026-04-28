@@ -251,7 +251,7 @@ function FriendProfilePopupInner({ visible, friend, colors, onClose, onChallenge
           <View style={styles.actions}>
             <Pressable style={[styles.challengeButton, { backgroundColor: colors.accent }]} onPress={() => onChallenge(profile.id)}>
               <Ionicons name="flash" size={16} color="#FFFFFF" />
-              <Text style={styles.challengeText}>Challenge @{profile.username}</Text>
+              <Text style={styles.challengeText}>{t('challenge.challenge_header', { username: profile.username })}</Text>
             </Pressable>
             {/* Secondary row: Remove | Report, equal width, muted.
                 Report uses a distinct subdued flag icon + wrong colour

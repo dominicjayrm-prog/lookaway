@@ -133,7 +133,7 @@ function SpotGameScreen() {
           if(activePhases.includes(state.phase)){setShowQuitConfirm(true);}
           else{clearTimer();router.back();}
         }}><Text style={s.closeBtn}>{String.fromCharCode(10005)}</Text></Pressable>
-        <Text style={s.roundLabel}>Round {state.roundIndex+1} of 5</Text>
+        <Text style={s.roundLabel}>{t('game.round_progress', { current: state.roundIndex+1, total: 5 })}</Text>
         <View style={s.spacer}/>
       </View>
 
@@ -171,7 +171,7 @@ function SpotGameScreen() {
 
       {state.phase==='FEEDBACK' && round && (
         <Animated.View entering={isWeb ? undefined : FadeIn} style={s.centered}>
-          <Text style={[s.feedbackText,{color:state.tapCorrect?colors.correct:colors.wrong}]}>{state.tapCorrect?'Correct!':'Wrong!'}</Text>
+          <Text style={[s.feedbackText,{color:state.tapCorrect?colors.correct:colors.wrong}]}>{state.tapCorrect?t('game.feedback_correct'):t('game.feedback_wrong')}</Text>
           <Text style={s.feedbackDesc}>{round.change.description}</Text>
         </Animated.View>
       )}
@@ -183,10 +183,10 @@ function SpotGameScreen() {
             <View style={[s.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[s.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
               </Text>
               <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); if (!isSubscribed) loseLife(); router.back(); }}>
-                <Text style={s.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
+                <Text style={s.quitBtnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
               </Pressable>
               <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.quitBtnText}>{t('challenge.keep_playing')}</Text>

@@ -223,10 +223,10 @@ function SpeedGameScreen() {
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[styles.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? 'Are you sure you want to leave?' : "You'll lose a life if you quit now."}
+                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
               </Text>
               <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimeouts(); if (!isSubscribed) loseLife(); resetGame(); router.back(); }}>
-                <Text style={styles.quitBtnText}>{isSubscribed ? 'Leave' : 'Leave (-1 life)'}</Text>
+                <Text style={styles.quitBtnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
               </Pressable>
               <Pressable style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={styles.quitBtnText}>{t('challenge.keep_playing')}</Text>

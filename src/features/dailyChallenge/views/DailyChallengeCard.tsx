@@ -28,9 +28,9 @@ import type { DailyChallengeResult } from '../types';
 
 type CardState =
   | { kind: 'loading' }
-  | { kind: 'not_played'; mode: string; resetsInMinutes: number }
+  | { kind: 'not_played'; resetsInMinutes: number }
   | { kind: 'played'; result: DailyChallengeResult }
-  | { kind: 'streak_alert'; mode: string; resetsInMinutes: number; streakCount: number };
+  | { kind: 'streak_alert'; resetsInMinutes: number; streakCount: number };
 
 function minutesUntilUtcMidnight(now: Date = new Date()): number {
   const next = new Date(Date.UTC(
@@ -112,16 +112,18 @@ export function DailyChallengeCard() {
           lastPlayDate === yesterdayIso &&
           localHour >= 18
         ) {
+          // The mode display name isn't stored in state — it's resolved
+          // at render time from `todayMode` so language switches (or a
+          // late-loading `preferredLanguage` from AsyncStorage) take
+          // effect without waiting for the next minute-tick.
           setState({
             kind: 'streak_alert',
-            mode: getModeDisplayName(todayMode),
             resetsInMinutes: minutes,
             streakCount,
           });
         } else {
           setState({
             kind: 'not_played',
-            mode: getModeDisplayName(todayMode),
             resetsInMinutes: minutes,
           });
         }
@@ -203,6 +205,10 @@ export function DailyChallengeCard() {
   // not_played + streak_alert share the active-state visual. The
   // streak alert just adds the streak subtitle and bumps prominence.
   const isAlert = state.kind === 'streak_alert';
+  // Resolve mode display name at render time so the locale always
+  // matches the current i18n setting (the value cached in state would
+  // freeze whatever locale was active when setState ran).
+  const modeName = getModeDisplayName(todayMode);
 
   return (
     <Pressable
@@ -212,7 +218,7 @@ export function DailyChallengeCard() {
         pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={t('daily_challenge.card.open_aria', { mode: state.mode, time: formatCountdown(state.resetsInMinutes) })}
+      accessibilityLabel={t('daily_challenge.card.open_aria', { mode: modeName, time: formatCountdown(state.resetsInMinutes) })}
     >
       <LinearGradient
         colors={isAlert ? ['#FF6B6B', '#E84545'] : ['#6C5CE7', '#8F7EEB']}
@@ -239,7 +245,7 @@ export function DailyChallengeCard() {
           <Text style={s.activeSubtitle}>
             {isAlert
               ? t('daily_challenge.card.streak_alert_subtitle', { count: state.streakCount })
-              : t('daily_challenge.card.subtitle_resets', { mode: state.mode, time: formatCountdown(state.resetsInMinutes) })}
+              : t('daily_challenge.card.subtitle_resets', { mode: modeName, time: formatCountdown(state.resetsInMinutes) })}
           </Text>
         </View>
         <View style={s.activeChevron}>

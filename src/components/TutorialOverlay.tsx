@@ -16,13 +16,25 @@ interface Props {
   onComplete: () => void;
 }
 
-var STEPS = [
-  { title: 'Start here', body: 'This is your current level. Tap Play to jump straight in.', tooltip: 'below' as const, radius: 22 },
-  { title: 'Your lives', body: 'You start with 5 lives. Fail a level and you\'ll lose one. They regenerate over time.', tooltip: 'below' as const, radius: 999 },
-  { title: 'Gems', body: 'Earn gems by completing levels with stars. Spend them on power-ups in the shop.', tooltip: 'below' as const, radius: 999 },
-  { title: 'Your journey', body: 'Explore 6 game modes with 380+ levels. Unlock new modes as you progress.', tooltip: 'above' as const, radius: 14 },
-  { title: 'The shop', body: 'Buy power-ups and gem packs. Power-ups help you beat tough levels.', tooltip: 'above' as const, radius: 14 },
+// Tooltip metadata is static; copy is read live from the i18n layer at
+// render time so a language switch flips the entire tutorial without a
+// remount.
+const STEP_META = [
+  { tooltip: 'below' as const, radius: 22 },
+  { tooltip: 'below' as const, radius: 999 },
+  { tooltip: 'below' as const, radius: 999 },
+  { tooltip: 'above' as const, radius: 14 },
+  { tooltip: 'above' as const, radius: 14 },
 ];
+
+function getSteps() {
+  return STEP_META.map((meta, i) => ({
+    title: t(`tutorial.step_${i + 1}_title`),
+    body: t(`tutorial.step_${i + 1}_body`),
+    tooltip: meta.tooltip,
+    radius: meta.radius,
+  }));
+}
 
 /** Premium celebration screen — expanding rings, floating stars, spring text */
 function CelebrationScreen({ onDismiss }: { onDismiss: () => void }) {
@@ -257,6 +269,7 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
   var PAD = 10;
   var raw = spotlights[step]!;
   var spot = { x: raw.x - PAD, y: raw.y - PAD, width: raw.width + PAD * 2, height: raw.height + PAD * 2 };
+  var STEPS = getSteps();
   var info = STEPS[step];
   var sw = Dimensions.get('window').width;
   var sh = Dimensions.get('window').height;
@@ -312,7 +325,7 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
         ]}>
           {/* Step badge */}
           <View style={st.badge}>
-            <Text style={st.badgeText}>{step + 1} OF {STEPS.length}</Text>
+            <Text style={st.badgeText}>{t('tutorial.step_badge', { current: step + 1, total: STEPS.length })}</Text>
           </View>
 
           <Text style={st.title}>{info.title}</Text>
@@ -326,12 +339,12 @@ function TutorialOverlay({ visible, spotlights, onComplete }: Props) {
               </Pressable>
             ) : (
               <Pressable onPress={back} style={st.backBtn}>
-                <Text style={st.backText}>{'\u2039'} Back</Text>
+                <Text style={st.backText}>{'\u2039'} {t('tutorial.back')}</Text>
               </Pressable>
             )}
 
             <Pressable onPress={next} style={st.nextBtn}>
-              <Text style={st.nextText}>{step === STEPS.length - 1 ? "Let's go!" : 'Next'}</Text>
+              <Text style={st.nextText}>{step === STEPS.length - 1 ? t('tutorial.final_cta') : t('tutorial.next_cta')}</Text>
             </Pressable>
 
             {step > 0 && step < STEPS.length - 1 && (

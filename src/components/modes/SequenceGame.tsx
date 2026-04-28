@@ -271,13 +271,13 @@ export default function SequenceGame({ modeData, onComplete, modeColor, onRoundC
 
       {phase === 'round_done' && (
         <View style={s.centered}>
-          <Text style={[s.roundTitle, { color: modeColor }]}>Round {roundIdx + 1}</Text>
-          <Text style={[s.roundScore, { color: colors.text }]}>{lastScore} pts</Text>
+          <Text style={[s.roundTitle, { color: modeColor }]}>{t('game.round_n', { n: roundIdx + 1 })}</Text>
+          <Text style={[s.roundScore, { color: colors.text }]}>{t('game.points_short', { pts: lastScore })}</Text>
           <Text style={[s.roundDetail, { color: colors.textMid }]}>
-            {tappedOrder.length === shapes.length ? `Perfect! All ${shapes.length} correct + bonus` : `${tappedOrder.length}/${shapes.length} correct`}
+            {tappedOrder.length === shapes.length ? t('game.perfect_all_correct_bonus', { count: shapes.length }) : t('game.x_of_y_correct', { current: tappedOrder.length, total: shapes.length })}
           </Text>
           <Pressable style={[s.btn, { backgroundColor: modeColor }]} onPress={nextRound}>
-            <Text style={s.btnText}>{roundIdx + 1 < totalRounds ? 'Next Round' : 'See Results'}</Text>
+            <Text style={s.btnText}>{roundIdx + 1 < totalRounds ? t('game.next_round') : t('game.see_results')}</Text>
           </Pressable>
         </View>
       )}

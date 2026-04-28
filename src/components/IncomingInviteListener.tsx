@@ -356,7 +356,7 @@ export function IncomingInviteListener() {
             accessibilityLabel={`Accept challenge from ${challenger.username}`}
           >
             <Ionicons name="flash" size={18} color="#FFFFFF" />
-            <Text style={styles.acceptText}>Accept & play</Text>
+            <Text style={styles.acceptText}>{t('challenge.accept_and_play')}</Text>
           </Pressable>
           <Pressable onPress={handleDecline} style={styles.declineBtn} accessibilityRole="button" accessibilityLabel={t('common.decline_challenge_aria')}>
             <Text style={[styles.declineText, { color: colors.textMid }]}>{t('common.decline')}</Text>

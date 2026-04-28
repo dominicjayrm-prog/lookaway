@@ -45,12 +45,12 @@ export function QuitConfirmModal({ visible, costsLife, nonPremiumBody, onLeave, 
   const isSubscribed = useGameStore((s) => s.isSubscribed());
 
   const body = isSubscribed
-    ? 'Are you sure you want to leave?'
+    ? t('game.quit_body_plus')
     : costsLife
-      ? "You'll lose a life if you quit now."
-      : (nonPremiumBody ?? 'Your progress will be lost.');
+      ? t('game.quit_body_free')
+      : (nonPremiumBody ?? t('game.quit_body_progress'));
 
-  const leaveLabel = isSubscribed || !costsLife ? 'Leave' : 'Leave (-1 life)';
+  const leaveLabel = isSubscribed || !costsLife ? t('game.quit_leave') : t('game.quit_leave_free');
 
   if (!visible) return null;
 
@@ -70,7 +70,7 @@ export function QuitConfirmModal({ visible, costsLife, nonPremiumBody, onLeave, 
             style={[s.btn, { backgroundColor: colors.wrong }]}
             onPress={onLeave}
             accessibilityRole="button"
-            accessibilityLabel={isSubscribed ? 'Leave the level' : (costsLife ? 'Leave the level and lose a life' : 'Leave the level')}
+            accessibilityLabel={isSubscribed || !costsLife ? t('game.quit_leave_aria_plus') : t('game.quit_leave_aria_free')}
           >
             <Text style={s.btnText}>{leaveLabel}</Text>
           </Pressable>

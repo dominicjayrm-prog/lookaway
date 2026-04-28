@@ -206,9 +206,9 @@ function WorldCompleteCelebration({ visible, worldNumber, worldName, worldColor,
         <RNAnimated.View style={{ position: 'absolute', left: 20, right: 20, top: cy + 170, alignItems: 'center', opacity: statsOpacity }}>
           <View style={s.statRow}>
             <Svg width={16} height={16} viewBox="0 0 24 24"><Polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9" fill="#D4A012" /></Svg>
-            <Text style={s.statText}>{starsEarned} / {totalStars} stars</Text>
+            <Text style={s.statText}>{t('celebrations.stars_x_of_y', { earned: starsEarned, total: totalStars })}</Text>
           </View>
-          {nextWorldName && <Text style={s.nextWorld}>Next: {nextWorldName}</Text>}
+          {nextWorldName && <Text style={s.nextWorld}>{t('celebrations.next_world_label', { name: nextWorldName })}</Text>}
         </RNAnimated.View>
 
         {isPerfect && (

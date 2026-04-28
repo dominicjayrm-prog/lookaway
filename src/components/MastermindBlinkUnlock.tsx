@@ -160,7 +160,7 @@ export function MastermindBlinkUnlock({ visible, onDismiss }: Props) {
               <Text style={st.achievementEmoji}>{'\uD83D\uDC51'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={[st.achievementTitle, { color: textColor }]}>{t('modals.mastermind_complete')}</Text>
-                <Text style={[st.achievementDesc, { color: textMid }]}>Finished Classic World 6 — the hardest world in Blanked</Text>
+                <Text style={[st.achievementDesc, { color: textMid }]}>{t('celebrations.mastermind_complete_desc')}</Text>
               </View>
             </View>
           </View>

@@ -207,7 +207,7 @@ function CampaignCompleteCelebration({ visible, totalStars, maxStars, onDismiss 
 
         {/* Stats */}
         <RNAnimated.View style={{ position: 'absolute', left: 20, right: 20, top: cy + 165, alignItems: 'center', opacity: statsOpacity }}>
-          <Text style={s.statsText}>All 200 levels complete</Text>
+          <Text style={s.statsText}>{t('celebrations.campaign_all_levels_complete')}</Text>
           <View style={s.starRow}>
             <Svg width={18} height={18} viewBox="0 0 24 24"><Polygon points="12,2 15,9 22,9 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9 9,9" fill="#D4A012" /></Svg>
             <Text style={s.starCount}>{totalStars} / {maxStars}</Text>

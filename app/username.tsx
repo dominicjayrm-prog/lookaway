@@ -205,12 +205,12 @@ function UsernameScreen() {
 
   const hintText =
     saveError ? saveError :
-    availability === 'idle' ? '3-16 characters \u00B7 letters, numbers, underscores' :
-    availability === 'checking' ? 'Checking availability\u2026' :
-    availability === 'available' ? '\u2713 Available' :
+    availability === 'idle' ? t('username_page.hint_format') :
+    availability === 'checking' ? t('username_page.checking') :
+    availability === 'available' ? t('username_page.available') :
     availability === 'taken' ? t('username_page.taken') :
     availability === 'disallowed' ? (disallowedMessage ?? t('username_page.disallowed')) :
-    '3-16 lowercase letters, numbers, or underscores';
+    t('username_page.hint_format_alt');
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
@@ -237,9 +237,9 @@ function UsernameScreen() {
               only place we explain *why* the username matters — users
               who've just come through the Apple sheet are on fumes
               attention-wise, one line is plenty. */}
-          <Text style={[styles.title, { color: colors.text }]}>You&apos;re in!</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('username_page.title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textMid }]}>
-            Pick a username so friends can add you.
+            {t('username_page.subtitle')}
           </Text>
 
           {/* ── Username input ── Large, centred, big tap target. The
@@ -251,7 +251,7 @@ function UsernameScreen() {
               style={[styles.input, { color: colors.text }]}
               value={username}
               onChangeText={(t) => setUsername(sanitize(t))}
-              placeholder="username"
+              placeholder={t('username_page.input_placeholder')}
               placeholderTextColor={colors.textLight}
               autoCapitalize="none"
               autoCorrect={false}
@@ -280,7 +280,7 @@ function UsernameScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <Text style={[styles.buttonText, { color: canContinue ? '#FFF' : colors.textLight }]}>
-                Continue
+                {t('username_page.continue')}
               </Text>
             )}
           </Pressable>

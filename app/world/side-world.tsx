@@ -261,7 +261,7 @@ function SideWorldMap() {
             <Pressable style={st.popupBackdropTouch} onPress={() => setPopup(null)} />
             <View style={[st.popupCard, { backgroundColor: themeColors.card }]}>
               <View style={[st.popupCircle, { backgroundColor: worldColor }]}><Text style={st.popupCircleNum}>{popupLevel}</Text></View>
-              <Text style={[st.popupTitle, { color: themeColors.text }]}>Level {popupLevel}</Text>
+              <Text style={[st.popupTitle, { color: themeColors.text }]}>{t('game.level_n', { n: popupLevel })}</Text>
               <Text style={[st.popupSub, { color: themeColors.textMid }]}>{campaign?.name} — {wName}</Text>
               <View style={st.popupStars}>{[1, 2, 3].map(s => <StarSvg key={s} size={24} filled={starCount(popupLevel) >= s} />)}</View>
               <View style={st.popupButtons}>
