@@ -300,7 +300,14 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)',
   },
   pulseHalo: {
-    position: 'absolute', right: 12, top: '50%', marginTop: -42,
+    // Centred on the 44×44 chevron. Chevron sits at `padding: 18` from
+    // the card's right edge, so its centre is at `cardRight - 40`. With
+    // halo width 84 (half = 42), `right` must be `40 - 42 = -2` to put
+    // the halo centre on the chevron centre. The card's overflow:hidden
+    // clips the 2px sliver past the edge (invisible at rest, ~9px at
+    // peak scale 1.18). Pre-fix the halo was at `right: 12`, leaving
+    // the glow visibly offset 14px to the left of the play button.
+    position: 'absolute', right: -2, top: '50%', marginTop: -42,
     width: 84, height: 84, borderRadius: 42,
     backgroundColor: '#FFFFFF',
   },
