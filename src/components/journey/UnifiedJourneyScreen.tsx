@@ -209,29 +209,28 @@ export function UnifiedJourneyScreen() {
   // Viewport culling — rendering all 380 level nodes + 379 SVG path
   // connectors at once is the single biggest perf risk on Android.
   // Instead we track the scroll position and only render a window of
-  // nodes around the current viewport. The window grows after first
-  // mount: ±10 positions on the very first commit (~20 nodes for fast
-  // first paint), then expanded to ±40 on the next frame so the user
-  // can scroll smoothly.
+  // nodes around the current viewport.
+  //
+  // Previously the window started at ±10 (~21 nodes) and expanded to
+  // ±40 (~81 nodes) via a 60ms setTimeout — meant to give a fast first
+  // paint. But that expansion fired DURING the TabTransition's 250ms
+  // fade-in, plus `useAnimatedScrollHandler` re-firing as soon as
+  // `contentOffset` applied its initial scroll position also tripped
+  // the same expansion via the worklet → setVisibleRange path. Result:
+  // 60 new <Path> elements + 60 nodes pop into the JourneyPathSvg /
+  // node tree mid-fade, forcing an Svg re-render and a React commit
+  // pass while the TabTransition opacity was rising — that was the
+  // 'weird glitchy thing' on first tab open.
+  //
+  // Now: render the full ±40 buffer from the very first commit. The
+  // ~30–60ms extra first-paint cost is invisible because TabTransition
+  // is still at low opacity during it, and the screen settles to its
+  // final layout before the fade reaches a perceivable level.
   const VISIBLE_BUFFER = 40;
-  const INITIAL_VISIBLE_BUFFER = 10;
   const [visibleRange, setVisibleRange] = useState<[number, number]>(() => [
-    Math.max(1, unifiedPosition - INITIAL_VISIBLE_BUFFER),
-    Math.min(UNIFIED_LADDER.length, unifiedPosition + INITIAL_VISIBLE_BUFFER),
+    Math.max(1, unifiedPosition - VISIBLE_BUFFER),
+    Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER),
   ]);
-  // Expand the visible window after mount so the journey opens fast
-  // but smooth-scrolls into the wider buffer right after.
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      setVisibleRange((prev) => {
-        const lo = Math.max(1, unifiedPosition - VISIBLE_BUFFER);
-        const hi = Math.min(UNIFIED_LADDER.length, unifiedPosition + VISIBLE_BUFFER);
-        if (prev[0] === lo && prev[1] === hi) return prev;
-        return [lo, hi];
-      });
-    }, 60);
-    return () => clearTimeout(handle);
-  }, [unifiedPosition]);
 
   // CRITICAL: this callback MUST be declared BEFORE the
   // useAnimatedReaction below — otherwise Reanimated captures the
