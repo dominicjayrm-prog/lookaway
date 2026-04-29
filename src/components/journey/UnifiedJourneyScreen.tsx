@@ -38,6 +38,7 @@ import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
 import { BrainMasterCelebration } from './BrainMasterCelebration';
+import { GrandMasterCelebration } from './GrandMasterCelebration';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
@@ -180,6 +181,8 @@ export function UnifiedJourneyScreen() {
     markUnifiedIntroSeen,
     hasSeenBrainMaster,
     markBrainMasterSeen,
+    hasSeenGrandMaster,
+    markGrandMasterSeen,
   } = useGameStore();
   // Cloud hydration flag — until loadFromCloud has completed at least
   // once, the intro / migration banner / world intro / Brain Master
@@ -195,6 +198,7 @@ export function UnifiedJourneyScreen() {
   const readyForIntroDecisions = cloudHydrated || !authUserId;
 
   const [showBrainMaster, setShowBrainMaster] = useState(false);
+  const [showGrandMaster, setShowGrandMaster] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   // Jump-to-current indicator: 'above' means the current level sits
   // above the viewport (player has scrolled down past it), 'below'
@@ -432,26 +436,41 @@ export function UnifiedJourneyScreen() {
   // Auto-scroll-to-current is handled by ScrollView's contentOffset
   // prop now — no post-mount setTimeout, no visible jump.
 
-  // Fire the Brain Master celebration once when the player has
-  // completed every level. Gated on `hasSeenBrainMaster` so it never
-  // re-fires after dismissal — without that, the modal would pop every
-  // time the journey screen mounts after the player reaches 380.
+  // Brain Master celebration — fires at position 380 (Mastermind L40,
+  // the original main-campaign capstone). Gated on hasSeenBrainMaster
+  // so it never re-fires after dismissal.
+  //
+  // Note: pre-Endgame-20 this checked `position < UNIFIED_LADDER.length`
+  // — fine when the ladder ended at 380, but the ladder is now 400 so
+  // we have to anchor explicitly to 380 instead of "the final level".
   useEffect(() => {
     if (!readyForIntroDecisions) return;
     if (hasSeenBrainMaster) return;
-    if (unifiedPosition < UNIFIED_LADDER.length) return;
-    const final = getUnifiedLevel(UNIFIED_LADDER.length);
-    if (!final) return;
-    const stars =
-      final.mode === 'classic'
-        ? levelProgress[final.levelId]?.stars ?? 0
-        : sideCampaignProgress[final.levelId]?.stars ?? 0;
+    if (unifiedPosition < 380) return;
+    const stars = levelProgress['w6-l40']?.stars ?? 0;
     if (stars > 0) setShowBrainMaster(true);
-  }, [readyForIntroDecisions, unifiedPosition, levelProgress, sideCampaignProgress, hasSeenBrainMaster]);
+  }, [readyForIntroDecisions, unifiedPosition, levelProgress, hasSeenBrainMaster]);
+
+  // Grand Master celebration — fires at position 400 (Mastermind L55,
+  // the Endgame 20 capstone). Independent of Brain Master so existing
+  // 380-completers see this milestone fire correctly the first time
+  // they push past 380. Same anti-replay guard via hasSeenGrandMaster.
+  useEffect(() => {
+    if (!readyForIntroDecisions) return;
+    if (hasSeenGrandMaster) return;
+    if (unifiedPosition < 400) return;
+    const stars = levelProgress['w6-l55']?.stars ?? 0;
+    if (stars > 0) setShowGrandMaster(true);
+  }, [readyForIntroDecisions, unifiedPosition, levelProgress, hasSeenGrandMaster]);
 
   const closeBrainMaster = () => {
     setShowBrainMaster(false);
     markBrainMasterSeen();
+  };
+
+  const closeGrandMaster = () => {
+    setShowGrandMaster(false);
+    markGrandMasterSeen();
   };
 
   const shareJourney = async () => {
@@ -803,6 +822,10 @@ export function UnifiedJourneyScreen() {
         <BrainMasterCelebration
           visible={showBrainMaster}
           onClose={closeBrainMaster}
+        />
+        <GrandMasterCelebration
+          visible={showGrandMaster}
+          onClose={closeGrandMaster}
         />
         <OutOfLivesModal
           visible={showOutOfLives}

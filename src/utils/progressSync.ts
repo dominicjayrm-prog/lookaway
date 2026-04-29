@@ -74,6 +74,7 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       has_seen_unified_intro: state.hasSeenUnifiedIntro ?? false,
       has_seen_world_intro: state.hasSeenWorldIntro ?? {},
       has_seen_brain_master: state.hasSeenBrainMaster ?? false,
+      has_seen_grand_master: state.hasSeenGrandMaster ?? false,
       // tutorial_seen is written separately when the player completes the
       // spotlight tour (one-shot from app/(tabs)/index.tsx) — we do NOT
       // upsert it here because every save would re-write the same flag.
@@ -155,6 +156,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
   hasSeenUnifiedIntro: boolean;
   hasSeenWorldIntro: Partial<Record<WorldTheme, boolean>>;
   hasSeenBrainMaster: boolean;
+  hasSeenGrandMaster: boolean;
 } | null> {
   try {
     // Load profile
@@ -256,6 +258,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
           ? profile.has_seen_world_intro
           : {},
       hasSeenBrainMaster: profile.has_seen_brain_master === true,
+      hasSeenGrandMaster: profile.has_seen_grand_master === true,
     };
   } catch (e) {
     log.error('sync', 'loadProgressFromSupabase threw', e, { userId });

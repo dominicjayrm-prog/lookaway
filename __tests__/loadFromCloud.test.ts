@@ -100,6 +100,7 @@ const cloudSnapshot = (overrides: Partial<NonNullable<CloudSnapshot>> = {}): Non
   hasSeenUnifiedIntro: false,
   hasSeenWorldIntro: {},
   hasSeenBrainMaster: false,
+  hasSeenGrandMaster: false,
   ...overrides,
 });
 
