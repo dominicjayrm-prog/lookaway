@@ -234,9 +234,10 @@ interface SavedState {
   equippedNameColor?: string;
   equippedExpression?: string;
   loginReward?: LoginRewardState;
-  // Unified Brain Journey — one linear ladder of 380 levels that snakes
-  // through five themed worlds. `unifiedPosition` is the highest position
-  // the player has unlocked (they're currently playing this number).
+  // Unified Brain Journey — one linear ladder of 400 levels (380 main +
+  // 20 endgame) that snakes through five themed worlds plus the Endgame
+  // 20 trial. `unifiedPosition` is the highest position the player has
+  // unlocked (they're currently playing this number).
   unifiedPosition?: number;
   currentWorldTheme?: WorldTheme;
   lastPlayedMode?: ModeId | null;
@@ -458,7 +459,7 @@ export interface GameStore {
   preferredLanguage: LanguagePreference;
   totalStars: number; highestWorld: number;
   // Unified Brain Journey: the single linear ladder players walk.
-  /** Highest position (1-380) the player has reached. They are currently
+  /** Highest position (1-400) the player has reached. They are currently
    *  playing this level; completing it calls `advanceUnifiedPosition`. */
   unifiedPosition: number;
   /** Derived from `unifiedPosition`. Cached so render code doesn't have to

@@ -32,6 +32,7 @@ export const MILESTONE_REWARDS: MilestoneReward[] = [
   { world: 5, level: 40, itemId: 'expr_motion_master', itemName: 'Motion Master', category: 'expression' },
   { world: 6, level: 20, itemId: 'frame_temporal', itemName: 'Temporal Frame', category: 'frame' },
   { world: 6, level: 40, itemId: 'expr_mastermind', itemName: 'Mastermind', category: 'expression' },
+  { world: 6, level: 55, itemId: 'frame_grand_master', itemName: 'Grand Master Frame', category: 'frame' },
 ];
 
 /** Find milestone rewards for a specific world + level. */
@@ -53,7 +54,7 @@ export function getWorldFromCondition(condition: string): number {
     classic_w3_l18: 3, classic_w3_complete: 3,
     classic_w4_l18: 4, classic_w4_complete: 4,
     classic_w5_l20: 5, classic_w5_complete: 5,
-    classic_w6_l20: 6, classic_w6_complete: 6,
+    classic_w6_l20: 6, classic_w6_complete: 6, classic_w6_endgame: 6,
   };
   return map[condition] ?? 1;
 }

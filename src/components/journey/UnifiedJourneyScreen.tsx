@@ -145,8 +145,9 @@ function pathXForPosition(position: number, containerWidth: number): number {
   return centerX + wave * amplitude;
 }
 
-/** Level 1 sits at the BOTTOM of the scroll canvas and 380 at the
- *  top — the classic mobile-game "climb upward" metaphor. Higher y
+/** Level 1 sits at the BOTTOM of the scroll canvas and the final
+ *  level at the top — the classic mobile-game "climb upward"
+ *  metaphor. Higher y
  *  means an earlier level; the player has to scroll UP to see what's
  *  next. The container height remains `PATH_TOP_PADDING + N*ROW_HEIGHT
  *  + footer` so we just mirror the linear mapping here.
@@ -210,7 +211,7 @@ export function UnifiedJourneyScreen() {
   // shape on WorldBackground.
   const decorationsReady = true;
 
-  // Viewport culling — rendering all 380 level nodes + 379 SVG path
+  // Viewport culling — rendering all 400 level nodes + 399 SVG path
   // connectors at once is the single biggest perf risk on Android.
   // Instead we track the scroll position and only render a window of
   // nodes around the current viewport.
@@ -540,7 +541,7 @@ export function UnifiedJourneyScreen() {
   const totalPct = Math.round((unifiedPosition / UNIFIED_LADDER.length) * 100);
 
   // Pre-computed visible-window data — this used to filter+map UNIFIED
-  // LADDER (380 entries) on every render via inline JSX. Memoising
+  // LADDER (400 entries) on every render via inline JSX. Memoising
   // means we only recompute when the visible window or progression
   // state actually changes. Both arrays are derived from the same
   // window slice so they share the cost.
@@ -678,7 +679,7 @@ export function UnifiedJourneyScreen() {
               </Pressable>
             </View>
 
-            {/* Progress rail — "Level N of 380" with a single-tone
+            {/* Progress rail — "Level N of 400" with a single-tone
              *  purple fill bar. */}
             <View style={st.worldBar}>
               <Text style={[st.worldLevelLabel, { color: colors.text }]}>

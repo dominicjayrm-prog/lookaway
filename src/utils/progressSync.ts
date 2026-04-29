@@ -148,7 +148,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
    *  of truth for scalar fields like gems and equipped_*. */
   cloudUpdatedAt: number;
   // ── Unified Brain Journey ──
-  /** 1-380. Server mirror of `unifiedPosition`. */
+  /** 1-400. Server mirror of `unifiedPosition`. */
   unifiedPosition: number;
   currentWorldTheme: WorldTheme;
   lastPlayedMode: ModeId | null;

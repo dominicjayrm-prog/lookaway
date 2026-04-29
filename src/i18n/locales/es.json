@@ -566,6 +566,11 @@
         "desc": "Maestro del tiempo y la memoria",
         "earn": "Llega al Nivel 20 en Memoria Profunda"
       },
+      "frame_grand_master": {
+        "name": "Gran Maestro",
+        "desc": "Conquistador del Endgame 20",
+        "earn": "Completa los Endgame 20 (Nivel 400)"
+      },
       "banner_none": {
         "name": "Predeterminado",
         "desc": "Limpio y simple"
@@ -991,7 +996,7 @@
     "step_3_title": "Gemas",
     "step_3_body": "Gana gemas al completar niveles con estrellas. Gástalas en potenciadores en la tienda.",
     "step_4_title": "Tu viaje",
-    "step_4_body": "Explora 6 modos de juego con más de 380 niveles. Desbloquea nuevos modos a medida que avanzas.",
+    "step_4_body": "Explora 6 modos de juego con 400 niveles. Desbloquea nuevos modos a medida que avanzas.",
     "step_5_title": "La tienda",
     "step_5_body": "Compra potenciadores y paquetes de gemas. Los potenciadores te ayudan a superar niveles difíciles."
   },
@@ -2078,7 +2083,7 @@
     "screen6": {
       "title": "¿Listo para entrenar\ntu memoria?",
       "subtitle": "Gratis. 2 minutos al día.\nTu cerebro te lo agradecerá.",
-      "feature_levels": "Más de 380 niveles",
+      "feature_levels": "400 niveles",
       "feature_modes": "6 modos de juego",
       "feature_friends": "Retar a amigos",
       "cta": "Jugar ahora"

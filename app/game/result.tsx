@@ -32,6 +32,7 @@ import { getMilestonesForLevel, type MilestoneReward } from '@/src/data/mileston
 import { sounds } from '@/src/lib/sounds';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
 import { t } from '@/src/i18n';
+import { getMastermindLevel } from '@/src/data/mastermindLevels';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -118,7 +119,20 @@ function ResultScreen() {
   const isLastLevelOfWorld = levelNum === worldTotalLevels;
   const nextWorldId = worldId < 6 ? worldId + 1 : null;
   const nextWorldName = nextWorldId ? WORLD_NAMES[nextWorldId] : null;
-  const nextLevelId = !isLastLevelOfWorld ? `w${worldId}-l${levelNum + 1}` : null;
+  // World 6 has the Endgame extension above L40 (Mastermind L41-55 with
+  // 5 cross-mode boss levels at unified positions 395-399 between L54 and
+  // L55). The "Next Level" CTA increments levelNum by 1 — fine within
+  // L41-L54, but at L54→L55 it would skip the bosses, and at L55 it
+  // would crash on a non-existent w6-l56. Both branches push the
+  // player back to the journey map so the unified ladder takes over.
+  const isFinalEndgameLevel = worldId === 6 && levelNum >= 55;
+  const isPreBossEndgameLevel = worldId === 6 && levelNum === 54;
+  const hasNextMastermind = worldId === 6 && levelNum >= 40 && getMastermindLevel(levelNum + 1) != null;
+  const nextLevelId = isFinalEndgameLevel || isPreBossEndgameLevel
+    ? null
+    : worldId === 6 && levelNum >= 40
+      ? (hasNextMastermind ? `w6-l${levelNum + 1}` : null)
+      : (!isLastLevelOfWorld ? `w${worldId}-l${levelNum + 1}` : null);
 
   // ── Process level result (runs once) ──
   useEffect(() => {
@@ -178,8 +192,17 @@ function ResultScreen() {
         const store = useGameStore.getState();
         for (const ms of milestones) {
           if (!store.ownedCosmetics.includes(ms.itemId)) {
-            // Don't toast for Mastermind legendary — it has its own celebration
-            if (ms.itemId === 'expr_mastermind') continue;
+            // Don't toast for Mastermind legendary or Grand Master frame —
+            // they have dedicated celebration modals (Brain Master + Grand
+            // Master) that double as the "you unlocked X" surface.
+            if (ms.itemId === 'expr_mastermind') {
+              store.unlockCosmetic(ms.itemId);
+              continue;
+            }
+            if (ms.itemId === 'frame_grand_master') {
+              store.unlockCosmetic(ms.itemId);
+              continue;
+            }
             store.unlockCosmetic(ms.itemId);
             safeTimeout(() => setMilestoneToast(ms), 2000);
             break; // One toast at a time
@@ -355,8 +378,10 @@ function ResultScreen() {
                 ) : (
                   <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
                 )
-              ) : (
+              ) : nextLevelId ? (
                 <Pressable style={st.primaryButton} onPress={handleNextLevel} accessibilityRole="button" accessibilityLabel={t('result.next_level_aria')}><Text style={st.primaryButtonText}>{t('result.next_level')}</Text></Pressable>
+              ) : (
+                <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
               )}
               <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>{t('result.back_to_map')}</Text></Pressable>
             </View>

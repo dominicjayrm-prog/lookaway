@@ -206,7 +206,7 @@ function PlayTab() {
   // Contextual hero subtitle — driven by the unified journey cursor now
   // that the campaign is one linear ladder. Still falls back to
   // streak / variety messages when there's nothing special to say.
-  const TOTAL_LADDER = 380;
+  const TOTAL_LADDER = TOTAL_POSITIONS;
   const heroSubtitle = (() => {
     const remaining = TOTAL_LADDER - unifiedPosition;
     if (unifiedPosition === 1) return t('home.welcome_unified');
@@ -543,11 +543,11 @@ function PlayTab() {
             </View>
           </View>
 
-          {/* Level info — uses the unified journey position (1-380)
+          {/* Level info — uses the unified journey position (1-400)
            *  rather than the legacy "World X Level Y" format so the
            *  text matches the new one-path progression. */}
           <Text style={styles.heroContinueLabel}>{t('home.continue_label')}</Text>
-          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: 380 })}</Text>
+          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: TOTAL_POSITIONS })}</Text>
           <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
           {/* Progress bar — fills by unified position instead of the
@@ -555,9 +555,9 @@ function PlayTab() {
            *  journey not just the current world's slice. */}
           <View style={styles.heroProgressRow}>
             <View style={styles.heroProgressTrack}>
-              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / 380) * 100)}%` }]} />
+              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / TOTAL_POSITIONS) * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{unifiedPosition}/380</Text>
+            <Text style={styles.heroProgressText}>{unifiedPosition}/{TOTAL_POSITIONS}</Text>
           </View>
 
           {/* Play button with press animation. Routes to the level at

@@ -63,7 +63,7 @@ export interface LeaderboardEntry {
   /** @deprecated Use unified_position. Kept for backwards compatibility
    *  while older cloud rows haven't written the new column yet. */
   highest_world: number;
-  /** Position 1-380 on the Unified Brain Journey. This is what friend
+  /** Position 1-400 on the Unified Brain Journey. This is what friend
    *  cards and leaderboard rows should display ("Level 108" instead
    *  of "World 2 Level 8"). */
   unified_position: number;

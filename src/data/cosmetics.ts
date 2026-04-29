@@ -156,6 +156,9 @@ export const FRAMES: FrameCosmetic[] = [
   { id: 'frame_speedster', type: 'frame', name: 'Speedster', description: 'Fast thinker\'s frame', unlock: 'earn', rarity: 'rare', borderColor: '#FF9F43', borderWidth: 3, glowColor: '#FF9F43', earnCondition: 'classic_w3_l18', earnDescription: 'Reach Level 18 in Numbers & Letters' },
   { id: 'frame_eagle_eye', type: 'frame', name: 'Eagle Eye', description: 'Nothing escapes your gaze', unlock: 'earn', rarity: 'epic', borderColor: '#2ECC71', borderWidth: 3, glowColor: '#2ECC71', earnCondition: 'classic_w4_complete', earnDescription: 'Complete World 4: Moving Objects' },
   { id: 'frame_temporal', type: 'frame', name: 'Temporal', description: 'Master of time and memory', unlock: 'earn', rarity: 'epic', borderColor: '#D4A012', borderWidth: 3, glowColor: '#D4A012', earnCondition: 'classic_w6_l20', earnDescription: 'Reach Level 20 in Deep Memory' },
+  // Endgame 20 capstone — clearing Mastermind L55 (unified position 400)
+  // unlocks this. Platinum-violet to match the GrandMasterCelebration.
+  { id: 'frame_grand_master', type: 'frame', name: 'Grand Master', description: 'Conqueror of the Endgame 20', unlock: 'earn', rarity: 'legendary', borderColor: '#4A3BBF', borderWidth: 4, glowColor: '#A29BFE', sparkle: true, earnCondition: 'classic_w6_endgame', earnDescription: 'Complete the Endgame 20 (Level 400)' },
 ];
 
 // ─── ALL BANNERS ───────────────────────────────────────────

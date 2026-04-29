@@ -46,7 +46,7 @@ function SideCampaignScreen() {
   const { levelId, mode, worldNumber, levelNumber, worldName } = useLocalSearchParams<{
     levelId: string; mode: string; worldNumber: string; levelNumber: string; worldName: string;
   }>();
-  // Prefer the unified position (1-380) for display. Falls back to the
+  // Prefer the unified position (1-400) for display. Falls back to the
   // per-world levelNumber if this levelId isn't registered in the
   // unified ladder (shouldn't happen post-migration but keeps legacy
   // entry points working).
@@ -371,7 +371,16 @@ function SideCampaignScreen() {
   }, [finishLevel]);
 
   // ─── Navigate to next level ───
+  const isBossLevel = (levelId ?? '').endsWith('_boss');
   const goToNextLevel = useCallback(() => {
+    // Endgame boss levels (sr_boss / sm_boss / etc) live at unified
+    // positions 395-399 and cross mode boundaries. The next "level"
+    // for sr_boss isn't sr_w1_l2 — it's a different mode entirely.
+    // Bounce back to the journey map so the player taps the next node.
+    if (isBossLevel) {
+      router.replace('/(tabs)/journey');
+      return;
+    }
     // Reset ALL state before navigating — router.replace reuses the component
     setPhase('loading');
     setTotalScore(0);
@@ -396,7 +405,7 @@ function SideCampaignScreen() {
       pathname: '/game/side-campaign',
       params: { levelId: nextId, mode: mode ?? '', worldNumber: worldNumber ?? '1', levelNumber: String(nextLevelNum), worldName: worldName ?? '' },
     });
-  }, [mode, worldNumber, levelNumber, worldName, router]);
+  }, [isBossLevel, mode, worldNumber, levelNumber, worldName, router]);
 
   // ─── RENDER ───
   if (phase === 'loading') {

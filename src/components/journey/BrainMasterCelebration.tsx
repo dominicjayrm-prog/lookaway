@@ -28,9 +28,10 @@ interface Props {
 
 const CONFETTI_PIECES = 32;
 
-/** Legendary Level 380 completion celebration. Fires once when the
- *  player clears the final Mastermind level. Gold-themed to match the
- *  Mastermind reward aesthetic. */
+/** Legendary Level 380 (Mastermind L40) celebration. Fires once when
+ *  the player clears the main ladder. Gold-themed to match the
+ *  Mastermind reward aesthetic. The Endgame 20 (positions 381-400)
+ *  has its own GrandMaster celebration. */
 export function BrainMasterCelebration({ visible, onClose }: Props) {
   if (!visible) return <Modal visible={false} transparent onRequestClose={onClose} />;
   return <BrainMasterBody onClose={onClose} />;

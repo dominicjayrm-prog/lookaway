@@ -37,7 +37,7 @@ interface FriendProfileInput {
   total_stars: number;
   /** @deprecated Use unified_position instead. Kept for back-compat. */
   highest_world: number;
-  /** 1-380 on the Unified Brain Journey. Feeds the friend stat cell. */
+  /** 1-400 on the Unified Brain Journey. Feeds the friend stat cell. */
   unified_position: number;
   last_seen: string | null;
   avatar_url?: string | null;
