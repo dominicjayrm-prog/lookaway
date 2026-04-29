@@ -57,7 +57,7 @@ export function WhatChangedMemoriseView({ config, onElapsed }: Props) {
         {t('daily_challenge.what_changed.memorise_instruction')}
       </Text>
       <RNAnimated.View
-        style={{ opacity: gridOpacity }}
+        style={[s.gridLayer, { opacity: gridOpacity }]}
         accessibilityLabel={a11yLabel}
       >
         <Grid config={config} cells={config.original} />
@@ -159,6 +159,18 @@ function InertCell({ colors, children }: { colors: ReturnType<typeof useTheme>['
 const s = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 22, paddingHorizontal: 16 },
   instruction: { fontSize: 14, fontWeight: '600', letterSpacing: 0.4, textTransform: 'uppercase' },
+  // Without `width: '100%'` here, the `<Animated.View>` wrapping the
+  // Grid would shrink to fit its content under the parent's
+  // `alignItems: 'center'`. The Grid inside uses `width: '100%'`, which
+  // refers to its parent (this Animated.View) — circular dependency,
+  // Yoga resolves the width to 0, every cell collapses to 0 width, and
+  // every emoji `<Text>` gets culled. The explicit-sized cellEmpty
+  // dots still rendered (8×8 hardcoded) which is why the grid appeared
+  // as 'just dots floating' in the bug screenshots. Fix: give the
+  // Animated wrapper an explicit width so the cascade resolves
+  // properly. Caveat: maxWidth here mirrors `gridWrap.maxWidth` so the
+  // wrapper doesn't span wider than the grid actually wants.
+  gridLayer: { width: '100%', maxWidth: 360, alignItems: 'center' },
   gridWrap: { width: '100%', maxWidth: 360, gap: 10 },
   gridRow: { flexDirection: 'row', gap: 10 },
   // Card shadow matches the rest of the daily challenge (Phone Number
