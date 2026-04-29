@@ -38,6 +38,7 @@ import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/ser
 import { IncomingInviteListener } from '@/src/components/IncomingInviteListener';
 import { ReviewPrompt } from '@/src/components/ReviewPrompt';
 import { initAdsAndTracking } from '@/src/utils/adService';
+import { initializeMetaSdk } from '@/src/lib/metaEvents';
 import { initAnalytics, identify as analyticsIdentify, resetAnalytics } from '@/src/lib/analytics';
 import { RootErrorBoundary } from '@/src/components/RootErrorBoundary';
 import { OfflineScreen } from '@/src/components/OfflineScreen';
@@ -74,7 +75,17 @@ function SoundLoader() {
  *  ad request, otherwise reviewers reject for "tracking without
  *  consent". Idempotent — only runs once per app session. */
 function AdsInitialiser() {
-  useEffect(() => { initAdsAndTracking(); }, []);
+  useEffect(() => {
+    // Sequence matters: AdMob's ATT flow shows the iOS tracking
+    // prompt as part of `initAdsAndTracking`. We chain Meta SDK init
+    // AFTER that resolves so Meta's `setAdvertiserTrackingEnabled`
+    // call sees the user's actual ATT decision rather than the
+    // pre-prompt 'undetermined' status.
+    (async () => {
+      await initAdsAndTracking();
+      await initializeMetaSdk();
+    })();
+  }, []);
   return null;
 }
 

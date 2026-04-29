@@ -19,6 +19,7 @@
 import { Platform } from 'react-native';
 import { log } from '@/src/lib/logger';
 import { GEM_PACK_REWARDS, IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
+import { logPurchase, logSubscribe } from '@/src/lib/metaEvents';
 
 const API_KEY = 'appl_CeUhcxEuMRVyailKleVtsYzPJDd';
 
@@ -118,6 +119,13 @@ export async function purchaseProduct(productId: string): Promise<PurchaseResult
     }
     await withTimeout(Purchases.purchaseStoreProduct(products[0]), PURCHASE_TIMEOUT_MS, 'purchaseStoreProduct');
     log.breadcrumb('purchases', 'product purchased', { productId });
+    // Meta App Events — log Purchase with the product's local-currency
+    // price so Meta can build value-based audiences for ad campaign
+    // optimisation (lookalikes of paying users).
+    const product = products[0] as { price?: number; currencyCode?: string };
+    if (product?.price != null) {
+      logPurchase(product.price, product.currencyCode ?? 'USD', productId);
+    }
     return 'success';
   } catch (e: any) {
     if (e.userCancelled) {
@@ -165,6 +173,17 @@ export async function purchaseSubscription(
     const isActive = !!plusEnt;
     const periodType = normalisePeriodType(plusEnt?.periodType);
     log.breadcrumb('purchases', 'subscription purchased', { plan, isActive, periodType });
+    // Meta App Events — fire Subscribe with local-currency price so
+    // Meta can build value-based audiences (lookalikes of high-LTV
+    // subscribers). Only fires on truly-active entitlements (filters
+    // out trial-period activations where periodType==='trial' which
+    // shouldn't count as paid revenue yet).
+    if (isActive && periodType !== 'trial') {
+      const product = (pkg as { product?: { price?: number; currencyCode?: string } })?.product;
+      const amount = product?.price ?? 0;
+      const currency = product?.currencyCode ?? 'USD';
+      logSubscribe(amount, currency, plan);
+    }
     return { result: 'success', isActive, periodType };
   } catch (e: any) {
     if (e.userCancelled) {

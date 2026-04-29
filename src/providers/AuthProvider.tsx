@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { initPurchases, identifyUser, logOutPurchases } from '@/src/lib/purchases';
+import { logSignupComplete } from '@/src/lib/metaEvents';
 
 /** Key we use to hand Apple's suggested display name across the
  *  router boundary between the login screen and the username picker.
@@ -287,6 +288,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (slug.length >= 3) {
           stashUsernameSuggestion(slug);
         }
+        // Apple only returns fullName on the FIRST authorisation per
+        // (user, app) pair, so this branch is the cleanest "this is a
+        // brand-new signup" signal. Fire Meta's CompletedRegistration
+        // here so it doesn't double-count on later sign-ins.
+        logSignupComplete();
       }
 
       log.breadcrumb('auth', 'apple sign-in complete', { userId });

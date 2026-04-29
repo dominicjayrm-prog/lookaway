@@ -29,6 +29,7 @@ import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { OptionButton } from '@/src/components/OptionButton';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
+import { logTutorialDone } from '@/src/lib/metaEvents';
 import { ONBOARDING_ROUNDS } from '@/src/data/onboardingTestScenes';
 import {
   buildOnboardingScoreOutput,
@@ -128,6 +129,7 @@ export default function Onboarding() {
       }
     } catch {}
     track(EVENTS.ONBOARDING_COMPLETED, { queuedPaywall: queuePaywall });
+    logTutorialDone();
     router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
   }, [router]);
 
