@@ -41,9 +41,9 @@ import { t } from '@/src/i18n';
 const ACCENT = '#6C5CE7';
 const ONBOARDED_KEY = 'blanked_onboarded';
 // Read by app/(tabs)/index.tsx on first home render after signup. When
-// true, the home tab pops the SubscriptionPaywall (and on dismiss, the
-// DiscountPaywall) before clearing the flag. This shifts the paywall
-// out of the pre-auth flow so purchases attach to a real account.
+// true, the home tab pops the SubscriptionPaywall before clearing the
+// flag. This shifts the paywall out of the pre-auth flow so purchases
+// attach to a real account.
 const POST_SIGNUP_PAYWALL_KEY = 'blanked_show_paywall_after_signup';
 
 // Paywall is shown AFTER signup, not during onboarding. Anonymous
