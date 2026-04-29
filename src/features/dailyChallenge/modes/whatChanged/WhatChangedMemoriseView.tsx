@@ -154,10 +154,28 @@ const s = StyleSheet.create({
   instruction: { fontSize: 14, fontWeight: '600', letterSpacing: 0.4, textTransform: 'uppercase' },
   gridWrap: { width: '100%', maxWidth: 360, gap: 10 },
   gridRow: { flexDirection: 'row', gap: 10 },
+  // Card shadow matches the rest of the daily challenge (Phone Number
+  // paper, Names & Faces slots, Witness scene card). Without this the
+  // pure-white cells blend into the warm-white page bg and the user
+  // perceives the grid as 'empty' even when emojis are rendered —
+  // exactly the glitch reported on Wed 29 Apr's What Changed memorise
+  // phase. Subtle ('shadowOpacity: 0.06' matches the design system in
+  // CLAUDE.md) so it doesn't read as a heavy-handed drop shadow, just
+  // enough to delineate each cell from the page.
+  //
+  // Note: the previous `overflow: 'hidden'` on this style clipped the
+  // shadow on iOS (UIView's shadow renders outside the view bounds —
+  // overflow:hidden cuts it). The cellEmoji + cellEmpty children
+  // never extend past the cell bounds and the reveal-phase overlay
+  // respects its own borderRadius, so dropping the clip is safe.
   cell: {
     flex: 1, aspectRatio: 1, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', position: 'relative',
-    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 10,
+    elevation: 2,
   },
   cellEmoji: { fontSize: 32, lineHeight: 40 },
   cellEmpty: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.06)' },
