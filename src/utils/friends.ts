@@ -16,7 +16,7 @@ export interface FriendProfile {
    *  rollout we show "Level 108" not "World 3". Kept in the type so
    *  older cloud rows that haven't been re-synced continue to parse. */
   highest_world: number;
-  /** 1-380 on the Unified Brain Journey. This is the display value on
+  /** 1-400 on the Unified Brain Journey. This is the display value on
    *  friend cards, leaderboard rows, and the friend profile popup. */
   unified_position: number;
   last_seen: string | null;

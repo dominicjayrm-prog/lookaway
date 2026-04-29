@@ -15,12 +15,12 @@ import {
 } from '../src/data/unifiedJourney';
 
 describe('Unified Ladder', () => {
-  it('contains exactly 380 levels', () => {
-    expect(UNIFIED_LADDER).toHaveLength(380);
-    expect(TOTAL_POSITIONS).toBe(380);
+  it('contains exactly 400 levels (380 main + 20 endgame)', () => {
+    expect(UNIFIED_LADDER).toHaveLength(400);
+    expect(TOTAL_POSITIONS).toBe(400);
   });
 
-  it('positions are a contiguous 1..380 sequence in order', () => {
+  it('positions are a contiguous 1..400 sequence in order', () => {
     UNIFIED_LADDER.forEach((lv, i) => {
       expect(lv.position).toBe(i + 1);
     });
@@ -49,6 +49,10 @@ describe('Unified Ladder', () => {
     addSide('cb', [15, 15]);
     addSide('cc', [12, 12]);
 
+    // The 380 main-campaign IDs from MODE_STRUCTURE. Endgame 20 adds
+    // 15 new w6-l{41..55} mastermind IDs + 5 boss IDs (sr_boss /
+    // sm_boss / seq_boss / cb_boss / cc_boss) on top — those don't
+    // come from MODE_STRUCTURE so the `expected` array stays at 380.
     expect(expected).toHaveLength(380);
     const actual = new Set(UNIFIED_LADDER.map((l) => l.levelId));
     for (const id of expected) expect(actual.has(id)).toBe(true);
@@ -99,8 +103,9 @@ describe('Unified Ladder', () => {
 
   it('main section chapters (pos 26-340) are 3-5 consecutive same-mode levels', () => {
     // Intro section (pos 1-25) is hand-tuned and includes a deliberate 2-level
-    // CC chunk at 24-25. Mastermind endgame (pos 341-380) is one long classic
-    // block by design. The chapter rule applies to the main section only.
+    // CC chunk at 24-25. Mastermind endgame (pos 341-394) is one long classic
+    // block by design, then 5 boss levels (395-399) followed by the Grand
+    // Master final at 400. The chapter rule applies to the main section only.
     const violations: Array<{ start: number; length: number; mode: ModeId }> = [];
     let chapterMode: ModeId | null = null;
     let chapterStart = 0;
@@ -128,11 +133,30 @@ describe('Unified Ladder', () => {
     expect(violations).toEqual([]);
   });
 
-  it('endgame section (pos 341-380) is all Mastermind Classic', () => {
-    for (let p = 341; p <= 380; p++) {
+  it('main endgame (pos 341-394) is all Mastermind Classic L1-54', () => {
+    for (let p = 341; p <= 394; p++) {
       const lv = UNIFIED_LADDER[p - 1];
       expect(lv.mode).toBe('classic');
       expect(lv.levelId.startsWith('w6-l')).toBe(true);
+    }
+    // Pos 400 is also Mastermind (Grand Master final, L55).
+    expect(UNIFIED_LADDER[399].levelId).toBe('w6-l55');
+    expect(UNIFIED_LADDER[399].mode).toBe('classic');
+  });
+
+  it('Endgame 20 boss tier (pos 395-399) is one boss per side mode', () => {
+    const expected = [
+      { position: 395, levelId: 'sr_boss',  mode: 'speed_recall' },
+      { position: 396, levelId: 'sm_boss',  mode: 'snap_match' },
+      { position: 397, levelId: 'seq_boss', mode: 'sequence' },
+      { position: 398, levelId: 'cb_boss',  mode: 'counting_blitz' },
+      { position: 399, levelId: 'cc_boss',  mode: 'colour_chain' },
+    ];
+    for (const e of expected) {
+      const lv = UNIFIED_LADDER[e.position - 1];
+      expect(lv.position).toBe(e.position);
+      expect(lv.levelId).toBe(e.levelId);
+      expect(lv.mode).toBe(e.mode);
     }
   });
 
@@ -156,6 +180,11 @@ describe('Unified Ladder', () => {
     classicCounts.forEach((count, i) => {
       for (let l = 1; l <= count; l++) expected.classic.push(`w${i + 1}-l${l}`);
     });
+    // Endgame 20: Mastermind L41-54 slot in at the end of the classic
+    // chain (positions 381-394), then L55 at position 400. Internal
+    // order is preserved: L41 < L42 < ... < L54 < L55.
+    for (let l = 41; l <= 55; l++) expected.classic.push(`w6-l${l}`);
+
     const addSide = (mode: ModeId, prefix: string, perWorld: number[]) => {
       perWorld.forEach((count, i) => {
         for (let l = 1; l <= count; l++) expected[mode].push(`${prefix}_w${i + 1}_l${l}`);
@@ -166,25 +195,35 @@ describe('Unified Ladder', () => {
     addSide('sequence', 'seq', [12, 12, 12]);
     addSide('counting_blitz', 'cb', [15, 15]);
     addSide('colour_chain', 'cc', [12, 12]);
+    // Endgame 20 boss tier: each side mode gets one boss level
+    // appended at the tail of its sequence.
+    expected.speed_recall.push('sr_boss');
+    expected.snap_match.push('sm_boss');
+    expected.sequence.push('seq_boss');
+    expected.counting_blitz.push('cb_boss');
+    expected.colour_chain.push('cc_boss');
 
     (Object.keys(expected) as ModeId[]).forEach((mode) => {
       expect(perMode[mode]).toEqual(expected[mode]);
     });
   });
 
-  it('Mastermind (Classic W6) levels only appear in positions 341-380', () => {
+  it('Mastermind (Classic W6) levels appear in 341-394 + 400 (with 395-399 reserved for boss tier)', () => {
     for (const lv of UNIFIED_LADDER) {
       if (/^w6-l/.test(lv.levelId)) {
-        expect(lv.position).toBeGreaterThanOrEqual(341);
-        expect(lv.position).toBeLessThanOrEqual(380);
+        const inMainEndgame = lv.position >= 341 && lv.position <= 394;
+        const isFinal = lv.position === 400;
+        expect(inMainEndgame || isFinal).toBe(true);
       }
     }
-    // All 40 Mastermind levels are at 341-380.
-    for (let p = 341; p <= 380; p++) {
+    // 341-394 are mastermind L1-54.
+    for (let p = 341; p <= 394; p++) {
       const lv = UNIFIED_LADDER[p - 1];
       expect(lv.levelId).toMatch(/^w6-l\d+$/);
       expect(lv.mode).toBe('classic');
     }
+    // 400 is mastermind L55.
+    expect(UNIFIED_LADDER[399].levelId).toBe('w6-l55');
   });
 
   it('world themes are assigned correctly by position range', () => {
@@ -193,7 +232,7 @@ describe('Unified Ladder', () => {
       amber_dunes:    [76, 150],
       crystal_depths: [151, 225],
       aurora_peaks:   [226, 300],
-      inferno_core:   [301, 380],
+      inferno_core:   [301, 400],
     };
     for (const lv of UNIFIED_LADDER) {
       const [s, e] = byTheme[lv.worldTheme];
@@ -205,7 +244,8 @@ describe('Unified Ladder', () => {
   it('Classic appears in roughly 40-55% of positions (anchor mode)', () => {
     const classicCount = UNIFIED_LADDER.filter((l) => l.mode === 'classic').length;
     const pct = classicCount / UNIFIED_LADDER.length;
-    // With 200 of 380 levels being Classic (including Mastermind), share is ~53%.
+    // With 200 + 15 of 400 levels being Classic (incl. Mastermind L1-55),
+    // share is ~54%.
     expect(pct).toBeGreaterThanOrEqual(0.4);
     expect(pct).toBeLessThanOrEqual(0.6);
   });
@@ -213,13 +253,20 @@ describe('Unified Ladder', () => {
   it('getUnifiedLevel returns correct level for valid positions', () => {
     expect(getUnifiedLevel(1)?.levelId).toBe('w1-l1');
     expect(getUnifiedLevel(380)?.levelId).toBe('w6-l40');
+    // Endgame 20: position 381 is mastermind L41, position 400 is L55.
+    expect(getUnifiedLevel(381)?.levelId).toBe('w6-l41');
+    expect(getUnifiedLevel(400)?.levelId).toBe('w6-l55');
     expect(getUnifiedLevel(0)).toBeUndefined();
-    expect(getUnifiedLevel(381)).toBeUndefined();
+    expect(getUnifiedLevel(401)).toBeUndefined();
   });
 
   it('getPositionForLevelId returns correct inverse', () => {
     expect(getPositionForLevelId('w1-l1')).toBe(1);
     expect(getPositionForLevelId('w6-l40')).toBe(380);
+    expect(getPositionForLevelId('w6-l41')).toBe(381);
+    expect(getPositionForLevelId('w6-l55')).toBe(400);
+    expect(getPositionForLevelId('sr_boss')).toBe(395);
+    expect(getPositionForLevelId('cc_boss')).toBe(399);
     expect(getPositionForLevelId('nonexistent')).toBeUndefined();
   });
 
@@ -234,6 +281,7 @@ describe('Unified Ladder', () => {
     expect(getWorldForPosition(300)).toBe('aurora_peaks');
     expect(getWorldForPosition(301)).toBe('inferno_core');
     expect(getWorldForPosition(380)).toBe('inferno_core');
+    expect(getWorldForPosition(400)).toBe('inferno_core');
   });
 
   it('isWorldTransition flags positions 76, 151, 226, 301', () => {
@@ -245,6 +293,7 @@ describe('Unified Ladder', () => {
     expect(isWorldTransition(150)).toBe(false);
     expect(isWorldTransition(1)).toBe(false);
     expect(isWorldTransition(380)).toBe(false);
+    expect(isWorldTransition(400)).toBe(false);
   });
 
   it('isChapterStart detects mode transitions', () => {
@@ -272,7 +321,8 @@ describe('Unified Ladder', () => {
     expect(next).not.toBeNull();
     expect(next!.mode).toBe('speed_recall');
     expect(next!.startPos).toBe(6);
-    expect(getNextChapter(380)).toBeNull();
+    // The very last position (400 = Grand Master Trial) has no next.
+    expect(getNextChapter(400)).toBeNull();
   });
 
   it('ladder uses every side-mode level at least once', () => {
@@ -290,7 +340,7 @@ describe('Unified Ladder', () => {
     expect(WORLD_THEMES.amber_dunes.range).toEqual([76, 150]);
     expect(WORLD_THEMES.crystal_depths.range).toEqual([151, 225]);
     expect(WORLD_THEMES.aurora_peaks.range).toEqual([226, 300]);
-    expect(WORLD_THEMES.inferno_core.range).toEqual([301, 380]);
+    expect(WORLD_THEMES.inferno_core.range).toEqual([301, 400]);
     expect(WORLD_THEME_ORDER).toHaveLength(5);
   });
 });

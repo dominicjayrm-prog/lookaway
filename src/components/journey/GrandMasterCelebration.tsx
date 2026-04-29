@@ -10,7 +10,6 @@ import Animated, {
   withRepeat,
   withSequence,
   Easing,
-  runOnJS,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Blink } from '@/src/components/Blink';
@@ -18,7 +17,7 @@ import { useGameStore } from '@/src/store';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { t } from '@/src/i18n';
-import { UNIFIED_LADDER } from '@/src/data/unifiedJourney';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { useEquippedBlinkExpression } from '@/src/hooks/useEquippedBlink';
 
 interface Props {
@@ -26,23 +25,26 @@ interface Props {
   onClose: () => void;
 }
 
-const CONFETTI_PIECES = 32;
+const CONFETTI_PIECES = 36;
 
-/** Legendary Level 380 (Mastermind L40) celebration. Fires once when
- *  the player clears the main ladder. Gold-themed to match the
- *  Mastermind reward aesthetic. The Endgame 20 (positions 381-400)
- *  has its own GrandMaster celebration. */
-export function BrainMasterCelebration({ visible, onClose }: Props) {
+/** Endgame 20 completion celebration. Fires once when the player
+ *  clears Position 400 (Mastermind L55 = Grand Master Trial). Distinct
+ *  from BrainMasterCelebration in palette + copy: BrainMaster is
+ *  gold-on-warm (the rite-of-passage at 380), GrandMaster is
+ *  platinum-purple (the ascended tier — beyond the main campaign).
+ *  Pattern + structure intentionally mirror BrainMaster so both
+ *  celebrations feel like part of the same family of moments. */
+export function GrandMasterCelebration({ visible, onClose }: Props) {
   if (!visible) return <Modal visible={false} transparent onRequestClose={onClose} />;
-  return <BrainMasterBody onClose={onClose} />;
+  return <GrandMasterBody onClose={onClose} />;
 }
 
-function BrainMasterBody({ onClose }: { onClose: () => void }) {
+function GrandMasterBody({ onClose }: { onClose: () => void }) {
   const { totalStars, streakCount } = useGameStore();
   const blinkExpression = useEquippedBlinkExpression();
-  // Real Brain Master count from Supabase, surfaced as "Brain Master #N".
-  // Falls back to a generic "every level complete" blurb if the query
-  // fails (offline, RLS hiccup) — we never show a fabricated percentage.
+  // Real Grand Master count from Supabase. Mirrors the same query
+  // BrainMaster uses but filtered to position === 400. If the query
+  // fails we fall back to the generic blurb — never fabricate a stat.
   const [rank, setRank] = useState<number | null>(null);
   const [totalMasters, setTotalMasters] = useState<number | null>(null);
 
@@ -52,12 +54,6 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
         const { data: { session } } = await supabase.auth.getSession();
         const myId = session?.user?.id;
         if (!myId) return;
-        // Count the number of other users who hit L380 BEFORE me. We use
-        // the profile's updated_at as a proxy for "when they reached
-        // Brain Master" — imperfect for users who've written to their
-        // profile for other reasons after completion, but good enough
-        // for a bragging-rights number. If exactness ever matters we
-        // can add a dedicated brain_master_completed_at column.
         const { data: myProfile } = await supabase
           .from('profiles')
           .select('updated_at')
@@ -68,17 +64,17 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
           supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
-            .eq('unified_position', 380)
+            .eq('unified_position', 400)
             .lt('updated_at', myProfile?.updated_at ?? new Date().toISOString()),
           supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
-            .eq('unified_position', 380),
+            .eq('unified_position', 400),
         ]);
         if (typeof countAhead === 'number') setRank(countAhead + 1);
         if (typeof totalCount === 'number') setTotalMasters(totalCount);
       } catch (e) {
-        log.error('journey', 'brain master rank fetch failed', e);
+        log.error('journey', 'grand master rank fetch failed', e);
       }
     })();
   }, []);
@@ -125,8 +121,8 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
     }
     try {
       await Share.share({
-        message: t('journey.brain_master.share_message', {
-          total: UNIFIED_LADDER.length,
+        message: t('journey.grand_master.share_message', {
+          total: TOTAL_POSITIONS,
           stars: totalStars,
           streak: streakCount,
         }),
@@ -143,12 +139,13 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={handleClose}>
+      {/* Platinum-violet gradient — distinct from BrainMaster's gold so
+       *  the two celebrations don't feel like the same moment. The
+       *  dark violet at the bottom anchors the white-platinum top. */}
       <LinearGradient
-        colors={['#FFD700', '#D4A012', '#8B6914']}
+        colors={['#F4F0FF', '#A29BFE', '#4A3BBF']}
         style={st.overlay}
       >
-        {/* Confetti layer — 32 pieces of falling gold pieces, each on
-         *  its own worklet loop so the main thread stays free. */}
         <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
           {Array.from({ length: CONFETTI_PIECES }).map((_, i) => (
             <ConfettiPiece key={i} index={i} />
@@ -163,25 +160,22 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
 
             <Animated.View style={titleStyle}>
               <Text style={st.eyebrow}>
-                {t('journey.brain_master.eyebrow', { total: UNIFIED_LADDER.length })}
+                {t('journey.grand_master.eyebrow', { total: TOTAL_POSITIONS })}
               </Text>
-              <Text style={st.title}>{t('journey.brain_master.title')}</Text>
+              <Text style={st.title}>{t('journey.grand_master.title')}</Text>
             </Animated.View>
 
             <Animated.View style={statsStyle}>
-              {/* Rank blurb — real data from Supabase. Falls back to the
-               *  generic "every level complete" copy so we never invent
-               *  a stat we can't verify. */}
               <Text style={st.blurb}>
                 {rank !== null
-                  ? t('journey.brain_master.rank_blurb', { rank })
-                  : t('journey.brain_master.blurb')}
+                  ? t('journey.grand_master.rank_blurb', { rank })
+                  : t('journey.grand_master.blurb')}
               </Text>
 
               <View style={st.statsRow}>
-                <StatBubble value={totalStars} label={t('journey.brain_master.stars_label')} />
-                <StatBubble value={UNIFIED_LADDER.length} label={t('journey.brain_master.levels_label')} />
-                <StatBubble value={streakCount} label={t('journey.brain_master.day_streak_label')} />
+                <StatBubble value={totalStars} label={t('journey.grand_master.stars_label')} />
+                <StatBubble value={TOTAL_POSITIONS} label={t('journey.grand_master.levels_label')} />
+                <StatBubble value={streakCount} label={t('journey.grand_master.day_streak_label')} />
               </View>
 
               <Pressable
@@ -191,9 +185,9 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
                   { opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={t('journey.brain_master.share_aria')}
+                accessibilityLabel={t('journey.grand_master.share_aria')}
               >
-                <Text style={st.shareText}>{t('journey.brain_master.share_cta')}</Text>
+                <Text style={st.shareText}>{t('journey.grand_master.share_cta')}</Text>
               </Pressable>
 
               <Pressable
@@ -203,9 +197,9 @@ function BrainMasterBody({ onClose }: { onClose: () => void }) {
                   { opacity: pressed ? 0.7 : 1 },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={t('journey.brain_master.close_aria')}
+                accessibilityLabel={t('journey.grand_master.close_aria')}
               >
-                <Text style={st.closeText}>{t('journey.brain_master.done_cta')}</Text>
+                <Text style={st.closeText}>{t('journey.grand_master.done_cta')}</Text>
               </Pressable>
             </Animated.View>
           </View>
@@ -267,7 +261,10 @@ function ConfettiPiece({ index }: { index: number }) {
     transform: [{ rotate: `${rotate.value}deg` }],
   }));
 
-  const colors = ['#FFD700', '#FFE8A3', '#FFFFFF', '#FFBA08'];
+  // Platinum + lavender + violet confetti — palette mirrors the
+  // overlay gradient so the celebration reads as a single cohesive
+  // visual moment.
+  const colors = ['#FFFFFF', '#E8E0FF', '#A29BFE', '#6C5CE7'];
   const bg = colors[index % colors.length];
   const isRectangle = index % 2 === 0;
   return (
@@ -318,15 +315,15 @@ const st = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     letterSpacing: -1.2,
-    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowColor: 'rgba(74,59,191,0.45)',
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 8,
   },
   blinkWrap: {
     marginBottom: 16,
     shadowColor: '#FFFFFF',
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
+    shadowOpacity: 0.6,
+    shadowRadius: 32,
     shadowOffset: { width: 0, height: 0 },
   },
   blurb: {
@@ -381,7 +378,7 @@ const st = StyleSheet.create({
     elevation: 4,
   },
   shareText: {
-    color: '#8B6914',
+    color: '#4A3BBF',
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 0.5,

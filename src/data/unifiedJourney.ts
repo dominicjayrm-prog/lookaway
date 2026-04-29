@@ -1,5 +1,5 @@
 /**
- * Unified Brain Journey — the single ordered curriculum of all 380 levels.
+ * Unified Brain Journey — the single ordered curriculum of all 400 levels.
  *
  * This module replaces the old per-mode campaign gate with one linear ladder
  * that snakes through 5 visually themed worlds. Mode variety comes from
@@ -47,7 +47,11 @@ export const WORLD_THEMES: Record<WorldTheme, WorldThemeMeta> = {
   amber_dunes:    { name: 'Amber Dunes',    range: [76, 150],  color: '#D4A012', worldNumber: 2 },
   crystal_depths: { name: 'Crystal Depths', range: [151, 225], color: '#0984E3', worldNumber: 3 },
   aurora_peaks:   { name: 'Aurora Peaks',   range: [226, 300], color: '#A29BFE', worldNumber: 4 },
-  inferno_core:   { name: 'Inferno Core',   range: [301, 380], color: '#FF6B6B', worldNumber: 5 },
+  // Inferno Core extends through the original W6 (Mastermind L1-40)
+  // AND the new Endgame 20 (positions 381-400). All endgame content
+  // sits inside the same red-themed "core" world rather than a new
+  // visual theme — it's a difficulty tier, not a new biome.
+  inferno_core:   { name: 'Inferno Core',   range: [301, 400], color: '#FF6B6B', worldNumber: 5 },
 };
 
 export const WORLD_THEME_ORDER: WorldTheme[] = [
@@ -58,7 +62,11 @@ export const WORLD_THEME_ORDER: WorldTheme[] = [
   'inferno_core',
 ];
 
-export const TOTAL_POSITIONS = 380;
+// Total ladder positions. 380 main campaign + Endgame 20 (positions
+// 381-400). Endgame 20 = 14 Mastermind extension levels (L41-54) +
+// 5 side-mode boss levels (one per side-mode discipline) + 1 final
+// Grand Master Trial (Mastermind L55) at position 400.
+export const TOTAL_POSITIONS = 400;
 
 // Level counts per mode × per world, mirroring src/data/campaigns.ts.
 const MODE_STRUCTURE: Record<ModeId, { levelsPerWorld: number[]; prefix: string }> = {
@@ -266,16 +274,85 @@ function buildMainSection(alreadyConsumed: Record<ModeId, number>): UnifiedLevel
   return emitted;
 }
 
-// ----- Endgame (positions 341-380) -----
+// ----- Endgame (positions 341-400) -----
+//
+// Two tiers stacked here:
+//   341-380: original W6 (Mastermind L1-40) — the main campaign capstone
+//   381-400: Endgame 20 ("Mastermind Elite" + side-mode bosses) — for
+//            players who beat the main 380 and want a real challenge
+//
+// Endgame 20 layout:
+//   381-394: Mastermind L41-54 (14 levels — extends W6 with new
+//            cognitive levers: 4-5 stages, 1.5s/stage, no hints,
+//            subtle colour shifts, 7-shape layouts)
+//   395:     Speed Recall Boss   (sr_boss)
+//   396:     Snap Match Boss     (sm_boss)
+//   397:     Sequence Boss       (seq_boss)
+//   398:     Counting Blitz Boss (cb_boss)
+//   399:     Colour Chain Boss   (cc_boss)
+//   400:     Mastermind L55 — Grand Master Trial (the absolute apex)
+//
+// The 5 boss-level IDs must exist as rows in the Supabase
+// `side_campaign_levels` table; SQL migration ships alongside this
+// change. The Mastermind extension levels (L41-55) are pure data in
+// `mastermindLevels.ts` and don't need a Supabase round-trip.
+
+interface BossSlot {
+  position: number;
+  levelId: string;
+  mode: ModeId;
+}
+const ENDGAME_BOSSES: BossSlot[] = [
+  { position: 395, levelId: 'sr_boss',  mode: 'speed_recall' },
+  { position: 396, levelId: 'sm_boss',  mode: 'snap_match' },
+  { position: 397, levelId: 'seq_boss', mode: 'sequence' },
+  { position: 398, levelId: 'cb_boss',  mode: 'counting_blitz' },
+  { position: 399, levelId: 'cc_boss',  mode: 'colour_chain' },
+];
 
 function buildEndgame(): UnifiedLevel[] {
-  const mastermind = modeLevelsInOrder('classic').slice(160); // W6 levels
-  return mastermind.map((levelId, i) => ({
-    position: 341 + i,
-    levelId,
-    mode: 'classic' as ModeId,
-    worldTheme: getWorldForPosition(341 + i),
-  }));
+  const out: UnifiedLevel[] = [];
+
+  // 341-380: original Mastermind L1-40 via the existing
+  // modeLevelsInOrder slice (W1-5 = 160, so slice(160) gives W6 only).
+  const mastermindMain = modeLevelsInOrder('classic').slice(160);
+  mastermindMain.forEach((levelId, i) => {
+    const pos = 341 + i;
+    out.push({ position: pos, levelId, mode: 'classic', worldTheme: getWorldForPosition(pos) });
+  });
+
+  // 381-394: Mastermind L41-54 (the extension tier). IDs follow the
+  // existing `w6-l{N}` convention so [levelId].tsx routes them through
+  // the Mastermind game screen automatically.
+  for (let mmLevel = 41; mmLevel <= 54; mmLevel++) {
+    const pos = 381 + (mmLevel - 41);
+    out.push({
+      position: pos,
+      levelId: `w6-l${mmLevel}`,
+      mode: 'classic',
+      worldTheme: getWorldForPosition(pos),
+    });
+  }
+
+  // 395-399: side-mode boss levels — one per discipline.
+  for (const boss of ENDGAME_BOSSES) {
+    out.push({
+      position: boss.position,
+      levelId: boss.levelId,
+      mode: boss.mode,
+      worldTheme: getWorldForPosition(boss.position),
+    });
+  }
+
+  // 400: Grand Master Trial — Mastermind L55.
+  out.push({
+    position: 400,
+    levelId: 'w6-l55',
+    mode: 'classic',
+    worldTheme: getWorldForPosition(400),
+  });
+
+  return out;
 }
 
 // ----- Overrides -----

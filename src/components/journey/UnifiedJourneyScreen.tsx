@@ -38,6 +38,7 @@ import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
 import { BrainMasterCelebration } from './BrainMasterCelebration';
+import { GrandMasterCelebration } from './GrandMasterCelebration';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 
 const ROW_HEIGHT = 86; // Vertical space per level in the path.
@@ -144,8 +145,9 @@ function pathXForPosition(position: number, containerWidth: number): number {
   return centerX + wave * amplitude;
 }
 
-/** Level 1 sits at the BOTTOM of the scroll canvas and 380 at the
- *  top — the classic mobile-game "climb upward" metaphor. Higher y
+/** Level 1 sits at the BOTTOM of the scroll canvas and the final
+ *  level at the top — the classic mobile-game "climb upward"
+ *  metaphor. Higher y
  *  means an earlier level; the player has to scroll UP to see what's
  *  next. The container height remains `PATH_TOP_PADDING + N*ROW_HEIGHT
  *  + footer` so we just mirror the linear mapping here.
@@ -180,6 +182,8 @@ export function UnifiedJourneyScreen() {
     markUnifiedIntroSeen,
     hasSeenBrainMaster,
     markBrainMasterSeen,
+    hasSeenGrandMaster,
+    markGrandMasterSeen,
   } = useGameStore();
   // Cloud hydration flag — until loadFromCloud has completed at least
   // once, the intro / migration banner / world intro / Brain Master
@@ -195,6 +199,7 @@ export function UnifiedJourneyScreen() {
   const readyForIntroDecisions = cloudHydrated || !authUserId;
 
   const [showBrainMaster, setShowBrainMaster] = useState(false);
+  const [showGrandMaster, setShowGrandMaster] = useState(false);
   const [showOutOfLives, setShowOutOfLives] = useState(false);
   // Jump-to-current indicator: 'above' means the current level sits
   // above the viewport (player has scrolled down past it), 'below'
@@ -206,7 +211,7 @@ export function UnifiedJourneyScreen() {
   // shape on WorldBackground.
   const decorationsReady = true;
 
-  // Viewport culling — rendering all 380 level nodes + 379 SVG path
+  // Viewport culling — rendering all 400 level nodes + 399 SVG path
   // connectors at once is the single biggest perf risk on Android.
   // Instead we track the scroll position and only render a window of
   // nodes around the current viewport.
@@ -432,26 +437,41 @@ export function UnifiedJourneyScreen() {
   // Auto-scroll-to-current is handled by ScrollView's contentOffset
   // prop now — no post-mount setTimeout, no visible jump.
 
-  // Fire the Brain Master celebration once when the player has
-  // completed every level. Gated on `hasSeenBrainMaster` so it never
-  // re-fires after dismissal — without that, the modal would pop every
-  // time the journey screen mounts after the player reaches 380.
+  // Brain Master celebration — fires at position 380 (Mastermind L40,
+  // the original main-campaign capstone). Gated on hasSeenBrainMaster
+  // so it never re-fires after dismissal.
+  //
+  // Note: pre-Endgame-20 this checked `position < UNIFIED_LADDER.length`
+  // — fine when the ladder ended at 380, but the ladder is now 400 so
+  // we have to anchor explicitly to 380 instead of "the final level".
   useEffect(() => {
     if (!readyForIntroDecisions) return;
     if (hasSeenBrainMaster) return;
-    if (unifiedPosition < UNIFIED_LADDER.length) return;
-    const final = getUnifiedLevel(UNIFIED_LADDER.length);
-    if (!final) return;
-    const stars =
-      final.mode === 'classic'
-        ? levelProgress[final.levelId]?.stars ?? 0
-        : sideCampaignProgress[final.levelId]?.stars ?? 0;
+    if (unifiedPosition < 380) return;
+    const stars = levelProgress['w6-l40']?.stars ?? 0;
     if (stars > 0) setShowBrainMaster(true);
-  }, [readyForIntroDecisions, unifiedPosition, levelProgress, sideCampaignProgress, hasSeenBrainMaster]);
+  }, [readyForIntroDecisions, unifiedPosition, levelProgress, hasSeenBrainMaster]);
+
+  // Grand Master celebration — fires at position 400 (Mastermind L55,
+  // the Endgame 20 capstone). Independent of Brain Master so existing
+  // 380-completers see this milestone fire correctly the first time
+  // they push past 380. Same anti-replay guard via hasSeenGrandMaster.
+  useEffect(() => {
+    if (!readyForIntroDecisions) return;
+    if (hasSeenGrandMaster) return;
+    if (unifiedPosition < 400) return;
+    const stars = levelProgress['w6-l55']?.stars ?? 0;
+    if (stars > 0) setShowGrandMaster(true);
+  }, [readyForIntroDecisions, unifiedPosition, levelProgress, hasSeenGrandMaster]);
 
   const closeBrainMaster = () => {
     setShowBrainMaster(false);
     markBrainMasterSeen();
+  };
+
+  const closeGrandMaster = () => {
+    setShowGrandMaster(false);
+    markGrandMasterSeen();
   };
 
   const shareJourney = async () => {
@@ -496,7 +516,16 @@ export function UnifiedJourneyScreen() {
     const worldNumber = match?.[1] ?? '1';
     const levelNumber = match?.[2] ?? '1';
     const campaign = CAMPAIGNS[level.mode];
-    const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
+    // Endgame boss levels (sr_boss / sm_boss / seq_boss / cb_boss /
+    // cc_boss) don't match the standard {prefix}_w{N}_l{M} pattern, so
+    // worldNumber falls back to '1' and the campaign's first-world
+    // name would read 'Foundations' or similar — wrong for an endgame
+    // trial. Override with the i18n endgame label so the side-campaign
+    // screen header reads correctly.
+    const isBoss = level.levelId.endsWith('_boss');
+    const worldName = isBoss
+      ? t('mastermind.endgame_world_name')
+      : campaign?.worldNames[Number(worldNumber) - 1] ?? '';
     router.push({
       pathname: '/game/side-campaign',
       params: {
@@ -512,7 +541,7 @@ export function UnifiedJourneyScreen() {
   const totalPct = Math.round((unifiedPosition / UNIFIED_LADDER.length) * 100);
 
   // Pre-computed visible-window data — this used to filter+map UNIFIED
-  // LADDER (380 entries) on every render via inline JSX. Memoising
+  // LADDER (400 entries) on every render via inline JSX. Memoising
   // means we only recompute when the visible window or progression
   // state actually changes. Both arrays are derived from the same
   // window slice so they share the cost.
@@ -650,7 +679,7 @@ export function UnifiedJourneyScreen() {
               </Pressable>
             </View>
 
-            {/* Progress rail — "Level N of 380" with a single-tone
+            {/* Progress rail — "Level N of 400" with a single-tone
              *  purple fill bar. */}
             <View style={st.worldBar}>
               <Text style={[st.worldLevelLabel, { color: colors.text }]}>
@@ -803,6 +832,10 @@ export function UnifiedJourneyScreen() {
         <BrainMasterCelebration
           visible={showBrainMaster}
           onClose={closeBrainMaster}
+        />
+        <GrandMasterCelebration
+          visible={showGrandMaster}
+          onClose={closeGrandMaster}
         />
         <OutOfLivesModal
           visible={showOutOfLives}

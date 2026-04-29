@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/src/lib/supabase';
 import { t } from '@/src/i18n';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 
 // ── Divisions ─────────────────────────────────────────────────────────
 export interface Division {
@@ -62,7 +63,7 @@ export interface LeaderboardEntry {
   /** @deprecated Use unified_position. Kept for backwards compatibility
    *  while older cloud rows haven't written the new column yet. */
   highest_world: number;
-  /** Position 1-380 on the Unified Brain Journey. This is what friend
+  /** Position 1-400 on the Unified Brain Journey. This is what friend
    *  cards and leaderboard rows should display ("Level 108" instead
    *  of "World 2 Level 8"). */
   unified_position: number;
@@ -100,7 +101,7 @@ export async function getGlobalLeaderboard(limit: number = 50): Promise<Leaderbo
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
-    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
+    unified_position: Math.min(TOTAL_POSITIONS, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,
@@ -142,7 +143,7 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
-    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
+    unified_position: Math.min(TOTAL_POSITIONS, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,

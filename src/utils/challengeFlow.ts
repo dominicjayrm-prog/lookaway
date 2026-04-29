@@ -3,6 +3,7 @@ import { notifyChallengeResult, notifyChallengeReceived, notifyChallengeDeclined
 import { checkAchievements } from '@/src/utils/achievements';
 import { log } from '@/src/lib/logger';
 import { t } from '@/src/i18n';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 
 // ──────────────────────────────────────────────────────────────────────
 // Difficulty tiers map to world ranges. Easy = worlds 1-2 (shape +
@@ -120,7 +121,7 @@ async function getUnifiedPosition(userId: string): Promise<number> {
       .eq('id', userId)
       .single();
     const pos = data?.unified_position;
-    if (typeof pos === 'number' && pos >= 1 && pos <= 380) return pos;
+    if (typeof pos === 'number' && pos >= 1 && pos <= TOTAL_POSITIONS) return pos;
     return 1;
   } catch {
     return 1;

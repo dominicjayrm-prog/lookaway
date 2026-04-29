@@ -18,6 +18,7 @@ import {
   registerPushToken,
 } from '@/src/utils/notifications';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
@@ -205,7 +206,7 @@ function PlayTab() {
   // Contextual hero subtitle — driven by the unified journey cursor now
   // that the campaign is one linear ladder. Still falls back to
   // streak / variety messages when there's nothing special to say.
-  const TOTAL_LADDER = 380;
+  const TOTAL_LADDER = TOTAL_POSITIONS;
   const heroSubtitle = (() => {
     const remaining = TOTAL_LADDER - unifiedPosition;
     if (unifiedPosition === 1) return t('home.welcome_unified');
@@ -214,7 +215,7 @@ function PlayTab() {
         ? t('home.final_level')
         : t('home.final_levels', { count: remaining });
     }
-    if (remaining === 0) return t('home.journey_complete');
+    if (remaining === 0) return t('home.journey_complete', { total: TOTAL_POSITIONS });
     if (streakCount >= 3) return t('home.streak_keep_going', { count: streakCount });
     const subKeys = ['home.subtitle_1', 'home.subtitle_2', 'home.subtitle_3', 'home.subtitle_4'];
     return t(subKeys[unifiedPosition % subKeys.length]);
@@ -542,11 +543,11 @@ function PlayTab() {
             </View>
           </View>
 
-          {/* Level info — uses the unified journey position (1-380)
+          {/* Level info — uses the unified journey position (1-400)
            *  rather than the legacy "World X Level Y" format so the
            *  text matches the new one-path progression. */}
           <Text style={styles.heroContinueLabel}>{t('home.continue_label')}</Text>
-          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: 380 })}</Text>
+          <Text style={styles.heroLevelTitle}>{t('home.unified_level_title', { position: unifiedPosition, total: TOTAL_POSITIONS })}</Text>
           <Text style={styles.heroLevelSubtitle}>{heroSubtitle}</Text>
 
           {/* Progress bar — fills by unified position instead of the
@@ -554,9 +555,9 @@ function PlayTab() {
            *  journey not just the current world's slice. */}
           <View style={styles.heroProgressRow}>
             <View style={styles.heroProgressTrack}>
-              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / 380) * 100)}%` }]} />
+              <View style={[styles.heroProgressFill, { width: `${Math.round((unifiedPosition / TOTAL_POSITIONS) * 100)}%` }]} />
             </View>
-            <Text style={styles.heroProgressText}>{unifiedPosition}/380</Text>
+            <Text style={styles.heroProgressText}>{unifiedPosition}/{TOTAL_POSITIONS}</Text>
           </View>
 
           {/* Play button with press animation. Routes to the level at

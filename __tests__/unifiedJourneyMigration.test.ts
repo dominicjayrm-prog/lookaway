@@ -1,4 +1,4 @@
-import { UNIFIED_LADDER, getWorldForPosition } from '../src/data/unifiedJourney';
+import { UNIFIED_LADDER, getWorldForPosition, TOTAL_POSITIONS } from '../src/data/unifiedJourney';
 
 // Inline copy of the migration logic from gameStore.ts so we can test it
 // without pulling the full store (which imports i18n + Supabase).
@@ -25,7 +25,7 @@ function migrate(saved: SavedShape): SavedShape {
     }
     firstUncompleted = level.position + 1;
   }
-  const position = Math.min(380, Math.max(1, firstUncompleted));
+  const position = Math.min(TOTAL_POSITIONS, Math.max(1, firstUncompleted));
   saved.unifiedPosition = position;
   saved.currentWorldTheme = getWorldForPosition(position);
   saved.hasSeenUnifiedIntro = saved.hasSeenUnifiedIntro ?? false;
@@ -76,14 +76,28 @@ describe('Unified Journey migration', () => {
     expect(migrated.unifiedPosition).toBe(6);
   });
 
-  it('user who finished the whole ladder lands on position 380', () => {
+  it('user who finished the whole ladder lands on the final position', () => {
     const levelProgress: Record<string, { stars: number; bestScore: number; attempts: number }> = {};
     UNIFIED_LADDER.forEach((lv) =>
       (levelProgress[lv.levelId] = { stars: 3, bestScore: 100, attempts: 1 })
     );
     const migrated = migrate({ levelProgress });
-    expect(migrated.unifiedPosition).toBe(380);
+    expect(migrated.unifiedPosition).toBe(TOTAL_POSITIONS);
     expect(migrated.currentWorldTheme).toBe('inferno_core');
+  });
+
+  it('Endgame 20 (positions 381-400) is wired into the ladder', () => {
+    expect(UNIFIED_LADDER.length).toBe(TOTAL_POSITIONS);
+    expect(TOTAL_POSITIONS).toBe(400);
+    // Position 400 should be the Grand Master Trial (Mastermind L55).
+    const final = UNIFIED_LADDER[UNIFIED_LADDER.length - 1];
+    expect(final.position).toBe(400);
+    expect(final.levelId).toBe('w6-l55');
+    expect(final.mode).toBe('classic');
+    // Positions 395-399 should be the 5 side-mode bosses.
+    const bosses = UNIFIED_LADDER.filter((lv) => lv.levelId.endsWith('_boss'));
+    expect(bosses).toHaveLength(5);
+    expect(bosses.map((b) => b.position).sort()).toEqual([395, 396, 397, 398, 399]);
   });
 
   it('levels with 0 stars are treated as uncompleted', () => {

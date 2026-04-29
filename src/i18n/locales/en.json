@@ -521,7 +521,7 @@
     "step_3_title": "Gems",
     "step_3_body": "Earn gems by completing levels with stars. Spend them on power-ups in the shop.",
     "step_4_title": "Your journey",
-    "step_4_body": "Explore 6 game modes with 380+ levels. Unlock new modes as you progress.",
+    "step_4_body": "Explore 6 game modes with 400 levels. Unlock new modes as you progress.",
     "step_5_title": "The shop",
     "step_5_body": "Buy power-ups and gem packs. Power-ups help you beat tough levels."
   },
@@ -1099,6 +1099,20 @@
       "share_aria": "Share your journey",
       "close_aria": "Close"
     },
+    "grand_master": {
+      "eyebrow": "ENDGAME 20 · COMPLETE",
+      "title": "GRAND MASTER",
+      "blurb": "Beyond Brain Master. Beyond the campaign. You cleared the Endgame 20 — the final trial. There is nothing left to memorise.",
+      "rank_blurb": "You cleared the Endgame 20. Beyond Brain Master, beyond the campaign — only the elite reach this tier. You are Grand Master #{rank}.",
+      "stars_label": "STARS",
+      "levels_label": "LEVELS",
+      "day_streak_label": "DAY STREAK",
+      "share_cta": "Share Grand Master",
+      "done_cta": "Done",
+      "share_message": "I cleared all {total} levels of BLANKED including the Endgame 20. {stars} stars, {streak}-day streak. Grand Master. 🧠💎",
+      "share_aria": "Share Grand Master",
+      "close_aria": "Close"
+    },
     "node_aria": "Level {position}, {state}",
     "node_state_completed": "completed",
     "node_state_current": "current",
@@ -1422,6 +1436,29 @@
     "friends": "Friends",
     "shop": "Shop"
   },
+  "mastermind": {
+    "endgame_title_41": "Stages Without Hints",
+    "endgame_title_42": "Compressed Cycle",
+    "endgame_title_43": "Four Stages",
+    "endgame_title_44": "Four Stages, No Hints",
+    "endgame_title_45": "Peak Compression",
+    "endgame_title_46": "Subtle Shifts",
+    "endgame_title_47": "Compounded Shifts",
+    "endgame_title_48": "Speed + Subtlety",
+    "endgame_title_49": "Five Stages",
+    "endgame_title_50": "Five Stages, No Hints",
+    "endgame_title_51": "Compound Trial",
+    "endgame_title_52": "Apex Cycle",
+    "endgame_title_53": "Transformation Chain",
+    "endgame_title_54": "Final Trial",
+    "endgame_title_55": "The Apex",
+    "boss_title_sr": "The Mind Map",
+    "boss_title_sm": "The Spotter",
+    "boss_title_seq": "The Conductor",
+    "boss_title_cb": "The Tally",
+    "boss_title_cc": "The Pattern",
+    "endgame_world_name": "Endgame Trial"
+  },
   "home": {
     "lives_aria": "{count} of 5 lives",
     "lives_hint": "Tap to see how lives work",
@@ -1436,7 +1473,7 @@
     "welcome_unified": "Your brain journey starts here",
     "final_level": "One level left — finish strong!",
     "final_levels": "{count} levels from Brain Master",
-    "journey_complete": "All 380 complete · true Brain Master",
+    "journey_complete": "All {total} complete · true Brain Master",
     "levels_to_finish_one": "1 level to finish World {world}!",
     "levels_to_finish_many": "{count} levels to finish World {world}!",
     "streak_keep_going": "{count}-day streak! Keep it going",
@@ -1571,7 +1608,7 @@
     "screen6": {
       "title": "Ready to train\nyour memory?",
       "subtitle": "Free to play. 2 minutes a day.\nYour brain will thank you.",
-      "feature_levels": "380+ levels",
+      "feature_levels": "400 levels",
       "feature_modes": "6 game modes",
       "feature_friends": "Challenge friends",
       "cta": "Play Now"
