@@ -27,8 +27,14 @@ export interface MastermindQuestion {
 
 export interface MastermindLevel {
   level: number;
-  stageCount: 2 | 3;
-  secondsPerStage: 2 | 3;
+  // Widened to 2-5 to support the Endgame 20 levels (L41-55) which
+  // push beyond W6's original 2-3 stage ceiling. Levels 49+ use 4-5
+  // stages, levels 45-55 use 1.5s per stage. Runtime in
+  // app/game/mastermind.tsx already iterates `stages.length` and
+  // reads `secondsPerStage` as a number, so this widen is purely a
+  // type concession — no behaviour change for L1-40.
+  stageCount: 2 | 3 | 4 | 5;
+  secondsPerStage: number;
   stages: MastermindStage[];
   questions: MastermindQuestion[];
 }
