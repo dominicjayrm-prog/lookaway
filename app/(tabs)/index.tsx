@@ -18,6 +18,7 @@ import {
   registerPushToken,
 } from '@/src/utils/notifications';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
@@ -214,7 +215,7 @@ function PlayTab() {
         ? t('home.final_level')
         : t('home.final_levels', { count: remaining });
     }
-    if (remaining === 0) return t('home.journey_complete');
+    if (remaining === 0) return t('home.journey_complete', { total: TOTAL_POSITIONS });
     if (streakCount >= 3) return t('home.streak_keep_going', { count: streakCount });
     const subKeys = ['home.subtitle_1', 'home.subtitle_2', 'home.subtitle_3', 'home.subtitle_4'];
     return t(subKeys[unifiedPosition % subKeys.length]);

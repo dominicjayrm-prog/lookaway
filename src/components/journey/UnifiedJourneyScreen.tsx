@@ -515,7 +515,16 @@ export function UnifiedJourneyScreen() {
     const worldNumber = match?.[1] ?? '1';
     const levelNumber = match?.[2] ?? '1';
     const campaign = CAMPAIGNS[level.mode];
-    const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
+    // Endgame boss levels (sr_boss / sm_boss / seq_boss / cb_boss /
+    // cc_boss) don't match the standard {prefix}_w{N}_l{M} pattern, so
+    // worldNumber falls back to '1' and the campaign's first-world
+    // name would read 'Foundations' or similar — wrong for an endgame
+    // trial. Override with the i18n endgame label so the side-campaign
+    // screen header reads correctly.
+    const isBoss = level.levelId.endsWith('_boss');
+    const worldName = isBoss
+      ? t('mastermind.endgame_world_name')
+      : campaign?.worldNames[Number(worldNumber) - 1] ?? '';
     router.push({
       pathname: '/game/side-campaign',
       params: {

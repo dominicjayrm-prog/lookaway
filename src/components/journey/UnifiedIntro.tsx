@@ -24,7 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/providers/ThemeProvider';
-import { WORLD_THEMES, WORLD_THEME_ORDER } from '@/src/data/unifiedJourney';
+import { WORLD_THEMES, WORLD_THEME_ORDER, TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { CAMPAIGNS, CAMPAIGN_ORDER } from '@/src/data/campaigns';
 import { t } from '@/src/i18n';
 import { localizedWorldName } from './worldI18n';
@@ -190,7 +190,7 @@ function IntroCard1({
       <Animated.Text style={[st.eyebrow, { color: colors.accent }, eyebrowStyle]}>
         {t('journey.intro.eyebrow_1')}
       </Animated.Text>
-      <Animated.Text style={[st.bigNumber, { color: colors.accent }, numberStyle]}>380</Animated.Text>
+      <Animated.Text style={[st.bigNumber, { color: colors.accent }, numberStyle]}>{TOTAL_POSITIONS}</Animated.Text>
       <Animated.Text style={[st.title, { color: colors.text }, titleStyle]}>
         {t('journey.intro.title_1')}
       </Animated.Text>
