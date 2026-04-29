@@ -1234,6 +1234,17 @@ export function mastermindToStandardLevel(levelNum: number): import('@/src/types
   const mm = getMastermindLevel(levelNum);
   if (!mm) return null;
 
+  // Endgame 20 (L41-55) get hand-curated titles via i18n. L1-40 keep
+  // the default `Mastermind N` label. The lookup falls back gracefully
+  // if a key is missing (i18n returns the key string).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { t } = require('@/src/i18n') as typeof import('@/src/i18n');
+  const titleKey = `mastermind.endgame_title_${levelNum}`;
+  const localizedTitle = levelNum >= 41 ? t(titleKey) : null;
+  const title = (localizedTitle && localizedTitle !== titleKey)
+    ? localizedTitle
+    : `Mastermind ${levelNum}`;
+
   // Total viewing time = all stages + transition gaps
   const totalViewTime = mm.stageCount * mm.secondsPerStage + (mm.stageCount - 1) * 0.5;
 
@@ -1261,7 +1272,7 @@ export function mastermindToStandardLevel(levelNum: number): import('@/src/types
     id: `w6-l${levelNum}`,
     worldId: 6,
     levelNumber: levelNum,
-    title: `Mastermind ${levelNum}`,
+    title,
     scenes: [{
       id: `w6-l${levelNum}-s1`,
       viewTime: totalViewTime,
