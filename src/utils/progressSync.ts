@@ -2,7 +2,7 @@ import { supabase } from '@/src/lib/supabase';
 import { INITIAL_LOGIN_REWARD_STATE, type LoginRewardState } from '@/src/utils/dailyLoginRewards';
 import type { SubscriptionStatus, GameStore } from '@/src/store/gameStore';
 import { log } from '@/src/lib/logger';
-import type { ModeId, WorldTheme } from '@/src/data/unifiedJourney';
+import { TOTAL_POSITIONS, type ModeId, type WorldTheme } from '@/src/data/unifiedJourney';
 
 /**
  * Sync user progress to Supabase. Fire and forget.
@@ -67,7 +67,7 @@ export async function saveProgressToSupabase(userId: string, state: GameStore) {
       // user across devices. The clamp on unified_position is enforced
       // by a CHECK constraint on the column, so we defend against
       // corrupted local state here rather than let the upsert 500.
-      unified_position: Math.min(380, Math.max(1, state.unifiedPosition ?? 1)),
+      unified_position: Math.min(TOTAL_POSITIONS, Math.max(1, state.unifiedPosition ?? 1)),
       current_world_theme: state.currentWorldTheme ?? 'emerald_grove',
       last_played_mode: state.lastPlayedMode ?? null,
       last_played_level_id: state.lastPlayedLevelId ?? null,
@@ -231,7 +231,7 @@ export async function loadProgressFromSupabase(userId: string): Promise<{
       // next saveProgressToSupabase will populate them).
       unifiedPosition:
         typeof profile.unified_position === 'number'
-          ? Math.min(380, Math.max(1, profile.unified_position))
+          ? Math.min(TOTAL_POSITIONS, Math.max(1, profile.unified_position))
           : 1,
       currentWorldTheme: (profile.current_world_theme === 'emerald_grove'
         || profile.current_world_theme === 'amber_dunes'

@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/src/lib/supabase';
 import { t } from '@/src/i18n';
+import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 
 // ── Divisions ─────────────────────────────────────────────────────────
 export interface Division {
@@ -100,7 +101,7 @@ export async function getGlobalLeaderboard(limit: number = 50): Promise<Leaderbo
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
-    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
+    unified_position: Math.min(TOTAL_POSITIONS, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,
@@ -142,7 +143,7 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
     avatar_color: row.avatar_color ?? '#6C5CE7',
     total_stars: row.total_stars ?? 0,
     highest_world: row.highest_world ?? 1,
-    unified_position: Math.min(380, Math.max(1, row.unified_position ?? 1)),
+    unified_position: Math.min(TOTAL_POSITIONS, Math.max(1, row.unified_position ?? 1)),
     division: getDivision(row.total_stars ?? 0),
     rank: i + 1,
     avatar_url: row.avatar_url ?? null,
