@@ -200,7 +200,7 @@ export async function purchaseSubscription(
 /**
  * Whether the current Apple ID is eligible for the intro-offer free
  * trial on the given product. Used by the paywall to only advertise
- * "3 days free" to users who would actually receive it — Apple
+ * "7 days free" to users who would actually receive it — Apple
  * specifically calls out in guideline 2.1(b) that an advertised free
  * trial must be offered in sandbox + production to the reviewer.
  * Showing the trial banner to an ineligible reviewer (whose sandbox

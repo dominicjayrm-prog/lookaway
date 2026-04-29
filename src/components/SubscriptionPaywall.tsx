@@ -2,11 +2,11 @@
  * Blanked+ Subscription Paywall — Full-screen modal.
  * Stacked plan cards, shimmer CTA, staggered animations.
  *
- * Yearly plan ships with a 3-day free trial intro offer (configured
+ * Yearly plan ships with a 7-day free trial intro offer (configured
  * in App Store Connect + RevenueCat). Monthly plan has no trial.
  * The trial badge is only rendered when StoreKit confirms the user
  * is eligible (`isTrialEligible(productId)`), so an ineligible
- * reviewer doesn't see "3 days free" while StoreKit refuses to
+ * reviewer doesn't see "7 days free" while StoreKit refuses to
  * grant it. The previously-rejected build 21 had the badge
  * unconditionally — the eligibility check is the safeguard.
  */
@@ -262,7 +262,7 @@ function SubscriptionPaywall({ visible, onDismiss, onSubscribe }: Props) {
   const [annualPkg, setAnnualPkg] = useState<SubscriptionPrice | null>(null);
   // Trial eligibility for the yearly plan, queried from StoreKit via
   // RevenueCat. Only true when the Apple ID has not previously
-  // redeemed an intro offer on this product. Drives the "3 days free"
+  // redeemed an intro offer on this product. Drives the "7 days free"
   // badge — we never advertise a trial to a user who can't claim one,
   // which is what got build 21 rejected.
   const [yearlyTrialEligible, setYearlyTrialEligible] = useState(false);

@@ -23,7 +23,6 @@ import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
-import DiscountPaywall from '@/src/components/DiscountPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 
@@ -319,10 +318,6 @@ function PlayTab() {
   }, [toast]);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  // The discount paywall is the second-chance offer surfaced when the
-  // user dismisses the regular paywall during the post-signup flow.
-  // It only fires once per device (via blanked_discount_paywall_seen).
-  const [showDiscountPaywall, setShowDiscountPaywall] = useState(false);
   // True when the currently-visible paywall came from the post-signup
   // flow vs other entry points (out-of-lives, stats space, shop).
   // Only post-signup dismissals chain to the discount paywall.
@@ -724,32 +719,11 @@ function PlayTab() {
         visible={showPaywall}
         onDismiss={async () => {
           setShowPaywall(false);
-          // Post-signup flow chains to the discount paywall once per
-          // device. Other entry points (out-of-lives, stats space)
-          // just close.
-          if (!postSignupPaywallActive.current) {
-            // Non-post-signup paywall closing has no effect on the
-            // tutorial gate. Existing users never set the flag in the
-            // first place; setting it again is a harmless no-op.
-            setPostSignupPaywallDone(true);
-            return;
-          }
+          // Paywall closes — release the tutorial gate. The yearly free
+          // trial is the conversion path; we no longer chain to a
+          // discount paywall on dismissal.
           postSignupPaywallActive.current = false;
-          let alreadySeen = false;
-          try {
-            alreadySeen = (await AsyncStorage.getItem('blanked_discount_paywall_seen')) === 'true';
-          } catch {}
-          if (alreadySeen) {
-            // No discount paywall to chain to. Paywall flow ends here,
-            // unblock the tutorial.
-            setPostSignupPaywallDone(true);
-            return;
-          }
-          try { await AsyncStorage.setItem('blanked_discount_paywall_seen', 'true'); } catch {}
-          // Defer briefly so the regular paywall's dismiss animation
-          // completes before the discount paywall slides in. Tutorial
-          // stays gated until that paywall closes too.
-          setTimeout(() => setShowDiscountPaywall(true), 280);
+          setPostSignupPaywallDone(true);
         }}
         onSubscribe={async (plan: 'monthly' | 'yearly') => {
           setShowPaywall(false);
@@ -769,29 +743,6 @@ function PlayTab() {
           store.unlockCosmetic('banner_premium_gold');
           // Store-level guard skips during trial / intro period, so
           // calling unconditionally is safe.
-          store.maybeGrantMonthlyPlusGems();
-          setShowPremiumCelebration(true);
-        }}
-      />
-      <DiscountPaywall
-        visible={showDiscountPaywall}
-        onDismiss={() => { setShowDiscountPaywall(false); setPostSignupPaywallDone(true); }}
-        onSubscribe={async () => {
-          setShowDiscountPaywall(false);
-          // Discount offer only ever applies to the monthly plan.
-          // RevenueCat applies the configured intro offer at purchase
-          // time when the Apple ID is eligible.
-          const { result, periodType } = await purchaseSubscription('monthly');
-          // Paywall flow ends here regardless of purchase outcome.
-          // Releases the tutorial gate so the spotlight tour fires
-          // next render cycle.
-          setPostSignupPaywallDone(true);
-          if (result !== 'success') return;
-          const store = useGameStore.getState();
-          store.activatePlus(periodType);
-          store.unlockCosmetic('frame_premium_gold');
-          store.unlockCosmetic('expr_premium');
-          store.unlockCosmetic('banner_premium_gold');
           store.maybeGrantMonthlyPlusGems();
           setShowPremiumCelebration(true);
         }}
