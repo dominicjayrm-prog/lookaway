@@ -1793,8 +1793,10 @@
   },
   "paywall": {
     "restore": "Restaurar",
-    "header_sub": "Entrena tu memoria sin límites",
+    "header_sub": "Mira tu memoria afilarse",
     "benefits": {
+      "analytics_title": "Mira tu mente afilarse",
+      "analytics_desc": "Sigue tus puntos fuertes, los débiles y cómo estás mejorando",
       "double_gems_title": "2× gemas en cada nivel",
       "double_gems_desc": "Recompensas dobles en Clásico, Snap Match y todos los modos",
       "lives_title": "Vidas ilimitadas",

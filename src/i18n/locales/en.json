@@ -1323,8 +1323,10 @@
   },
   "paywall": {
     "restore": "Restore",
-    "header_sub": "Train your memory without limits",
+    "header_sub": "See your memory get sharper",
     "benefits": {
+      "analytics_title": "See your sharpness grow",
+      "analytics_desc": "Track your strongest skills, weak spots, and how you're improving",
       "double_gems_title": "2× gems on every level",
       "double_gems_desc": "Earn double rewards in Classic, Snap Match, every mode",
       "lives_title": "Unlimited lives",

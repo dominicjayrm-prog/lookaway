@@ -147,16 +147,47 @@ function NoAdsSvg() {
     </Svg>
   );
 }
+/** Rising trend-line + corner arrow tip — the "your sharpness is
+ *  climbing" signal. Reads at 18px as an upward stock-chart line.
+ *  Path geometry is balanced around the 24×24 viewBox centre (12,12)
+ *  so the icon sits cleanly in the 36×36 row badge without leaning
+ *  to one side. Stroke width matches the visual weight of the filled
+ *  heart/gem/star icons sitting below it in the row. Purple accent to
+ *  hook into the brand without competing with the utility-benefit
+ *  colours (gold / coral / blue) further down the list. */
+function ProgressChartSvg() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 19 L9 13 L13 15 L21 5"
+        stroke={ACCENT}
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M16 5 L21 5 L21 10"
+        stroke={ACCENT}
+        strokeWidth={2.4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 // ── Benefits data ─────────────────────────────────────────────────────
 // Benefits resolve t() at render time — each row's title + desc
 // re-read on locale flip without a remount.
 //
-// "2× gems on every level" leads the list because it's the strongest
-// always-on benefit a subscriber feels — every single level reward
-// doubles, not once-per-month or once-per-day. Visible value beats
-// hidden value at the moment of conversion.
+// Order matters. The 35-65 audience installs Blanked because they want
+// to feel mentally sharp — not because they want more gems. So the
+// emotional anchor (memory analytics → 'see your sharpness grow') sits
+// at the TOP, where the eye lands first. The gem / lives / no-ads
+// rows that follow read as the practical bonus stack on top of the
+// real reason to subscribe.
 const BENEFIT_KEYS = [
+  { Icon: ProgressChartSvg, color: ACCENT, titleKey: 'paywall.benefits.analytics_title', descKey: 'paywall.benefits.analytics_desc' },
   { Icon: GemSvg, color: '#D4A012', titleKey: 'paywall.benefits.double_gems_title', descKey: 'paywall.benefits.double_gems_desc' },
   { Icon: HeartSvg, color: '#FF6B6B', titleKey: 'paywall.benefits.lives_title', descKey: 'paywall.benefits.lives_desc' },
   { Icon: GemSvg, color: ACCENT, titleKey: 'paywall.benefits.gems_title', descKey: 'paywall.benefits.gems_desc' },
