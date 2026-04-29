@@ -514,21 +514,29 @@ const st = StyleSheet.create({
   },
 
   // Header
-  header: { paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center', position: 'relative' },
+  // Trimmed paddingBottom (24 → 14) and logoCircle.marginTop (40 → 22)
+  // to claw back ~28px of vertical space — that was previously eating
+  // into the bottom Subscribe CTA on shorter phones (iPhone SE / 13
+  // mini / 15) where the user reported the button being cut off.
+  header: { paddingHorizontal: 20, paddingBottom: 14, alignItems: 'center', position: 'relative' },
   restoreBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 16, left: 16, zIndex: 10 },
   restoreText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
   closeBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 14, right: 16, zIndex: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   logoCircle: {
-    width: 54, height: 54, borderRadius: 27, marginTop: 40,
+    width: 54, height: 54, borderRadius: 27, marginTop: 22,
     backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
   headerTitle: { fontSize: 26, fontWeight: '800', color: '#FFF', marginBottom: 4 },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+  // Bumped from 13 → 14 + weight 600 + opacity 0.6 → 0.85 so the
+  // "See your memory get sharper" hook actually reads on the gradient
+  // bg. Pre-fix it was barely visible against the purple — defeating
+  // the point of having a hook at all.
+  headerSub: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.88)', letterSpacing: 0.1 },
 
   // Content
   content: { flex: 1, backgroundColor: '#FFFFFF' },
-  contentInner: { paddingHorizontal: 20, paddingTop: 16 },
+  contentInner: { paddingHorizontal: 20, paddingTop: 12 },
 
   // Benefits
   benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
