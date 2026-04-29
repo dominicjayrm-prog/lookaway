@@ -93,7 +93,8 @@ function AnimatedScore({ value, style }: { value: number; style: object }) {
 function ResultScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, advanceUnifiedPosition, addStars, incrementStreak, addGems, levelProgress, levelPowerUpsUsed, sessionLevelCount, bumpSessionLevelCount } = useGameStore();
+  const { score, answers, currentLevel, gameState, resetGame, recordLevelComplete, advanceUnifiedPosition, addStars, incrementStreak, addGems, levelProgress, levelPowerUpsUsed, sessionLevelCount, bumpSessionLevelCount, subscriptionStatus, unlimitedLivesUntil } = useGameStore();
+  const hasUnlimitedLives = subscriptionStatus === 'active' || (!!unlimitedLivesUntil && Date.now() < unlimitedLivesUntil);
   const [challengeToast, setChallengeToast] = useState<WeeklyChallenge | null>(null);
   const level = currentLevel;
   const passed = gameState === 'COMPLETE';
@@ -390,7 +391,7 @@ function ResultScreen() {
           <>
             <Text style={[st.failedTitle, { color: colors.wrong }]}>{t('result.failed_title')}</Text>
             <Text style={[st.scoreText, { color: colors.text }]}>{t('result.correct_count', { correct: correctCount, total: totalCount })}</Text>
-            {celeb.extraLifeSaved ? (
+            {hasUnlimitedLives ? null : celeb.extraLifeSaved ? (
               <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>{t('result.extra_life_saved')}</Text></View>
             ) : (
               <View style={[st.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.wrong }]}>{t('result.life_lost')}</Text></View>
