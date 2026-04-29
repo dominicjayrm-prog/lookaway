@@ -11,6 +11,7 @@ import { log } from '@/src/lib/logger';
 import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
 import { shouldShowReviewPrompt, type ReviewPromptState } from '@/src/lib/reviewPrompt';
 import { track, EVENTS } from '@/src/lib/analytics';
+import { logLevelAchieved } from '@/src/lib/metaEvents';
 import { applyLanguage, type LanguagePreference } from '@/src/i18n';
 import {
   UNIFIED_LADDER,
@@ -1027,6 +1028,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Log to economy tracker
       if (gemsEarned > 0) {
         logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars: clampedStars, scorePercent: clampedScore, replay: !!existing, plusDoubled: doubled });
+      }
+      // Meta App Events — fire LevelAchieved at the 5 + 25 unique-clear
+      // milestones for ad funnel optimisation. Only on first-time
+      // completion (replays don't grow the unique count).
+      if (!existing) {
+        const uniqueCleared = Object.keys(get().levelProgress).length;
+        if (uniqueCleared === 5 || uniqueCleared === 25) {
+          logLevelAchieved(uniqueCleared);
+        }
       }
       return { earned: gemsEarned, doubled };
     },
