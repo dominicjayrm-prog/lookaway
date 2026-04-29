@@ -25,11 +25,18 @@ const FADE_OUT_MS = 350;
 
 export function WhatChangedMemoriseView({ config, onElapsed }: Props) {
   const { colors } = useTheme();
-  const gridOpacity = useRef(new RNAnimated.Value(0)).current;
+  // Start at full opacity — no fade-in. Previously this animated from
+  // 0→1 with `useNativeDriver: true`, which on iOS could leave the
+  // emoji glyphs unrasterised inside the layer's bitmap until well
+  // after the animation completed. That produced the 'memorise phase
+  // looks empty' glitch reported on Wed 29 Apr — title visible, grid
+  // cells visible (as cards), but emojis just… absent. The fade-out
+  // keeps `useNativeDriver: true` since by then the text has been
+  // composited and dimming the layer doesn't disturb glyph rendering.
+  const gridOpacity = useRef(new RNAnimated.Value(1)).current;
   const progressAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
-    RNAnimated.timing(gridOpacity, { toValue: 1, duration: 280, useNativeDriver: true }).start();
     RNAnimated.timing(progressAnim, {
       toValue: 1,
       duration: config.viewSeconds * 1000,

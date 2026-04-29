@@ -27,19 +27,22 @@ const isWeb = Platform.OS === 'web';
 
 export function PhoneNumberMemoriseView({ digits, viewSeconds, onElapsed }: Props) {
   const { colors } = useTheme();
-  const cardOpacity = useRef(new RNAnimated.Value(0)).current;
-  const digitsOpacity = useRef(new RNAnimated.Value(0)).current;
+  // Both opacities start at full visibility — no fade-in. Same iOS
+  // layer/text-rasterisation glitch fix as WhatChangedMemoriseView:
+  // a `useNativeDriver: true` opacity 0→1 animation over a parent
+  // containing <Text> can leave the digit glyphs unrendered until well
+  // after the animation completes. For a memorise mode where the
+  // player must read those digits, that bug is brutal — we'd rather
+  // skip the polish fade-in than risk a player getting an unreadable
+  // grid. The fade-out at the end keeps `useNativeDriver: true`
+  // because by then the glyphs have been composited and dimming the
+  // layer is safe.
+  const cardOpacity = useRef(new RNAnimated.Value(1)).current;
+  const digitsOpacity = useRef(new RNAnimated.Value(1)).current;
   const [phase, setPhase] = useState<'show' | 'fading'>('show');
   const [secondsLeft, setSecondsLeft] = useState(viewSeconds);
 
   useEffect(() => {
-    // Card fades up first, then digits stagger in. Avoids the harsh
-    // "wall of numbers appears" effect.
-    RNAnimated.timing(cardOpacity, { toValue: 1, duration: 240, useNativeDriver: true }).start();
-    RNAnimated.timing(digitsOpacity, {
-      toValue: 1, duration: 280, delay: 180, useNativeDriver: true,
-    }).start();
-
     // Visible countdown for the player. Tightens the focus.
     const tickId = setInterval(() => {
       setSecondsLeft((s) => Math.max(0, +(s - 0.1).toFixed(1)));

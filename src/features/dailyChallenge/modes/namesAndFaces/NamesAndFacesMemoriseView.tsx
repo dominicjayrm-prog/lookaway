@@ -35,11 +35,16 @@ const BLINK_SIZE = 80;
 
 export function NamesAndFacesMemoriseView({ config, onElapsed }: Props) {
   const { colors } = useTheme();
-  const gridOpacity = useRef(new RNAnimated.Value(0)).current;
+  // Start at full opacity — no fade-in. Same iOS layer/text-rasterisation
+  // glitch fix as WhatChangedMemoriseView: animating a `useNativeDriver:
+  // true` opacity from 0→1 over a parent that contains <Text> can leave
+  // the glyphs unrendered for the duration the player needs to memorise.
+  // The fade-out stays animated since the text has been composited by
+  // then.
+  const gridOpacity = useRef(new RNAnimated.Value(1)).current;
   const progressAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
-    RNAnimated.timing(gridOpacity, { toValue: 1, duration: 280, useNativeDriver: true }).start();
     RNAnimated.timing(progressAnim, {
       toValue: 1,
       duration: config.viewSeconds * 1000,
