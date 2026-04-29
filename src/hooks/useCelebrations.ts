@@ -127,7 +127,15 @@ export function useCelebrations() {
 
   /** Handle failure — extra life check, life loss, starter pack */
   const triggerFailCelebrations = useCallback((safeTimeout: SafeTimeout) => {
-    const hasExtraLife = useGameStore.getState().getPowerUpCount('extra_life') > 0;
+    const state = useGameStore.getState();
+    // Blanked+ subscribers and the unlimited-lives boost both get a free
+    // pass — no life lost, no extra_life power-up consumed, no "life lost"
+    // pill on the result screen. The retry button still shows.
+    const hasUnlimited = state.subscriptionStatus === 'active'
+      || (!!state.unlimitedLivesUntil && Date.now() < state.unlimitedLivesUntil);
+    if (hasUnlimited) return;
+
+    const hasExtraLife = state.getPowerUpCount('extra_life') > 0;
     if (hasExtraLife) {
       useGameStore.getState().usePowerUp('extra_life');
       setExtraLifeSaved(true);
