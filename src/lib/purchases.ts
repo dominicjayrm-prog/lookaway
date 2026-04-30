@@ -30,7 +30,7 @@ import { logPurchase, logSubscribe } from '@/src/lib/metaEvents';
 // configure(). When ready, paste the goog_... key from RevenueCat
 // → Project settings → API keys.
 const API_KEY_IOS = 'appl_CeUhcxEuMRVyailKleVtsYzPJDd';
-const API_KEY_ANDROID = '';
+const API_KEY_ANDROID = 'goog_pNvxHXFKElYDbiQEzXWRcbSFzao';
 
 function getApiKey(): string | null {
   if (Platform.OS === 'ios') return API_KEY_IOS;
