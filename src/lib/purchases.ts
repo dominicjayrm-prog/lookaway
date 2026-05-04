@@ -21,7 +21,22 @@ import { log } from '@/src/lib/logger';
 import { GEM_PACK_REWARDS, IAP_PRODUCT_IDS } from '@/src/data/iapProducts';
 import { logPurchase, logSubscribe } from '@/src/lib/metaEvents';
 
-const API_KEY = 'appl_CeUhcxEuMRVyailKleVtsYzPJDd';
+// RevenueCat issues platform-specific API keys. iOS keys start with
+// `appl_` and Android keys start with `goog_` — passing the wrong
+// prefix to the platform's SDK causes a native crash on init. The
+// Android key is left empty until we wire up Google Play Billing in
+// the RevenueCat dashboard; until then `getApiKey()` returns null on
+// Android and `initPurchases()` short-circuits before calling
+// configure(). When ready, paste the goog_... key from RevenueCat
+// → Project settings → API keys.
+const API_KEY_IOS = 'appl_CeUhcxEuMRVyailKleVtsYzPJDd';
+const API_KEY_ANDROID = 'goog_pNvxHXFKElYDbiQEzXWRcbSFzao';
+
+function getApiKey(): string | null {
+  if (Platform.OS === 'ios') return API_KEY_IOS;
+  if (Platform.OS === 'android') return API_KEY_ANDROID || null;
+  return null;
+}
 
 // ─── Lazy native import ────────────────────────────────────────────
 // react-native-purchases has native iOS code that crashes on web.
@@ -51,8 +66,13 @@ let _configured = false;
 export async function initPurchases(): Promise<void> {
   const Purchases = getPurchases();
   if (!Purchases || _configured) return;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    log.breadcrumb('purchases', 'skipping configure — no API key for platform', { platform: Platform.OS });
+    return;
+  }
   try {
-    Purchases.configure({ apiKey: API_KEY });
+    Purchases.configure({ apiKey });
     _configured = true;
     log.breadcrumb('purchases', 'configured');
   } catch (e) {
