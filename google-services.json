@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "361847372355",
+    "project_id": "blanked-android",
+    "storage_bucket": "blanked-android.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:361847372355:android:7fcef5a12763b938e4b2f6",
+        "android_client_info": {
+          "package_name": "com.blanked.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHNoJDx281nh0NCADiCyuRcWktUqFhMNs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
