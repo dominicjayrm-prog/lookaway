@@ -169,6 +169,11 @@
         {
           "ios": {
             "useFrameworks": "static"
+          },
+          "android": {
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "extraProguardRules": "-keep class expo.modules.filesystem.** { *; }\n-keep class expo.modules.** { *; }"
           }
         }
       ]
