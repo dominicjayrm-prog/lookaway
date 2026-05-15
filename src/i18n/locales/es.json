@@ -13,6 +13,7 @@
     "dismiss_aria": "Descartar",
     "try_again": "Intentar de nuevo",
     "something_wrong": "Algo ha salido mal",
+    "not_now": "Ahora no",
     "yes": "Sí",
     "no": "No",
     "player": "Jugador",
@@ -131,6 +132,9 @@
     "friends_tab": "Amigos",
     "global_tab": "Global",
     "top_division": "¡División máxima alcanzada!",
+    "claim_rank_title": "Reclama tu puesto",
+    "claim_rank_sub": "Guarda tu cuenta para competir en la clasificación global",
+    "claim_rank_aria": "Guarda tu cuenta para aparecer en la clasificación global",
     "no_thanks": "No, gracias",
     "invite_earn": "Invita a amigos, gana gemas",
     "your_code": "TU CÓDIGO",
@@ -347,6 +351,11 @@
       "final_body": "Todo tu progreso, gemas, rachas, cosméticos y conexiones con amigos se perderán para siempre.",
       "final_cta": "Sí, eliminar todo",
       "failed_body": "No hemos podido eliminar tu cuenta. Inténtalo de nuevo o contacta con soporte."
+    },
+    "guest": {
+      "save_title": "Guarda tu cuenta",
+      "save_sub": "Mantén tu progreso seguro en todos tus dispositivos",
+      "save_aria": "Guarda tu cuenta para conservar tu progreso entre dispositivos"
     }
   },
   "data": {
@@ -1049,7 +1058,63 @@
     "update_password_aria": "Actualizar contraseña",
     "update_password_failed": "No se pudo actualizar la contraseña. Inténtalo de nuevo.",
     "password_too_short": "La contraseña debe tener al menos 6 caracteres",
-    "passwords_dont_match": "Las contraseñas no coinciden"
+    "passwords_dont_match": "Las contraseñas no coinciden",
+    "continue_as_guest": "Continuar como invitado",
+    "continue_as_guest_aria": "Continuar como invitado sin crear una cuenta",
+    "guest_hint": "Tu progreso se guarda en este dispositivo. Puedes crear una cuenta cuando quieras.",
+    "guest_failed": "No se pudo iniciar. Comprueba tu conexión e inténtalo de nuevo.",
+    "or_email": "o continúa con tu correo",
+    "consent_prefix": "Acepto los",
+    "consent_terms": "Términos de uso",
+    "consent_and": "y la",
+    "consent_privacy": "Política de privacidad"
+  },
+  "save_account": {
+    "title": "Guarda tu cuenta",
+    "subtitle": "Mantén tu progreso a salvo y juega en todos tus dispositivos.",
+    "preview_label": "LO QUE ESTÁS GUARDANDO",
+    "preview_stars": "Estrellas",
+    "preview_streak": "Días de racha",
+    "preview_gems": "Gemas",
+    "username_placeholder": "elige_un_nombre",
+    "username_hint": "3-16 caracteres, minúsculas, números y guiones bajos",
+    "submit": "Guardar mi cuenta",
+    "submit_aria": "Guarda tu cuenta con correo electrónico",
+    "email_taken_title": "Ese correo ya está en uso",
+    "email_taken_body": "Ya existe una cuenta con este correo. Prueba con otro correo o inicia sesión en la cuenta existente desde una instalación nueva (este progreso de invitado quedaría atrás).",
+    "apple_taken_title": "Ese Apple ID ya está enlazado",
+    "apple_taken_body": "Tu Apple ID está conectado a otra cuenta de Blanked. Prueba con otro método para guardar este progreso de invitado.",
+    "profile_failed": "Tu cuenta se ha guardado, pero no hemos podido sincronizar tu perfil. Inténtalo de nuevo desde Ajustes."
+  },
+  "upgrade_sheet": {
+    "save_cta": "Guardar mi cuenta",
+    "save_aria": "Guardar tu cuenta",
+    "reason": {
+      "friend_request": {
+        "title": "Guarda tu cuenta para añadir amigos",
+        "body": "Las solicitudes de amistad necesitan una cuenta para no perderlas. Tu progreso se mantiene."
+      },
+      "friend_search": {
+        "title": "Guarda tu cuenta para encontrar amigos",
+        "body": "Buscar y añadir amigos necesita una cuenta. Es un momento y tu progreso se conserva."
+      },
+      "leaderboard_post": {
+        "title": "Guarda tu cuenta para reclamar tu puesto",
+        "body": "La clasificación global es para cuentas guardadas. Tus estrellas y tu racha siguen contigo."
+      },
+      "challenge_send": {
+        "title": "Guarda tu cuenta para retar a tus amigos",
+        "body": "Los retos necesitan una cuenta guardada para que tu amigo te encuentre. Tu progreso se mantiene."
+      },
+      "streak_save": {
+        "title": "Mantén tu racha a salvo",
+        "body": "Guarda tu cuenta y tu racha te seguirá entre dispositivos — y sobrevivirá a una reinstalación."
+      },
+      "generic": {
+        "title": "Guarda tu cuenta",
+        "body": "Guarda tu progreso, asegura tu racha y desbloquea amigos y clasificaciones. Es un momento."
+      }
+    }
   },
   "world_map": {
     "play": "Jugar",

@@ -30,6 +30,17 @@ function Index() {
       return;
     }
 
+    // Guest users always have a synthetic `player_xxxx` username
+    // written inline by signInAsGuest(), so they're treated as
+    // "has username" without a round-trip. Without this short-circuit
+    // a freshly-installed Meta-ads user would race the profile
+    // upsert and momentarily bounce through /username — which is
+    // exactly the wall we built guest mode to remove.
+    if (session.user.is_anonymous) {
+      setHasUsername(true);
+      return;
+    }
+
     // ALWAYS check profiles.username directly — never trust
     // user_metadata.display_name as a proxy. Supabase auto-populates
     // user_metadata from Apple's fullName claim on the first Apple

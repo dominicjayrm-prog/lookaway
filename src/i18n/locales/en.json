@@ -13,6 +13,7 @@
     "dismiss_aria": "Dismiss",
     "try_again": "Try again",
     "something_wrong": "Something went wrong",
+    "not_now": "Not now",
     "yes": "Yes",
     "no": "No",
     "player": "Player",
@@ -131,6 +132,9 @@
     "friends_tab": "Friends",
     "global_tab": "Global",
     "top_division": "Top division reached!",
+    "claim_rank_title": "Claim your rank",
+    "claim_rank_sub": "Save your account to compete on the global board",
+    "claim_rank_aria": "Save your account to appear on the global leaderboard",
     "no_thanks": "No thanks",
     "invite_earn": "Invite friends, earn gems",
     "your_code": "YOUR CODE",
@@ -347,6 +351,11 @@
       "final_body": "All your progress, gems, streaks, cosmetics, and friend connections will be lost forever.",
       "final_cta": "Yes, delete everything",
       "failed_body": "Could not delete your account. Please try again or contact support."
+    },
+    "guest": {
+      "save_title": "Save your account",
+      "save_sub": "Keep your progress safe across devices",
+      "save_aria": "Save your account to keep progress across devices"
     }
   },
   "data": {
@@ -574,7 +583,63 @@
     "update_password_aria": "Update password",
     "update_password_failed": "Could not update password. Please try again.",
     "password_too_short": "Password must be at least 6 characters",
-    "passwords_dont_match": "Passwords don't match"
+    "passwords_dont_match": "Passwords don't match",
+    "continue_as_guest": "Continue as guest",
+    "continue_as_guest_aria": "Continue as a guest without creating an account",
+    "guest_hint": "Your progress saves on this device. You can create an account anytime.",
+    "guest_failed": "Could not start. Please check your connection and try again.",
+    "or_email": "or continue with email",
+    "consent_prefix": "I agree to the",
+    "consent_terms": "Terms of Use",
+    "consent_and": "and",
+    "consent_privacy": "Privacy Policy"
+  },
+  "save_account": {
+    "title": "Save your account",
+    "subtitle": "Keep your progress safe and play across all your devices.",
+    "preview_label": "WHAT YOU'RE SAVING",
+    "preview_stars": "Stars",
+    "preview_streak": "Day streak",
+    "preview_gems": "Gems",
+    "username_placeholder": "choose_a_username",
+    "username_hint": "3-16 chars, lowercase letters, numbers, underscores",
+    "submit": "Save my account",
+    "submit_aria": "Save your account with email",
+    "email_taken_title": "That email is already in use",
+    "email_taken_body": "An account already exists with this email. Try a different email, or sign in to the existing account from a fresh install (this guest progress would be left behind).",
+    "apple_taken_title": "That Apple ID is already linked",
+    "apple_taken_body": "Your Apple ID is connected to a different Blanked account. Try a different sign-in method to save this guest progress.",
+    "profile_failed": "Your account was saved, but we couldn't sync your profile. Please try again from Settings."
+  },
+  "upgrade_sheet": {
+    "save_cta": "Save my account",
+    "save_aria": "Save your account",
+    "reason": {
+      "friend_request": {
+        "title": "Save your account to add friends",
+        "body": "Friend requests need an account so you don't lose them. Your progress stays the same."
+      },
+      "friend_search": {
+        "title": "Save your account to find friends",
+        "body": "Finding and adding friends needs an account. Takes a moment and your progress is preserved."
+      },
+      "leaderboard_post": {
+        "title": "Save your account to claim your rank",
+        "body": "The global leaderboard is for saved accounts. Your stars and streak all carry over."
+      },
+      "challenge_send": {
+        "title": "Save your account to challenge friends",
+        "body": "Challenges need a saved account so your friend can find you. Your progress stays the same."
+      },
+      "streak_save": {
+        "title": "Keep your streak safe",
+        "body": "Save your account and your streak will follow you across devices — and survive a reinstall."
+      },
+      "generic": {
+        "title": "Save your account",
+        "body": "Save your progress, lock in your streak, and unlock friends and leaderboards. Takes a moment."
+      }
+    }
   },
   "world_map": {
     "play": "Play",

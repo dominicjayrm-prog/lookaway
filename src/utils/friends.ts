@@ -63,12 +63,20 @@ export async function searchUsers(query: string, currentUserId: string): Promise
   // Fetch blocks in parallel with the search — blocks list is
   // normally very small so the round-trip is cheap. We request 5+
   // extra rows to compensate for the ones we'll filter out.
+  //
+  // `is_anonymous = false` keeps guests out of friend search. Their
+  // auto-generated `player_xxxx` names would otherwise flood any
+  // partial query for "player" and make the friends tab feel like
+  // it's full of strangers nobody picked. Guests trying to use the
+  // friends tab themselves see an UpgradeSheet — the friends search
+  // is the entry point for the "save your account" prompt.
   const [searchRes, hidden] = await Promise.all([
     supabase
       .from('profiles')
       .select(FRIEND_PROFILE_COLUMNS)
       .ilike('username', `${query}%`)
       .neq('id', currentUserId)
+      .eq('is_anonymous', false)
       .limit(15),
     getHiddenUserIds(currentUserId),
   ]);

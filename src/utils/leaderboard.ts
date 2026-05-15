@@ -85,9 +85,17 @@ const LEADERBOARD_COLUMNS =
 // board the moment they earn their first star, which mirrors how
 // every competitive game works.
 export async function getGlobalLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
+  // `is_anonymous = false` keeps the global board reserved for users
+  // who've actually committed to an account. Guests still see the
+  // board (it works as aspirational social proof — "these are the
+  // players I'll be ranked next to once I save my account") but they
+  // don't appear on it themselves. Spam protection + a built-in
+  // upgrade hook in one filter. The column has a partial index in
+  // the migration so the planner skips the anon rows cheaply.
   const { data, error } = await supabase
     .from('profiles')
     .select(LEADERBOARD_COLUMNS)
+    .eq('is_anonymous', false)
     .not('username', 'is', null)
     .gt('total_stars', 0)
     .order('total_stars', { ascending: false })
@@ -161,11 +169,15 @@ export async function getFriendsLeaderboard(userId: string): Promise<Leaderboard
 export async function getMyGlobalRank(userId: string): Promise<number | null> {
   const { data: me } = await supabase
     .from('profiles')
-    .select('total_stars')
+    .select('total_stars, is_anonymous')
     .eq('id', userId)
     .single();
 
   if (!me) return null;
+  // Guests don't have a rank — they're not on the board. The
+  // leaderboard UI shows a "claim your rank" prompt in this case
+  // rather than a number, which doubles as a contextual upgrade hook.
+  if (me.is_anonymous) return null;
   // Users with 0 stars aren't on the board at all (they haven't
   // earned an entry yet), so we don't compute a rank for them.
   if ((me.total_stars ?? 0) <= 0) return null;
@@ -174,6 +186,7 @@ export async function getMyGlobalRank(userId: string): Promise<number | null> {
     .from('profiles')
     .select('id', { count: 'exact', head: true })
     .gt('total_stars', me.total_stars ?? 0)
+    .eq('is_anonymous', false)
     .not('username', 'is', null);
 
   if (error || count === null) return null;

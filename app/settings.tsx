@@ -22,7 +22,7 @@ import { t } from '@/src/i18n';
 function SettingsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
@@ -60,6 +60,31 @@ function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
           </LinearGradient>
         </Pressable>
+
+        {/* Save-your-account card. Renders only for guest sessions so
+            we don't clutter Settings for users who already have a real
+            account. Visual treatment is a single-shadow card with a
+            heart icon — warm, not alarming. The card itself is the
+            CTA: tapping anywhere on it routes to /save-account. */}
+        {isGuest && (
+          <Pressable
+            style={({ pressed }) => [pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+            onPress={() => router.push('/(auth)/save-account')}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.guest.save_aria')}
+          >
+            <Card style={styles.saveAccountCard}>
+              <View style={[styles.saveAccountIcon, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="bookmark" size={18} color={colors.accent} />
+              </View>
+              <View style={styles.saveAccountText}>
+                <Text style={[styles.saveAccountTitle, { color: colors.text }]}>{t('settings.guest.save_title')}</Text>
+                <Text style={[styles.saveAccountSub, { color: colors.textMid }]}>{t('settings.guest.save_sub')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+            </Card>
+          </Pressable>
+        )}
 
         {/* Preferences section — notification + sound toggles now each
             get their own dedicated screen so players can configure
@@ -327,4 +352,12 @@ const styles = StyleSheet.create({
   plusIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   plusTitle: { fontSize: 15, fontWeight: '700', color: '#FFF' },
   plusSub: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
+  // Save-your-account card (guest-only). Same horizontal layout as
+  // navRow rows but lifted onto its own Card so it reads as a
+  // standalone action rather than a settings entry.
+  saveAccountCard: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: spacing.lg, gap: 12 },
+  saveAccountIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  saveAccountText: { flex: 1, gap: 1 },
+  saveAccountTitle: { fontSize: 15, fontWeight: '700' },
+  saveAccountSub: { fontSize: 11 },
 });

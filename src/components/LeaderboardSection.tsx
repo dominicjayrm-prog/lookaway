@@ -7,6 +7,7 @@ import { t } from '@/src/i18n';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FriendAvatar } from '@/src/components/FriendAvatar';
+import UpgradeSheet from '@/src/components/UpgradeSheet';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { useAuth } from '@/src/providers/AuthProvider';
 import {
@@ -18,17 +19,19 @@ import {
   type LeaderboardEntry,
 } from '@/src/utils/leaderboard';
 import { log } from '@/src/lib/logger';
+import { borderRadius, spacing } from '@/src/theme/spacing';
 
 type Tab = 'friends' | 'global';
 
 function LeaderboardSection() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const userId = user?.id;
   const [tab, setTab] = useState<Tab>('friends');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -89,6 +92,35 @@ function LeaderboardSection() {
         </Pressable>
       </View>
 
+      {/* Claim-your-rank banner for guests on the global tab. Guests
+          don't appear on the global board (filtered out by
+          getGlobalLeaderboard's is_anonymous check) so without a CTA
+          here they'd just see other players and wonder where they
+          fit. The banner gives them a one-tap path to the upgrade
+          sheet — the same surface that converts elsewhere in the
+          app, kept consistent for the player. */}
+      {isGuest && tab === 'global' && (
+        <Pressable
+          style={({ pressed }) => [
+            st.claimBanner,
+            { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+            pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+          ]}
+          onPress={() => setShowUpgradeSheet(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('social.claim_rank_aria')}
+        >
+          <View style={[st.claimIcon, { backgroundColor: colors.accent }]}>
+            <Ionicons name="trophy" size={14} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.claimTitle, { color: colors.text }]}>{t('social.claim_rank_title')}</Text>
+            <Text style={[st.claimSub, { color: colors.textMid }]}>{t('social.claim_rank_sub')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+        </Pressable>
+      )}
+
       {/* Division badge for current user */}
       {myEntry && (
         <View style={[st.divisionRow, { backgroundColor: myDivision.color + '10', borderColor: myDivision.color + '25' }]}>
@@ -147,6 +179,12 @@ function LeaderboardSection() {
           <LeaderboardRow entry={myEntry} isMe colors={colors} isLast />
         </>
       )}
+
+      <UpgradeSheet
+        visible={showUpgradeSheet}
+        reason="leaderboard_post"
+        onClose={() => setShowUpgradeSheet(false)}
+      />
     </View>
   );
 }
@@ -282,4 +320,18 @@ const st = StyleSheet.create({
 
   separator: { alignItems: 'center', paddingVertical: 4, borderTopWidth: 1 },
   separatorText: { fontSize: 11 },
+
+  // Guest claim-your-rank CTA. Same horizontal layout as the division
+  // row but with a softer accent-tint background so it reads as
+  // invitation rather than achievement. Borders are kept subtle —
+  // this is meant to feel like a nudge, not a banner ad.
+  claimBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: borderRadius.md, borderWidth: 1,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  claimIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  claimTitle: { fontSize: 14, fontWeight: '700' },
+  claimSub: { fontSize: 11, marginTop: 1 },
 });

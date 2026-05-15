@@ -30,7 +30,7 @@ type Mode = 'login' | 'signup';
 
 function AuthScreen() {
   const { colors, isDark } = useTheme();
-  const { signIn, signUp, signInWithApple, session } = useAuth();
+  const { signIn, signUp, signInWithApple, signInAsGuest, session } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
 
@@ -210,6 +210,27 @@ function AuthScreen() {
     setMode(mode === 'login' ? 'signup' : 'login');
     setError(null);
     setSignUpSuccess(false);
+  };
+
+  /** "Maybe later" / "Continue as guest" path. Creates a Supabase
+   *  anonymous session, seeds a `player_xxxx` username, and drops the
+   *  user straight into the app. Replaces what used to be a hard wall
+   *  between Meta-ad installs and first-level gameplay. The post-signup
+   *  paywall flag set by onboarding still fires on first home render
+   *  so the conversion moment isn't lost. */
+  const handleGuestContinue = async () => {
+    setError(null);
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const result = await signInAsGuest();
+    setLoading(false);
+    if (result.error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      setError(t('auth.guest_failed'));
+      return;
+    }
+    // Session listener will fire the redirect, but belt-and-braces it.
+    router.replace('/');
   };
 
   if (signUpSuccess) {
@@ -458,6 +479,30 @@ function AuthScreen() {
               </Text>
             </Pressable>
           </View>
+
+          {/* Guest entrypoint. Low-emphasis text link sitting under the
+              account toggle so it doesn't compete with the primary
+              Apple / email paths but is always one tap away. The
+              "Your progress is saved on this device" reassurance is
+              the bit Meta-ad users need: they won't tap "guest" if
+              they think it means losing levels when they reopen. */}
+          <View style={styles.guestSection}>
+            <Pressable
+              onPress={handleGuestContinue}
+              disabled={loading}
+              style={({ pressed }) => [styles.guestButton, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('auth.continue_as_guest_aria')}
+            >
+              <Text style={[styles.guestButtonText, { color: colors.textMid }]}>
+                {t('auth.continue_as_guest')}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textLight} style={{ marginLeft: 4 }} />
+            </Pressable>
+            <Text style={[styles.guestHint, { color: colors.textLight }]}>
+              {t('auth.guest_hint')}
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -494,7 +539,7 @@ const styles = StyleSheet.create({
   primaryButton: { borderRadius: borderRadius.md, paddingVertical: 16, paddingHorizontal: spacing.xxl, alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 52, width: '100%' },
   primaryButtonText: { color: '#FFFFFF', fontSize: typography.sizes.lg, fontWeight: '700' },
   buttonDisabled: { opacity: 0.6 },
-  toggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxl, paddingBottom: spacing.xxxl },
+  toggleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxl },
   toggleText: { fontSize: typography.sizes.md },
   toggleLink: { fontSize: typography.sizes.md, fontWeight: '700' },
   successContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xxl, gap: spacing.lg },
@@ -509,4 +554,8 @@ const styles = StyleSheet.create({
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   consentText: { flex: 1, fontSize: 13, lineHeight: 18 },
   consentLink: { fontWeight: '700', textDecorationLine: 'underline' },
+  guestSection: { alignItems: 'center', marginTop: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.xs },
+  guestButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  guestButtonText: { fontSize: typography.sizes.md, fontWeight: '600' },
+  guestHint: { fontSize: 12, textAlign: 'center', paddingHorizontal: spacing.xl },
 });

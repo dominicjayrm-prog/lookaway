@@ -41,6 +41,7 @@ import { FriendsListSection } from '@/src/components/friends/FriendsListSection'
 import { RecentResultsSection } from '@/src/components/friends/RecentResultsSection';
 import { InviteFriendsSection } from '@/src/components/friends/InviteFriendsSection';
 import { SectionLabel } from '@/src/components/friends/SectionLabel';
+import UpgradeSheet, { type UpgradeReason } from '@/src/components/UpgradeSheet';
 
 /**
  * Friends tab — composition root. All presentational chunks live in
@@ -50,8 +51,14 @@ import { SectionLabel } from '@/src/components/friends/SectionLabel';
 function FriendsTab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const userId = user?.id;
+  // UpgradeSheet visibility for the friends tab. Guests see it when
+  // they tap the search input, try to send a friend request, or try
+  // any other social action. Single shared state so multiple gates
+  // funnel into one prompt rather than stacking sheets.
+  const [showUpgradeSheet, setShowUpgradeSheet] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason>('friend_search');
 
   // Read the last-known friends blob from localStorage SYNCHRONOUSLY on
   // first render so the tab doesn't flash the empty state while the
@@ -120,9 +127,29 @@ function FriendsTab() {
     };
   }, [searchText, userId]);
 
+  // Guest gate for the search input. Routing the focus event itself
+  // through this keeps the keyboard from popping up only to be
+  // dismissed by the sheet — feels nicer than letting the input
+  // visibly take focus before being interrupted.
+  const handleSearchFocusChange = useCallback((focused: boolean) => {
+    if (isGuest && focused) {
+      setUpgradeReason('friend_search');
+      setShowUpgradeSheet(true);
+      // Don't propagate the focus event — keep the input collapsed
+      // visually so the keyboard never animates in.
+      return;
+    }
+    setSearchFocused(focused);
+  }, [isGuest]);
+
   const handleSendRequest = useCallback(
     async (addresseeId: string, addresseeUsername: string) => {
       if (!userId) return;
+      if (isGuest) {
+        setUpgradeReason('friend_request');
+        setShowUpgradeSheet(true);
+        return;
+      }
       // Use the consolidated helper so we catch already-friends / pending
       // cases instead of silently double-inserting.
       const outcome = await addFriendById(userId, addresseeId);
@@ -160,11 +187,21 @@ function FriendsTab() {
 
   const handleAccept = useCallback(
     async (id: string) => {
+      // Defensive gate. Guests shouldn't be receiving friend requests
+      // at all (they're filtered out of search + their QR is gated)
+      // but a deep-link or pre-upgrade request could theoretically
+      // land here. Route through the upgrade sheet rather than
+      // silently failing — at least the user understands why.
+      if (isGuest) {
+        setUpgradeReason('friend_request');
+        setShowUpgradeSheet(true);
+        return;
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       await acceptFriendRequest(id, userId);
       loadData();
     },
-    [loadData, userId],
+    [loadData, userId, isGuest],
   );
 
   const handleDecline = useCallback(
@@ -278,9 +315,18 @@ function FriendsTab() {
   );
 
   const handleFocusSearch = useCallback(() => {
+    // "Add by username" CTA on the invite section auto-focuses the
+    // search input. For guests we want the upgrade sheet here too —
+    // skipping the actual focus call avoids the keyboard flash before
+    // the sheet interrupts. Same UX as tapping the input directly.
+    if (isGuest) {
+      setUpgradeReason('friend_search');
+      setShowUpgradeSheet(true);
+      return;
+    }
     scrollRef.current?.scrollTo({ y: 0, animated: true });
     setTimeout(() => searchInputRef.current?.focus(), 300);
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
     const refreshInterval = setInterval(() => {
@@ -413,7 +459,7 @@ function FriendsTab() {
             searchText={searchText}
             onChangeSearchText={setSearchText}
             searchFocused={searchFocused}
-            onFocusChange={setSearchFocused}
+            onFocusChange={handleSearchFocusChange}
             searchResults={visibleSearchResults}
             sentRequests={sentRequests}
             onSendRequest={handleSendRequest}
@@ -442,8 +488,22 @@ function FriendsTab() {
 
           <InviteFriendsSection
             onAddByUsername={handleFocusSearch}
-            onScanQR={() => setShowQRScanner(true)}
-            onShowMyQR={() => setShowMyQR(true)}
+            onScanQR={() => {
+              if (isGuest) {
+                setUpgradeReason('friend_request');
+                setShowUpgradeSheet(true);
+                return;
+              }
+              setShowQRScanner(true);
+            }}
+            onShowMyQR={() => {
+              if (isGuest) {
+                setUpgradeReason('friend_request');
+                setShowUpgradeSheet(true);
+                return;
+              }
+              setShowMyQR(true);
+            }}
             onShareInvite={handleShare}
           />
         </ScrollView>
@@ -463,6 +523,11 @@ function FriendsTab() {
           visible={showQRScanner}
           onDismiss={() => setShowQRScanner(false)}
           onFriendAdded={loadData}
+        />
+        <UpgradeSheet
+          visible={showUpgradeSheet}
+          reason={upgradeReason}
+          onClose={() => setShowUpgradeSheet(false)}
         />
       </SafeAreaView>
     </TabTransition>
