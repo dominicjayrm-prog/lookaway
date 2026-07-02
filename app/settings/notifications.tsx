@@ -45,6 +45,7 @@ import {
   saveNotificationPreferences,
   loadDailyReminderTime,
   registerPushToken,
+  requestNotificationPermission,
   hasNotificationPermission,
   type NotificationPreferenceKey,
 } from '@/src/utils/notifications';
@@ -184,7 +185,13 @@ export default function NotificationSettingsScreen() {
 
   const handleEnablePermission = useCallback(async () => {
     if (!user?.id) return;
-    const token = await registerPushToken(user.id);
+    // Explicit user-initiated ask: this button is the ONE place in
+    // settings where requesting the native dialog is exactly what the
+    // user asked for. registerPushToken itself is silent (it never
+    // requests — see notifications.ts), so request first, register
+    // after.
+    const granted = await requestNotificationPermission();
+    const token = granted ? await registerPushToken(user.id) : null;
     if (token) {
       setPermissionState('granted');
     } else {

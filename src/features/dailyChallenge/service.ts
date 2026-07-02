@@ -14,6 +14,8 @@
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { useGameStore } from '@/src/store';
+import { calculateDailyReward } from '@/src/utils/scoring';
+import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import type { DailyChallengeModeId, DailyChallengeResult } from './types';
 import { todayUtcIso } from './seededRandom';
 import {
@@ -88,6 +90,24 @@ export async function submitDailyChallenge(args: SubmitArgs): Promise<SubmitOutc
       useGameStore.getState().incrementStreak();
     } catch (e) {
       log.warn('dailyChallenge', 'incrementStreak failed', { error: String(e) });
+    }
+    // Pay the daily reward (5 base, +5 at 80%, +5 at 100% — see
+    // calculateDailyReward). The daily previously granted nothing
+    // visible, which left "why come back tomorrow?" unanswered for
+    // new players. Single-attempt-per-day is DB-enforced (unique
+    // constraint above), so this can't be farmed — the 23505 branch
+    // never reaches here.
+    try {
+      const gems = calculateDailyReward(args.score);
+      if (gems > 0) {
+        useGameStore.getState().addGems(gems);
+        logEconomyEvent(userId, ECONOMY_EVENTS.GEM_EARN_DAILY, gems, {
+          mode: args.mode,
+          scorePercent: args.score,
+        });
+      }
+    } catch (e) {
+      log.warn('dailyChallenge', 'daily gem award failed', { error: String(e) });
     }
     // Stamp the local "daily played today" cache so the home card
     // can keep the done-state visible even when a follow-up Supabase

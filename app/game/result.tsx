@@ -17,7 +17,8 @@ import { NotificationPrompt } from '@/src/components/NotificationPrompt';
 import { logActivity } from '@/src/utils/activity';
 import { claimDueStreakRewards } from '@/src/utils/streakRewards';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
-import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder } from '@/src/utils/notifications';
+import { requestNotificationPermission, registerPushToken, cancelStreakReminder, scheduleStreakReminder, scheduleOnboardingPushes } from '@/src/utils/notifications';
+import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/service';
 import { recordLevelCompleteForChallenges, recordLevelFailedForChallenges, type WeeklyChallenge } from '@/src/utils/weeklyChallenges';
 import { FriendRequestToast } from '@/src/components/FriendRequestToast';
 import StarterPackPopup from '@/src/components/StarterPackPopup';
@@ -176,7 +177,9 @@ function ResultScreen() {
       (async () => {
         const uid = useGameStore.getState()._authUserId;
         const newStreak = useGameStore.getState().streakCount;
-        if (!uid || newStreak < 3) return;
+        // < 1 (was < 3): day-1 and day-2 milestones now exist, so the
+        // very first play earns a streak acknowledgement.
+        if (!uid || newStreak < 1) return;
         const claimed = await claimDueStreakRewards(uid, newStreak);
         if (claimed.length === 0) return;
         // Sync local mirrors: bump shields, mark days claimed, surface toasts
@@ -475,7 +478,24 @@ function ResultScreen() {
             // cast was returning undefined and silently skipping the
             // push token registration every time.
             const uid = useGameStore.getState()._authUserId;
-            if (uid) { await registerPushToken(uid); const streak = useGameStore.getState().streakCount; if (streak >= 3) scheduleStreakReminder(streak); }
+            if (uid) {
+              await registerPushToken(uid);
+              const streak = useGameStore.getState().streakCount;
+              if (streak >= 2) scheduleStreakReminder(streak);
+              // Permission just landed — schedule the local reminder
+              // ladder NOW. registerPushToken no longer requests
+              // permission itself, so everything scheduled at login
+              // was a no-op until this moment. The onboarding pushes
+              // (D1/D2/D3/D5/D7, anchored to first-open) + the daily
+              // challenge mornings are the guaranteed D1-D7 comeback
+              // channel.
+              try {
+                const AS = require('@react-native-async-storage/async-storage').default;
+                const firstOpenedRaw = await AS.getItem('blanked_first_open_at');
+                await scheduleOnboardingPushes(new Date(firstOpenedRaw ?? Date.now()));
+              } catch {}
+              refreshDailyChallengeSchedule(uid).catch(() => {});
+            }
           }
         }}
         onDismiss={async () => {

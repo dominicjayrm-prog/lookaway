@@ -10,9 +10,12 @@ import { log } from '@/src/lib/logger';
 export const COMEBACK_REWARD_GEMS = 15;
 
 /** Days the player must have been away (no app open) before the
- *  comeback modal becomes eligible. Matches the day-7 win-back push so
- *  tapping that push naturally lands the user on a claimable modal. */
-const COMEBACK_AWAY_DAYS = 7;
+ *  comeback modal becomes eligible. Was 7 — a lapsed-user mechanic
+ *  mislabelled as retention: by day 7 a casual player has forgotten
+ *  the app exists. At 2 days it fires inside the window where paid
+ *  installs actually churn, and pairs with the day-3 win-back push
+ *  (tapping that push lands on a claimable modal). */
+const COMEBACK_AWAY_DAYS = 2;
 
 /** Cooldown between claims. Without this a player who churns + comes
  *  back every week could keep claiming. 14 days means it can fire at

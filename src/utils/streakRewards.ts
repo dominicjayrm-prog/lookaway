@@ -104,7 +104,10 @@ export async function claimDueStreakRewards(
   userId: string,
   currentStreak: number,
 ): Promise<ClaimedMilestone[]> {
-  if (!userId || currentStreak < 3) return [];
+  // Streak < 1 means nothing to claim. The old guard was < 3 (first
+  // milestone was day 3) — day-1 and day-2 milestones now exist so
+  // brand-new players get streak acknowledgement immediately.
+  if (!userId || currentStreak < 1) return [];
   try {
     // Fetch unclaimed milestones the streak qualifies for in one round-trip
     const { data: due } = await supabase

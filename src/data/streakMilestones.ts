@@ -3,7 +3,10 @@
  * specific streak day counts.
  *
  * Source of truth for both the seed function and the claim logic.
- * The same 11 entries live as rows in `public.streak_rewards` per user.
+ * The same entries live as rows in `public.streak_rewards` per user
+ * (seeded per-row, so adding milestones here backfills existing
+ * players on their next launch; CHANGING an existing milestone's
+ * reward only affects players seeded after the change).
  *
  * Higher streaks earn more shields (more valuable protection the further
  * you've climbed). No cosmetics or power-ups here — keep the rewards
@@ -27,8 +30,16 @@ function buildMilestone(day: number, gems: number, shields: number, title: strin
 }
 
 export const STREAK_MILESTONES: readonly StreakMilestone[] = [
-  buildMilestone(3,   3,   0, '3-Day Spark',         '#FF9500'),
-  buildMilestone(7,   5,   1, 'One Week Strong',     '#FF6B6B'),
+  // Days 1-2: the highest-churn window used to have zero streak
+  // acknowledgement (first milestone was day 3, for 3 gems). A new
+  // player now gets a reward the very first day they play and a
+  // bigger one for coming back tomorrow — the exact behaviour we
+  // need to reinforce. Existing users get the new rows seeded on
+  // next launch via seedStreakMilestonesIfMissing (per-row upsert).
+  buildMilestone(1,   5,   0, 'First Step',          '#00B894'),
+  buildMilestone(2,   8,   0, 'Back Again',          '#0984E3'),
+  buildMilestone(3,   10,  0, '3-Day Spark',         '#FF9500'),
+  buildMilestone(7,   15,  1, 'One Week Strong',     '#FF6B6B'),
   buildMilestone(14,  10,  0, 'Two Week Warrior',    '#0984E3'),
   buildMilestone(21,  10,  1, 'Three Week Habit',    '#A29BFE'),
   buildMilestone(30,  15,  2, 'Monthly Master',      '#D4A012'),

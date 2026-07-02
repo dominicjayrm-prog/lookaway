@@ -247,6 +247,15 @@ export function DailyChallengeCard() {
               ? t('daily_challenge.card.streak_alert_subtitle', { count: state.streakCount })
               : t('daily_challenge.card.subtitle_resets', { mode: modeName, time: formatCountdown(state.resetsInMinutes) })}
           </Text>
+          {/* Reward preview — the reason to tap. The daily used to
+              advertise nothing, so "why come back tomorrow?" had no
+              on-screen answer. 15 = calculateDailyReward max. */}
+          {!isAlert && (
+            <View style={s.rewardRow}>
+              <Ionicons name="diamond" size={11} color="rgba(255,255,255,0.85)" />
+              <Text style={s.rewardText}>{t('daily_challenge.card.reward_hint')}</Text>
+            </View>
+          )}
         </View>
         <View style={s.activeChevron}>
           <Ionicons name="play" size={22} color="#FFFFFF" />
@@ -293,6 +302,8 @@ const s = StyleSheet.create({
     fontSize: 12, fontWeight: '600',
     color: 'rgba(255,255,255,0.85)', marginTop: 4,
   },
+  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  rewardText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
   activeChevron: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.22)',

@@ -1713,7 +1713,8 @@
       "open_aria": "Abrir el reto diario de hoy, {mode}, se reinicia en {time}",
       "view_done_aria": "Ver el resultado del reto de hoy",
       "countdown_minutes": "{m} min",
-      "countdown_hours": "{h} h {m} min"
+      "countdown_hours": "{h} h {m} min",
+      "reward_hint": "Gana hasta 15 gemas"
     },
     "reveal": {
       "today": "HOY",
@@ -1743,7 +1744,8 @@
       "back_button": "Volver al inicio",
       "back_aria": "Volver al inicio",
       "share_error_title": "No se pudo compartir",
-      "share_error_body": "Inténtalo de nuevo en un momento."
+      "share_error_body": "Inténtalo de nuevo en un momento.",
+      "gems_earned": "+{count} gemas ganadas"
     },
     "share_card": {
       "subtitle_eyebrow": "RETO DIARIO",

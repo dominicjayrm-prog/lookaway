@@ -44,16 +44,19 @@ export async function registerPushToken(userId: string): Promise<string | null> 
       return null;
     }
 
+    // SILENT registration only — never triggers the native permission
+    // dialog. This function used to call requestPermissionsAsync()
+    // whenever permission wasn't granted, which meant the iOS "Allow
+    // Notifications?" sheet fired unconditionally on login, mid
+    // paywall/tutorial pile-up — the worst possible moment, and it
+    // burned the one hard-prompt iOS allows before the soft
+    // pre-prompt ever ran. The ASK now lives exclusively in the
+    // post-first-win NotificationPrompt flow (result.tsx /
+    // (tabs)/index.tsx), which calls requestNotificationPermission()
+    // explicitly and then this function to register.
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      log.breadcrumb('notifications', 'permission denied', { userId, finalStatus });
+      log.breadcrumb('notifications', 'permission not granted — silent register skipped', { userId, existingStatus });
       return null;
     }
 
@@ -240,7 +243,11 @@ export async function scheduleStreakReminder(currentStreak: number): Promise<voi
 
     await Notifications.cancelScheduledNotificationAsync('streak-reminder').catch(() => {});
 
-    if (currentStreak < 3) return;
+    // ≥ 2 (was ≥ 3): a 2-day streak is already something a casual
+    // player doesn't want to lose — and days 2-3 are exactly where
+    // paid installs were churning. Day-1 users get the onboarding
+    // push instead, so the floor stays at 2 to avoid double-pinging.
+    if (currentStreak < 2) return;
 
     // Streak save reminder fires at 6pm local. Earlier wins big — by
     // 8pm a meaningful chunk of users have already shut down for the

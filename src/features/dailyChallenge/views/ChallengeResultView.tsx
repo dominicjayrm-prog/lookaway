@@ -27,6 +27,7 @@ import { formatHumanDate } from '../formatDate';
 import { ShareCardImage, SHARE_CARD_SIZE, type ModeVisual } from './ShareCardImage';
 import { captureAndShareCard } from './captureAndShare';
 import { sounds } from '@/src/lib/sounds';
+import { calculateDailyReward } from '@/src/utils/scoring';
 
 interface Props {
   mode: DailyChallengeModeId;
@@ -137,6 +138,20 @@ export function ChallengeResultView({
         </Text>
         <Text style={[s.timeText, { color: colors.textMid }]}>{timeSeconds.toFixed(1)}s</Text>
       </View>
+
+      {/* Gems earned — derived from the same pure function the
+          service used to grant them (calculateDailyReward), so the
+          number always matches what actually landed in the balance.
+          Hidden on replays: the DB's single-attempt constraint means
+          no gems were granted for an alreadyPlayed view. */}
+      {!alreadyPlayed && calculateDailyReward(score) > 0 && (
+        <View style={[s.streakPill, { backgroundColor: colors.accentSoft, borderColor: 'transparent' }]}>
+          <Ionicons name="diamond" size={14} color={colors.accent} />
+          <Text style={[s.streakText, { color: colors.accent }]}>
+            {t('daily_challenge.result.gems_earned', { count: calculateDailyReward(score) })}
+          </Text>
+        </View>
+      )}
 
       {streakCount >= 1 && (
         <View

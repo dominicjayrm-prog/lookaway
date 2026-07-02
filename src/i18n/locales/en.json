@@ -1238,7 +1238,8 @@
       "open_aria": "Open today's daily challenge, {mode}, resets in {time}",
       "view_done_aria": "View today's daily challenge result",
       "countdown_minutes": "{m}m",
-      "countdown_hours": "{h}h {m}m"
+      "countdown_hours": "{h}h {m}m",
+      "reward_hint": "Earn up to 15 gems"
     },
     "reveal": {
       "today": "TODAY",
@@ -1268,7 +1269,8 @@
       "back_button": "Back to home",
       "back_aria": "Back to home",
       "share_error_title": "Could not share",
-      "share_error_body": "Try again in a moment."
+      "share_error_body": "Try again in a moment.",
+      "gems_earned": "+{count} gems earned"
     },
     "share_card": {
       "subtitle_eyebrow": "DAILY CHALLENGE",

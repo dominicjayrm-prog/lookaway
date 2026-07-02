@@ -15,7 +15,7 @@
  * Per spec 1.10:
  *   - Morning at 8am LOCAL: rotating variants, no streak in body.
  *   - Evening at 6pm LOCAL: streak-aware copy, only scheduled
- *     when current streak >= 2.
+ *     when current streak >= 1.
  *   - Cancel today's pending fires the moment the user completes.
  *   - Both notifications respect the in-app Settings toggles.
  *   - Apple guideline 4.5.4: service notifications, no promo,
@@ -154,8 +154,10 @@ export async function scheduleDailyChallengeNotifications(args: ScheduleArgs): P
         }
       }
 
-      // Evening only when streak is alive enough to be at risk.
-      if (args.enableEvening && args.streakCount >= 2) {
+      // Evening only when a streak exists to protect. ≥ 1 (was ≥ 2):
+      // even a single-day streak is loss-averse leverage for a new
+      // player — and days 1-2 are where paid installs churned.
+      if (args.enableEvening && args.streakCount >= 1) {
         const fireAt = localFireDate(day, EVENING_HOUR);
         if (fireAt.getTime() > now) {
           const copy = eveningCopyFor(args.streakCount);

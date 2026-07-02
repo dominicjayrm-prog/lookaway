@@ -157,15 +157,17 @@ first win → habit → then account, then money.
 
 ### Phase 3 — A reason to come back tomorrow (client + server, ~1–2 weeks)
 
+**STATUS: ✅ BUILT 2026-07-02**
+
 | # | Action | Detail |
 |---|---|---|
-| 3.1 | **Notification permission after the first win** (soft prompt: "Want a nudge to keep your streak alive?" → native dialog). Remove the unconditional `requestPermissionsAsync` on login. | _layout.tsx, notifications.ts |
-| 3.2 | **Guaranteed local D1 + D2 reminders**, scheduled on first win, independent of the server pipeline. | notifications.ts |
-| 3.3 | **Streak day 1 & 2 acknowledgement**: day 1 = celebratory moment + 5 gems, day 2 = 10 gems + shield preview. Milestones stop being invisible until day 3. | streakMilestones.ts |
-| 3.4 | **Login-reward calendar visible on D0** (fix the tutorial-branch early return), with tomorrow's reward teased on the home card. | (tabs)/index.tsx |
-| 3.5 | **Daily challenge pays visibly**: 10–25 gems by score, shown on the card before playing ("Today's challenge · 🏆 up to 25 💎"). | dailyChallenge/service.ts, DailyChallengeCard |
-| 3.6 | Comeback reward triggers at 48h absence (not 7 days), warm copy. | comebackReward.ts |
-| 3.7 | Un-gate the loss-aversion pushes: evening daily reminder from streak ≥ 1, streak-save from streak ≥ 2. | dailyChallenge/notifications.ts |
+| 3.1 | ✅ Native permission dialog no longer fires on login — `registerPushToken` is now silent (registers only when already granted). The ask lives exclusively in the post-win NotificationPrompt surfaces + the explicit settings button. The soft-prompt-inversion is gone: the pre-prompt now genuinely runs BEFORE the native sheet. | notifications.ts, settings/notifications.tsx |
+| 3.2 | ✅ On permission grant, the local reminder ladder is scheduled immediately (onboarding D1/D2/D3/D5/D7 pushes anchored to first-open + 7 days of daily-challenge mornings) — everything scheduled pre-grant was a silent no-op. | result.tsx, (tabs)/index.tsx |
+| 3.3 | ✅ Streak milestones now start at day 1 (First Step, 5 gems) and day 2 (Back Again, 8 gems); day 3 bumped 3→10 gems, day 7 5→15. Claim guards relaxed from streak ≥ 3 to ≥ 1. Existing players get the new rows auto-seeded on next launch. | streakMilestones.ts, streakRewards.ts, result.tsx |
+| 3.4 | ✅ Login-reward calendar now surfaces on day 0 — a focus-based check shows it once the tutorial is done (the launch path's tutorial branch used to permanently swallow it in session 1). | (tabs)/index.tsx |
+| 3.5 | ✅ Daily challenge pays 5–15 gems by score (DB single-attempt constraint makes it unfarmable), the result screen shows the gems earned, and the home card advertises "Earn up to 15 gems" before playing. | dailyChallenge/service.ts, ChallengeResultView, DailyChallengeCard |
+| 3.6 | ✅ Comeback reward triggers at 2 days absent (was 7 — after a week a casual has forgotten the app exists). | comebackReward.ts |
+| 3.7 | ✅ Loss-aversion pushes un-gated: evening daily reminder from streak ≥ 1 (was ≥ 2), streak-save reminder from streak ≥ 2 (was ≥ 3). | dailyChallenge/notifications.ts, notifications.ts |
 
 ### Phase 4 — Prove it, then scale (2 weeks after Phase 3)
 

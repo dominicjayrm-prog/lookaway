@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Image, ScrollView, Dimensions, Animated as RNAnimated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,9 @@ import {
   markNotifPromptAsked,
   requestNotificationPermission,
   registerPushToken,
+  scheduleOnboardingPushes,
 } from '@/src/utils/notifications';
+import { refreshDailyChallengeSchedule } from '@/src/features/dailyChallenge/service';
 import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { useGameStore } from '@/src/store';
@@ -413,6 +415,37 @@ function PlayTab() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
+  // Day-0 login-reward recovery. The launch effect above returns early
+  // into the tutorial branch for brand-new users, so their first
+  // session never showed the 30-day reward calendar — the single
+  // strongest "come back tomorrow" visual, hidden exactly when first
+  // impressions form. This focus check fires when home regains focus
+  // (after the tutorial hand-off level, after any game) and surfaces
+  // the calendar once the tour is done. The modal re-checks
+  // availability on open and auto-dismisses if already claimed, so
+  // double-fire against the launch path is harmless.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      if (showTutorial || showDailyReward) return;
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        try {
+          // Only act once the tour is done — reading the flag here
+          // (not component state) avoids racing the launch effect's
+          // async tutorial-seen check on a brand-new user's very
+          // first focus.
+          const seen = await AsyncStorage.getItem(`blanked_tutorial_seen_${user.id}`);
+          if (!seen || cancelled) return;
+          const latest = useGameStore.getState().loginReward;
+          const check = checkDailyReward(latest);
+          if (check.available) setShowDailyReward(true);
+        } catch {}
+      }, 600);
+      return () => { cancelled = true; clearTimeout(timer); };
+    }, [user?.id, showTutorial, showDailyReward]),
+  );
+
   useEffect(() => {
     if (!showTutorial) return;
     const timer = setTimeout(() => {
@@ -686,6 +719,14 @@ function PlayTab() {
           const granted = await requestNotificationPermission();
           if (granted && user?.id) {
             await registerPushToken(user.id);
+            // Everything scheduled pre-grant was a no-op
+            // (registerPushToken no longer requests permission) —
+            // build the local D1-D7 reminder ladder now.
+            try {
+              const firstOpenedRaw = await AsyncStorage.getItem('blanked_first_open_at');
+              await scheduleOnboardingPushes(new Date(firstOpenedRaw ?? Date.now()));
+            } catch {}
+            refreshDailyChallengeSchedule(user.id).catch(() => {});
           }
         }}
         onDismiss={async () => {
