@@ -6,7 +6,6 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '@/src/lib/supabase';
 import { log } from '@/src/lib/logger';
 import { initPurchases, identifyUser, logOutPurchases } from '@/src/lib/purchases';
-import { logSignupComplete } from '@/src/lib/metaEvents';
 
 /** Username prefix for guest accounts. The home redirect uses this
  *  prefix to recognise auto-generated names so anonymous users
@@ -337,11 +336,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (slug.length >= 3) {
           stashUsernameSuggestion(slug);
         }
-        // Apple only returns fullName on the FIRST authorisation per
-        // (user, app) pair, so this branch is the cleanest "this is a
-        // brand-new signup" signal. Fire Meta's CompletedRegistration
-        // here so it doesn't double-count on later sign-ins.
-        logSignupComplete();
+        // NOTE: Meta CompletedRegistration intentionally NOT fired
+        // here anymore. The event now means "activated" and fires
+        // exactly once on the player's first level completion (see
+        // gameStore.completeLevel), regardless of auth path — one
+        // consistent conversion definition for the ad algorithm.
       }
 
       log.breadcrumb('auth', 'apple sign-in complete', { userId });
@@ -406,12 +405,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // the user can still progress (just less smoothly). Return ok
       // so the UI doesn't surface an error toast on a recoverable race.
     }
-    // Fire Meta CompletedRegistration so the ad funnel counts guest
-    // creation as a conversion. We deliberately fire on the guest
-    // signal rather than the eventual upgrade so the Meta algorithm
-    // has dense conversion events to learn from during the £1k UA
-    // campaign window.
-    logSignupComplete();
+    // NOTE: no Meta CompletedRegistration here. Firing it on guest
+    // creation taught the ad algorithm to find people who tap
+    // "continue as guest" and bounce. The event now fires on the
+    // player's FIRST LEVEL COMPLETION (see gameStore.completeLevel) —
+    // activation, not registration — so Meta optimises toward people
+    // who actually play.
     log.breadcrumb('auth', 'guest sign-in complete', { userId });
     return { error: null };
   };

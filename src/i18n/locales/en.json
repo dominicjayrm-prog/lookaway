@@ -1664,10 +1664,10 @@
       "cta": "Play Now"
     },
     "test": {
-      "welcome_title": "Let's test your memory",
-      "welcome_subtitle": "3 quick rounds. Takes under a minute. We'll show you what your brain can do.",
-      "welcome_meta": "60 seconds · 3 rounds",
-      "welcome_cta": "Start memory test",
+      "welcome_title": "Memorise. Look away. Answer.",
+      "welcome_subtitle": "Three quick rounds to wake your memory up. No pressure — it's a warm-up, not a test.",
+      "welcome_meta": "Under a minute · 3 rounds",
+      "welcome_cta": "Let's play",
       "round_progress": "Round {current} of {total}",
       "memorise": "Memorise this",
       "look_away": "Look away!",
@@ -1699,7 +1699,8 @@
         "brain_type_label": "BRAIN TYPE",
         "round_breakdown": "Round breakdown",
         "round_label": "Round {number}",
-        "cta": "See full brain profile"
+        "cta": "Start playing",
+        "next_up": "That was just the warm-up. 400 levels are waiting — your progress saves automatically as you play."
       },
       "brain_type": {
         "quick_recall": {
@@ -1741,7 +1742,10 @@
         "unlock_title": "Unlock your full profile",
         "unlock_sub": "Get personalised insights, your training plan, and 2× gems on every level. Only with Blanked+.",
         "unlock_cta": "Unlock Full Profile"
-      }
+      },
+      "have_account": "I already have an account",
+      "feedback_correct": "Nice — you got it!",
+      "feedback_wrong": "Good try — that one catches everyone."
     }
   },
   "profile": {

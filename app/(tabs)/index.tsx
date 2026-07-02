@@ -21,6 +21,7 @@ import { checkDailyReward } from '@/src/utils/dailyLoginRewards';
 import { TOTAL_POSITIONS } from '@/src/data/unifiedJourney';
 import { useGameStore } from '@/src/store';
 import { purchaseSubscription } from '@/src/lib/purchases';
+import { shouldAutoShowPaywall } from '@/src/lib/paywallGate';
 import { OutOfLivesModal } from '@/src/components/OutOfLivesModal';
 import SubscriptionPaywall from '@/src/components/SubscriptionPaywall';
 import { useTheme } from '@/src/providers/ThemeProvider';
@@ -318,47 +319,37 @@ function PlayTab() {
   }, [toast]);
   const [showPremiumCelebration, setShowPremiumCelebration] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  // True when the currently-visible paywall came from the post-signup
-  // flow vs other entry points (out-of-lives, stats space, shop).
-  // Only post-signup dismissals chain to the discount paywall.
-  const postSignupPaywallActive = useRef(false);
-  // Defers the spotlight tutorial until the post-signup paywall flow
-  // (regular paywall + optional discount paywall) has finished. The
-  // tutorial would otherwise fire 800ms after auth and stack on top of
-  // the paywall card, which produced the "1 OF 5 - Start here" tooltip
-  // floating over the Subscribe button. Default true (existing users
-  // never queued a paywall, so the tour fires immediately).
-  const [postSignupPaywallDone, setPostSignupPaywallDone] = useState(true);
 
-  // Post-signup paywall: onboarding dropped a flag for us to surface
-  // the paywall the first time the user lands on home with an active
-  // session. Anonymous purchases would otherwise leak entitlements
-  // onto a device id with no recovery path; running it here means the
-  // purchase is always attached to a real user account.
+  // Value-gated paywall. The old post-signup auto-pop (paywall 600ms
+  // after a brand-new user's first home render, before any gameplay)
+  // was the churn point for the majority of paid installs — see
+  // docs/RESCUE_PLAN.md. The paywall now auto-shows only after the
+  // player has earned it a hearing: first 3-star level or 5 ladder
+  // positions completed, max twice ever, 72h apart. paywallGate
+  // records the show before returning true, so a re-render can't
+  // double-fire it.
   useEffect(() => {
     if (!user?.id) return;
+    if (showTutorial) return; // never stack the pitch on the tour
     let cancelled = false;
     (async () => {
-      try {
-        const flag = await AsyncStorage.getItem('blanked_show_paywall_after_signup');
-        if (cancelled || flag !== 'true') return;
-        await AsyncStorage.removeItem('blanked_show_paywall_after_signup');
-        // Block the tutorial trigger while the paywall flow is live.
-        // Cleared in every paywall-closed code path below.
-        setPostSignupPaywallDone(false);
-        // Tiny delay so home renders before the paywall animates over
-        // it. Without this the paywall covers the home tab before any
-        // greeting has a chance to show, which is jarring.
-        setTimeout(() => {
-          if (!cancelled) {
-            postSignupPaywallActive.current = true;
-            setShowPaywall(true);
-          }
-        }, 600);
-      } catch {}
+      const store = useGameStore.getState();
+      const hasThreeStarLevel = Object.values(store.levelProgress).some((p) => p.stars >= 3);
+      const show = await shouldAutoShowPaywall({
+        userId: user.id,
+        unifiedPosition: store.unifiedPosition,
+        hasThreeStarLevel,
+        isSubscribed: store.subscriptionStatus === 'active',
+      });
+      if (show && !cancelled) {
+        // Small delay so home settles before the sheet animates over it.
+        setTimeout(() => { if (!cancelled) setShowPaywall(true); }, 600);
+      }
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+    // unifiedPosition + levelProgress drive the value gate — re-check
+    // whenever the player returns to home with new progress.
+  }, [user?.id, unifiedPosition, levelProgress, showTutorial]);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,14 +387,9 @@ function PlayTab() {
       }
       if (cancelled) return;
       if (!seen) {
-        // Defer the tour until the post-signup paywall flow has run
-        // its course. New users came here from the blurred-profile
-        // CTA, which means a paywall is queued; firing the spotlight
-        // overlay 800ms after auth would land it on top of the
-        // SubscriptionPaywall ("1 OF 5 - Start here" floating over
-        // the Subscribe button). The post-signup flag re-enables this
-        // gate via setPostSignupPaywallDone(true) on every exit path.
-        if (!postSignupPaywallDone) return;
+        // No paywall race anymore: the auto-paywall is value-gated
+        // (first 3-star / position 5) so it can't fire on a fresh
+        // user's first home render — the tour always goes first.
         setTimeout(() => { if (!cancelled) setShowTutorial(true); }, 800);
         return;
       }
@@ -425,11 +411,7 @@ function PlayTab() {
       }, 2500);
     })();
     return () => { cancelled = true; };
-    // postSignupPaywallDone is a dependency because the effect's
-    // tutorial branch reads it and bails when paywalls are still up.
-    // Re-running once the flag flips lets the tour show after the
-    // user dismisses / subscribes.
-  }, [user?.id, postSignupPaywallDone]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!showTutorial) return;
@@ -468,6 +450,41 @@ function PlayTab() {
     return () => clearTimeout(timer);
   }, [showTutorial]);
 
+  /** Launch whatever level the unified ladder says is next. Shared by
+   *  the hero Play button and the tutorial's final "Let's play" CTA —
+   *  the tour used to end by dumping the user back on home, forcing
+   *  them to re-find Play. Now the promise in the button text is kept. */
+  const launchCurrentLevel = useCallback(() => {
+    useGameStore.getState().checkLifeRegen();
+    if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
+    const current = getUnifiedLevel(unifiedPosition);
+    if (!current) {
+      // Ladder exhausted or bad state — fall back to Classic next unplayed.
+      router.push(`/game/${nextLevelId}`);
+      return;
+    }
+    useGameStore.getState().setLastPlayed(current.mode, current.levelId);
+    if (current.mode === 'classic') {
+      router.push(`/game/${current.levelId}`);
+      return;
+    }
+    const match = current.levelId.match(/^[a-z]+_w(\d+)_l(\d+)$/);
+    const worldNumber = match?.[1] ?? '1';
+    const levelNumber = match?.[2] ?? '1';
+    const campaign = CAMPAIGNS[current.mode];
+    const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
+    router.push({
+      pathname: '/game/side-campaign',
+      params: {
+        levelId: current.levelId,
+        mode: current.mode,
+        worldNumber,
+        levelNumber,
+        worldName,
+      },
+    });
+  }, [unifiedPosition, nextLevelId, router]);
+
   const completeTutorial = useCallback(async () => {
     setShowTutorial(false);
     // Local cache — user-scoped so a different account on this
@@ -478,7 +495,10 @@ function PlayTab() {
       // Server flag so a fresh install on a new device also skips it
       supabase.from('profiles').update({ tutorial_seen: true }).eq('id', user.id).then(() => {});
     }
-  }, [user?.id]);
+    // "Let's play" means play: drop the user straight into their next
+    // level instead of back onto the dashboard they just toured.
+    launchCurrentLevel();
+  }, [user?.id, launchCurrentLevel]);
 
   return (
     <TabTransition>
@@ -562,36 +582,7 @@ function PlayTab() {
            *  Classic and could mismatch the hero copy). */}
           <Pressable
             style={({ pressed }) => [styles.heroPlayButton, pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }]}
-            onPress={() => {
-              useGameStore.getState().checkLifeRegen();
-              if (useGameStore.getState().lives <= 0) { setShowOutOfLives(true); return; }
-              const current = getUnifiedLevel(unifiedPosition);
-              if (!current) {
-                // Ladder exhausted or bad state — fall back to Classic next unplayed.
-                router.push(`/game/${nextLevelId}`);
-                return;
-              }
-              useGameStore.getState().setLastPlayed(current.mode, current.levelId);
-              if (current.mode === 'classic') {
-                router.push(`/game/${current.levelId}`);
-                return;
-              }
-              const match = current.levelId.match(/^[a-z]+_w(\d+)_l(\d+)$/);
-              const worldNumber = match?.[1] ?? '1';
-              const levelNumber = match?.[2] ?? '1';
-              const campaign = CAMPAIGNS[current.mode];
-              const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
-              router.push({
-                pathname: '/game/side-campaign',
-                params: {
-                  levelId: current.levelId,
-                  mode: current.mode,
-                  worldNumber,
-                  levelNumber,
-                  worldName,
-                },
-              });
-            }}
+            onPress={launchCurrentLevel}
             accessibilityRole="button"
             accessibilityLabel={t('home.play_aria_unified', { position: unifiedPosition })}
           >
@@ -717,24 +708,18 @@ function PlayTab() {
       />
       <SubscriptionPaywall
         visible={showPaywall}
-        onDismiss={async () => {
+        onDismiss={() => {
+          // The yearly free trial is the conversion path; dismissal
+          // simply closes — no discount chain, no follow-up pitch.
+          // The value gate (paywallGate.ts) decides if/when an auto
+          // show ever happens again.
           setShowPaywall(false);
-          // Paywall closes — release the tutorial gate. The yearly free
-          // trial is the conversion path; we no longer chain to a
-          // discount paywall on dismissal.
-          postSignupPaywallActive.current = false;
-          setPostSignupPaywallDone(true);
         }}
         onSubscribe={async (plan: 'monthly' | 'yearly') => {
           setShowPaywall(false);
-          postSignupPaywallActive.current = false;
           // Route through the real StoreKit purchase so the home-tab
           // entry path matches shop.tsx / stats-space.tsx.
           const { result, periodType } = await purchaseSubscription(plan);
-          // Either way the paywall is closed: success unlocks Plus,
-          // cancel/error returns to home. Either way the tutorial
-          // should be allowed to fire afterwards.
-          setPostSignupPaywallDone(true);
           if (result !== 'success') return;
           const store = useGameStore.getState();
           store.activatePlus(periodType);

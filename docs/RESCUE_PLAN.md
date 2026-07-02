@@ -129,15 +129,17 @@ pound on ads.
 The single principle: **play first, ask later.** Duolingo/Candy Crush pattern:
 first win → habit → then account, then money.
 
+**STATUS: ✅ BUILT 2026-07-02** (needs TestFlight/Android smoke test before release)
+
 | # | Action | Detail |
 |---|---|---|
-| 1.1 | **Rebuild onboarding as play-first.** Cold open → straight into a real, winnable level 1 (guest session created silently). No welcome deck, no exam framing, no countdown anxiety: generous view time, 3 questions, celebrate every correct answer. Win → confetti + FirstLevelCelebration → level 2. | Replaces the test-as-exam. The 3-round "memory test" becomes 3 real ladder levels. |
-| 1.2 | **Kill the engineered failure + "weak memory" messaging.** If we keep a score reveal, it's warm and flattering at every tier ("Sharp start — your visual memory is above average for first-timers"). | onboarding.tsx, onboardingScore.ts |
-| 1.3 | **Kill the blurred-profile bait.** Either build a real (simple, honest) memory profile screen that exists post-signup and updates weekly — or delete the promise entirely. No selling content that doesn't exist. | New: app/profile insights section (v1 can be 4 real stats). |
-| 1.4 | **One paywall moment, after value.** Paywall fires once, after the player's first 3-star OR level 5 completion, whichever first. Frequency cap: max 1 auto-show per 72h, stored per-user. All other entry points stay manual (settings, shop). | (tabs)/index.tsx, new paywallGate util |
-| 1.5 | **Fix the native re-onboarding loop** (AsyncStorage check in app/index.tsx, not localStorage). | app/index.tsx |
-| 1.6 | **Move Meta `CompletedRegistration` to first-level-complete** (activation), not guest creation. Add `AchievedLevel` at 3 and 10. Meta optimises toward people who actually play. | metaEvents.ts, AuthProvider |
-| 1.7 | Tutorial: teach the mechanic contextually inside level 1 (memorise → look away → answer beats), not the shop tour. "Let's play" actually launches the next level. | TutorialOverlay.tsx |
+| 1.1 | ✅ **Onboarding rebuilt play-first.** Warm welcome → 3 winnable warm-up rounds of the real mechanic (view times 5/4.5/4s, haptic + warm feedback on every answer) → celebratory results → one tap ("Start playing") silently creates a guest session and lands on home. No account wall anywhere. | app/onboarding.tsx |
+| 1.2 | ✅ Engineered round-3 failure removed (was 3s deliberately-unwinnable; now 4s and fair). Post-answer copy always warm; results framed as a starting point, never a deficiency. | onboardingTestScenes.ts |
+| 1.3 | ✅ Blurred-profile bait deleted entirely — no locked content, no "unlock" CTA, no promise of a profile that doesn't exist. Brain-type stays as an honest, fully-visible fun reveal. | onboarding.tsx |
+| 1.4 | ✅ Value-gated paywall: auto-shows only after first 3-star OR ladder position 5, max twice ever, 72h apart, second show requires continued progress (position ≥ 11). Post-signup auto-pop removed. Manual entry points unchanged. | src/lib/paywallGate.ts, (tabs)/index.tsx |
+| 1.5 | ✅ Native re-onboarding loop fixed — onboarded flag now read from AsyncStorage (native) with localStorage fallback (web). | app/index.tsx |
+| 1.6 | ✅ Meta `CompletedRegistration` now fires exactly once on first level completion (activation), removed from guest creation + Apple signup. `AchievedLevel` milestones extended to 3/5/10/25. | gameStore.ts, AuthProvider.tsx, metaEvents.ts |
+| 1.7 | ✅ Tutorial's final "Let's play" now launches the player's actual next ladder level instead of dumping them back on home. (Mechanic teaching now happens naturally in the warm-up rounds.) | (tabs)/index.tsx |
 
 ### Phase 2 — A first session that feels good (client, ~1 week)
 

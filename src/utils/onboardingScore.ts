@@ -1,9 +1,9 @@
 /**
  * Local scoring + brain-type derivation for the 3-round onboarding
- * memory test. This is conversion theatre — the numbers are tuned to
- * feel meaningful and to point the user toward the "Unlock Full
- * Profile" CTA, not to be a clinical assessment. Keep all logic
- * here so the results screen stays a thin renderer.
+ * warm-up. The numbers are tuned to feel meaningful and WARM — a
+ * celebratory first impression, not a clinical assessment and not a
+ * funnel toward an upsell. Keep all logic here so the results screen
+ * stays a thin renderer.
  *
  * NOT to be confused with `computeMemoryScore` in `memoryAnalytics.ts`,
  * which derives the running Memory Score from real play history.

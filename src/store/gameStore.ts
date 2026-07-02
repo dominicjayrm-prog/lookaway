@@ -11,7 +11,7 @@ import { log } from '@/src/lib/logger';
 import { resetAllStreakRewards, type ClaimedMilestone as ImportedClaimedMilestone } from '@/src/utils/streakRewards';
 import { shouldShowReviewPrompt, type ReviewPromptState } from '@/src/lib/reviewPrompt';
 import { track, EVENTS } from '@/src/lib/analytics';
-import { logLevelAchieved } from '@/src/lib/metaEvents';
+import { logLevelAchieved, logSignupComplete } from '@/src/lib/metaEvents';
 import { applyLanguage, type LanguagePreference } from '@/src/i18n';
 import {
   UNIFIED_LADDER,
@@ -1046,12 +1046,19 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (gemsEarned > 0) {
         logEconomyEvent(getUserId(), ECONOMY_EVENTS.GEM_EARN_LEVEL, gemsEarned, { levelId, stars: clampedStars, scorePercent: clampedScore, replay: !!existing, plusDoubled: doubled });
       }
-      // Meta App Events — fire LevelAchieved at the 5 + 25 unique-clear
-      // milestones for ad funnel optimisation. Only on first-time
-      // completion (replays don't grow the unique count).
+      // Meta App Events. CompletedRegistration fires on the FIRST
+      // unique clear — this is the activation moment the ad funnel
+      // optimises toward (was previously fired at signup, which
+      // taught the algorithm to find sign-up-and-bounce installs).
+      // LevelAchieved fires at the 3/5/10/25 unique-clear milestones
+      // to give the algorithm a depth-of-engagement gradient. Only on
+      // first-time completion (replays don't grow the unique count).
       if (!existing) {
         const uniqueCleared = Object.keys(get().levelProgress).length;
-        if (uniqueCleared === 5 || uniqueCleared === 25) {
+        if (uniqueCleared === 1) {
+          logSignupComplete();
+        }
+        if (uniqueCleared === 3 || uniqueCleared === 5 || uniqueCleared === 10 || uniqueCleared === 25) {
           logLevelAchieved(uniqueCleared);
         }
       }

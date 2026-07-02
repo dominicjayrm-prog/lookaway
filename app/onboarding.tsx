@@ -1,61 +1,51 @@
 /**
- * BLANKED onboarding — 3-round memory test → results → paywall →
- * (optional) discount paywall → login.
+ * BLANKED onboarding — play-first.
  *
- * Replaces the previous 6-screen swipe deck. The new flow gets the
- * user playing within ~10 seconds: minimal welcome screen, then the
- * test starts. Three classic-mode mini rounds with rising difficulty,
- * a fake "analysing your memory" loader, then a results screen with
- * their score / percentile / brain type. The detailed brain profile
- * sits behind a frosted-glass overlay with an "Unlock Full Profile"
- * CTA — that's the conversion hook.
+ * Three warm-up rounds of the real mechanic (memorise → look away →
+ * answer), a celebratory results screen, then straight into the app
+ * on a silently-created guest session. No account wall, no paywall,
+ * no locked content — the first monetisation moment now lives behind
+ * real gameplay value (see src/lib/paywallGate.ts).
+ *
+ * This replaces the exam-framed memory test that ended in a blurred
+ * "brain profile" + forced signup + auto-paywall. Production data
+ * showed 58% of users completed that whole funnel and then quit
+ * within 30 minutes without playing a single level — the sell came
+ * before the fun. The rounds are now winnable (generous view times,
+ * no engineered failure), every answer gets warm feedback, and the
+ * exit is one tap into the game.
  *
  * Persistence: the AsyncStorage key `blanked_onboarded` is set on
- * exit (regardless of subscribe outcome) so the test only runs once
- * per device install. Existing users with the key already set skip
- * straight to login.
+ * exit so the warm-up only runs once per device install. app/index.tsx
+ * reads the same key (AsyncStorage on native, localStorage on web).
  */
 import React, { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Platform,
-  Animated as RNAnimated, ScrollView,
+  Animated as RNAnimated, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { AnimatedBlink } from '@/src/components/AnimatedBlink';
 import { SceneRenderer } from '@/src/components/SceneRenderer';
 import { OptionButton } from '@/src/components/OptionButton';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { useAuth } from '@/src/providers/AuthProvider';
 import { track, EVENTS } from '@/src/lib/analytics';
 import { logTutorialDone } from '@/src/lib/metaEvents';
 import { ONBOARDING_ROUNDS } from '@/src/data/onboardingTestScenes';
 import {
   buildOnboardingScoreOutput,
   type RoundResult,
-  type BrainType,
 } from '@/src/utils/onboardingScore';
 import { t } from '@/src/i18n';
 
 const ACCENT = '#6C5CE7';
 const ONBOARDED_KEY = 'blanked_onboarded';
-// Read by app/(tabs)/index.tsx on first home render after signup. When
-// true, the home tab pops the SubscriptionPaywall before clearing the
-// flag. This shifts the paywall out of the pre-auth flow so purchases
-// attach to a real account.
-const POST_SIGNUP_PAYWALL_KEY = 'blanked_show_paywall_after_signup';
 
-// Paywall is shown AFTER signup, not during onboarding. Anonymous
-// purchases technically work via RevenueCat (anon device id later
-// merged into the auth user via `Purchases.logIn`), but the timing
-// is fragile: if a user pays and closes the app before signing up,
-// the entitlement lives on a device id with no recovery path. The
-// safer pattern (used by Headspace / Calm / Duolingo Plus) is auth
-// first, paywall after. The onboarding test still drives conversion
-// via the blurred-profile hook, but the actual purchase happens on
-// home after the user has an account to attach it to.
-type Phase = 'welcome' | 'round' | 'analysing' | 'results' | 'profile';
+type Phase = 'welcome' | 'round' | 'results';
 
 interface OnboardingState {
   phase: Phase;
@@ -65,9 +55,7 @@ interface OnboardingState {
 
 type Action =
   | { type: 'start' }
-  | { type: 'recordRound'; result: RoundResult }
-  | { type: 'analysisDone' }
-  | { type: 'showProfile' };
+  | { type: 'recordRound'; result: RoundResult };
 
 function reducer(state: OnboardingState, action: Action): OnboardingState {
   switch (action.type) {
@@ -76,17 +64,13 @@ function reducer(state: OnboardingState, action: Action): OnboardingState {
     case 'recordRound': {
       const nextResults = [...state.results, action.result];
       const isLast = state.roundIndex === 2;
-      if (isLast) return { ...state, phase: 'analysing', results: nextResults };
+      if (isLast) return { ...state, phase: 'results', results: nextResults };
       return {
         ...state,
         results: nextResults,
         roundIndex: (state.roundIndex + 1) as 0 | 1 | 2,
       };
     }
-    case 'analysisDone':
-      return { ...state, phase: 'results' };
-    case 'showProfile':
-      return { ...state, phase: 'profile' };
     default:
       return state;
   }
@@ -97,50 +81,68 @@ function getStorage() {
   return require('@react-native-async-storage/async-storage').default;
 }
 
+async function markOnboarded() {
+  try {
+    await getStorage().setItem(ONBOARDED_KEY, 'true');
+  } catch {}
+  // Web fallback so app/index.tsx's redirect picks up the flag
+  // without a full reload.
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(ONBOARDED_KEY, 'true');
+    }
+  } catch {}
+}
+
 // ─── MAIN ───────────────────────────────────────────────────────────
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { signInAsGuest } = useAuth();
   const [state, dispatch] = useReducer(reducer, {
     phase: 'welcome',
     roundIndex: 0,
     results: [],
   });
+  const [startingGuest, setStartingGuest] = useState(false);
 
-  // Tapping "Unlock Full Profile" sets a flag that the home tab picks
-  // up after signup, so the SubscriptionPaywall fires once the user has
-  // a real account. This path is also used as the regular exit, since
-  // the test must be completed before reaching the rest of the app.
-  const exitToSignup = useCallback(async (queuePaywall: boolean) => {
-    try {
-      await getStorage().setItem(ONBOARDED_KEY, 'true');
-      if (queuePaywall) {
-        await getStorage().setItem(POST_SIGNUP_PAYWALL_KEY, 'true');
-      }
-    } catch {}
-    // Web fallback so app/index.tsx's redirect picks up the flag
-    // without a full reload, matching the previous onboarding's
-    // behaviour for the existing onboarded key.
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(ONBOARDED_KEY, 'true');
-        if (queuePaywall) localStorage.setItem(POST_SIGNUP_PAYWALL_KEY, 'true');
-      }
-    } catch {}
-    track(EVENTS.ONBOARDING_COMPLETED, { queuedPaywall: queuePaywall });
+  /** Primary exit: silently create a guest session and land on home.
+   *  The user never sees an account form. If the anonymous sign-in
+   *  fails (offline, rate limit), fall back to the login screen —
+   *  it has its own "Continue as guest" retry path. */
+  const startPlaying = useCallback(async () => {
+    if (startingGuest) return;
+    setStartingGuest(true);
+    await markOnboarded();
+    track(EVENTS.ONBOARDING_COMPLETED, { exit: 'guest' });
     logTutorialDone();
-    router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
+    const result = await signInAsGuest();
+    if (result.error) {
+      // Recoverable: the login screen offers guest + account paths.
+      setStartingGuest(false);
+      router.replace({ pathname: '/(auth)/login', params: { mode: 'signup' } });
+      return;
+    }
+    router.replace('/');
+  }, [startingGuest, signInAsGuest, router]);
+
+  /** Secondary exit for returning players: straight to sign-in, no
+   *  guest session created (their real account has their progress). */
+  const goToSignIn = useCallback(async () => {
+    await markOnboarded();
+    track(EVENTS.ONBOARDING_COMPLETED, { exit: 'existing_account' });
+    router.replace({ pathname: '/(auth)/login', params: { mode: 'login' } });
   }, [router]);
 
-  const output = state.phase === 'results' || state.phase === 'profile'
+  const output = state.phase === 'results'
     ? buildOnboardingScoreOutput(state.results)
     : null;
 
   return (
     <View style={[s.root, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
       {state.phase === 'welcome' && (
-        <Welcome onStart={() => dispatch({ type: 'start' })} />
+        <Welcome onStart={() => dispatch({ type: 'start' })} onSignIn={goToSignIn} />
       )}
       {state.phase === 'round' && (
         <TestRound
@@ -149,20 +151,13 @@ export default function Onboarding() {
           onComplete={(result) => dispatch({ type: 'recordRound', result })}
         />
       )}
-      {state.phase === 'analysing' && (
-        <Analysing onDone={() => dispatch({ type: 'analysisDone' })} />
-      )}
       {state.phase === 'results' && output && (
         <Results
           output={output}
           rounds={state.results}
-          onContinue={() => dispatch({ type: 'showProfile' })}
-        />
-      )}
-      {state.phase === 'profile' && output && (
-        <BlurredProfile
-          brainType={output.brainType}
-          onUnlock={() => exitToSignup(true)}
+          starting={startingGuest}
+          onStart={startPlaying}
+          onSignIn={goToSignIn}
         />
       )}
     </View>
@@ -170,7 +165,7 @@ export default function Onboarding() {
 }
 
 // ─── WELCOME ────────────────────────────────────────────────────────
-function Welcome({ onStart }: { onStart: () => void }) {
+function Welcome({ onStart, onSignIn }: { onStart: () => void; onSignIn: () => void }) {
   const { colors } = useTheme();
   const fade = useRef(new RNAnimated.Value(0)).current;
   const lift = useRef(new RNAnimated.Value(20)).current;
@@ -204,11 +199,16 @@ function Welcome({ onStart }: { onStart: () => void }) {
       >
         <Text style={s.primaryBtnText}>{t('onboarding.test.welcome_cta')}</Text>
       </Pressable>
+      {/* Returning players skip the warm-up entirely — their account
+          already has real progress, no need to prove anything. */}
+      <Pressable onPress={onSignIn} style={({ pressed }) => [s.signInLink, pressed && { opacity: 0.6 }]}>
+        <Text style={[s.signInLinkText, { color: colors.textMid }]}>{t('onboarding.test.have_account')}</Text>
+      </Pressable>
     </RNAnimated.View>
   );
 }
 
-// ─── TEST ROUND ─────────────────────────────────────────────────────
+// ─── WARM-UP ROUND ──────────────────────────────────────────────────
 function TestRound({
   roundIndex,
   onComplete,
@@ -219,9 +219,8 @@ function TestRound({
   const { colors } = useTheme();
   const round = ONBOARDING_ROUNDS[roundIndex];
   // Three phases: memorise (scene visible) → blank ("Look away!") →
-  // question (4-option pick). Round count + difficulty hint are
-  // displayed across all three so the user always knows where they
-  // are in the test.
+  // question (4-option pick). Round count is displayed across all
+  // three so the user always knows where they are in the warm-up.
   const [phase, setPhase] = useState<'memorise' | 'blank' | 'question'>('memorise');
   const [selected, setSelected] = useState<number | null>(null);
   const questionShownAt = useRef<number>(0);
@@ -254,9 +253,20 @@ function TestRound({
     setSelected(idx);
     const reactionMs = Date.now() - questionShownAt.current;
     const correct = idx === round.question.correctIndex;
-    // Brief reveal so the user sees right/wrong before we move on,
-    // then advance. 700ms matches the classic-mode feedback timing.
-    setTimeout(() => onComplete({ correct, reactionMs }), 800);
+    // Warm feedback on every answer — a success haptic on correct, a
+    // gentle (non-error) tap on wrong. The old flow gave a silent
+    // right/wrong flash; for a first-touch audience the physical
+    // "well done" matters.
+    if (Platform.OS !== 'web') {
+      if (correct) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+    }
+    // Reveal window: long enough to actually read which answer was
+    // right (the old 800ms was too quick for the 35-65 demo).
+    setTimeout(() => onComplete({ correct, reactionMs }), 1400);
   }, [selected, round.question.correctIndex, onComplete]);
 
   const stateForOption = (idx: number): 'default' | 'selected' | 'correct' | 'wrong' | 'dimmed' => {
@@ -266,6 +276,7 @@ function TestRound({
     return 'dimmed';
   };
 
+  const answeredCorrect = selected !== null && selected === round.question.correctIndex;
   const progressLabel = t('onboarding.test.round_progress', { current: round.number, total: 3 });
 
   return (
@@ -325,89 +336,16 @@ function TestRound({
               />
             ))}
           </View>
+          {/* Post-answer encouragement — always warm, never scolding. */}
+          {selected !== null && (
+            <Text style={[s.feedbackText, { color: answeredCorrect ? '#00B894' : colors.textMid }]}>
+              {answeredCorrect
+                ? t('onboarding.test.feedback_correct')
+                : t('onboarding.test.feedback_wrong')}
+            </Text>
+          )}
         </View>
       )}
-    </View>
-  );
-}
-
-// ─── ANALYSING ──────────────────────────────────────────────────────
-// Fake 2.7-second loader with a fill bar + three checkmarks animating
-// in. Pure conversion theatre — the score has already been computed,
-// but the moment of "the app is judging me" sets up the results screen.
-const ANALYSE_STEPS = [
-  'onboarding.test.analysing.step_1',
-  'onboarding.test.analysing.step_2',
-  'onboarding.test.analysing.step_3',
-] as const;
-
-// Eye-movement cycle for the analysing Blink. Drives `lookOffset`
-// through a sequence so the character feels alive (scanning, thinking)
-// rather than frozen. Slow enough to read as a deliberate "I'm
-// processing" expression, not a twitch.
-const LOOK_PATH: { x: number; y: number }[] = [
-  { x: 0, y: 0 },
-  { x: -0.6, y: 0.3 },
-  { x: 0.6, y: 0.3 },
-  { x: 0, y: -0.4 },
-  { x: -0.5, y: -0.2 },
-  { x: 0.5, y: -0.2 },
-  { x: 0, y: 0 },
-];
-
-function Analysing({ onDone }: { onDone: () => void }) {
-  const { colors } = useTheme();
-  const fill = useRef(new RNAnimated.Value(0)).current;
-  const [stepDone, setStepDone] = useState(0);
-  const [lookIdx, setLookIdx] = useState(0);
-
-  useEffect(() => {
-    RNAnimated.timing(fill, {
-      toValue: 1,
-      duration: 2700,
-      useNativeDriver: false,
-    }).start();
-    const t1 = setTimeout(() => setStepDone(1), 700);
-    const t2 = setTimeout(() => setStepDone(2), 1500);
-    const t3 = setTimeout(() => setStepDone(3), 2300);
-    const done = setTimeout(onDone, 2800);
-    // Cycle the eye position every 380ms while the loader runs.
-    // Stops on cleanup (unmount + done callback).
-    const lookId = setInterval(() => {
-      setLookIdx((i) => (i + 1) % LOOK_PATH.length);
-    }, 380);
-    return () => {
-      [t1, t2, t3, done].forEach(clearTimeout);
-      clearInterval(lookId);
-    };
-  }, [fill, onDone]);
-
-  const widthInterp = fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-
-  return (
-    <View style={s.centered}>
-      <AnimatedBlink expression="memorise" size={92} entrance="fade" lookOffset={LOOK_PATH[lookIdx]} />
-      <Text style={[s.analyseTitle, { color: colors.text }]}>{t('onboarding.test.analysing.title')}</Text>
-
-      <View style={[s.fillTrack, { backgroundColor: colors.border }]}>
-        <RNAnimated.View style={[s.fillBar, { width: widthInterp, backgroundColor: ACCENT }]} />
-      </View>
-
-      <View style={s.analyseSteps}>
-        {ANALYSE_STEPS.map((key, i) => {
-          const done = i < stepDone;
-          return (
-            <View key={key} style={s.analyseRow}>
-              <Ionicons
-                name={done ? 'checkmark-circle' : 'ellipse-outline'}
-                size={20}
-                color={done ? '#00B894' : colors.textLight}
-              />
-              <Text style={[s.analyseRowText, { color: done ? colors.text : colors.textMid }]}>{t(key)}</Text>
-            </View>
-          );
-        })}
-      </View>
     </View>
   );
 }
@@ -416,11 +354,15 @@ function Analysing({ onDone }: { onDone: () => void }) {
 function Results({
   output,
   rounds,
-  onContinue,
+  starting,
+  onStart,
+  onSignIn,
 }: {
   output: ReturnType<typeof buildOnboardingScoreOutput>;
   rounds: RoundResult[];
-  onContinue: () => void;
+  starting: boolean;
+  onStart: () => void;
+  onSignIn: () => void;
 }) {
   const { colors } = useTheme();
   const scoreFade = useRef(new RNAnimated.Value(0)).current;
@@ -428,6 +370,11 @@ function Results({
 
   useEffect(() => {
     RNAnimated.timing(scoreFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    // Celebration haptic on the reveal — this screen is a win moment,
+    // whatever the score.
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
     // Count up the headline number for some weight on the reveal.
     const start = Date.now();
     const duration = 1100;
@@ -443,6 +390,9 @@ function Results({
   return (
     <ScrollView contentContainerStyle={s.resultsScroll} showsVerticalScrollIndicator={false}>
       <RNAnimated.View style={{ opacity: scoreFade, alignItems: 'center' }}>
+        <View style={s.resultsBlink}>
+          <AnimatedBlink expression="celebrate" size={72} entrance="bounce" />
+        </View>
         <Text style={[s.resultsLabel, { color: colors.textMid }]}>{t('onboarding.test.results.score_label')}</Text>
         <Text style={[s.resultsScore, { color: colors.text }]}>{displayScore}<Text style={[s.resultsScoreOf, { color: colors.textMid }]}>/100</Text></Text>
         <View style={[s.resultsPercentilePill, { backgroundColor: ACCENT + '14' }]}>
@@ -479,118 +429,29 @@ function Results({
           ))}
         </View>
 
+        <Text style={[s.resultsNext, { color: colors.textMid }]}>{t('onboarding.test.results.next_up')}</Text>
+
         <Pressable
-          onPress={onContinue}
+          onPress={onStart}
+          disabled={starting}
           style={({ pressed }) => [
             s.primaryBtn,
-            { backgroundColor: ACCENT, marginTop: 28 },
-            pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
+            { backgroundColor: ACCENT, marginTop: 10 },
+            (pressed || starting) && { opacity: 0.88, transform: [{ scale: 0.97 }] },
           ]}
         >
-          <Text style={s.primaryBtnText}>{t('onboarding.test.results.cta')}</Text>
+          {starting ? (
+            <ActivityIndicator color="#FFF" size="small" />
+          ) : (
+            <Text style={s.primaryBtnText}>{t('onboarding.test.results.cta')}</Text>
+          )}
+        </Pressable>
+
+        <Pressable onPress={onSignIn} disabled={starting} style={({ pressed }) => [s.signInLink, pressed && { opacity: 0.6 }]}>
+          <Text style={[s.signInLinkText, { color: colors.textMid }]}>{t('onboarding.test.have_account')}</Text>
         </Pressable>
       </RNAnimated.View>
     </ScrollView>
-  );
-}
-
-// ─── BLURRED PROFILE ────────────────────────────────────────────────
-// Four sections (strengths / weaknesses / training plan / age compare)
-// rendered with low opacity so they read like real content but are
-// unreadable. A frosted overlay sits on top with the lock icon and CTA.
-// We don't use expo-blur (not in deps) — opacity + scrambled-feel
-// content is more than enough to convey "locked".
-const PROFILE_SECTIONS = [
-  {
-    titleKey: 'onboarding.test.profile.strengths_title',
-    bodyKey: 'onboarding.test.profile.strengths_body',
-    icon: 'flash',
-    color: '#00B894',
-  },
-  {
-    titleKey: 'onboarding.test.profile.weaknesses_title',
-    bodyKey: 'onboarding.test.profile.weaknesses_body',
-    icon: 'alert-circle',
-    color: '#FF6B6B',
-  },
-  {
-    titleKey: 'onboarding.test.profile.training_title',
-    bodyKey: 'onboarding.test.profile.training_body',
-    icon: 'fitness',
-    color: '#0984E3',
-  },
-  {
-    titleKey: 'onboarding.test.profile.age_title',
-    bodyKey: 'onboarding.test.profile.age_body',
-    icon: 'people',
-    color: '#D4A012',
-  },
-] as const;
-
-function BlurredProfile({
-  brainType,
-  onUnlock,
-}: {
-  brainType: BrainType;
-  onUnlock: () => void;
-}) {
-  const { colors } = useTheme();
-  const fade = useRef(new RNAnimated.Value(0)).current;
-  useEffect(() => {
-    RNAnimated.timing(fade, { toValue: 1, duration: 450, useNativeDriver: true }).start();
-  }, [fade]);
-
-  return (
-    <RNAnimated.View style={[s.profileRoot, { opacity: fade }]}>
-      <ScrollView contentContainerStyle={s.profileScroll} showsVerticalScrollIndicator={false}>
-        <Text style={[s.profileTitle, { color: colors.text }]}>{t('onboarding.test.profile.title')}</Text>
-        <Text style={[s.profileSub, { color: colors.textMid }]}>
-          {t('onboarding.test.profile.sub', { brainType: t(brainType.nameKey) })}
-        </Text>
-
-        {/* The four sections — rendered, but visually obscured. */}
-        <View style={s.profileSections}>
-          {PROFILE_SECTIONS.map((section) => (
-            <View key={section.titleKey} style={[s.profileCard, { borderColor: colors.border }]}>
-              <View style={s.profileCardHeader}>
-                <Ionicons name={section.icon as any} size={18} color={section.color} />
-                <Text style={[s.profileCardTitle, { color: colors.text }]}>{t(section.titleKey)}</Text>
-              </View>
-              <Text style={[s.profileCardBody, { color: colors.textMid }]}>{t(section.bodyKey)}</Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Frosted overlay — semi-transparent matte that sits over the
-          sections. Combined with the low opacity on the content
-          itself, the user sees structure but can't read the details. */}
-      <View style={s.profileOverlay} pointerEvents="box-none">
-        <View style={s.profileOverlayInner}>
-          <View style={s.lockCircle}>
-            <Ionicons name="lock-closed" size={28} color="#FFF" />
-          </View>
-          <Text style={[s.unlockTitle, { color: colors.text }]}>{t('onboarding.test.profile.unlock_title')}</Text>
-          <Text style={[s.unlockSub, { color: colors.textMid }]}>{t('onboarding.test.profile.unlock_sub')}</Text>
-          <Pressable
-            onPress={onUnlock}
-            style={({ pressed }) => [
-              s.primaryBtn,
-              { backgroundColor: ACCENT, marginTop: 20 },
-              pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <LinearGradient
-              colors={['#6C5CE7', '#A29BFE']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <Text style={s.primaryBtnText}>{t('onboarding.test.profile.unlock_cta')}</Text>
-          </Pressable>
-        </View>
-      </View>
-    </RNAnimated.View>
   );
 }
 
@@ -607,14 +468,16 @@ const s = StyleSheet.create({
 
   primaryBtn: {
     // Add horizontal padding so text doesn't touch the rounded edges
-    // of the gradient pill — without it, longer locale strings like
-    // "Unlock Full Profile" sat flush with the button's right curve
-    // on iOS and read as clipped.
+    // of the pill — longer locale strings sat flush with the button's
+    // right curve on iOS and read as clipped.
     width: '100%', maxWidth: 320, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 54,
     shadowColor: ACCENT, shadowOpacity: 0.25, shadowOffset: { width: 0, height: 4 }, shadowRadius: 14, elevation: 5,
   },
   primaryBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+
+  signInLink: { paddingVertical: 12, paddingHorizontal: 16 },
+  signInLinkText: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
 
   // Round
   roundRoot: { flex: 1, paddingHorizontal: 20, paddingTop: 8 },
@@ -634,17 +497,11 @@ const s = StyleSheet.create({
   questionWrap: { flex: 1, paddingTop: 24, gap: 18 },
   questionText: { fontSize: 22, fontWeight: '700', textAlign: 'center', paddingHorizontal: 12 },
   optionsCol: { gap: 12, paddingHorizontal: 4, marginTop: 6 },
-
-  // Analysing
-  analyseTitle: { fontSize: 22, fontWeight: '800', marginTop: 18, marginBottom: 10, textAlign: 'center' },
-  fillTrack: { width: '100%', maxWidth: 280, height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
-  fillBar: { height: '100%', borderRadius: 3 },
-  analyseSteps: { gap: 10, marginTop: 22, alignSelf: 'stretch', paddingHorizontal: 32 },
-  analyseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  analyseRowText: { fontSize: 14, fontWeight: '600' },
+  feedbackText: { fontSize: 15, fontWeight: '700', textAlign: 'center', marginTop: 2 },
 
   // Results
   resultsScroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 60 },
+  resultsBlink: { marginBottom: 6 },
   resultsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   resultsScore: { fontSize: 80, fontWeight: '900', marginTop: 4 },
   resultsScoreOf: { fontSize: 22, fontWeight: '700' },
@@ -667,30 +524,5 @@ const s = StyleSheet.create({
   breakdownRowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   breakdownReact: { fontSize: 12, fontWeight: '600' },
 
-  // Profile
-  profileRoot: { flex: 1, position: 'relative' },
-  profileScroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 200, opacity: 0.35 },
-  profileTitle: { fontSize: 22, fontWeight: '800' },
-  profileSub: { fontSize: 14, marginTop: 4, marginBottom: 16 },
-  profileSections: { gap: 12 },
-  profileCard: { borderWidth: 1.5, borderRadius: 14, padding: 14, gap: 8 },
-  profileCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  profileCardTitle: { fontSize: 14, fontWeight: '700' },
-  profileCardBody: { fontSize: 13, lineHeight: 19 },
-
-  profileOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(247,246,243,0.78)' : 'rgba(247,246,243,0.86)',
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  profileOverlayInner: { alignItems: 'center', maxWidth: 360, gap: 6 },
-  lockCircle: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: ACCENT,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: ACCENT, shadowOpacity: 0.35, shadowOffset: { width: 0, height: 6 }, shadowRadius: 18, elevation: 8,
-    marginBottom: 8,
-  },
-  unlockTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-  unlockSub: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 320, marginTop: 4 },
+  resultsNext: { fontSize: 14, textAlign: 'center', marginTop: 26, lineHeight: 20, maxWidth: 300 },
 });

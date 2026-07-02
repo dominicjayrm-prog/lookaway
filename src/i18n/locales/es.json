@@ -2139,10 +2139,10 @@
       "cta": "Jugar ahora"
     },
     "test": {
-      "welcome_title": "Vamos a probar tu memoria",
-      "welcome_subtitle": "3 rondas rápidas. Menos de un minuto. Te enseñamos lo que tu cerebro puede hacer.",
-      "welcome_meta": "60 segundos · 3 rondas",
-      "welcome_cta": "Empezar prueba de memoria",
+      "welcome_title": "Memoriza. Aparta la vista. Responde.",
+      "welcome_subtitle": "Tres rondas rápidas para despertar tu memoria. Sin presión: es un calentamiento, no un examen.",
+      "welcome_meta": "Menos de un minuto · 3 rondas",
+      "welcome_cta": "A jugar",
       "round_progress": "Ronda {current} de {total}",
       "memorise": "Memoriza esto",
       "look_away": "¡Mira hacia otro lado!",
@@ -2174,7 +2174,8 @@
         "brain_type_label": "TIPO DE CEREBRO",
         "round_breakdown": "Resumen por ronda",
         "round_label": "Ronda {number}",
-        "cta": "Ver perfil completo del cerebro"
+        "cta": "Empezar a jugar",
+        "next_up": "Eso solo era el calentamiento. Te esperan 400 niveles — tu progreso se guarda automáticamente mientras juegas."
       },
       "brain_type": {
         "quick_recall": {
@@ -2216,7 +2217,10 @@
         "unlock_title": "Desbloquea tu perfil completo",
         "unlock_sub": "Consigue análisis personalizados, tu plan de entrenamiento y 2× gemas en cada nivel. Solo con Blanked+.",
         "unlock_cta": "Desbloquear perfil completo"
-      }
+      },
+      "have_account": "Ya tengo una cuenta",
+      "feedback_correct": "¡Bien, la tienes!",
+      "feedback_wrong": "Buen intento — esa engaña a cualquiera."
     }
   },
   "profile": {

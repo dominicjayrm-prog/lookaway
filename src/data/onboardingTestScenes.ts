@@ -1,13 +1,15 @@
 /**
- * The 3-round memory test that runs during onboarding.
+ * The 3-round warm-up that runs during onboarding.
  *
- * Difficulty ramps each round to give the user a real sense of their
- * memory ceiling: round 1 is winnable by anyone, round 3 is hard
- * enough that even attentive players make mistakes. The result feeds
- * the percentile / brain-type theatre on the results screen.
+ * Difficulty ramps gently — every round is designed to be WINNABLE
+ * by an attentive first-time player in the 35-65 target demo. The
+ * old tuning deliberately made round 3 too hard (3s view on a
+ * 5-shape count) to set up a "you have weaknesses" upsell; that
+ * engineered failure is gone. The player's first three memories of
+ * BLANKED should be three wins, or near-wins with warm feedback.
  *
  * Each round = one scene + one question. Kept inline (not in
- * Supabase) because the test runs PRE-AUTH — the user has no
+ * Supabase) because the warm-up runs PRE-AUTH — the user has no
  * Supabase identity yet and the rounds must be deterministic across
  * every device.
  */
@@ -25,7 +27,7 @@ export interface OnboardingRound {
 }
 
 // ─── Round 1 — Easy ──────────────────────────────────────────────
-// 3 shapes, 4s view time. Question is a colour recall — the easiest
+// 3 shapes, 5s view time. Question is a colour recall — the easiest
 // category. Almost everyone gets this one to set up the "I'm doing
 // well" feeling before round 2 ramps up.
 const round1Objects: SceneObject[] = [
@@ -85,7 +87,7 @@ const round1Question: Question = makeQuestion(
 );
 
 // ─── Round 2 — Medium ────────────────────────────────────────────
-// 4 shapes, 3.5s view. Position-based question — harder because the
+// 4 shapes, 4.5s view. Position-based question — harder because the
 // user has to remember WHERE something was, not just what it was.
 const round2Objects: SceneObject[] = [
   { id: 'r2-a', type: 'star',    color: 'yellow', x: 22, y: 25, size: 54 },
@@ -110,11 +112,13 @@ const round2Question: Question = makeQuestion(
   12,
 );
 
-// ─── Round 3 — Hard ──────────────────────────────────────────────
-// 5 shapes, 3s view. Counting + colour — combined detail question
-// that forces the user to track two attributes at once. Most players
-// miss this; that's the point. Sets up the "you have weaknesses we
-// can train" angle on the results / blurred-profile screens.
+// ─── Round 3 — Stretch (but fair) ────────────────────────────────
+// 5 shapes, 4s view. Counting + colour — the most demanding of the
+// three, but with enough view time that an attentive player gets
+// it. This round used to run at 3s specifically so most players
+// would miss it ("sets up the weaknesses angle"); that engineered
+// failure is gone — the last memory of the warm-up should be
+// "I can do this", not "I'm bad at this".
 const round3Objects: SceneObject[] = [
   { id: 'r3-a', type: 'circle',   color: 'red',    x: 18, y: 28, size: 48 },
   { id: 'r3-b', type: 'circle',   color: 'red',    x: 50, y: 22, size: 48 },
@@ -148,22 +152,22 @@ export const ONBOARDING_ROUNDS: readonly OnboardingRound[] = [
   {
     index: 0,
     number: 1,
-    viewTime: 4,
-    scene: makeScene('onb-r1', 4, round1Objects, round1Question),
+    viewTime: 5,
+    scene: makeScene('onb-r1', 5, round1Objects, round1Question),
     question: round1Question,
   },
   {
     index: 1,
     number: 2,
-    viewTime: 3.5,
-    scene: makeScene('onb-r2', 3.5, round2Objects, round2Question),
+    viewTime: 4.5,
+    scene: makeScene('onb-r2', 4.5, round2Objects, round2Question),
     question: round2Question,
   },
   {
     index: 2,
     number: 3,
-    viewTime: 3,
-    scene: makeScene('onb-r3', 3, round3Objects, round3Question),
+    viewTime: 4,
+    scene: makeScene('onb-r3', 4, round3Objects, round3Question),
     question: round3Question,
   },
 ] as const;

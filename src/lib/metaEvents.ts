@@ -83,9 +83,12 @@ export async function initializeMetaSdk(): Promise<void> {
   }
 }
 
-/** Player completed sign-up — fired right after Apple Sign In returns
- *  successfully and we have a Supabase user. Meta uses this as an
- *  early-funnel signal: real users vs. install-and-bounce. */
+/** Player ACTIVATED — fired exactly once, on their first-ever level
+ *  completion (see gameStore.completeLevel). Deliberately NOT fired
+ *  at signup/guest creation: optimising ad delivery on registration
+ *  finds people who sign up and bounce; optimising on first-level
+ *  completion finds people who actually play. The Meta event name
+ *  stays CompletedRegistration for campaign continuity. */
 export function logSignupComplete(): void {
   if (!loadSdk()) return;
   try {

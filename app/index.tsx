@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useTheme } from '@/src/providers/ThemeProvider';
 import { supabase } from '@/src/lib/supabase';
 
-function hasSeenOnboarding(): boolean {
+/** Onboarding-seen check. AsyncStorage is the source of truth on
+ *  native (onboarding.tsx writes it there); localStorage is the web
+ *  fallback. The old version read ONLY localStorage — which doesn't
+ *  exist on native iOS — so any user who finished onboarding but
+ *  bailed at the auth screen was forced through the entire warm-up
+ *  again on next launch. */
+async function hasSeenOnboarding(): Promise<boolean> {
   try {
-    if (typeof window === 'undefined') return false;
-    if (typeof localStorage === 'undefined') return false;
-    return localStorage.getItem('blanked_onboarded') === 'true';
+    const v = await AsyncStorage.getItem('blanked_onboarded');
+    if (v === 'true') return true;
+  } catch {}
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('blanked_onboarded') === 'true';
+    }
   } catch {
     // localStorage may throw on native iOS even if window exists
-    return false;
   }
+  return false;
 }
 
 function Index() {
@@ -22,7 +33,11 @@ function Index() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [hasUsername, setHasUsername] = useState<boolean | null>(null);
 
-  useEffect(() => { setOnboarded(hasSeenOnboarding()); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    hasSeenOnboarding().then((seen) => { if (!cancelled) setOnboarded(seen); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!session) {
