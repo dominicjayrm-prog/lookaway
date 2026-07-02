@@ -115,12 +115,14 @@ pound on ads.
 
 ### Phase 0 — Stop the bleeding (server-side, no app release, ~1 day)
 
+**STATUS: ✅ APPLIED TO PROD 2026-07-02** (see `sql/push_pipeline_phase0_fix.sql`)
+
 | # | Action | Where |
 |---|---|---|
-| 0.1 | **Fix push-dispatch 401**: redeploy with `verify_jwt: false` (function already validates its own `x-push-dispatch-secret`), or add a service-role JWT to the cron headers. Verify a 200 tick and drain the stuck `pending` rows. | Supabase edge function + cron |
-| 0.2 | Add a dead-man alarm: a daily cron that checks `push_queue` for rows `pending > 1h` and `notification_log` for zero sends in 24h; alert via email/Slack webhook. Never fly blind again. | Supabase cron |
-| 0.3 | Win-back blast to the 43 Meta-cohort users with valid push tokens (guarded, one-time, warm copy — "We've made BLANKED easier to love. Your streak is waiting."). Only after Phase 1 ships, so they return to a better app. | push_queue |
-| 0.4 | Enable RLS on the 3 exposed tables flagged by the advisor (`banned_words`, `level_string_translations`, `unified_ladder_snapshot` — all read-only reference data: enable RLS + public SELECT policy). | SQL |
+| 0.1 | ✅ **Fixed push-dispatch 401**: cron tick now sends the anon-key JWT alongside the dispatch secret, satisfying `verify_jwt`. Verified 200s on every tick since. Two stale April `pending` rows marked skipped so they didn't fire months late. | cron.alter_job on job 1 |
+| 0.2 | ✅ Dead-man alarm live: hourly `push-pipeline-healthcheck` cron opens rows in `public.system_alerts` on non-200 dispatch responses or stuck queue rows; auto-resolves when clear. Verified firing. | migration `push_pipeline_deadman_alarm` |
+| 0.3 | ⏳ Win-back blast to the 43 Meta-cohort users with valid push tokens (guarded, one-time, warm copy). Deliberately deferred until Phase 1 ships, so they return to a better app. | push_queue |
+| 0.4 | ✅ RLS enabled on `banned_words`, `level_string_translations` (locked, server-only) and `unified_ladder_snapshot` (public read policy). | migration `enable_rls_reference_tables` |
 
 ### Phase 1 — A front door that earns trust (client, ~1 week)
 

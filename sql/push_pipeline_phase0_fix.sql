@@ -1,0 +1,35 @@
+-- Phase 0 rescue — push pipeline fix + dead-man alarm (applied to prod 2026-07-02).
+--
+-- THE OUTAGE: push-dispatch edge function v6 was deployed ~2026-04-24
+-- with verify_jwt=true. The pg_cron tick called it with only the
+-- x-push-dispatch-secret header — no JWT — so the platform rejected
+-- every call with 401 BEFORE the function ran. cron.job_run_details
+-- showed "succeeded" throughout because net.http_post is
+-- fire-and-forget; the failure was only visible in edge-function
+-- logs and net._http_response. Result: zero pushes sent between
+-- 2026-04-26 and 2026-07-02, including the entire Meta UA campaign.
+--
+-- THE FIX (applied via cron.alter_job on job 1): add the public anon
+-- key as Authorization: Bearer + apikey headers to the tick call.
+-- verify_jwt only demands a valid platform JWT; the function's own
+-- x-push-dispatch-secret check remains the real auth gate. If the
+-- anon key is ever rotated, the cron command must be updated with
+-- the new key or the 401s return — the alarm below will catch it.
+--
+-- Two stale rows queued during the outage (friend_request pushes
+-- from April) were marked status='skipped' so they didn't fire
+-- months late when the pipe reopened.
+--
+-- THE ALARM (migration push_pipeline_deadman_alarm): hourly cron
+-- 'push-pipeline-healthcheck' calls check_push_pipeline_health(),
+-- which opens a row in public.system_alerts when (a) any non-200
+-- came back from dispatch in the last hour, or (b) push_queue rows
+-- sit pending > 1h. Alerts auto-resolve when the condition clears.
+--
+--   Health check-in (run in SQL editor any Monday):
+--   SELECT * FROM public.system_alerts WHERE resolved_at IS NULL;
+--   -- empty = pipeline healthy
+--
+-- This file documents what was applied via the Supabase MCP; the
+-- authoritative migrations live in the project's migration history
+-- (enable_rls_reference_tables, push_pipeline_deadman_alarm).
