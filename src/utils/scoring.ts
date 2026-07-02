@@ -3,13 +3,33 @@ import type { Level } from '@/src/types/game';
 /** Score threshold for 2 stars (percentage) */
 export const TWO_STAR_THRESHOLD = 80;
 
-/** Gem rewards by star count */
+/** Gem rewards by star count.
+ *
+ *  Restored to the design spec ("5-20 gems per level clear",
+ *  CLAUDE.md). The economy originally shipped at 1/2/3 — 1/6th of
+ *  spec — which made every sink unaffordable: a new player's 50
+ *  starting gems couldn't buy a single 80-gem life refill, and ~40
+ *  clears were needed to close the gap. Free players learned that
+ *  gems buy nothing, which killed the reward loop and made the
+ *  paywall feel like the only door out. */
 export const GEM_REWARDS: Record<0 | 1 | 2 | 3, number> = {
   0: 0,
-  1: 1,
-  2: 2,
-  3: 3,
+  1: 5,
+  2: 10,
+  3: 15,
 };
+
+/** Consolation gems for a failed level. Failing used to pay zero AND
+ *  cost a life — a double punishment aimed at exactly the struggling
+ *  casual player the game needs to keep. A small effort reward keeps
+ *  the loop warm without making failure farmable (2 vs 5+ for a pass). */
+export const FAIL_EFFORT_GEMS = 2;
+
+/** Completed-level count below which failing costs no life. Beginner
+ *  protection: the first sessions are for learning the mechanic, not
+ *  for burning through 5 hearts and hitting the out-of-lives wall in
+ *  minutes (production data: strugglers walled inside session 1). */
+export const BEGINNER_PROTECTED_CLEARS = 3;
 
 /** Blanked+ subscribers earn 2× gems on every level completion (any
  *  game mode). Applied at every level-completion gem-award site so the
@@ -35,12 +55,13 @@ export function getStarsForScore(
   return 0;
 }
 
-/** Calculate gem reward for first-time completion */
+/** Calculate gem reward for first-time completion. Mirrors
+ *  GEM_REWARDS by star tier — keep the two in sync. */
 export function calculateGemReward(score: number, totalQuestions: number): number {
   const percentage = Math.round((score / totalQuestions) * 100);
-  if (percentage === 100) return 3;
-  if (percentage >= 80) return 2;
-  if (percentage >= 60) return 1;
+  if (percentage === 100) return GEM_REWARDS[3];
+  if (percentage >= 80) return GEM_REWARDS[2];
+  if (percentage >= 60) return GEM_REWARDS[1];
   return 0;
 }
 
@@ -90,7 +111,11 @@ export const INITIAL_GEMS = 50;
 export const LIVES_CONFIG = {
   maxLives: 5,
   regenTimeMinutes: 30,
-  gemRefillCost: 80,
+  // 80 → 40: a refill is now reachable from the 50-gem starting
+  // balance and from ~1 session of decent play (5-15 gems/level).
+  // The old price was unaffordable for exactly the players who
+  // needed it (see docs/RESCUE_PLAN.md, economy math).
+  gemRefillCost: 40,
 };
 
 /** Power-up costs */

@@ -11,7 +11,7 @@ import { useAuth } from '@/src/providers/AuthProvider';
 // checkStreakMilestone import retired — claim flow lives in claimDueStreakRewards now.
 import { checkAchievements, type AchievementUnlock } from '@/src/utils/achievements';
 import { scheduleLivesFullNotification } from '@/src/utils/notifications';
-import { LIVES_CONFIG } from '@/src/utils/scoring';
+import { LIVES_CONFIG, BEGINNER_PROTECTED_CLEARS, FAIL_EFFORT_GEMS } from '@/src/utils/scoring';
 
 interface CelebrationState {
   celebration: { days: number; gems: number; title: string; color: string } | null;
@@ -32,6 +32,14 @@ export function useCelebrations() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [achievementUnlocks, setAchievementUnlocks] = useState<AchievementUnlock[]>([]);
   const [extraLifeSaved, setExtraLifeSaved] = useState(false);
+  // True when a fail cost nothing because the player is still inside
+  // the beginner-protection window (< BEGINNER_PROTECTED_CLEARS
+  // completed levels). The result screen renders a warm "no life
+  // lost — you're still warming up" pill instead of the broken heart.
+  const [beginnerProtected, setBeginnerProtected] = useState(false);
+  // Gems granted as a consolation on a real (life-costing) fail.
+  // 0 when no effort reward was paid (protected / unlimited / shield).
+  const [failEffortGems, setFailEffortGems] = useState(0);
   const [showWorldComplete, setShowWorldComplete] = useState(false);
   const [showFirstLevel, setShowFirstLevel] = useState(false);
   const [showCampaignComplete, setShowCampaignComplete] = useState(false);
@@ -135,12 +143,29 @@ export function useCelebrations() {
       || (!!state.unlimitedLivesUntil && Date.now() < state.unlimitedLivesUntil);
     if (hasUnlimited) return;
 
+    // Beginner protection: no life loss and no extra_life consumption
+    // while the player is still learning (mirrors the guard inside
+    // loseLife, but caught here too so the power-up isn't burned and
+    // the result screen can show warm copy instead of a broken heart).
+    const clears = Object.keys(state.levelProgress).length;
+    if (clears < BEGINNER_PROTECTED_CLEARS) {
+      setBeginnerProtected(true);
+      return;
+    }
+
     const hasExtraLife = state.getPowerUpCount('extra_life') > 0;
     if (hasExtraLife) {
       useGameStore.getState().usePowerUp('extra_life');
       setExtraLifeSaved(true);
     } else {
       useGameStore.getState().loseLife();
+      // Consolation gems on a REAL fail — the fail used to pay zero
+      // AND cost a life, a double punishment for the struggling
+      // players the game most needs to keep. Paid only when a life
+      // was actually lost, so it can't be farmed faster than the
+      // lives wall allows.
+      useGameStore.getState().addGems(FAIL_EFFORT_GEMS);
+      setFailEffortGems(FAIL_EFFORT_GEMS);
       const state = useGameStore.getState();
       scheduleLivesFullNotification(state.lives, state.maxLives, LIVES_CONFIG.regenTimeMinutes);
 
@@ -190,6 +215,7 @@ export function useCelebrations() {
   return {
     // State
     celebration, showNotifPrompt, achievementUnlocks, extraLifeSaved,
+    beginnerProtected, failEffortGems,
     showWorldComplete, showFirstLevel, showCampaignComplete, showMilestone, showStarterPack,
     // Setters (for dismissing)
     setCelebration, setShowNotifPrompt, setAchievementUnlocks,

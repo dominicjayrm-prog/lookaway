@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Level, GameState } from '@/src/types/game';
-import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, bundlePrice, applyPlusGemMultiplier, type PowerUpId } from '@/src/utils/scoring';
+import { GEM_REWARDS, calculateReplayReward, checkStreakMilestone, INITIAL_GEMS, LIVES_CONFIG, POWER_UP_COSTS, BEGINNER_PROTECTED_CLEARS, bundlePrice, applyPlusGemMultiplier, type PowerUpId } from '@/src/utils/scoring';
 import type { PeriodType } from '@/src/lib/purchases';
 import { logEconomyEvent, ECONOMY_EVENTS } from '@/src/utils/economyLogger';
 import { saveProgressToSupabase, loadProgressFromSupabase } from '@/src/utils/progressSync';
@@ -830,9 +830,20 @@ export const useGameStore = create<GameStore>((set, get) => {
     loseLife: () => {
       // Don't deduct a life if the unlimited-lives boost is active
       // OR the user has an active Blanked+ subscription (unlimited lives).
-      const { unlimitedLivesUntil, subscriptionStatus } = get();
+      const { unlimitedLivesUntil, subscriptionStatus, levelProgress } = get();
       if (subscriptionStatus === 'active') return;
       if (unlimitedLivesUntil && Date.now() < unlimitedLivesUntil) return;
+      // Beginner protection: no life loss until the player has
+      // cleared their first few levels. Learning the mechanic
+      // shouldn't burn hearts — production data showed struggling
+      // new players hitting the out-of-lives wall inside their first
+      // session, which is a churn event, not a monetisation moment.
+      if (Object.keys(levelProgress).length < BEGINNER_PROTECTED_CLEARS) {
+        log.breadcrumb('lives', 'life loss skipped (beginner protection)', {
+          clears: Object.keys(levelProgress).length,
+        });
+        return;
+      }
       set((s) => ({ lives: Math.max(0, s.lives - 1), livesLastLostAt: s.livesLastLostAt ?? Date.now() }));
       setTimeout(() => saveState(get()), 0);
       logEconomyEvent(getUserId(), ECONOMY_EVENTS.LIFE_LOST, -1, { levelId: get().currentLevel?.id });
@@ -923,7 +934,24 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
     pushStreakRewards: (rewards) => {
       if (!rewards || rewards.length === 0) return;
-      set((s) => ({ streakRewardQueue: [...s.streakRewardQueue, ...rewards] }));
+      set((s) => {
+        const combined = [...s.streakRewardQueue, ...rewards];
+        if (combined.length <= 1) return { streakRewardQueue: combined };
+        // Coalesce a multi-milestone backlog into ONE summary toast.
+        // Each toast holds the screen ~4s (3s + 1s gap) with a sound
+        // and haptic; a 5-7 deep backlog (streak re-climb, offline
+        // days) used to cycle for ~30 seconds OVER the memorise
+        // screen because the mounter lives at root and the queue
+        // survives navigation. One toast, summed rewards, done.
+        const summary: ImportedClaimedMilestone = {
+          ...combined[combined.length - 1],
+          day: Math.max(...combined.map((r) => r.day)),
+          gems: combined.reduce((sum, r) => sum + r.gems, 0),
+          shields: combined.reduce((sum, r) => sum + r.shields, 0),
+          bundledCount: combined.reduce((sum, r) => sum + (r.bundledCount ?? 1), 0),
+        };
+        return { streakRewardQueue: [summary] };
+      });
     },
     clearStreakRewardQueue: () => set({ streakRewardQueue: [] }),
     setRecoveryWindowStart: (iso) => {

@@ -143,15 +143,17 @@ first win → habit → then account, then money.
 
 ### Phase 2 — A first session that feels good (client, ~1 week)
 
+**STATUS: ✅ CORE BUILT 2026-07-02** (two content follow-ups deferred, noted below)
+
 | # | Action | Detail |
 |---|---|---|
-| 2.1 | **Difficulty on-ramp.** W1 L1–5: 3 questions per scene (not 5), question timer 12s (not 8), 3★ threshold = 90% for World 1, view time explicit 5s. Level data update in `campaign_levels` + seed fallback for World 1 checked into the repo (offline first-run currently 404s). | SQL + src/data/levels.ts |
-| 2.2 | **Economy reset to spec.** Level clear: 5/10/15 gems by stars (heals the faucet). Life refill: 40 gems. Fail: no life loss for the player's first 5 fails ever ("protected hearts" — teach without punishing), and a fail still pays 2 gems "effort reward". Quit no longer costs a life. | scoring.ts, gameStore.ts, [levelId].tsx |
-| 2.3 | **Fix "Next Level" to follow the unified ladder** (next position, not `w1-l(n+1)`), keeping the map and the mode interleave in sync. | result.tsx |
-| 2.4 | **Fix streak toast spam**: coalesce backlog into one summary toast ("3 rewards claimed! +23 💎"), and hard-suppress the toast mounter during MEMORISE/QUESTION states. | StreakRewardToast.tsx, streakRewards.ts, _layout.tsx |
-| 2.5 | Fix the 0-question scene soft-lock (filter at load, always). | levels.ts |
-| 2.6 | Result-screen decongestion: one celebration per result, others queue to next home visit. | useCelebrations.ts |
-| 2.7 | Fail screen tone: "So close — 2 of 5. One more look?" + free instant retry with a fresh scene variant, not a broken heart + FAILED. | result.tsx |
+| 2.1 | ✅ Partial: World 1 default view time 5s (was 4s); answer-reveal window 1200ms (was a subliminal 800ms). ⏳ Deferred as a content op: trimming W1 scenes from 5 to 3 questions in `campaign_levels` (touches ES translations too) + checking a World 1 offline fallback into the repo. | levels.ts, [levelId].tsx |
+| 2.2 | ✅ **Economy reset.** Level clear: 5/10/15 gems by stars (was 1/2/3). Life refill 40 gems (was 80 — unaffordable from the 50-gem start). Beginner protection: no life loss until 3 levels cleared. Real fails now pay +2 effort gems (only when a life was actually lost, so it can't be farmed). Quitting no longer costs a life, any mode. | scoring.ts, gameStore.ts, useCelebrations.ts, all 4 game screens |
+| 2.3 | ✅ "Next Level" follows the unified ladder — players now meet the interleaved side modes instead of 20 identical classic levels, and the journey map stays in sync. Off-ladder replays keep linear behaviour. | result.tsx |
+| 2.4 | ✅ Streak toast spam fixed: multi-milestone backlogs coalesce into ONE summary toast with summed gems/shields (was ~4s × N toasts cycling over the memorise screen). Toast copy localised EN/ES (was hardcoded English). | gameStore.ts, StreakRewardToast.tsx |
+| 2.5 | ✅ 0-question scene soft-lock fixed: empty scenes filtered at load always (was only for multi-scene levels), and the gameplay screen treats an unplayable level as not-found instead of a dead screen. | levels.ts, [levelId].tsx |
+| 2.6 | ✅ Partial via 2.4 (the worst stacker was the toast backlog). ⏳ Full one-celebration-per-result queueing deferred. | useCelebrations.ts |
+| 2.7 | ✅ Fail screen warmed: beginner-protection pill ("No life lost — you're still warming up"), +2 effort-gems pill, encouraging retry line replacing the cold "You need 60% to pass". | result.tsx |
 
 ### Phase 3 — A reason to come back tomorrow (client + server, ~1–2 weeks)
 

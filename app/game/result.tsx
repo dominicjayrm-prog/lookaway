@@ -33,6 +33,8 @@ import { sounds } from '@/src/lib/sounds';
 import { MilestoneGiftCelebration } from '@/src/components/MilestoneGiftCelebration';
 import { t } from '@/src/i18n';
 import { getMastermindLevel } from '@/src/data/mastermindLevels';
+import { getUnifiedLevel, getPositionForLevelId } from '@/src/data/unifiedJourney';
+import { CAMPAIGNS } from '@/src/data/campaigns';
 
 const GEM = String.fromCodePoint(0x1f48e);
 const HEART = String.fromCodePoint(0x1f494);
@@ -329,7 +331,43 @@ function ResultScreen() {
   // the result screen's own fade animation. Stack cleanup is implicit
   // because result was itself reached via a replace from /game/[levelId],
   // so the stack is just [/(tabs), /game/result] when these fire.
-  const handleNextLevel = () => { resetGame(); if (nextLevelId) router.replace(`/game/${nextLevelId}`); };
+  /** "Next Level" follows the UNIFIED LADDER, not classic-linear
+   *  numbering. The old handler pushed `w{world}-l{n+1}`, which
+   *  bypassed the ladder's mode interleaving — players who chained
+   *  "Next Level" saw 20 identical classic levels in a row and never
+   *  met the side modes, while the journey map silently desynced
+   *  (advanceUnifiedPosition refuses to move for off-ladder plays).
+   *  Now: when the completed level sits on the ladder, we route to
+   *  whatever the (already-advanced) cursor points at — classic or
+   *  side-mode. Off-ladder plays (Mode Library replays) keep the old
+   *  linear behaviour. */
+  const handleNextLevel = () => {
+    const completedOnLadder = level ? getPositionForLevelId(level.id) !== undefined : false;
+    if (completedOnLadder) {
+      const store = useGameStore.getState();
+      const current = getUnifiedLevel(store.unifiedPosition);
+      if (current) {
+        resetGame();
+        store.setLastPlayed(current.mode, current.levelId);
+        if (current.mode === 'classic') {
+          router.replace(`/game/${current.levelId}`);
+          return;
+        }
+        const match = current.levelId.match(/^[a-z]+_w(\d+)_l(\d+)$/);
+        const worldNumber = match?.[1] ?? '1';
+        const levelNumber = match?.[2] ?? '1';
+        const campaign = CAMPAIGNS[current.mode];
+        const worldName = campaign?.worldNames[Number(worldNumber) - 1] ?? '';
+        router.replace({
+          pathname: '/game/side-campaign',
+          params: { levelId: current.levelId, mode: current.mode, worldNumber, levelNumber, worldName },
+        });
+        return;
+      }
+    }
+    resetGame();
+    if (nextLevelId) router.replace(`/game/${nextLevelId}`);
+  };
   const handleNextWorld = () => { resetGame(); if (nextWorldId) router.replace(`/world/${nextWorldId}`); };
   const handleBackToMap = () => { resetGame(); router.replace('/(tabs)/journey'); };
   const handleRetry = () => { const id = level?.id; resetGame(); if (id) router.replace(`/game/${id}`); else router.replace('/(tabs)/journey'); };
@@ -379,7 +417,7 @@ function ResultScreen() {
                 ) : (
                   <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
                 )
-              ) : nextLevelId ? (
+              ) : (nextLevelId || (level && getPositionForLevelId(level.id) !== undefined && getUnifiedLevel(useGameStore.getState().unifiedPosition))) ? (
                 <Pressable style={st.primaryButton} onPress={handleNextLevel} accessibilityRole="button" accessibilityLabel={t('result.next_level_aria')}><Text style={st.primaryButtonText}>{t('result.next_level')}</Text></Pressable>
               ) : (
                 <Pressable style={st.primaryButton} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={st.primaryButtonText}>{t('result.back_to_map')}</Text></Pressable>
@@ -391,12 +429,17 @@ function ResultScreen() {
           <>
             <Text style={[st.failedTitle, { color: colors.wrong }]}>{t('result.failed_title')}</Text>
             <Text style={[st.scoreText, { color: colors.text }]}>{t('result.correct_count', { correct: correctCount, total: totalCount })}</Text>
-            {hasUnlimitedLives ? null : celeb.extraLifeSaved ? (
+            {hasUnlimitedLives ? null : celeb.beginnerProtected ? (
+              <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>{t('result.beginner_protected')}</Text></View>
+            ) : celeb.extraLifeSaved ? (
               <View style={[st.lifeLostPill, { backgroundColor: colors.correctSoft }]}><Text style={st.lifeLostIcon}>{'\u2764\uFE0F\u200D\uD83D\uDD25'}</Text><Text style={[st.lifeLostText, { color: colors.correct }]}>{t('result.extra_life_saved')}</Text></View>
             ) : (
               <View style={[st.lifeLostPill, { backgroundColor: colors.wrongSoft }]}><Text style={st.lifeLostIcon}>{HEART}</Text><Text style={[st.lifeLostText, { color: colors.wrong }]}>{t('result.life_lost')}</Text></View>
             )}
-            {level && <Text style={[st.requireText, { color: colors.textMid }]}>{t('result.need_to_pass', { score: level.requiredScore })}</Text>}
+            {celeb.failEffortGems > 0 && (
+              <View style={[st.lifeLostPill, { backgroundColor: colors.accentSoft }]}><Text style={st.lifeLostIcon}>{'\uD83D\uDC8E'}</Text><Text style={[st.lifeLostText, { color: colors.accent }]}>{t('result.fail_effort_gems', { count: celeb.failEffortGems })}</Text></View>
+            )}
+            <Text style={[st.requireText, { color: colors.textMid }]}>{t('result.fail_encourage')}</Text>
             <View style={st.buttons}>
               <Pressable style={st.primaryButton} onPress={handleRetry} accessibilityRole="button" accessibilityLabel={t('result.try_again_aria')}><Text style={st.primaryButtonText}>{t('result.try_again')}</Text></Pressable>
               <Pressable style={st.secondaryLink} onPress={handleBackToMap} accessibilityRole="button" accessibilityLabel={t('result.back_to_map_aria')}><Text style={[st.secondaryLinkText, { color: colors.accent }]}>{t('result.back_to_map')}</Text></Pressable>

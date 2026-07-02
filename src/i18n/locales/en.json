@@ -1478,7 +1478,10 @@
     "challenge_complete_title": "{icon} Challenge complete!",
     "challenge_complete_sub": "{title} - +{gems} gems",
     "starter_pack_title": "Starter Pack",
-    "starter_pack_body": "In-app purchases will be available when RevenueCat is configured."
+    "starter_pack_body": "In-app purchases will be available when RevenueCat is configured.",
+    "beginner_protected": "No life lost — you're still warming up",
+    "fail_effort_gems": "+{count} gems for the effort",
+    "fail_encourage": "So close. Fancy one more look?"
   },
   "tabs": {
     "play": "Play",
@@ -1839,5 +1842,9 @@
     "claim_button": "Claim",
     "claim_button_aria": "Claim {gems} gems",
     "dismiss_aria": "Dismiss"
+  },
+  "streak_toast": {
+    "title": "Day {day} reward!",
+    "bundle_title": "{count} streak rewards claimed!"
   }
 }

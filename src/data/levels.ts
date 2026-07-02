@@ -45,11 +45,16 @@ function dbRowToLevel(row: CampaignLevelRow): Level {
   const locale = currentLocale();
   const raw = (locale === 'es' && row.scene_data_es) ? row.scene_data_es : row.scene_data;
   // Handle both single-scene object and multi-scene array from DB
+  // World 1 gets a gentler default view time (5s vs 4s). The first
+  // world is the on-ramp for a 35-65 casual audience — the extra
+  // second turns "I barely found the shapes" into "I had time to
+  // look". Explicit per-scene / per-row values still win.
+  const defaultViewTime = row.world_id === 1 ? 5 : 4;
   let scenes: Scene[];
   if (Array.isArray(raw)) {
     scenes = raw.map((s: any, i: number) => ({
       id: `${row.id}-s${i + 1}`,
-      viewTime: s.viewTime ?? row.view_time ?? 4,
+      viewTime: s.viewTime ?? row.view_time ?? defaultViewTime,
       objects: Array.isArray(s.objects) ? s.objects : [],
       questions: Array.isArray(s.questions) ? s.questions : [],
     }));
@@ -57,16 +62,22 @@ function dbRowToLevel(row: CampaignLevelRow): Level {
     const sceneData = raw ?? { objects: [], questions: [] };
     scenes = [{
       id: `${row.id}-s1`,
-      viewTime: row.view_time ?? 4,
+      viewTime: row.view_time ?? defaultViewTime,
       objects: (Array.isArray(sceneData.objects) ? sceneData.objects : []) as SceneObject[],
       questions: (Array.isArray(sceneData.questions) ? sceneData.questions : []) as Question[],
     }];
   }
-  // Filter out empty scenes (no objects or no questions)
-  if (scenes.length > 1) {
-    scenes = scenes.filter(s => s.objects.length > 0 && s.questions.length > 0);
-  }
-  // Ensure at least one scene exists
+  // Filter out empty scenes (no objects or no questions) — ALWAYS,
+  // even when only one scene exists. A single-scene level with
+  // objects but zero questions used to survive this filter and
+  // soft-lock the game: MEMORISE → TRANSITION → QUESTION renders
+  // nothing (no currentQuestion), no timer runs, and the only exit
+  // was the X. One malformed admin-authored level = a trap.
+  scenes = scenes.filter(s => s.objects.length > 0 && s.questions.length > 0);
+  // Ensure at least one scene exists so downstream code never sees an
+  // empty array. The gameplay screen treats a level whose only scene
+  // has no questions as unplayable and shows the level-not-found
+  // fallback instead of a dead screen.
   if (scenes.length === 0) {
     scenes = [{ id: `${row.id}-s1`, viewTime: row.view_time ?? 4, objects: [], questions: [] }];
   }

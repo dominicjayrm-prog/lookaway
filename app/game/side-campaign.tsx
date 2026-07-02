@@ -633,10 +633,10 @@ function SideCampaignScreen() {
             <View style={[s.quitCard, { backgroundColor: colors.card }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[s.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
+                {t('game.quit_body_plus')}
               </Text>
-              <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); if (!isSubscribed) loseLife(); router.back(); }}>
-                <Text style={s.btnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
+              <Pressable style={[s.btn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); router.back(); }}>
+                <Text style={s.btnText}>{t('game.quit_leave')}</Text>
               </Pressable>
               <Pressable style={[s.btn, { backgroundColor: mColor }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.btnText}>{t('challenge.keep_playing')}</Text>

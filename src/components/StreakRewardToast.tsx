@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { sounds } from '@/src/lib/sounds';
 import { useTheme } from '@/src/providers/ThemeProvider';
+import { t } from '@/src/i18n';
 import type { ClaimedMilestone } from '@/src/utils/streakRewards';
 
 interface Props {
@@ -114,7 +115,11 @@ export function StreakRewardToast({ queue, onDone }: Props) {
           setTimeout(() => router.push('/streak-rewards'), 200);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`Day ${current.day} streak reward`}
+        accessibilityLabel={
+          (current.bundledCount ?? 1) > 1
+            ? t('streak_toast.bundle_title', { count: current.bundledCount ?? 0 })
+            : t('streak_toast.title', { day: current.day })
+        }
         style={({ pressed }) => [
           st.card,
           { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.92 : 1 },
@@ -123,7 +128,9 @@ export function StreakRewardToast({ queue, onDone }: Props) {
         <Text style={st.fire}>{FIRE_EMOJI}</Text>
         <View style={st.body}>
           <Text style={[st.title, { color: colors.text }]} numberOfLines={1}>
-            Day {current.day} Reward!
+            {(current.bundledCount ?? 1) > 1
+              ? t('streak_toast.bundle_title', { count: current.bundledCount ?? 0 })
+              : t('streak_toast.title', { day: current.day })}
           </Text>
           <View style={st.pillRow}>
             <View style={[st.pill, { backgroundColor: colors.accentSoft }]}>

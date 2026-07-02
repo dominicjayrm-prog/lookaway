@@ -183,10 +183,10 @@ function SpotGameScreen() {
             <View style={[s.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[s.quitTitle, { color: colors.text }]}>{t('challenge.leave_level')}</Text>
               <Text style={[s.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
+                {t('game.quit_body_plus')}
               </Text>
-              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); if (!isSubscribed) loseLife(); router.back(); }}>
-                <Text style={s.quitBtnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
+              <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.wrong }]} onPress={() => { setShowQuitConfirm(false); clearTimer(); router.back(); }}>
+                <Text style={s.quitBtnText}>{t('game.quit_leave')}</Text>
               </Pressable>
               <Pressable style={[s.quitLeaveBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuitConfirm(false)}>
                 <Text style={s.quitBtnText}>{t('challenge.keep_playing')}</Text>

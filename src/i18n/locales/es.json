@@ -1953,7 +1953,10 @@
     "challenge_complete_title": "{icon} ¡Reto completado!",
     "challenge_complete_sub": "{title} - +{gems} gemas",
     "starter_pack_title": "Pack de inicio",
-    "starter_pack_body": "Las compras integradas estarán disponibles cuando RevenueCat esté configurado."
+    "starter_pack_body": "Las compras integradas estarán disponibles cuando RevenueCat esté configurado.",
+    "beginner_protected": "Sin perder vida — todavía estás calentando",
+    "fail_effort_gems": "+{count} gemas por el esfuerzo",
+    "fail_encourage": "Casi lo tienes. ¿Le echas otro vistazo?"
   },
   "tabs": {
     "play": "Jugar",
@@ -2314,5 +2317,9 @@
     "claim_button": "Reclamar",
     "claim_button_aria": "Reclamar {gems} gemas",
     "dismiss_aria": "Cerrar"
+  },
+  "streak_toast": {
+    "title": "¡Recompensa del día {day}!",
+    "bundle_title": "¡{count} recompensas de racha reclamadas!"
   }
 }

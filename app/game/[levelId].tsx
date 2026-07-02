@@ -178,12 +178,15 @@ function GameScreen() {
         if (isCorrect) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-      revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 800);
+      // 1200ms reveal (was 800): long enough for the 35-65 demo to
+      // actually SEE which answer was right and learn from it before
+      // the auto-advance — the old window read as a subliminal flash.
+      revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 1200);
     }, 300);
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, currentQuestion, clearTimeouts]);
 
   const handleQuestionTimeout = useCallback(() => {
-    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 800); }
+    if (selectedOption === null) { selectOption(null); revealAnswer(); if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); clearTimeouts(); revealTimeout.current = setTimeout(() => { setHiddenOptions([]); nextQuestion(); }, 1200); }
   }, [selectedOption, selectOption, revealAnswer, nextQuestion, clearTimeouts]);
 
   const handleNextScene = useCallback(() => { setHiddenOptions([]); nextScene(); }, [nextScene]);
@@ -253,7 +256,13 @@ function GameScreen() {
     return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><ActivityIndicator size="large" color={colors.accent} /></SafeAreaView>);
   }
 
-  if (!level) {
+  // Treat a level whose scenes carry no playable content the same as
+  // a missing level. dbRowToLevel keeps a placeholder empty scene
+  // when every scene was malformed (objects but no questions, etc.) —
+  // entering the state machine with it produced a blank, timer-less
+  // QUESTION screen whose only exit was the quit X.
+  const unplayable = level && level.scenes.every((s) => s.objects.length === 0 || s.questions.length === 0);
+  if (!level || unplayable) {
     return (<SafeAreaView style={[styles.container, { backgroundColor: tc.bg }]}><Text style={[styles.errorText, { color: tc.textMid }]}>{t('modes.level_not_found')}</Text><Button title={t('modes.go_back')} onPress={() => router.back()} /></SafeAreaView>);
   }
 
@@ -367,22 +376,24 @@ function GameScreen() {
             <View style={[styles.quitCard, { backgroundColor: colors.bg }]}>
               <Text style={[styles.quitTitle, { color: colors.text }]}>{t('game.quit_title')}</Text>
               <Text style={[styles.quitMessage, { color: colors.textMid }]}>
-                {isSubscribed ? t('game.quit_body_plus') : t('game.quit_body_free')}
+                {t('game.quit_body_plus')}
               </Text>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.wrong }]}
                 onPress={() => {
                   setShowQuitConfirm(false);
                   clearTimeouts();
-                  // Blanked+ members keep their lives — only non-subscribers pay the cost of quitting.
-                  if (!isSubscribed) loseLife();
+                  // Quitting no longer costs a life for anyone —
+                  // punishing a player for backing out of a level they
+                  // weren't ready for read as hostile, especially in
+                  // the first session (see docs/RESCUE_PLAN.md 2.2).
                   resetGame();
                   router.back();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={isSubscribed ? t('game.quit_leave_aria_plus') : t('game.quit_leave_aria_free')}
+                accessibilityLabel={t('game.quit_leave_aria_plus')}
               >
-                <Text style={styles.quitBtnText}>{isSubscribed ? t('game.quit_leave') : t('game.quit_leave_free')}</Text>
+                <Text style={styles.quitBtnText}>{t('game.quit_leave')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.quitLeaveBtn, { backgroundColor: colors.accent }]}

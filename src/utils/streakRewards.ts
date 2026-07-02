@@ -86,6 +86,12 @@ export async function getStreakRewards(userId: string): Promise<StreakRewardRow[
 
 export interface ClaimedMilestone extends StreakMilestone {
   claimedAt: string;
+  /** Set (> 1) when this entry is a coalesced summary of several
+   *  milestones claimed at once — the toast renders "N rewards
+   *  claimed" with summed gems/shields instead of playing each
+   *  milestone as its own 4-second toast. A backlog of 5+ toasts
+   *  used to cycle for ~30s over the memorise screen mid-gameplay. */
+  bundledCount?: number;
 }
 
 /** Find every milestone the player has reached but not yet claimed,
