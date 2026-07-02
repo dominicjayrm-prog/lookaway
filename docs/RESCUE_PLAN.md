@@ -171,14 +171,31 @@ first win → habit → then account, then money.
 
 ### Phase 4 — Prove it, then scale (2 weeks after Phase 3)
 
-1. **Re-test with £100–150, not £1k.** Same UK 35–65 broad targeting, the
-   best-performing prior creative. You need ~40–60 installs to compare cohorts.
-2. **Gates before spending more:**
+**STATUS: ⚙️ INSTRUMENTED 2026-07-02 — operator steps in docs/PHASE4_PLAYBOOK.md**
+
+Built and live:
+- `cohort_funnel_weekly` view on prod (dashboard-only; SELECT revoked
+  from anon/authenticated) computing activation / D1 / D7 / push-grant
+  per signup week — the gates are now one query away.
+- `sql/winback_meta_cohort.sql` — guarded one-time win-back push to the
+  ~18 May-cohort users with valid tokens. **Run only after the new
+  build is live in both stores.**
+- Full operator checklist: release → smoke test → win-back → £100-150
+  re-test config → gate reading → decision tree, in
+  **docs/PHASE4_PLAYBOOK.md**.
+
+Remaining (requires store/ads access — founder):
+1. Merge branch, EAS build, submit release (iOS + Android).
+2. 15-minute smoke test on device (checklist in playbook).
+3. Fire the win-back once live.
+4. **Re-test with £100–150, not £1k.** Same UK 35–65 broad targeting, the
+   best-performing prior creative unchanged. ~40–60 installs to compare cohorts.
+5. **Gates before spending more** (query `cohort_funnel_weekly`):
    - Activation (complete level 1): **> 80%** (was ~33%)
    - D1 retention: **> 30%** (was ~21% overall, near 0 for the stuck cohort)
    - D7 retention: **> 12%**
    - Push permission grant: > 40%
-3. Only when the gates pass: scale spend, and *then* invest in the growth bets
+6. Only when the gates pass: scale spend, and *then* invest in the growth bets
    (memory tracks / Numbers mode, daily duet, weekend editions — the
    brainstorm backlog is real but worthless until the funnel holds water).
 
