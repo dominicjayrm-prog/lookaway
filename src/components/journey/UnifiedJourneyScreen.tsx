@@ -25,6 +25,7 @@ import { CAMPAIGNS } from '@/src/data/campaigns';
 import {
   UNIFIED_LADDER,
   getUnifiedLevel,
+  getWorldForPosition,
   isChapterStart,
   type UnifiedLevel,
   type ModeId,
@@ -33,7 +34,7 @@ import { LevelNode, type NodeState } from './LevelNode';
 import { ChapterBadge } from './ChapterBadge';
 import { JourneyPathSvg } from './JourneyPathSvg';
 import { WorldBackground } from './WorldBackground';
-import { JOURNEY_PALETTE } from './worldVisuals';
+import { JOURNEY_PALETTE, WORLD_VISUALS } from './worldVisuals';
 import { UnifiedIntro } from './UnifiedIntro';
 import { MigrationBanner } from './MigrationBanner';
 import { BlinkOnPath } from './BlinkOnPath';
@@ -622,16 +623,20 @@ export function UnifiedJourneyScreen() {
     );
   }
 
-  // The whole screen sits on the single pastel purple bg. Any gutter
-  // the scroll doesn't cover (status bar area, below Level 1 on
-  // bounce) reads as the same continuous purple.
+  // Ambient chrome colour follows the world the PLAYER is currently
+  // in — the safe-area strip and overscroll gutters blend with the
+  // slab their level sits on (grove mint at level 30, ember blush at
+  // 350). Changes only 4 times across the whole 400-level game so it
+  // reads as atmosphere, not as flicker.
+  const ambientBg = WORLD_VISUALS[getWorldForPosition(unifiedPosition)].backgroundColor;
+
   return (
     <TabTransition>
-      <SafeAreaView style={[st.container, { backgroundColor: JOURNEY_PALETTE.bg }]} edges={['top']}>
+      <SafeAreaView style={[st.container, { backgroundColor: ambientBg }]} edges={['top']}>
         <Animated.ScrollView
           ref={scrollRef as any}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[st.scrollContent, { backgroundColor: JOURNEY_PALETTE.bg }]}
+          contentContainerStyle={[st.scrollContent, { backgroundColor: ambientBg }]}
           onScroll={scrollHandler}
           onContentSizeChange={handleContentSizeChange}
           scrollEventThrottle={16}
@@ -753,6 +758,7 @@ export function UnifiedJourneyScreen() {
               pathTopPadding={PATH_TOP_PADDING}
               rowHeight={ROW_HEIGHT}
               totalPositions={UNIFIED_LADDER.length}
+              visibleRange={visibleRange}
               showDecorations={decorationsReady}
             />
             {/* All connectors drawn inside ONE Svg element rather

@@ -1657,7 +1657,8 @@
     "node_state_completed": "completado",
     "node_state_current": "actual",
     "node_state_locked": "bloqueado",
-    "splash_entering": "ENTRANDO"
+    "splash_entering": "ENTRANDO",
+    "gate_world_label": "MUNDO {number}"
   },
   "notifications": {
     "streak_risk_title": "¡Tu racha está en peligro!",
