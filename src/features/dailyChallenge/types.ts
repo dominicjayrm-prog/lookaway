@@ -12,15 +12,15 @@
  *  these values. */
 export type DailyChallengeModeId =
   | 'phone_number'
-  // Phase 3+ (NOT implemented in this build, listed for the
-  // rotation table type-checker to accept future config diffs):
   | 'what_changed'
   | 'names_and_faces'
-  | 'the_witness';
+  | 'the_witness'
+  | 'mental_maths';
 
 /** Currently-shipping modes. Narrower union used wherever we need
- *  exhaustive switching to compile only against built modes. */
-export type ShippingModeId = 'phone_number';
+ *  exhaustive switching to compile only against built modes. All
+ *  five daily modes ship as of the Mental Tally drop. */
+export type ShippingModeId = DailyChallengeModeId;
 
 /** Result of a single completed challenge attempt. Shared shape
  *  across every mode so persistence + share card + result screen

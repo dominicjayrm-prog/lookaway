@@ -13,13 +13,15 @@ import type { DailyChallengeModeId } from './types';
 import { utcDayOfWeek } from './seededRandom';
 import { t } from '@/src/i18n';
 
-// Phase 5 rotation. The Witness slots into Thursday — the mid-week
-// reading slot, where a contemplative break lands well between two
-// faster modes. Final mix: Phone Number 2, What Changed 2, Names &
-// Faces 2, The Witness 1. No mode plays two days in a row.
+// Phase 6 rotation. Mental Tally takes Monday — the fresh-week slot
+// where a crisp numbers challenge lands well — and no mode repeats
+// on consecutive days. Weekly mix: Phone Number 1, Mental Tally 1,
+// Names & Faces 2, What Changed 2, The Witness 1 — five distinct
+// disciplines across seven days:
+//   digits → arithmetic → faces → change → prose → change → faces
 const ROTATION: Record<number, DailyChallengeModeId> = {
-  0: 'phone_number',     // Sunday
-  1: 'phone_number',     // Monday
+  0: 'phone_number',     // Sunday — Phone Number (hard, by tradition)
+  1: 'mental_maths',     // Monday — Mental Tally (running-total arithmetic)
   2: 'names_and_faces',  // Tuesday — Names & Faces (easy)
   3: 'what_changed',     // Wednesday
   4: 'the_witness',      // Thursday — The Witness (reading mode)

@@ -1766,7 +1766,9 @@
       "what_changed_subtitle": "Memoriza la cuadrícula. Detecta los cambios.",
       "names_and_faces": "Nombres y caras",
       "the_witness": "El testigo",
-      "the_witness_subtitle": "Lee la escena. Fíjate en todo."
+      "the_witness_subtitle": "Lee la escena. Fíjate en todo.",
+      "mental_maths": "Suma Mental",
+      "mental_maths_subtitle": "Los números aparecen de uno en uno. Mantén la suma total."
     },
     "phone_number": {
       "memorise_instruction": "Memoriza este número",
@@ -1876,6 +1878,25 @@
       "morning_help": "Un aviso suave a las 8h con el reto de hoy.",
       "evening_label": "Recordatorio de tarde",
       "evening_help": "Aviso a las 18h si tu racha está en riesgo."
+    },
+    "mental_maths": {
+      "tutorial_title": "Mantén el total",
+      "tutorial_body": "Los números aparecen de uno en uno y luego desaparecen. Suma cada uno a tu total y escribe la respuesta final al terminar.",
+      "tutorial_example_caption": "Tres números aparecen… el total es 15",
+      "tutorial_minus_hint": "Ojo — en las rondas finales se cuela un número negativo. Réstalo de tu total.",
+      "tutorial_dismiss": "Entendido",
+      "tutorial_dismiss_aria": "Cerrar el tutorial y empezar el reto",
+      "round_label": "Ronda {current} de {total}",
+      "get_ready": "Prepárate…",
+      "sequence_instruction": "Mantén la suma total",
+      "entry_instruction": "¿Cuál era el total?",
+      "submit": "Confirmar",
+      "submit_aria": "Enviar tu total",
+      "feedback_exact": "¡Clavado!",
+      "feedback_close": "¡Por muy poco!",
+      "feedback_near": "No andabas lejos",
+      "feedback_miss": "Se escapó",
+      "your_answer": "Dijiste {answer}"
     }
   },
   "paywall": {

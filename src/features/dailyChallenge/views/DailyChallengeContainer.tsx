@@ -40,6 +40,9 @@ import { WitnessReadView } from '../modes/witness/WitnessReadView';
 import { WitnessQuestionsView } from '../modes/witness/WitnessQuestionsView';
 import { WitnessTutorialView } from '../modes/witness/WitnessTutorialView';
 import { buildWitnessInstance, type WitnessConfig } from '../modes/witness/logic';
+import { MentalMathsGameView } from '../modes/mentalMaths/MentalMathsGameView';
+import { MentalMathsTutorialView } from '../modes/mentalMaths/MentalMathsTutorialView';
+import { buildMentalMathsInstance, type MentalMathsConfig, type RoundOutcome } from '../modes/mentalMaths/logic';
 import { getModeForDate } from '../modeRotation';
 import { submitDailyChallenge } from '../service';
 import type { DailyChallengeInstance, DailyChallengeModeId } from '../types';
@@ -57,6 +60,7 @@ const TUTORIAL_KEY_BY_MODE: Partial<Record<DailyChallengeModeId, string>> = {
   what_changed: 'blanked_dc_what_changed_tutorial_seen',
   names_and_faces: 'blanked_dc_names_and_faces_tutorial_seen',
   the_witness: 'blanked_dc_the_witness_tutorial_seen',
+  mental_maths: 'blanked_dc_mental_maths_tutorial_seen',
 };
 
 /** Builds the instance for whichever mode plays today. Switches on
@@ -70,6 +74,7 @@ function buildInstanceForToday(): DailyChallengeInstance<unknown> {
   if (mode === 'what_changed') return buildWhatChangedInstance() as DailyChallengeInstance<unknown>;
   if (mode === 'names_and_faces') return buildNamesAndFacesInstance() as DailyChallengeInstance<unknown>;
   if (mode === 'the_witness') return buildWitnessInstance() as DailyChallengeInstance<unknown>;
+  if (mode === 'mental_maths') return buildMentalMathsInstance() as DailyChallengeInstance<unknown>;
   return buildPhoneNumberInstance() as DailyChallengeInstance<unknown>;
 }
 
@@ -158,6 +163,13 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         timeSeconds: number;
         emojiBlocks: string;
         correctness: boolean[];
+      }
+    | {
+        kind: 'mental_maths';
+        score: number;
+        timeSeconds: number;
+        emojiBlocks: string;
+        outcomes: RoundOutcome[];
       }
     | {
         kind: 'fallback';
@@ -299,6 +311,29 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
     setPhase('result');
   }, [instance]);
 
+  const handleMentalMathsComplete = useCallback(async (result: {
+    score: number; timeSeconds: number;
+    outcomes: RoundOutcome[];
+    emojiBlocks: string;
+  }) => {
+    setPhase('submitting');
+    await submitDailyChallenge({
+      mode: instance.mode,
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      shareCardEmojiBlocks: result.emojiBlocks,
+      challengeDate: instance.challengeDate,
+    });
+    setFinalResult({
+      kind: 'mental_maths',
+      score: result.score,
+      timeSeconds: result.timeSeconds,
+      emojiBlocks: result.emojiBlocks,
+      outcomes: result.outcomes,
+    });
+    setPhase('result');
+  }, [instance]);
+
   // Bridges the read view's onContinue to the recall phase. The
   // Witness has no separate "look away" phase between read and
   // questions — we go straight to the questions view, which itself
@@ -329,6 +364,7 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
   const whatChangedConfig = instance.mode === 'what_changed' ? (instance.config as WhatChangedConfig) : null;
   const namesAndFacesConfig = instance.mode === 'names_and_faces' ? (instance.config as NamesAndFacesConfig) : null;
   const witnessConfig = instance.mode === 'the_witness' ? (instance.config as WitnessConfig) : null;
+  const mentalMathsConfig = instance.mode === 'mental_maths' ? (instance.config as MentalMathsConfig) : null;
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -365,6 +401,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         {phase === 'tutorial' && witnessConfig && (
           <WitnessTutorialView onDismiss={handleTutorialDismiss} />
         )}
+        {phase === 'tutorial' && mentalMathsConfig && (
+          <MentalMathsTutorialView onDismiss={handleTutorialDismiss} />
+        )}
         {phase === 'memorise' && phoneConfig && (
           <PhoneNumberMemoriseView
             digits={phoneConfig.digits}
@@ -380,6 +419,9 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
         )}
         {phase === 'memorise' && witnessConfig && (
           <WitnessReadView config={witnessConfig} onContinue={handleWitnessReadDone} />
+        )}
+        {phase === 'memorise' && mentalMathsConfig && (
+          <MentalMathsGameView config={mentalMathsConfig} onComplete={handleMentalMathsComplete} />
         )}
         {phase === 'mingle' && namesAndFacesConfig && (
           <NamesAndFacesMingle config={namesAndFacesConfig} onComplete={handleMingleDone} />
@@ -442,6 +484,12 @@ export function DailyChallengeContainer({ alreadyPlayed, initialResult, onClose 
                   kind: 'the_witness',
                   config: witnessConfig,
                   correctness: finalResult.correctness,
+                };
+              }
+              if (finalResult.kind === 'mental_maths') {
+                return {
+                  kind: 'mental_maths',
+                  outcomes: finalResult.outcomes,
                 };
               }
               return { kind: 'fallback', emojiBlocks: finalResult.emojiBlocks };

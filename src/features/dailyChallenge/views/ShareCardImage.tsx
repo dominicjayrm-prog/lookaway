@@ -103,6 +103,12 @@ export type ModeVisual =
       /** Per-question correctness in display order. */
       correctness: readonly boolean[];
     }
+  | {
+      kind: 'mental_maths';
+      /** Per-round outcome: the true total, what the player entered,
+       *  and the accuracy tier. Rendered as three "sum chips". */
+      outcomes: readonly { target: number; entered: number; tier: 'exact' | 'close' | 'near' | 'miss' }[];
+    }
   | { kind: 'fallback'; emojiBlocks: string };
 
 /** forwardRef so callers can captureRef(this, ...) via view-shot. */
@@ -370,6 +376,30 @@ function ModeVisualBlock({ visual }: { visual: ModeVisual }) {
       </View>
     );
   }
+  if (visual.kind === 'mental_maths') {
+    // Three round chips: the target total big, the player's entry
+    // underneath when they missed. Tier colour ramps green → gold →
+    // orange → coral. Numbers-only — the day's sequence itself stays
+    // secret so the share can't spoil the puzzle.
+    const tierColor = (tier: 'exact' | 'close' | 'near' | 'miss') =>
+      tier === 'exact' ? '#00B894' : tier === 'close' ? '#D4A012' : tier === 'near' ? '#E1701A' : '#FF6B6B';
+    return (
+      <View style={s.mmRow}>
+        {visual.outcomes.map((o, i) => {
+          const color = tierColor(o.tier);
+          return (
+            <View key={i} style={[s.mmChip, { borderColor: color, backgroundColor: color + '22' }]}>
+              <Text style={s.mmChipRound}>{`R${i + 1}`}</Text>
+              <Text style={s.mmChipTotal}>{`Σ ${o.target}`}</Text>
+              <View style={[s.mmBadge, { backgroundColor: color }]}>
+                <Text style={s.mmBadgeText}>{o.tier === 'exact' ? '✓' : o.entered}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
   // Fallback: just render the emoji blocks string for future modes
   // that haven't defined a custom visual yet.
   return <Text style={s.emojiFallback}>{visual.emojiBlocks}</Text>;
@@ -444,6 +474,19 @@ const s = StyleSheet.create({
   },
   visualWrap: { marginTop: 30 },
   digitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  mmRow: { flexDirection: 'row', justifyContent: 'center', gap: 28 },
+  mmChip: {
+    minWidth: 220, borderWidth: 4, borderRadius: 32,
+    paddingVertical: 26, paddingHorizontal: 24,
+    alignItems: 'center', gap: 8,
+  },
+  mmChipRound: { fontSize: 26, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 2 },
+  mmChipTotal: { fontSize: 58, fontWeight: '900', color: '#FFFFFF', fontVariant: ['tabular-nums'] },
+  mmBadge: {
+    minWidth: 52, height: 52, borderRadius: 26, paddingHorizontal: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  mmBadgeText: { fontSize: 26, fontWeight: '900', color: '#FFFFFF', fontVariant: ['tabular-nums'] },
   digitPill: {
     width: 92, height: 110,
     borderRadius: 18, borderWidth: 3,

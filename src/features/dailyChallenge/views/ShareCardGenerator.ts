@@ -27,6 +27,7 @@ const MODE_EMOJI: Record<DailyChallengeModeId, string> = {
   what_changed: '👁️',
   names_and_faces: '🧑‍🤝‍🧑',
   the_witness: '🕵️',
+  mental_maths: '🧮',
 };
 
 // Marketing site that deep-links to the App Store / Google Play

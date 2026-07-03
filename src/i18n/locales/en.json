@@ -1291,7 +1291,9 @@
       "what_changed_subtitle": "Memorise the grid. Spot the changes.",
       "names_and_faces": "Names & Faces",
       "the_witness": "The Witness",
-      "the_witness_subtitle": "Read the scene. Notice everything."
+      "the_witness_subtitle": "Read the scene. Notice everything.",
+      "mental_maths": "Mental Tally",
+      "mental_maths_subtitle": "Numbers flash one at a time. Keep the running total."
     },
     "phone_number": {
       "memorise_instruction": "Memorise this number",
@@ -1401,6 +1403,25 @@
       "morning_help": "One gentle ping at 8am with today's challenge.",
       "evening_label": "Evening streak nudge",
       "evening_help": "6pm reminder if your streak is at risk."
+    },
+    "mental_maths": {
+      "tutorial_title": "Keep the total",
+      "tutorial_body": "Numbers appear one at a time, then disappear. Add each one to your running total, and key in the final answer at the end.",
+      "tutorial_example_caption": "Three numbers flash… the total is 15",
+      "tutorial_minus_hint": "Watch out — later rounds sneak in a minus number. Subtract it from your total.",
+      "tutorial_dismiss": "Got it",
+      "tutorial_dismiss_aria": "Dismiss the tutorial and start the challenge",
+      "round_label": "Round {current} of {total}",
+      "get_ready": "Get ready…",
+      "sequence_instruction": "Keep the running total",
+      "entry_instruction": "What was the total?",
+      "submit": "Lock it in",
+      "submit_aria": "Submit your total",
+      "feedback_exact": "Spot on!",
+      "feedback_close": "So close!",
+      "feedback_near": "Not far off",
+      "feedback_miss": "Slipped away",
+      "your_answer": "You said {answer}"
     }
   },
   "paywall": {
